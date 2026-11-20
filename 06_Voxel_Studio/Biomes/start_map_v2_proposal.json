@@ -1,0 +1,606 @@
+{
+  "schema": "start_map_v2_proposal",
+  "rev": "0.1",
+  "status": "proposed",
+  "owner": "GLM (ratification required)",
+  "author": "DeepSeek",
+  "date": "2026-10-24",
+  "supersedes": "start_map_v1.json (128 x 128 m) for T-009 review; v1 remains the formally approved baseline until ratified",
+  "seedExample": 1337,
+  "coordinateConvention": {
+    "space": "cell indices x = east (0..255), z = south (0..255); cell (x,z) covers world metres [x-128, x-127) x [z-128, z-127); centre = worldX(x), worldZ(z)",
+    "worldMetres": "x/z in [-128, 128), y up; y = 0 sea level",
+    "y": "metres above/below y = 0; multiples of 0.5",
+    "north": "negative z"
+  },
+  "map": {
+    "cellsPerSide": 256,
+    "cellMetres": 1,
+    "heightQuantumM": 0.5,
+    "seaLevelM": 0.0,
+    "skirtY": -12.0,
+    "observedHeightRangeM": [
+      -4.5,
+      22.0
+    ],
+    "observedMeanHeightM": 4.77,
+    "playableTargetClampM": 120,
+    "borderRingM": 8,
+    "buildGridM": 2.0,
+    "simAreaM2": 65536,
+    "renderOnlyScenery": {
+      "apronRadiusM": 408,
+      "apronStepM": 12,
+      "horizonRingsM": [
+        430,
+        520,
+        640,
+        820,
+        1100
+      ],
+      "note": "not simulated and not walkable; the camera target clamps at +/-120 m"
+    }
+  },
+  "regions": {
+    "plain": {
+      "label": "Founder valley",
+      "type": "plain",
+      "ellipse": {
+        "cx": 8,
+        "cz": 36,
+        "rx": 31,
+        "rz": 23
+      },
+      "heightM": 4.0,
+      "role": "flat build shelf, trail, Noxel integration sites"
+    },
+    "forest": {
+      "label": "Eastwood",
+      "type": "forest",
+      "ellipse": {
+        "cx": 76,
+        "cz": -32,
+        "rx": 56,
+        "rz": 46
+      },
+      "heightM": 4.5,
+      "role": "principal eastern wood; two passes cut the shelf"
+    },
+    "highForest": {
+      "label": "Hanging wood",
+      "type": "forest",
+      "ellipse": {
+        "cx": 94,
+        "cz": -74,
+        "rx": 34,
+        "rz": 28
+      },
+      "heightM": 4.5,
+      "role": "higher north-east wood; frames the highland approach"
+    },
+    "hills": {
+      "label": "South downs",
+      "type": "hills",
+      "ellipse": {
+        "cx": 58,
+        "cz": 80,
+        "rx": 48,
+        "rz": 32
+      },
+      "heightM": 4.5,
+      "role": "low downland and border mesas"
+    },
+    "westUpland": {
+      "label": "West rise",
+      "type": "hills",
+      "ellipse": {
+        "cx": -88,
+        "cz": 38,
+        "rx": 38,
+        "rz": 38
+      },
+      "heightM": 4.5,
+      "role": "western upland; lake approach"
+    },
+    "massif": {
+      "label": "Crown massif",
+      "type": "highland",
+      "ellipse": {
+        "cx": -88,
+        "cz": -92,
+        "rx": 102,
+        "rz": 74
+      },
+      "coreHeightM": 7.0,
+      "cragCount": 12,
+      "cragHeightRangeM": [
+        11.0,
+        22.0
+      ],
+      "role": "broken north-west crown; talus skirt, soft core, 12 separate crags"
+    },
+    "spire": {
+      "label": "Sentinel Rock",
+      "type": "highland",
+      "ellipse": {
+        "cx": -31,
+        "cz": -25,
+        "rx": 9,
+        "rz": 7
+      },
+      "heightM": 5.5,
+      "role": "low grassy outcrop; orientation landmark"
+    },
+    "lake": {
+      "label": "Mirror lake",
+      "type": "water",
+      "ellipse": {
+        "cx": -48,
+        "cz": 72,
+        "rx": 29,
+        "rz": 23
+      },
+      "waterLevelM": 0.0,
+      "bedLevelM": -4.5,
+      "role": "south-west lake, hard shore, reeds"
+    },
+    "island": {
+      "label": "Heron islet",
+      "type": "water",
+      "ellipse": {
+        "cx": -41,
+        "cz": 68,
+        "rx": 6,
+        "rz": 5
+      },
+      "heightM": [
+        0.5,
+        2.0
+      ],
+      "role": "small wooded island"
+    },
+    "ridge": {
+      "label": "Border ridges",
+      "type": "ridge",
+      "ellipse": {
+        "cx": 0,
+        "cz": 0,
+        "rx": 128,
+        "rz": 128
+      },
+      "heightM": [
+        4.5,
+        8.0
+      ],
+      "role": "eight isolated rim mesas and passes; not a continuous wall"
+    }
+  },
+  "landforms": {
+    "rimMesas": [
+      {
+        "cx": -116,
+        "cz": -112,
+        "rx": 44,
+        "rz": 32,
+        "heightM": 8.0
+      },
+      {
+        "cx": -44,
+        "cz": -126,
+        "rx": 36,
+        "rz": 26,
+        "heightM": 6.0
+      },
+      {
+        "cx": 42,
+        "cz": -122,
+        "rx": 38,
+        "rz": 28,
+        "heightM": 6.0
+      },
+      {
+        "cx": 124,
+        "cz": -54,
+        "rx": 20,
+        "rz": 24,
+        "heightM": 4.5
+      },
+      {
+        "cx": 122,
+        "cz": 58,
+        "rx": 22,
+        "rz": 26,
+        "heightM": 4.5
+      },
+      {
+        "cx": 48,
+        "cz": 124,
+        "rx": 38,
+        "rz": 26,
+        "heightM": 6.0
+      },
+      {
+        "cx": -64,
+        "cz": 122,
+        "rx": 34,
+        "rz": 28,
+        "heightM": 6.0
+      },
+      {
+        "cx": -126,
+        "cz": 16,
+        "rx": 24,
+        "rz": 34,
+        "heightM": 7.0
+      }
+    ],
+    "massifCores": [
+      {
+        "cx": -102,
+        "cz": -94,
+        "rx": 40,
+        "rz": 32,
+        "heightM": 7.0
+      },
+      {
+        "cx": -78,
+        "cz": -96,
+        "rx": 36,
+        "rz": 30,
+        "heightM": 7.0
+      },
+      {
+        "cx": -116,
+        "cz": -74,
+        "rx": 30,
+        "rz": 30,
+        "heightM": 7.0
+      },
+      {
+        "cx": -88,
+        "cz": -66,
+        "rx": 32,
+        "rz": 24,
+        "heightM": 7.0
+      },
+      {
+        "cx": -62,
+        "cz": -72,
+        "rx": 24,
+        "rz": 20,
+        "heightM": 7.0
+      },
+      {
+        "cx": -118,
+        "cz": -112,
+        "rx": 28,
+        "rz": 22,
+        "heightM": 7.0
+      }
+    ],
+    "crags": [
+      {
+        "cx": -104,
+        "cz": -106,
+        "rx": 10,
+        "rz": 8,
+        "heightM": 22.0
+      },
+      {
+        "cx": -96,
+        "cz": -100,
+        "rx": 7,
+        "rz": 6,
+        "heightM": 19.0
+      },
+      {
+        "cx": -110,
+        "cz": -100,
+        "rx": 8,
+        "rz": 6,
+        "heightM": 16.0
+      },
+      {
+        "cx": -90,
+        "cz": -96,
+        "rx": 9,
+        "rz": 7,
+        "heightM": 20.0
+      },
+      {
+        "cx": -83,
+        "cz": -91,
+        "rx": 7,
+        "rz": 6,
+        "heightM": 17.0
+      },
+      {
+        "cx": -97,
+        "cz": -87,
+        "rx": 6,
+        "rz": 5,
+        "heightM": 14.0
+      },
+      {
+        "cx": -72,
+        "cz": -80,
+        "rx": 10,
+        "rz": 8,
+        "heightM": 18.0
+      },
+      {
+        "cx": -65,
+        "cz": -75,
+        "rx": 7,
+        "rz": 6,
+        "heightM": 15.0
+      },
+      {
+        "cx": -78,
+        "cz": -71,
+        "rx": 6,
+        "rz": 5,
+        "heightM": 12.0
+      },
+      {
+        "cx": -80,
+        "cz": -92,
+        "rx": 8,
+        "rz": 7,
+        "heightM": 16.0
+      },
+      {
+        "cx": -88,
+        "cz": -104,
+        "rx": 6,
+        "rz": 5,
+        "heightM": 13.0
+      },
+      {
+        "cx": -75,
+        "cz": -90,
+        "rx": 5,
+        "rz": 4,
+        "heightM": 11.0
+      }
+    ],
+    "talusFans": [
+      {
+        "cx": 50,
+        "cz": -12,
+        "rx": 14,
+        "rz": 10,
+        "heightM": 4.8
+      },
+      {
+        "cx": 66,
+        "cz": -16,
+        "rx": 13,
+        "rz": 9,
+        "heightM": 4.8
+      },
+      {
+        "cx": 82,
+        "cz": -20,
+        "rx": 12,
+        "rz": 9,
+        "heightM": 4.8
+      }
+    ],
+    "easternPasses": [
+      {
+        "cx": 66,
+        "cz": -28,
+        "rx": 15,
+        "rz": 11,
+        "floorM": 4.0
+      },
+      {
+        "cx": 100,
+        "cz": -44,
+        "rx": 11,
+        "rz": 9,
+        "floorM": 4.0
+      }
+    ],
+    "ravines": [
+      {
+        "from": [
+          -114,
+          -118
+        ],
+        "to": [
+          -54,
+          -54
+        ],
+        "widthM": 7.0
+      },
+      {
+        "from": [
+          -114,
+          -118
+        ],
+        "to": [
+          -64,
+          -18
+        ],
+        "widthM": 6.0
+      },
+      {
+        "from": [
+          -104,
+          -110
+        ],
+        "to": [
+          -108,
+          -36
+        ],
+        "widthM": 5.5
+      }
+    ],
+    "river": {
+      "polyline": [
+        [
+          -44,
+          -56
+        ],
+        [
+          -48,
+          -40
+        ],
+        [
+          -38,
+          -26
+        ],
+        [
+          -44,
+          -10
+        ],
+        [
+          -29,
+          6
+        ],
+        [
+          -36,
+          22
+        ],
+        [
+          -48,
+          38
+        ],
+        [
+          -41,
+          54
+        ],
+        [
+          -52,
+          72
+        ]
+      ],
+      "channelWidthM": [
+        2.2,
+        4.1
+      ],
+      "bedLevelM": -1.7,
+      "bankLevelM": 1.5,
+      "floodplainWidthM": 18,
+      "waterLevelM": 0.0,
+      "joins": "Crown massif south face to Mirror lake"
+    }
+  },
+  "resources": {
+    "treeTotal": 308,
+    "treeWoodland": 260,
+    "treeSolitary": 48,
+    "treePlacement": "seeded shuffled 3.3 m lattice; first pass east/north, second pass remainder; clearings and the settlement shelf excluded",
+    "rocks": 97,
+    "oreVeins": [
+      {
+        "x": -30,
+        "z": -18,
+        "count": 7
+      },
+      {
+        "x": -45,
+        "z": 10,
+        "count": 6
+      },
+      {
+        "x": 30,
+        "z": -30,
+        "count": 5
+      },
+      {
+        "x": 44,
+        "z": 62,
+        "count": 5
+      },
+      {
+        "x": -72,
+        "z": 26,
+        "count": 5
+      }
+    ],
+    "oreProps": 28,
+    "noxelSites": [
+      {
+        "kind": "waystone",
+        "x": 18,
+        "z": 32,
+        "y": 4.0,
+        "rotDeg": 0,
+        "provisional": true
+      },
+      {
+        "kind": "marker",
+        "x": -14,
+        "z": 26,
+        "y": 4.0,
+        "rotDeg": 90,
+        "provisional": true
+      }
+    ],
+    "note": "Props are scenery and resource hints in T-009; no inventory/gathering loop is implemented."
+  },
+  "materials": {
+    "source": "04_Art_Director/Approved_Art_Direction/palette_v2.json",
+    "gameCopy": "Game/src/data/palette.json (manual copy; sync check still missing)",
+    "counts": {
+      "grass": 61304,
+      "stone": 3536,
+      "sand": 696,
+      "path": 0
+    },
+    "flags": {
+      "shore": 2819,
+      "cliff": 1001,
+      "edge": 2032,
+      "ore": 28
+    },
+    "note": "path material is 0; the visible trail is prop geometry (dark soil + stone slabs)"
+  },
+  "budgets": {
+    "targetDrawCalls": 120,
+    "targetTriangles": 250000,
+    "defaultWorld": {
+      "drawCalls": 49,
+      "triangles": 245094
+    },
+    "topDownMap": {
+      "drawCalls": 50,
+      "triangles": 201670
+    },
+    "kit": {
+      "drawCalls": 21,
+      "triangles": 16238
+    },
+    "noxelCloseup": {
+      "drawCalls": 43,
+      "triangles": 237750
+    },
+    "mobile390x664": {
+      "drawCalls": [
+        41,
+        43
+      ],
+      "triangles": [
+        238272,
+        238368
+      ]
+    }
+  },
+  "ratification": {
+    "glm": false,
+    "humanArtReview": false,
+    "ownerNoxelReferences": false,
+    "required": [
+      "accept 256 x 256 m and the +/-120 m playable target clamp",
+      "accept authored ellipse/mask regions instead of literal v1 rects",
+      "accept 308 trees / 97 rocks / 28 ore props as the T-009 resource stand-in",
+      "accept the render-only apron and horizon as scenery, not playable terrain",
+      "accept the provisional Noxel waystone/marker as an integration test only",
+      "accept the measured 245,094 / 250,000 triangle candidate or require a prop reduction"
+    ],
+    "task004": "blocked until T-009 is reviewed and voxel + Noxel coexistence is accepted"
+  }
+}

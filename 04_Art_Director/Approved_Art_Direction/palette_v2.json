@@ -1,0 +1,183 @@
+{
+  "schema": "palette_v2",
+  "date": "2026-10-22",
+  "status": "proposed",
+  "source": "REF-002 (hybrid world reference), values sampled by eye; numeric verification pending",
+  "note": "One material palette. Time of day is expressed by the lighting presets below, not by repainting materials.",
+  "materials": {
+    "grass_top": {
+      "hex": "#79B94C",
+      "role": "terrain top, low elevation"
+    },
+    "grass_high": {
+      "hex": "#8FC95E",
+      "role": "terrain top, mid elevation"
+    },
+    "grass_peak": {
+      "hex": "#9AD06A",
+      "role": "terrain top, high elevation"
+    },
+    "grass_cap": {
+      "hex": "#5E9440",
+      "role": "side band 0.0-0.4 m below top"
+    },
+    "strata_ochre": {
+      "hex": "#C99A5F",
+      "role": "side band 0.4-0.62 m below top"
+    },
+    "strata_rust": {
+      "hex": "#B4633C",
+      "role": "side band 0.62-0.80 m below top"
+    },
+    "stone_top": {
+      "hex": "#E6DFCC",
+      "role": "bare stone top surface"
+    },
+    "stone_body_a": {
+      "hex": "#DCD3BE",
+      "role": "side body, even 4.5 m band"
+    },
+    "stone_body_b": {
+      "hex": "#D1C7AF",
+      "role": "side body, odd 4.5 m band"
+    },
+    "stone_shade": {
+      "hex": "#B9AE96",
+      "role": "crevice / recessed stone accent"
+    },
+    "sand": {
+      "hex": "#E3D3A6",
+      "role": "shore cells"
+    },
+    "water_shallow": {
+      "hex": "#67CFD8",
+      "role": "water depth <= 0.5 m"
+    },
+    "water_mid": {
+      "hex": "#3AAFC4",
+      "role": "water depth ~1.5 m"
+    },
+    "water_deep": {
+      "hex": "#2A8FA8",
+      "role": "water depth >= 4.0 m"
+    },
+    "water_rim": {
+      "hex": "#BFEAF0",
+      "role": "shoreline rim / foam tint"
+    },
+    "canopy_green_a": {
+      "hex": "#5FA83F",
+      "role": "green canopy, shade mass"
+    },
+    "canopy_green_b": {
+      "hex": "#6FB84A",
+      "role": "green canopy, main mass"
+    },
+    "canopy_green_c": {
+      "hex": "#7FC356",
+      "role": "green canopy, highlight mass"
+    },
+    "canopy_pink": {
+      "hex": "#F2A6C4",
+      "role": "blossom accent species only"
+    },
+    "canopy_pink_b": {
+      "hex": "#E88FB2",
+      "role": "blossom shade mass"
+    },
+    "trunk": {
+      "hex": "#6B4A33",
+      "role": "tree trunks"
+    },
+    "bark_dark": {
+      "hex": "#4E3626",
+      "role": "trunk shade, stumps"
+    },
+    "ore_crystal": {
+      "hex": "#7B5AD6",
+      "role": "ore deposit accent (proposed, replaces teal)"
+    },
+    "ore_crystal_b": {
+      "hex": "#9B7BE8",
+      "role": "ore highlight facet"
+    },
+    "noxel_stone": {
+      "hex": "#E6DFCC",
+      "role": "Noxel architecture main stone"
+    },
+    "noxel_stone_b": {
+      "hex": "#D3C9B4",
+      "role": "Noxel secondary stone / recess"
+    },
+    "accent_blue": {
+      "hex": "#3E7FB8",
+      "role": "banner / cloth accent"
+    },
+    "accent_teal": {
+      "hex": "#2FA6A0",
+      "role": "secondary accent"
+    },
+    "emissive_fire": {
+      "hex": "#FF9E4A",
+      "role": "campfire / warm emissive (effects only)"
+    },
+    "emissive_magic": {
+      "hex": "#D24BFF",
+      "role": "reserved: magic effects only, never materials"
+    }
+  },
+  "lighting": {
+    "dawn": {
+      "sunElevationDeg": 12,
+      "sunAzimuthDeg": 105,
+      "sunColor": "#FFC79A",
+      "sunIntensity": 2.2,
+      "hemiSky": "#8FA6C8",
+      "hemiGround": "#4E5F6E",
+      "hemiIntensity": 0.6,
+      "sky": "#A8BED6",
+      "fog": "#A8BED6",
+      "fogDensity": 0.005,
+      "exposure": 1.1
+    },
+    "noon": {
+      "sunElevationDeg": 38,
+      "sunAzimuthDeg": 50,
+      "sunColor": "#FFF4DC",
+      "sunIntensity": 2.75,
+      "hemiSky": "#BFD9F2",
+      "hemiGround": "#7A8F55",
+      "hemiIntensity": 0.55,
+      "sky": "#9ED2EE",
+      "fog": "#DCEFF8",
+      "fogDensity": 0.0028,
+      "exposure": 1.05
+    },
+    "dusk": {
+      "sunElevationDeg": 9,
+      "sunAzimuthDeg": 250,
+      "sunColor": "#FFB27A",
+      "sunIntensity": 3.2,
+      "hemiSky": "#8E7C9E",
+      "hemiGround": "#5A4A50",
+      "hemiIntensity": 1.1,
+      "sky": "#C98E86",
+      "fog": "#C0908A",
+      "fogDensity": 0.0036,
+      "exposure": 1.32
+    },
+    "night": {
+      "sunElevationDeg": 40,
+      "sunAzimuthDeg": 220,
+      "sunColor": "#AFC8FF",
+      "sunIntensity": 1.0,
+      "hemiSky": "#3A4C7A",
+      "hemiGround": "#1C2540",
+      "hemiIntensity": 1.05,
+      "sky": "#101736",
+      "fog": "#151C3C",
+      "fogDensity": 0.0045,
+      "exposure": 1.5
+    }
+  }
+}

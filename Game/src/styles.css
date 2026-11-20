@@ -1,0 +1,148 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: #9ED2EE;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#app { position: fixed; inset: 0; }
+#app canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+#hud {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  max-width: min(440px, 62vw);
+  padding: 9px 13px;
+  font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: #F4F0E4;
+  background: rgba(22, 26, 38, 0.6);
+  border: 1px solid rgba(240, 236, 220, 0.18);
+  border-radius: 8px;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  letter-spacing: 0.01em;
+}
+#hud strong { color: #FFF3D6; font-weight: 600; }
+#hud .dim { color: rgba(240, 236, 220, 0.62); font-size: 12px; }
+
+/* ---- touch controls (only on coarse pointers) ---- */
+#controls { display: none; }
+
+@media (pointer: coarse) {
+  #controls {
+    display: flex;
+    position: fixed;
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    gap: 14px;
+    align-items: flex-end;
+    z-index: 5;
+    touch-action: none;
+  }
+  #hud { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 128px); max-width: 66vw; font-size: 12px; }
+
+  .pad {
+    position: relative;
+    width: 132px; height: 132px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+  }
+  .pb {
+    appearance: none;
+    border: 1px solid rgba(244, 240, 228, 0.28);
+    background: rgba(22, 26, 38, 0.5);
+    color: #F4F0E4;
+    font: 600 18px/1 ui-sans-serif, system-ui, sans-serif;
+    border-radius: 12px;
+    width: 42px; height: 42px;
+    display: grid; place-items: center;
+    padding: 0;
+    backdrop-filter: blur(4px);
+    touch-action: none;
+    user-select: none;
+  }
+  .pb:active { background: rgba(240, 236, 220, 0.28); }
+  .up    { grid-area: 1 / 2; }
+  .left  { grid-area: 2 / 1; }
+  .center{ grid-area: 2 / 2; opacity: 0.55; }
+  .right { grid-area: 2 / 3; }
+  .down  { grid-area: 3 / 2; }
+
+  .zoomers { display: flex; flex-direction: column; gap: 10px; }
+  .zoomers .pb { width: 46px; height: 46px; font-size: 22px; }
+}
+
+@media (pointer: coarse) and (orientation: landscape) {
+  #hud { bottom: max(12px, env(safe-area-inset-bottom)); max-width: 52vw; }
+}
+
+/* ---- clean inspection captures ---- */
+body.clean #hud, body.clean #controls { display: none !important; }
+
+/* ---- provisional Noxel kit sheet overlay ---- */
+#kit-panel, #map-panel {
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: min(390px, 34vw);
+  padding: 15px 17px 14px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  font: 12px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: #F4F0E4;
+  background: rgba(20, 23, 34, 0.78);
+  border: 1px solid rgba(240, 236, 220, 0.24);
+  border-radius: 9px;
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+#map-panel { left: auto; right: max(16px, env(safe-area-inset-right)); }
+#kit-panel strong, #map-panel strong {
+  display: block;
+  color: #FFF3D6;
+  font-size: 13px;
+  letter-spacing: 0.09em;
+}
+#kit-panel .warn {
+  display: block;
+  margin: 5px 0 9px;
+  color: #F0B37A;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+#kit-panel dl {
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  gap: 4px 10px;
+  margin: 0 0 9px;
+}
+#kit-panel dt { color: #FFF3D6; font-weight: 600; }
+#kit-panel dd { margin: 0; color: rgba(240, 236, 220, 0.76); }
+#kit-panel p, #map-panel p {
+  margin: 0;
+  color: rgba(240, 236, 220, 0.67);
+  font-size: 11px;
+  line-height: 1.5;
+}
+body.kit #hud, body.map #hud { display: none; }
+
+@media (max-width: 760px) {
+  #kit-panel, #map-panel { width: min(300px, 76vw); font-size: 11px; }
+  #kit-panel dl { grid-template-columns: 74px 1fr; }
+}
+
+#map-north {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  top: max(16px, env(safe-area-inset-top));
+  padding: 6px 10px;
+  font: 600 13px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  color: #F4F0E4;
+  background: rgba(22, 26, 38, 0.62);
+  border: 1px solid rgba(240, 236, 220, 0.18);
+  border-radius: 6px;
+  pointer-events: none;
+}

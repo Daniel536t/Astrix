@@ -1,0 +1,179 @@
+{
+  "schema": "start_map_v1",
+  "rev": "1.1",
+  "owner": "GLM",
+  "milestone": 1,
+  "paletteRef": "04_Art_Director/Approved_Art_Direction/palette_v2.json",
+  "lightingRef": "palette_v2 lighting presets (dawn/noon/dusk/night), per VSG v1.1 §4.5",
+  "coordinateConvention": {
+    "space": "cell indices, x = east (0..127), z = south (0..127); cell (x,z) covers world metres [x-64, x-63) x [z-64, z-63)",
+    "rect": "[x0,z0,x1,z1) half-open in cell coordinates (x1/z1 exclusive)",
+    "y": "metres above/below y=0 sea level, multiples of 0.5"
+  },
+  "map": {
+    "cellsPerSide": 128,
+    "cellMetres": 1,
+    "heightQuantumM": 0.5,
+    "seaLevelM": 0.0,
+    "skirtY": -12.0,
+    "observedHeightRange": [-5.0, 40.0],
+    "playableRect": [8, 8, 120, 120],
+    "extensionRingCells": 8,
+    "buildGridM": 2.0
+  },
+  "generation": {
+    "seedExample": 1337,
+    "hash": "integer imul hash (ix*374761393-style finaliser, spec §VSG 7.1), 32-bit, no trig",
+    "noiseLayers": [
+      { "id": "continental", "freq": "1/90 m", "octaves": 3, "seedOff": 11, "outScale": 2.7 },
+      { "id": "mid", "freq": "1/30 m", "octaves": 3, "seedOff": 23, "outScale": 2.0 },
+      { "id": "plateauMask", "freq": "1/46 m", "octaves": 2, "seedOff": 91 },
+      { "id": "contourWobble", "freq": "1/3.4 m", "octaves": 1, "seedOff": 131, "ampM": 0.21 },
+      { "id": "massifIrregular", "freq": "1/14 m", "octaves": 2, "seedOff": 37 },
+      { "id": "massifRidge", "freq": "1/22 m", "octaves": 3, "seedOff": 53 },
+      { "id": "lakeIrregular", "freq": "1/11 m", "octaves": 2, "seedOff": 71 },
+      { "id": "cliffNotch", "freq": "1/9 m", "octaves": 1, "seedOff": 151, "threshold": 0.88, "depthM": 1.5 },
+      { "id": "treeDensity", "freq": "1/6 m", "octaves": 2, "seedOff": 211, "threshold": 0.40 }
+    ],
+    "baseHeightM": 6.4,
+    "lowlandBowl": { "centre": [34, 34], "radiusM": 22, "depthM": 5.0 },
+    "terraceStepM": { "plateau": 1.0, "elsewhere": 0.5, "plateauCondition": "plateauMask > 0.75 OR inside massif contribution > 0.4" },
+    "terraceBias": -0.18,
+    "routeMaxGrade": 0.13,
+    "routeFeatherM": 4.5
+  },
+  "regions": {
+    "plain": {
+      "rect": [16, 80, 54, 102],
+      "flatCoreHeightM": 4.0,
+      "maxSlopeDeg": 4,
+      "measuredMaxStepM": 0.0,
+      "areaM2": 836,
+      "material": "grass",
+      "rule": "build-grade surface: exactly 4.0 m core, 7 m feather to surrounding terrain; no trees, rocks or ore inside"
+    },
+    "forest": {
+      "rect": [64, 24, 104, 52],
+      "areaM2": 1120,
+      "material": "grass",
+      "heightBandM": [4.5, 9.5],
+      "treeLatticeM": 3,
+      "treeJitterM": 1.1,
+      "treeCount": 68
+    },
+    "rocky": {
+      "rect": [96, 56, 120, 84],
+      "material": "stone",
+      "stoneTopCondition": "height > 13 m OR massif mask > 0.35",
+      "stoneTopCells": 1418
+    },
+    "oreZone": {
+      "rect": [102, 64, 114, 76],
+      "clusters": [[105, 74], [107, 65], [112, 68], [111, 74]],
+      "clusterRadiusM": 2.2,
+      "minSeparationM": 5.5,
+      "maxClusters": 5,
+      "seededClusterCount": 4,
+      "hostMaterial": "stone",
+      "accentHex": "#7B5AD6",
+      "highlightHex": "#9B7BE8",
+      "accentNote": "D-015 PROVISIONAL: violet crystal ore accent, replaces v1.0 teal #4E8F86; pending owner glance (VSG v1.1 §8)"
+    },
+    "massif": {
+      "rect": [86, 0, 128, 20],
+      "featherM": 9,
+      "peakContributionM": 34,
+      "peakContributionDefinition": "ridge height added by the massif term on top of base terrain (pipeline step 2); NOT absolute elevation",
+      "measuredSummitM": 40.0,
+      "measuredSummitNote": "absolute maximum elevation at seed 1337; equals map.observedHeightRange[1]",
+      "cliffHardBandM": 1.4,
+      "observedMaxFaceRunM": 29,
+      "observedCliffRegions": 58,
+      "observedCliffFaces": 135,
+      "observedMaxInteriorDropM": 13.0,
+      "material": "stone above h>13, grass terraces below"
+    },
+    "lowland": { "centre": [34, 34], "radiusM": 22, "depthM": 5.0 },
+    "lake": {
+      "ellipse": { "cx": 76, "cz": 91, "rx": 16, "rz": 13 },
+      "edgeIrregularNoiseFreq": "1/11 m",
+      "depthM": -4.5,
+      "waterCells": 843,
+      "shoreRule": "last land step pinned at +0.5 m -> hard 0.5 m cut, rim band per VSG v1.1 §5"
+    },
+    "river": {
+      "polyline": [[94, 26], [84, 44], [72, 60], [70, 76], [72, 88]],
+      "widthM": 4.0,
+      "bedDepthM": -1.7,
+      "joins": "massif south cliff base at (94,26); lake north shore near (72,88)"
+    },
+    "routes": [
+      { "id": "R1", "name": "plain-to-forest", "polyline": [[36, 88], [52, 78], [64, 66], [76, 52], [84, 40]], "lengthM": 68.7, "measuredMaxGrade": 0.13, "corridorFeatherM": 4.5 },
+      { "id": "R2", "name": "plain-to-rocky-south-bypass", "polyline": [[46, 94], [62, 104], [86, 116], [108, 100], [110, 82]], "lengthM": 91.0, "measuredMaxGrade": 0.13, "corridorFeatherM": 4.5 }
+    ]
+  },
+  "resources": {
+    "totalNodes": 92,
+    "ores": [
+      { "type": "ore", "cell": [105, 74], "remaining": 24 },
+      { "type": "ore", "cell": [107, 65], "remaining": 24 },
+      { "type": "ore", "cell": [112, 68], "remaining": 24 },
+      { "type": "ore", "cell": [111, 74], "remaining": 24 }
+    ],
+    "stone": [
+      { "type": "stone", "cell": [91, 24] }, { "type": "stone", "cell": [85, 24] },
+      { "type": "stone", "cell": [80, 24] }, { "type": "stone", "cell": [89, 21] },
+      { "type": "stone", "cell": [82, 21] }, { "type": "stone", "cell": [86, 28] },
+      { "type": "stone", "cell": [81, 27] }, { "type": "stone", "cell": [89, 27] },
+      { "type": "stone", "cell": [82, 30] }, { "type": "stone", "cell": [79, 21] },
+      { "type": "stone", "cell": [93, 21] }, { "type": "stone", "cell": [89, 30] }
+    ],
+    "wood": {
+      "type": "wood",
+      "count": 68,
+      "placement": "3 m lattice inside forest rect, jitter 1.1 m each axis, density fbm(x/6, z/6, seed+211, 2) > 0.40, land cells only; coordinates emitted at generation time (never hand-edited)"
+    },
+    "freshwater": [
+      { "type": "freshwater", "cell": [94, 92] },
+      { "type": "freshwater", "cell": [77, 106] },
+      { "type": "freshwater", "cell": [90, 100] }
+    ],
+    "food": [
+      { "type": "food", "cell": [66, 53] }, { "type": "food", "cell": [89, 55] },
+      { "type": "food", "cell": [103, 53] }, { "type": "food", "cell": [95, 53] },
+      { "type": "food", "cell": [77, 57] }
+    ]
+  },
+  "materials": {
+    "source": "palette_v2.json — every hex must exist there (VSG v1.1 acceptance rule)",
+    "grassTop": ["#79B94C", "#8FC95E", "#9AD06A"],
+    "grassTopRampRule": "step lookup by elevation: y<8 / 8<=y<16 / y>=16",
+    "sand": "#E3D3A6",
+    "stoneTop": "#E6DFCC",
+    "bandGrassCap": "#5E9440",
+    "bandOchre": "#C99A5F",
+    "bandRust": "#B4633C",
+    "bandStoneBody": ["#DCD3BE", "#D1C7AF"],
+    "bandBoundariesM": [0.4, 0.62, 0.8],
+    "shoreRim": "#BFEAF0",
+    "oreAccent": "#7B5AD6",
+    "oreHighlight": "#9B7BE8",
+    "waterShallow": "#67CFD8",
+    "waterMid": "#3AAFC4",
+    "waterDeep": "#2A8FA8",
+    "waterRim": "#BFEAF0"
+  },
+  "budgets": {
+    "terrainTriangles": 66828,
+    "waterTriangles": 1686,
+    "terrainQuads": 33414,
+    "chunkTriangles": [4482, 4010, 6270, 8166, 4116, 2554, 4014, 3692, 4206, 3514, 2844, 3294, 4412, 3288, 3598, 4368],
+    "maxChunkTriangles": 8166,
+    "indexedVertices": 133656,
+    "terrainDrawCalls": 16,
+    "waterDrawCalls": 1,
+    "targetDrawCallsInclProps": 30,
+    "budgetTriangles": 250000,
+    "budgetDrawCalls": 120
+  }
+}
