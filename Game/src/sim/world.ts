@@ -513,17 +513,35 @@ export function ensureChunk(world: World, cx: number, cz: number): VoxelChunk | 
 
 export function generateChunk(world: World, cx: number, cz: number): VoxelChunk | null {
   if (cx < 0 || cz < 0 || cx >= CHUNKS_PER_SIDE || cz >= CHUNKS_PER_SIDE) return null;
-  const key = chunkKey(cx, cz);
-  const existing = world.chunks.get(key);
+  const existing = world.chunks.get(chunkKey(cx, cz));
   if (existing) return existing;
-
   const t0 = performance.now();
+  const base = generateBaseChunk(world.seed, world.params.generatorVersion, cx, cz);
+  return installBaseChunk(world, base, performance.now() - t0);
+}
+
+/**
+ * Base generated contents of a chunk before durable edits. A pure function of
+ * (seed, generator version, cx, cz): safe to compute in a Web Worker, and the
+ * bytes are identical wherever it runs.
+ */
+export interface BaseChunk {
+  cx: number;
+  cz: number;
+  seed: number;
+  version: number;
+  data: Uint8Array;
+  heights: Uint8Array;
+  topMaterials: Uint8Array;
+  nonAir: number;
+}
+
+export function generateBaseChunk(seed: number, version: number, cx: number, cz: number): BaseChunk {
   const data = new Uint8Array(CHUNK_VOLUME);
   const heights = new Uint8Array(CHUNK_AREA);
   const topMaterials = new Uint8Array(CHUNK_AREA);
   const ox = chunkOriginX(cx), oz = chunkOriginZ(cz);
-  const seed = world.seed;
-  const v2 = world.params.generatorVersion >= GENERATOR_V2 ? terrainV2(seed) : null;
+  const v2 = version >= GENERATOR_V2 ? terrainV2(seed) : null;
 
   // Padded height cache: a three-cell border covers slope, beach and ledges.
   const P = 3;
@@ -662,6 +680,23 @@ export function generateChunk(world: World, cx: number, cz: number): VoxelChunk 
     }
   }
 
+  return { cx, cz, seed, version, data, heights, topMaterials, nonAir };
+}
+
+/**
+ * Install base contents as a resident chunk: apply durable edits, update
+ * stats, and run deterministic entity generation. Main-thread only; this is
+ * the single writer of World. Returns the already-resident chunk if one exists.
+ */
+export function installBaseChunk(world: World, base: BaseChunk, generationMs = 0): VoxelChunk | null {
+  if (base.seed !== world.seed || base.version !== world.params.generatorVersion) {
+    throw new Error('base chunk belongs to a different world configuration');
+  }
+  const { cx, cz, data, heights, topMaterials, nonAir } = base;
+  if (cx < 0 || cz < 0 || cx >= CHUNKS_PER_SIDE || cz >= CHUNKS_PER_SIDE) return null;
+  const key = chunkKey(cx, cz);
+  const existing = world.chunks.get(key);
+  if (existing) return existing;
   const chunk: VoxelChunk = {
     cx, cz, key, data, heights, topMaterials, nonAir,
     dirty: true,
@@ -688,7 +723,7 @@ export function generateChunk(world: World, cx: number, cz: number): VoxelChunk 
   world.chunks.set(key, chunk);
   world.stats.chunksGenerated++;
   world.stats.voxelsFilled += nonAir;
-  world.stats.generationMs += performance.now() - t0;
+  world.stats.generationMs += generationMs;
   world.dirty.add(key);
 
   generateEntities(world, chunk);
@@ -700,26 +735,40 @@ export function generateChunk(world: World, cx: number, cz: number): VoxelChunk 
  * a harvested chunk without materializing unrelated neighbouring chunks. */
 const baseColumnCache = new WeakMap<World, Map<string, { heights: Uint8Array; topMaterials: Uint8Array }>>();
 
-function baseColumns(world: World, chunk: VoxelChunk): { heights: Uint8Array; topMaterials: Uint8Array } {
+export interface BaseColumns { heights: Uint8Array; topMaterials: Uint8Array; }
+
+/** Base (pre-carve, pre-edit) column heights/materials used for entity placement. Pure. */
+export function computeBaseColumns(seed: number, version: number, cx: number, cz: number): BaseColumns {
+  const columns = { heights: new Uint8Array(CHUNK_AREA), topMaterials: new Uint8Array(CHUNK_AREA) };
+  for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      const x = chunkOriginX(cx) + lx, z = chunkOriginZ(cz) + lz;
+      const h = baseHeightAt(seed, version, x, z);
+      const slope = version >= GENERATOR_V2
+        ? versionedSlope(seed, version, x, z, h) : slopeAt(seed, x, z, h);
+      const index = lz * CHUNK_SIZE + lx;
+      columns.heights[index] = clamp(h - Y_MIN, 0, WORLD_HEIGHT - 1);
+      columns.topMaterials[index] = version >= GENERATOR_V2
+        ? baseTopMaterialFor(seed, version, x, z, h, slope)
+        : topMaterialAt(seed, x, z, h, slope);
+    }
+  }
+  return columns;
+}
+
+/** Provide precomputed base columns (for example from a worker) before installing a chunk. */
+export function seedBaseColumns(world: World, key: string, columns: BaseColumns): void {
+  let cache = baseColumnCache.get(world);
+  if (!cache) { cache = new Map(); baseColumnCache.set(world, cache); }
+  if (!cache.has(key)) cache.set(key, columns);
+}
+
+function baseColumns(world: World, chunk: VoxelChunk): BaseColumns {
   let cache = baseColumnCache.get(world);
   if (!cache) { cache = new Map(); baseColumnCache.set(world, cache); }
   const cached = cache.get(chunk.key);
   if (cached) return cached;
-  const columns = { heights: new Uint8Array(chunk.heights), topMaterials: new Uint8Array(chunk.topMaterials) };
-  for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-      const x = chunkOriginX(chunk.cx) + lx, z = chunkOriginZ(chunk.cz) + lz;
-      const version = world.params.generatorVersion;
-      const h = baseHeightAt(world.seed, version, x, z);
-      const slope = version >= GENERATOR_V2
-        ? versionedSlope(world.seed, version, x, z, h) : slopeAt(world.seed, x, z, h);
-      const index = lz * CHUNK_SIZE + lx;
-      columns.heights[index] = clamp(h - Y_MIN, 0, WORLD_HEIGHT - 1);
-      columns.topMaterials[index] = version >= GENERATOR_V2
-        ? baseTopMaterialFor(world.seed, version, x, z, h, slope)
-        : topMaterialAt(world.seed, x, z, h, slope);
-    }
-  }
+  const columns = computeBaseColumns(world.seed, world.params.generatorVersion, chunk.cx, chunk.cz);
   cache.set(chunk.key, columns);
   return columns;
 }

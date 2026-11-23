@@ -197,3 +197,19 @@ test('v2 chunk generation stays within budget per chunk', () => {
   const per = (performance.now() - t0) / 6;
   assert.ok(per < 60, `v2 chunk generation ${per.toFixed(1)} ms`);
 });
+
+test('archiving a save is reversible and the next load starts a new v2 world', () => {
+  const storage = new MemoryStorage();
+  const legacy = new BrowserSaveStore(storage, 1337, GENERATOR_VERSION);
+  const s = legacy.load().session;
+  s.dispatch({ schema: 3, id: 'tick:1', type: 'tick', ticks: 1, expectedRevision: s.world.revision });
+  legacy.save(s);
+  const original = storage.getItem('astrix:m002:v3:seed:1337')!;
+  const store = new BrowserSaveStore(storage, 1337, GENERATOR_V2);
+  const keys = store.archiveCurrent(1000);
+  assert.deepEqual(keys, ['astrix:m002:v3:seed:1337:archived:1000']);
+  assert.equal(storage.getItem(keys[0]), original, 'archived bytes are unchanged');
+  const fresh = store.load();
+  assert.equal(fresh.status, 'new');
+  assert.equal(fresh.session.world.params.generatorVersion, GENERATOR_V2);
+});

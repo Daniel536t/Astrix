@@ -97,6 +97,42 @@
       "hex": "#D8C9A3",
       "role": "trout belly (added 2026-11-23, review required)"
     },
+    "arch_plaster": {
+      "hex": "#E8DDC6",
+      "role": "village wall plaster (added 2026-11-23, review required)"
+    },
+    "arch_timber": {
+      "hex": "#6A4530",
+      "role": "village timber frame (added 2026-11-23, review required)"
+    },
+    "arch_timber_light": {
+      "hex": "#8A6142",
+      "role": "village planks and doors (added 2026-11-23, review required)"
+    },
+    "arch_thatch": {
+      "hex": "#C7A257",
+      "role": "thatch roof (added 2026-11-23, review required)"
+    },
+    "arch_thatch_dark": {
+      "hex": "#9C7B3C",
+      "role": "thatch roof shade course (added 2026-11-23, review required)"
+    },
+    "arch_stone": {
+      "hex": "#9B9A91",
+      "role": "village masonry (added 2026-11-23, review required)"
+    },
+    "arch_stone_dark": {
+      "hex": "#74736C",
+      "role": "village masonry joints and plinth (added 2026-11-23, review required)"
+    },
+    "prop_iron": {
+      "hex": "#3A3A3F",
+      "role": "iron fittings (added 2026-11-23, review required)"
+    },
+    "prop_glow": {
+      "hex": "#FFD27F",
+      "role": "lantern light (emissive, effect only) (added 2026-11-23, review required)"
+    },
     "water_shallow": {
       "hex": "#67CFD8",
       "role": "water depth <= 0.5 m"

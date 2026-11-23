@@ -71,6 +71,27 @@ export class BrowserSaveStore {
     private readonly newWorldGenerator = GENERATOR_VERSION,
   ) {}
 
+  /**
+   * Move every save for this seed to an archive key so the next load starts a
+   * new world. Reversible: the archived bytes are kept untouched under
+   * `<key>:archived:<timestamp>`. Returns the archive keys written.
+   */
+  archiveCurrent(now = Date.now()): string[] {
+    const archived: string[] = [];
+    if (!this.storage) return archived;
+    for (const schema of [CURRENT_SAVE_SCHEMA, DESIGN_SAVE_SCHEMA, SAVE_SCHEMA] as const) {
+      const key = saveKey(this.seed, schema);
+      const raw = this.storage.getItem(key);
+      if (raw === null) continue;
+      const target = `${key}:archived:${now}`;
+      this.storage.setItem(target, raw);
+      if (this.storage.getItem(target) !== raw) throw new Error('archive write could not be verified');
+      this.storage.removeItem(key);
+      archived.push(target);
+    }
+    return archived;
+  }
+
   private genesis(): GameSession {
     return GameSession.genesis(this.seed, this.newWorldGenerator);
   }

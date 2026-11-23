@@ -16,6 +16,8 @@ import { FOUNDER_STOCKPILE } from './sim/economy';
 import { FrameStats } from './app/perf';
 import { ExploreController, INTERACT_REACH } from './app/explore';
 import { FaunaView } from './render/fauna';
+import { ChunkWorkerPool } from './render/chunk-pool';
+import { buildVillageKitShowcase } from './render/village-kit';
 import { LifeGame } from './app/life';
 import { GameSession } from './app/session';
 import { BrowserSaveStore } from './app/persistence';
@@ -102,10 +104,23 @@ const loadT0 = performance.now();
 // v1 world. An existing save always restores on its own recorded generator.
 const newWorldGenerator = num('generator', LATEST_GENERATOR_VERSION, 1, LATEST_GENERATOR_VERSION, true);
 const store = new BrowserSaveStore(window.localStorage, worldSeed, newWorldGenerator);
+// ?newworld=1 archives this seed's existing save (kept, not deleted) and starts
+// a fresh world on the latest generator. The parameter is removed afterwards
+// so a reload does not archive again.
+let archivedNote = '';
+if (params.get('newworld') === '1') {
+  try {
+    const keys = store.archiveCurrent();
+    archivedNote = keys.length ? `previous save archived (${keys.length})` : '';
+  } catch (error) { archivedNote = `archive failed: ${(error as Error).message}`; }
+  params.delete('newworld');
+  const q = params.toString();
+  history.replaceState(null, '', location.pathname + (q ? `?${q}` : ''));
+}
 const loaded = store.load();
 const session = loaded.session;
 const world = session.world;
-let persistenceMessage = loaded.message;
+let persistenceMessage = archivedNote ? `${loaded.message} (${archivedNote})` : loaded.message;
 const debugMutations = import.meta.env.DEV && params.get('debugMutations') === '1';
 const sliceX = -42, sliceZ = -40;
 const sliceY = surfaceAt(world, sliceX, sliceZ);
@@ -176,6 +191,13 @@ if (isMap) {
 } else {
   terrainView.preload(rig.target);
 }
+// Streaming generation and meshing run in workers (?workers=0 disables them).
+// Preload above stays synchronous so the first frame is complete.
+let workerCount = 0;
+if (!isMap && typeof Worker !== 'undefined' && params.get('workers') !== '0') {
+  workerCount = Math.max(1, Math.min(3, (navigator.hardwareConcurrency || 2) - 1));
+  try { terrainView.enableWorkers(new ChunkWorkerPool(workerCount)); } catch { workerCount = 0; }
+}
 const initialLoadMs = performance.now() - loadT0;
 
 function disposeObject(obj: THREE.Object3D): void {
@@ -221,6 +243,15 @@ if (isKit) {
   kitGroup.name = 'noxel_integration_test';
   kitGroup.position.set(kitX, kitY, kitZ);
   for (const obj of buildKit()) kitGroup.add(obj);
+  // Block-built village kit (inspection only; not simulation structures) on
+  // a flat display platform beside the Noxel kit.
+  const village = buildVillageKitShowcase();
+  village.position.set(0, 1.2, -34);
+  const platform = new THREE.Mesh(new THREE.BoxGeometry(34, 1.2, 30),
+    new THREE.MeshLambertMaterial({ color: 0x8f8d84 }));
+  platform.position.set(0, 0.6, -30);
+  platform.receiveShadow = true;
+  kitGroup.add(platform, village);
   scene.add(kitGroup);
 }
 
@@ -402,6 +433,7 @@ function metrics() {
     residentChunks: terrainView.residentChunks,
     pendingChunkBuilds: terrainView.pendingChunkBuilds,
     sweptChunks: terrainView.evictedBySweep,
+    chunkWorkers: terrainView.workerMetrics,
     frameWork: frameWork.report(),
     frameInterval: frameInterval.report(),
     cachedChunks: world.chunks.size,

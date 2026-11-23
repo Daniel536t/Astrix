@@ -10,6 +10,8 @@
 import * as THREE from 'three';
 import palette from '../data/palette.json';
 import { meshChunkWater, installFarWaterHole, waterTime } from './water';
+import { MeshArrays, buildPadded, meshPadded } from './mesher';
+import type { ChunkWorkerPool } from './chunk-pool';
 import {
   World, VoxelChunk, MatId, SurfaceSample, GENERATOR_VERSION,
   WORLD_SIZE, HALF, CHUNK_SIZE, CHUNKS_PER_SIDE, CHUNK_AREA, WORLD_HEIGHT,
@@ -17,127 +19,12 @@ import {
   chunkKey, chunkOriginX, chunkOriginZ, localIndex, yToIndex,
   worldToChunkX, worldToChunkZ, worldToLocalX, worldToLocalZ,
   getVoxel, ensureChunk, evictChunk, hash2i, fbm2,
-  editVersion, baseHeightAt, baseTopMaterialFor,
+  editVersion, baseHeightAt, baseTopMaterialFor, installBaseChunk, seedBaseColumns,
 } from '../sim/world';
 
-const M = palette.materials as Record<string, { hex: string }>;
-const H = (k: string) => M[k].hex;
-
-const colorCache = new Map<string, THREE.Color>();
-function c(hex: string): THREE.Color {
-  let out = colorCache.get(hex);
-  if (!out) { out = new THREE.Color(hex); colorCache.set(hex, out); }
-  return out;
-}
-
-const COL = {
-  grassTop: [c(H('grass_top')), c(H('grass_high')), c(H('grass_peak'))],
-  grassCap: c(H('grass_cap')),
-  soil: c(H('strata_ochre')).clone().multiplyScalar(0.78),
-  ochre: c(H('strata_ochre')),
-  rust: c(H('strata_rust')),
-  stoneTop: c(H('stone_top')),
-  stoneA: c(H('stone_body_a')),
-  stoneB: c(H('stone_body_b')),
-  stoneShade: c(H('stone_shade')),
-  sand: c(H('sand')),
-  gravel: c(H('stone_body_b')).clone().lerp(c(H('sand')), 0.35),
-  ore: c(H('ore_crystal')),
-  moss: c(H('grass_cap')).clone().lerp(c(H('stone_body_b')), 0.35),
-  snow: c(H('snow')),
-  snowShade: c(H('snow')).clone().lerp(c(H('stone_shade')), 0.35),
-  waterRim: c(H('water_rim')),
-  waterShallow: c(H('water_shallow')),
-  waterMid: c(H('water_mid')),
-  waterDeep: c(H('water_deep')),
-};
-
-const SHADE = [0.90, 0.96, 1.0, 1.04];
-
-// Keep a small rolling window of build timings for the performance evidence.
-// These are instrumentation, not simulation state.
-const MAX_PERF_SAMPLES = 128;
-function recordSample(samples: number[], ms: number): void {
-  samples.push(ms);
-  if (samples.length > MAX_PERF_SAMPLES) samples.shift();
-}
-function percentile(samples: number[], p: number): number {
-  if (samples.length === 0) return 0;
-  const sorted = [...samples].sort((a, b) => a - b);
-  const i = Math.min(sorted.length - 1, Math.max(0, Math.ceil(p * sorted.length) - 1));
-  return Math.round(sorted[i] * 100) / 100;
-}
-
-function heightBand(y: number): number {
-  return y >= 45 ? 2 : y >= 18 ? 1 : 0;
-}
-function stoneTone(y: number): number {
-  return ((y + 64) >> 3) & 1;
-}
-function shadeAt(x: number, y: number, z: number, seed: number): number {
-  const sx = Math.floor(x / 2) + Math.floor(y / 3) * 17;
-  const sz = Math.floor(z / 2);
-  return Math.floor(hash2i(sx, sz, seed + 300) * 4);
-}
-
-function keyFor(mat: number, variant: number, shade: number, axis: number, dir: number): number {
-  return (mat & 15) | ((variant & 15) << 4) | ((shade & 3) << 8) | ((axis & 3) << 10) | ((dir > 0 ? 1 : 0) << 12);
-}
-
-const faceColorCache = new Map<number, THREE.Color>();
-
-function colorForKey(key: number): THREE.Color {
-  const cached = faceColorCache.get(key);
-  if (cached) return cached;
-  const mat = key & 15;
-  const variant = (key >> 4) & 15;
-  const shade = (key >> 8) & 3;
-  const axis = (key >> 10) & 3;
-  const dir = (key >> 12) & 1;
-  let color: THREE.Color;
-
-  if (axis === 1 && dir === 1) {
-    const hb = Math.min(2, variant & 3);
-    if (mat === MAT.GRASS) color = COL.grassTop[hb];
-    else if (mat === MAT.SAND) color = COL.sand;
-    else if (mat === MAT.GRAVEL) color = COL.gravel;
-    else if (mat === MAT.SOIL) color = COL.ochre;
-    else if (mat === MAT.ORE) color = COL.ore;
-    else if (mat === MAT.MOSS) color = COL.moss;
-    else if (mat === MAT.SNOW) color = COL.snow;
-    else color = COL.stoneTop;
-  } else if (axis === 1 && dir === 0) {
-    color = COL.stoneShade;
-  } else {
-    const depth = variant & 7;
-    const tone = (variant >> 3) & 1;
-    const body = tone ? COL.stoneB : COL.stoneA;
-    if (mat === MAT.GRASS || mat === MAT.MOSS) {
-      if (depth === 0) color = mat === MAT.MOSS ? COL.moss : COL.grassCap;
-      else if (depth <= 2) color = COL.soil;
-      else if (depth === 3) color = COL.rust;
-      else color = body;
-    } else if (mat === MAT.SOIL) {
-      color = depth <= 1 ? COL.soil : body;
-    } else if (mat === MAT.SAND) {
-      color = depth <= 1 ? COL.sand : depth === 2 ? COL.ochre : body;
-    } else if (mat === MAT.GRAVEL) {
-      color = depth <= 1 ? COL.gravel : body;
-    } else if (mat === MAT.ORE) {
-      color = COL.ore;
-    } else if (mat === MAT.SNOW) {
-      color = depth === 0 ? COL.snowShade : body;
-    } else if (mat === MAT.BEDROCK) {
-      color = COL.stoneShade;
-    } else {
-      color = body;
-    }
-  }
-
-  const out = color.clone().multiplyScalar(SHADE[shade]);
-  faceColorCache.set(key, out);
-  return out;
-}
+import {
+  M, H, colorCache, c, COL, SHADE, MAX_PERF_SAMPLES, recordSample, percentile, heightBand, stoneTone, shadeAt, keyFor, faceColorCache, colorForKey,
+} from './voxel-colors';
 
 const terrainMaterial = new THREE.MeshLambertMaterial({
   vertexColors: true,
@@ -189,156 +76,32 @@ float vn2(vec2 p) {
 
 interface MeshResult { geometry: THREE.BufferGeometry; triangles: number; }
 
-function posFrom(axis: number, slice: number, i: number, j: number): [number, number, number] {
-  if (axis === 0) return [slice, i, j];
-  if (axis === 1) return [j, slice, i];
-  return [i, j, slice];
+/** Build a BufferGeometry from mesher output (main thread). */
+export function geometryFromArrays(a: MeshArrays): MeshResult {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(a.positions, 3));
+  geometry.setAttribute('normal', new THREE.BufferAttribute(a.normals, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(a.colors, 3));
+  geometry.setAttribute('aMat', new THREE.BufferAttribute(a.mats, 1));
+  geometry.setIndex(new THREE.BufferAttribute(a.indices, 1));
+  geometry.computeBoundingSphere();
+  return { geometry, triangles: a.triangles };
+}
+
+/** Padded volume for a resident chunk; neighbours come from the world (3x3 must be resident). */
+export function paddedFor(world: World, chunk: VoxelChunk): Uint8Array {
+  const ox = chunkOriginX(chunk.cx), oz = chunkOriginZ(chunk.cz);
+  return buildPadded(chunk.data, (x, y, z) => getVoxel(world, ox + x, Y_MIN + y, oz + z));
 }
 
 /**
- * Greedy 3D face mesher. A face is emitted when an opaque voxel touches a
- * non-opaque cell (air or water). Water itself is rendered by the sea-level
- * surface, not as a voxel mesh.
+ * Greedy 3D face mesher (synchronous path). A face is emitted when an opaque
+ * voxel touches a non-opaque cell (air or water); water surfaces are meshed
+ * separately in water.ts.
  */
 export function meshChunk(world: World, chunk: VoxelChunk): MeshResult {
   const ox = chunkOriginX(chunk.cx), oz = chunkOriginZ(chunk.cz);
-  const data = chunk.data;
-  const sample = (x: number, y: number, z: number): number => {
-    if (x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE && y >= 0 && y < WORLD_HEIGHT) {
-      return data[localIndex(x, y, z)];
-    }
-    return getVoxel(world, ox + x, Y_MIN + y, oz + z);
-  };
-
-  const positions: number[] = [];
-  const normals: number[] = [];
-  const colors: number[] = [];
-  const mats: number[] = [];
-  const indices: number[] = [];
-  const dims = [CHUNK_SIZE, WORLD_HEIGHT, CHUNK_SIZE];
-
-  const emitQuad = (
-    axis: number, dir: number, slice: number,
-    i0: number, j0: number, w: number, h: number, key: number,
-  ) => {
-    // The face lies on the boundary between slice and slice+1 for both
-    // directions. Using `slice` for negative faces shifted every -x/-y/-z
-    // face one voxel into the air cell, leaving 1 m slits in the terrain.
-    const plane = slice + 1;
-    const u0 = i0, u1 = i0 + w, v0 = j0, v1 = j0 + h;
-    let p: number[][];
-    if (axis === 0) {
-      const x = ox + plane, y0 = Y_MIN + u0, y1 = Y_MIN + u1, z0 = oz + v0, z1 = oz + v1;
-      p = dir > 0
-        ? [[x, y0, z0], [x, y1, z0], [x, y1, z1], [x, y0, z1]]
-        : [[x, y0, z0], [x, y0, z1], [x, y1, z1], [x, y1, z0]];
-    } else if (axis === 1) {
-      const y = Y_MIN + plane, z0 = oz + u0, z1 = oz + u1, x0 = ox + v0, x1 = ox + v1;
-      p = dir > 0
-        ? [[x0, y, z0], [x0, y, z1], [x1, y, z1], [x1, y, z0]]
-        : [[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]];
-    } else {
-      const z = oz + plane, x0 = ox + u0, x1 = ox + u1, y0 = Y_MIN + v0, y1 = Y_MIN + v1;
-      p = dir > 0
-        ? [[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]]
-        : [[x0, y0, z], [x0, y1, z], [x1, y1, z], [x1, y0, z]];
-    }
-
-    const color = colorForKey(key);
-    const mat = key & 15;
-    const nx = axis === 0 ? dir : 0;
-    const ny = axis === 1 ? dir : 0;
-    const nz = axis === 2 ? dir : 0;
-    const base = positions.length / 3;
-    for (const v of p) {
-      positions.push(v[0], v[1], v[2]);
-      normals.push(nx, ny, nz);
-      colors.push(color.r, color.g, color.b);
-      mats.push(mat);
-    }
-    indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
-  };
-
-  for (let axis = 0; axis < 3; axis++) {
-    const u = (axis + 1) % 3;
-    const v = (axis + 2) % 3;
-    const du = dims[u], dv = dims[v], dd = dims[axis];
-    const mask = new Uint16Array(du * dv);
-
-    for (let slice = -1; slice < dd; slice++) {
-      mask.fill(0);
-      let any = false;
-
-      for (let j = 0; j < dv; j++) {
-        for (let i = 0; i < du; i++) {
-          const [ax, ay, az] = posFrom(axis, slice, i, j);
-          const [bx, by, bz] = posFrom(axis, slice + 1, i, j);
-          const a = sample(ax, ay, az);
-          const b = sample(bx, by, bz);
-          const ao = isOpaque(a), bo = isOpaque(b);
-          if (ao === bo) continue;
-
-          // Only the chunk that owns the solid voxel emits its face. At the
-          // slice -1/dd boundary the neighbour chunk owns the outward face.
-          const aInside = slice >= 0 && slice < dd;
-          const bInside = slice + 1 >= 0 && slice + 1 < dd;
-          let x: number, y: number, z: number, mat: number, dir: number;
-          if (ao && !bo && aInside) { x = ax; y = ay; z = az; mat = a; dir = 1; }
-          else if (bo && !ao && bInside) { x = bx; y = by; z = bz; mat = b; dir = -1; }
-          else continue;
-
-          const wy = Y_MIN + y;
-          const surfaceY = chunk.heights[z * CHUNK_SIZE + x] + Y_MIN;
-          const depth = surfaceY - (wy + 1);
-          let variant: number;
-          if (axis === 1 && dir > 0) variant = heightBand(wy);
-          else if (axis === 1 && dir < 0) variant = 15;
-          else variant = (Math.max(0, Math.min(7, depth)) & 7) | (stoneTone(wy) << 3);
-
-          const shade = shadeAt(ox + x, wy, oz + z, world.seed);
-          mask[j * du + i] = keyFor(mat, variant, shade, axis, dir);
-          any = true;
-        }
-      }
-
-      if (!any) continue;
-
-      for (let j = 0; j < dv; j++) {
-        for (let i = 0; i < du;) {
-          const key = mask[j * du + i];
-          if (!key) { i++; continue; }
-
-          let w = 1;
-          while (i + w < du && mask[j * du + i + w] === key) w++;
-
-          let h = 1;
-          outer: while (j + h < dv) {
-            for (let k = 0; k < w; k++) {
-              if (mask[(j + h) * du + i + k] !== key) break outer;
-            }
-            h++;
-          }
-
-          for (let jj = 0; jj < h; jj++) {
-            for (let ii = 0; ii < w; ii++) mask[(j + jj) * du + i + ii] = 0;
-          }
-
-          const dir = (key >> 12) & 1 ? 1 : -1;
-          emitQuad(axis, dir, slice, i, j, w, h, key);
-          i += w;
-        }
-      }
-    }
-  }
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geometry.setAttribute('aMat', new THREE.Float32BufferAttribute(mats, 1));
-  geometry.setIndex(indices);
-  geometry.computeBoundingSphere();
-  return { geometry, triangles: indices.length / 3 };
+  return geometryFromArrays(meshPadded(paddedFor(world, chunk), chunk.heights, ox, oz, world.seed));
 }
 
 /** One opaque sea-level surface for the whole view. */
@@ -799,6 +562,12 @@ export class VoxelTerrainView {
   private sweepCounter = 0;
   private sweptChunks = 0;
   private pinned = new Set<string>();
+  private pool: ChunkWorkerPool | null = null;
+  private generating = new Set<string>();
+  /** Latest mesh request per chunk; older results are discarded. */
+  private meshStamp = new Map<string, number>();
+  private stampCounter = 0;
+  private workerStats = { generated: 0, meshed: 0, discarded: 0, genMs: 0, meshMs: 0 };
   private waterGroup = new THREE.Group();
   private farWaterHole: { value: THREE.Vector4 };
   onChunksChanged: (() => void) | null = null;
@@ -858,6 +627,101 @@ export class VoxelTerrainView {
    * Stream the near ring nearest-first within a per-frame time budget. At least
    * one chunk is built per frame so streaming always makes progress.
    */
+  /**
+   * Move streaming generation and meshing to workers. Explicit rebuilds
+   * (construction, edits via rebuildAround) and preload stay synchronous so
+   * authoritative changes are visible immediately.
+   */
+  enableWorkers(pool: ChunkWorkerPool): void { this.pool = pool; }
+
+  get workerMetrics(): Record<string, number> | null {
+    if (!this.pool) return null;
+    return {
+      workers: this.pool.size, inFlight: this.pool.inFlight, ...this.workerStats,
+      genMsAvg: this.workerStats.generated ? Math.round(this.workerStats.genMs / this.workerStats.generated * 10) / 10 : 0,
+      meshMsAvg: this.workerStats.meshed ? Math.round(this.workerStats.meshMs / this.workerStats.meshed * 10) / 10 : 0,
+    };
+  }
+
+  private requestGenerate(cx: number, cz: number): void {
+    const key = chunkKey(cx, cz);
+    if (this.world.chunks.has(key) || this.generating.has(key) || !this.pool) return;
+    if (cx < 0 || cz < 0 || cx >= CHUNKS_PER_SIDE || cz >= CHUNKS_PER_SIDE) return;
+    this.generating.add(key);
+    const { seed } = this.world, version = this.world.params.generatorVersion;
+    void this.pool.generate(seed, version, cx, cz).then((r) => {
+      this.generating.delete(key);
+      // The main thread is the only World writer: install only if still wanted.
+      if (this.world.seed !== seed || this.world.params.generatorVersion !== version
+        || this.world.chunks.has(key)) { this.workerStats.discarded++; return; }
+      seedBaseColumns(this.world, key, r.columns);
+      installBaseChunk(this.world, r.base, r.ms);
+      this.workerStats.generated++;
+      this.workerStats.genMs += r.ms;
+    });
+  }
+
+  private requestMesh(key: string): void {
+    const chunk = this.world.chunks.get(key);
+    if (!chunk || !this.pool) return;
+    const stamp = ++this.stampCounter;
+    this.meshStamp.set(key, stamp);
+    this.world.dirty.delete(key);
+    const ox = chunkOriginX(chunk.cx), oz = chunkOriginZ(chunk.cz);
+    const padded = paddedFor(this.world, chunk);
+    void this.pool.mesh(padded, chunk.heights, ox, oz, this.world.seed).then((r) => {
+      // Superseded (newer request, unloaded or synchronously rebuilt) results are dropped.
+      if (this.meshStamp.get(key) !== stamp) { this.workerStats.discarded++; return; }
+      this.meshStamp.delete(key);
+      const current = this.world.chunks.get(key);
+      if (!current) { this.workerStats.discarded++; return; }
+      // An edit to this chunk while in flight re-marked it dirty; the result is
+      // still shown now and replaced by the next (fresh) request.
+      this.adoptMesh(key, current, geometryFromArrays(r.arrays));
+      this.workerStats.meshed++;
+      this.workerStats.meshMs += r.ms;
+      this.onChunksChanged?.();
+    });
+  }
+
+  private adoptMesh(key: string, chunk: VoxelChunk, result: MeshResult): void {
+    const existing = this.chunks.get(key);
+    if (existing) {
+      this.nearGroup.remove(existing.mesh);
+      existing.mesh.geometry.dispose();
+      if (existing.water) { this.waterGroup.remove(existing.water); existing.water.geometry.dispose(); }
+    }
+    const mesh = new THREE.Mesh(result.geometry, terrainMaterial);
+    mesh.name = `voxel_chunk_${chunk.cx}_${chunk.cz}`;
+    mesh.receiveShadow = true;
+    mesh.castShadow = false;
+    this.nearGroup.add(mesh);
+    const water = meshChunkWater(this.world, chunk);
+    if (water) this.waterGroup.add(water);
+    this.chunks.set(key, { mesh, water, triangles: result.triangles + (water?.userData.waterTriangles ?? 0) });
+    this.loaded.add(key);
+  }
+
+  /** Worker streaming: generate the 3x3 neighbourhood, then mesh, nearest first. */
+  private ensureChunksAsync(missing: Array<{ cx: number; cz: number; d: number }>): void {
+    const pool = this.pool!;
+    const maxInFlight = pool.size * 3;
+    for (const m of missing) {
+      if (pool.inFlight >= maxInFlight) break;
+      const key = chunkKey(m.cx, m.cz);
+      if (this.meshStamp.has(key)) continue;
+      let ready = true;
+      for (let dz = -1; dz <= 1; dz++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const cx = m.cx + dx, cz = m.cz + dz;
+          if (cx < 0 || cz < 0 || cx >= CHUNKS_PER_SIDE || cz >= CHUNKS_PER_SIDE) continue;
+          if (!this.world.chunks.has(chunkKey(cx, cz))) { ready = false; this.requestGenerate(cx, cz); }
+        }
+      }
+      if (ready) this.requestMesh(key);
+    }
+  }
+
   private ensureChunks(focus: THREE.Vector3, immediate: boolean, frameStart = performance.now()): void {
     const ccx = worldToChunkX(Math.round(focus.x));
     const ccz = worldToChunkZ(Math.round(focus.z));
@@ -874,13 +738,17 @@ export class VoxelTerrainView {
     }
     missing.sort((a, b) => a.d - b.d);
     let built = 0;
+    if (this.pool && !immediate && !this.pool.failed) {
+      this.ensureChunksAsync(missing);
+      missing.length = 0;
+    }
     for (const m of missing) {
       if (!immediate && built > 0 && performance.now() - frameStart >= this.frameBudgetMs) break;
       this.buildChunk(m.cx, m.cz);
       built++;
       changed = true;
     }
-    this.pendingChunks = missing.length - built;
+    this.pendingChunks = this.pool && !immediate ? this.meshStamp.size + this.generating.size : missing.length - built;
 
     const margin = this.nearRadius + 1;
     for (const key of [...this.loaded]) {
@@ -940,6 +808,7 @@ export class VoxelTerrainView {
       this.chunks.delete(key);
     }
     this.loaded.delete(key);
+    this.meshStamp.delete(key);
     if (this.pinned.has(key)) return;
     this.world.dirty.delete(key);
     evictChunk(this.world, key);
@@ -962,6 +831,10 @@ export class VoxelTerrainView {
     }
     if (dirty.length === 0) return;
     dirty.sort((a, b) => a.d - b.d);
+    if (this.pool && !this.pool.failed) {
+      for (const { key } of dirty) if (!this.meshStamp.has(key) || this.world.dirty.has(key)) this.requestMesh(key);
+      return;
+    }
     let rebuilt = 0;
     for (const { key } of dirty) {
       if (rebuilt > 0 && performance.now() - frameStart >= this.frameBudgetMs) break;
@@ -982,7 +855,7 @@ export class VoxelTerrainView {
     const ccz = worldToChunkZ(Math.round(focus.z));
     const keep = this.nearRadius + 2;
     for (const key of [...this.world.chunks.keys()]) {
-      if (this.loaded.has(key) || this.pinned.has(key)) continue;
+      if (this.loaded.has(key) || this.pinned.has(key) || this.meshStamp.has(key)) continue;
       const [cx, cz] = key.split(',').map(Number);
       if (Math.abs(cx - ccx) <= keep && Math.abs(cz - ccz) <= keep) continue;
       evictChunk(this.world, key);
@@ -1012,6 +885,7 @@ export class VoxelTerrainView {
     for (let dz = -1; dz <= 1; dz++) {
       for (let dx = -1; dx <= 1; dx++) {
         const key = chunkKey(cx + dx, cz + dz);
+        this.meshStamp.delete(key);
         if (this.loaded.has(key)) this.rebuildChunk(key);
       }
     }
