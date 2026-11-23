@@ -20,7 +20,14 @@ Companion to `World_Engine_Audit_2026-11-23.md` (findings) and `Controls.md`.
 - The macro-LOD edit fingerprint is memoized on an edit-version counter (was O(edits) every frame).
 - Nature variant geometry is cached (was rebuilt per entity on every nature rebuild).
 - Measured (headless SwiftShader, 24 s travel ≈ 450 m): resident chunks **81 → 135** before, **81 → ~100 and bounded** after; 49 chunks swept.
-- **Not done:** Web Worker generation/meshing. Main-thread chunk meshing is still the largest frame spike.
+- **Workers (phase 2).**
+  - Streaming generation and greedy meshing run in a pool of 1–3 module workers (`render/chunk-worker.ts`, `render/chunk-pool.ts`).
+  - Workers run only pure functions: `generateBaseChunk`, `computeBaseColumns` and `meshPadded`.
+  - The main thread stays the single World writer. It installs base chunks with `installBaseChunk`, which applies durable edits and entities. It adopts a mesh only if that request's stamp is still the latest, and it never sweeps a chunk with a mesh in flight.
+  - Construction rebuilds (`rebuildAround`) and preload stay synchronous.
+  - Worker output is proven identical to the synchronous path for v1 and v2, edits included (`tests/m004.workers.test.ts`).
+  - `?workers=0` restores the synchronous path.
+  - Measured main-thread frame work p50 dropped from 27.5 ms to 2.4 ms (see evidence REPORT).
 
 ## 3. Terrain generator versioning
 
@@ -86,6 +93,15 @@ Today's creatures are the **ambient** tier: not saved, re-spawned identically wh
 - `explore` (position, mode, camera distance, reachable resource);
 - `fauna` counts.
 
+## 8b. Village kit (phase 2)
+
+`render/village-kit.ts` is block-built timber-and-stone architecture on a 0.1 m quantum, varied per piece by seed:
+- cottages with thatch or shingle roofs (plinth, frame, braces, plaster, door and windows, steep stepped roof, gable, chimney);
+- a stone well with a roof;
+- an arch bridge, a lantern, a woodpile, a fence and a crate.
+
+These are shown in `?scene=kit` only. Next step: make them simulation structure designs (records, costs, placement validation), not render-only pieces.
+
 ## 9. Tests added
 
 | File | Covers |
@@ -93,6 +109,7 @@ Today's creatures are the **ambient** tier: not saved, re-spawned identically wh
 | `tests/m004.foundation.test.ts` | Resident queries, edit version, bounded residency while travelling, pinning, nature cache |
 | `tests/m004.generator.test.ts` | v1 genesis pin, v2 determinism and corridor equality, snow/peaks, monotone river levels, cascades, downstream flow, water containment, founder builds on v2, save compatibility both ways, journal/snapshot mismatch, chunk generation time |
 | `tests/m004.character.test.ts` | Landing, walk/run speeds, step-up, wall, jump, no chunk generation, determinism, swimming |
+| `tests/m004.workers.test.ts` | Worker-path base chunk, entities and mesh identical to synchronous path (v1, v2), with prior edits; stale/foreign results rejected |
 | `tests/m004.fauna.test.ts` | Deterministic spawn, valid habitat, no chunk generation, fleeing, sleeping |
 
 ## 10. Open decisions and art review
