@@ -17,6 +17,7 @@ import { FrameStats } from './app/perf';
 import { ExploreController, INTERACT_REACH } from './app/explore';
 import { FaunaView } from './render/fauna';
 import { ChunkWorkerPool } from './render/chunk-pool';
+import { SimClock, SaveScheduler, TabLease, TICK_SECONDS } from './app/sim-clock';
 import { buildVillageKitShowcase } from './render/village-kit';
 import { LifeGame } from './app/life';
 import { GameSession } from './app/session';
@@ -158,6 +159,23 @@ const natureGroup = new THREE.Group();
 natureGroup.name = 'styl_nature';
 scene.add(natureGroup);
 let lifeGame: LifeGame | null = null;
+// Real-time settlement: one journaled tick every TICK_SECONDS of active play.
+const simClock = new SimClock();
+let realtimeNote = '';
+const saveScheduler = new SaveScheduler(() => {
+  const saved = store.save(session);
+  persistenceMessage = saved.message;
+});
+let lsForLease: Storage | null = null;
+try { lsForLease = window.localStorage; } catch { lsForLease = null; }
+const lease = new TabLease(lsForLease, `astrix:lease:seed:${worldSeed}`);
+let leaseCheckedAt = 0;
+let lastSimAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveScheduler.flush();
+  else { simClock.reset(); lastSimAt = 0; }
+});
+window.addEventListener('pagehide', () => { saveScheduler.flush(); lease.release(); });
 let explore: ExploreController | null = null;
 
 /** Switch between walking the founder (explore) and the settlement overview (builder). */
@@ -468,6 +486,7 @@ function metrics() {
     lastAction,
     persistenceMessage,
     explore: explore?.metrics() ?? null,
+    realtime: { tickSeconds: TICK_SECONDS, issued: simClock.ticksIssued, leader: lease.isLeader, savePending: saveScheduler.pending },
     fauna: fauna?.metrics() ?? null,
   };
 }
@@ -487,6 +506,26 @@ function frame(timestamp?: number) {
   advanceTime(time, dt * speed);
   rig.update(dt);
   explore?.update(dt);
+  // Real-time simulation. Freeze (evidence captures), pause, hidden tabs and
+  // non-leader tabs do not advance settlement time.
+  const nowMs = Date.now();
+  if (nowMs - leaseCheckedAt > 2000) { lease.heartbeat(nowMs); leaseCheckedAt = nowMs; }
+  const simActive = !!lifeGame && !freeze && !time.paused && lease.isLeader
+    && document.visibilityState === 'visible' && session.journal.schema === 3;
+  // Wall-clock delta (the animation dt is clamped to 0.1 s, which would slow
+  // settlement time on low frame rates). SimClock caps each step at one tick.
+  const simDt = lastSimAt ? (nowMs - lastSimAt) / 1000 : 0;
+  lastSimAt = nowMs;
+  if (simClock.advance(simDt, simActive)) {
+    const r = lifeGame!.realtimeTick();
+    if (r.ok) saveScheduler.markDirty(nowMs);
+    else realtimeNote = `settlement time stopped: ${r.reasons.join('; ')}`;
+  }
+  saveScheduler.poll(nowMs);
+  realtimeNote = !lifeGame || session.journal.schema !== 3 ? ''
+    : !lease.isLeader ? 'another tab is running this world — time paused here'
+      : time.paused ? 'settlement paused (P)' : realtimeNote.startsWith('settlement time stopped') ? realtimeNote
+        : `settlement tick ${session.world.life?.tick ?? 0} · next in ${simClock.secondsToNext.toFixed(0)} s`;
   if (fauna) {
     if (faunaDirty) { fauna.sync(terrainView.loadedChunkKeys); faunaDirty = false; }
     const ch = explore?.active ? explore.character : null;
@@ -530,6 +569,7 @@ function frame(timestamp?: number) {
       hud.innerHTML =
         `<strong>ASTrix — Founder Settlement</strong> · seed ${worldSeed} · ${WORLD_SIZE} × ${WORLD_SIZE} m · 1 m voxels<br>` +
         `${timeLabel(time.t)} · ${time.paused ? 'paused' : 'day ' + Math.round(time.dayLengthSec) + 's'}` +
+        (realtimeNote ? ` · ${realtimeNote}` : '') +
         ` · wood ${m.inventory.wood ?? 0} · stone ${m.inventory.stone ?? 0}` +
         ` · ${m.structures} structure${m.structures === 1 ? '' : 's'}${built ? ` (${built})` : ''}` +
         `<br><span class="dim">${reach}${lastAction ? lastAction + ' · ' : ''}${hint} · ${persistence}</span>`;
@@ -595,7 +635,7 @@ if (!isMap) {
 
 if (!isMap && !isKit) {
   m2Game = new M2Game({ session, store, scene, terrainView, rig });
-  lifeGame = new LifeGame({ session, store, scene, toast: (message, kind) => {
+  lifeGame = new LifeGame({ session, store, scene, onSaved: () => saveScheduler.saved(Date.now()), toast: (message, kind) => {
     lastAction = message;
     persistenceMessage = store.metrics().message || persistenceMessage;
     m2Game?.toast(message, kind);

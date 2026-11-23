@@ -13,6 +13,8 @@ export interface LifeGameOptions {
   store: BrowserSaveStore;
   scene: THREE.Scene;
   toast: (message: string, kind: 'good' | 'warn' | 'bad') => void;
+  /** Called after a player command was saved immediately. */
+  onSaved?: () => void;
 }
 
 /** A snapshot for the read-only browser evidence surface, never a write API. */
@@ -81,11 +83,38 @@ export class LifeGame {
       return;
     }
     let saved: { ok: boolean; message: string } | null = null;
-    if (!result.duplicate) saved = this.options.store.save(session);
+    if (!result.duplicate) { saved = this.options.store.save(session); this.options.onSaved?.(); }
     const message = lifeMessage(intent) + (saved ? ` · ${saved.message}` : '');
     this.options.toast(message, saved?.ok === false ? 'bad' : 'good');
     // Rejected commands and duplicate receipts cannot refresh authoritative life.
     if (!result.duplicate) this.refresh();
+  }
+
+  /**
+   * Issue one real-time settlement tick through the normal journaled command
+   * path. Saving is left to the caller's SaveScheduler (throttled), so this
+   * returns whether an accepted tick changed state.
+   */
+  realtimeTick(): { ok: boolean; reasons: string[] } {
+    const session = this.options.session;
+    if (session.journal.schema !== 3 || !session.world.life) return { ok: false, reasons: ['legacy world'] };
+    const result = session.dispatch({
+      schema: 3, id: session.commandId('tick', 'realtime'), type: 'tick', ticks: 1,
+      expectedRevision: session.world.revision,
+    });
+    if (!result.ok) return { ok: false, reasons: result.reasons };
+    if (result.outcome.type === 'tick') {
+      const done = result.outcome.completedJobs.map((j) => j.recipe);
+      const ready = result.outcome.readyCrops.length;
+      if (done.length || ready) {
+        this.options.toast([
+          done.length ? `Finished ${done.join(', ')}` : '',
+          ready ? `${ready} crop${ready === 1 ? '' : 's'} ready to harvest` : '',
+        ].filter(Boolean).join(' · '), 'good');
+      }
+    }
+    this.refresh();
+    return { ok: true, reasons: [] };
   }
 
   refresh(): void {
