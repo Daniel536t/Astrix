@@ -1,0 +1,35 @@
+{
+  "scope": "actual built founder structures through production Build controls",
+  "browser": "Chromium / SwiftShader software WebGL",
+  "errors": [],
+  "failedResponses": [],
+  "steps": [
+    "genesis ready",
+    "accepted and saved house",
+    "accepted and saved path",
+    "accepted and saved farm",
+    "viewport capture succeeded"
+  ],
+  "startedAt": "2026-11-22T22:45:05.172Z",
+  "status": "captured",
+  "built": {
+    "structures": 3,
+    "commands": 3,
+    "inventory": {
+      "stone": 9,
+      "wood": 20,
+      "ore": 8
+    },
+    "stockpile": {},
+    "hash": "5b05e32aed0a9a05",
+    "save": {
+      "schema": 3,
+      "key": "astrix:m002:v3:seed:1337",
+      "status": "saved",
+      "persistent": true,
+      "message": "Saved locally."
+    }
+  },
+  "capture": "production-built-founder-settlement-2026-11-22T22-45-05.079Z.png",
+  "finishedAt": "2026-11-22T22:46:15.211Z"
+}

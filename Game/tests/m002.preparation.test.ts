@@ -325,11 +325,11 @@ test('executor refuses a plan whose obstruction set changed after authorization'
   // guard: it re-reads the obstruction set instead of trusting the token.
   const extra = {
     id: 'test:extra-rock',
-    kind: 'styl_rock_small' as const,
+    kind: 'styl_ore' as const,
     chunk: '30,30',
     x: -32.5, y: 16, z: -38.5,
     rot: 0, scale: 1, variant: 0,
-    resource: 'stone' as const, remaining: 2, yieldPerHarvest: 1,
+    resource: 'ore' as const, remaining: 2, yieldPerHarvest: 1,
     harvested: false, provisional: false, authored: false,
   };
   world.entities.set(extra.id, extra);

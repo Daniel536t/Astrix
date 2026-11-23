@@ -1,0 +1,164 @@
+{
+  "steps": [
+    {
+      "focus": [
+        -14,
+        -8
+      ],
+      "entities": 105,
+      "generated": 81,
+      "loaded": 81,
+      "liveEvicted": 0
+    },
+    {
+      "focus": "before waystone new page",
+      "entities": 12,
+      "generated": 5,
+      "cached": 5
+    },
+    {
+      "focus": [
+        -10,
+        -14
+      ],
+      "entities": 105,
+      "generated": 81,
+      "loaded": 81,
+      "liveEvicted": 0
+    },
+    {
+      "focus": "before final original new page",
+      "entities": 12,
+      "generated": 5,
+      "cached": 5
+    },
+    {
+      "focus": [
+        -14,
+        -8
+      ],
+      "entities": 105,
+      "generated": 81,
+      "loaded": 81,
+      "liveEvicted": 0
+    },
+    {
+      "focus": [
+        -56.5,
+        -43.5
+      ],
+      "entities": 135,
+      "generated": 98,
+      "loaded": 81,
+      "liveEvicted": 17
+    },
+    {
+      "focus": [
+        -48.5,
+        -43
+      ],
+      "entities": 135,
+      "generated": 98,
+      "loaded": 81,
+      "liveEvicted": 17
+    },
+    {
+      "focus": [
+        -32.5,
+        -38.5
+      ],
+      "entities": 146,
+      "generated": 101,
+      "loaded": 75,
+      "liveEvicted": 26
+    },
+    {
+      "focus": [
+        -43,
+        -41
+      ],
+      "entities": 144,
+      "generated": 107,
+      "loaded": 78,
+      "liveEvicted": 29
+    },
+    {
+      "focus": "original after restore",
+      "entities": 10,
+      "generated": 4,
+      "cached": 4
+    },
+    {
+      "focus": [
+        -14,
+        -8
+      ],
+      "entities": 103,
+      "generated": 81,
+      "loaded": 81,
+      "liveEvicted": 0
+    },
+    {
+      "focus": [
+        -56.5,
+        -43.5
+      ],
+      "entities": 133,
+      "generated": 98,
+      "loaded": 81,
+      "liveEvicted": 17
+    },
+    {
+      "focus": [
+        -48.5,
+        -43
+      ],
+      "entities": 133,
+      "generated": 98,
+      "loaded": 81,
+      "liveEvicted": 17
+    },
+    {
+      "focus": [
+        -32.5,
+        -38.5
+      ],
+      "entities": 144,
+      "generated": 101,
+      "loaded": 75,
+      "liveEvicted": 26
+    },
+    {
+      "focus": [
+        -43,
+        -41
+      ],
+      "entities": 144,
+      "generated": 107,
+      "loaded": 78,
+      "liveEvicted": 29
+    },
+    {
+      "focus": "original view after second restore",
+      "entities": 10,
+      "generated": 4,
+      "cached": 4
+    },
+    {
+      "focus": [
+        -14,
+        -8
+      ],
+      "entities": 103,
+      "generated": 81,
+      "loaded": 81,
+      "liveEvicted": 0
+    }
+  ],
+  "canonicalHash": "97c8b8ff48087e72",
+  "originalViewUnion": 103,
+  "finalFocusViewUnion": 133,
+  "fullViewHistoryUnion": 144,
+  "sameWaystoneViewAfterRestoreMatchesOriginalUnion": true,
+  "note": "The final-focus set contains additional entities materialized by earlier build views; after restore the original/Waystone history is exact."
+}

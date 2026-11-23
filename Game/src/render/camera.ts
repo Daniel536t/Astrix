@@ -172,6 +172,17 @@ export class OrbitRig {
     this.pitch = THREE.MathUtils.degToRad(pitchDeg);
     this.distance = dist;
     this.target.set(tx, ty, tz);
-    this.apply();
+    this.clampTarget();
+    // setView is a synchronous inspection/programmatic camera contract.
+    // Update the position matrix before deriving the look-at quaternion so no
+    // stale matrix update can be applied by the next renderer.render().
+    this.camera.position.set(
+      this.target.x + dist * Math.cos(this.pitch) * Math.sin(this.yaw),
+      this.target.y + dist * Math.sin(this.pitch),
+      this.target.z + dist * Math.cos(this.pitch) * Math.cos(this.yaw),
+    );
+    this.camera.updateMatrix();
+    this.camera.lookAt(this.target);
+    this.camera.updateMatrixWorld(true);
   }
 }

@@ -1,0 +1,14 @@
+{
+  "environment": "Chromium against Vite production build at 127.0.0.1:4173",
+  "date": "2026-11-22",
+  "checks": [
+    {
+      "name": "production blocks raw debug state and F/G/debugMutations",
+      "beforeHash": "3ded386e17521851",
+      "afterHash": "3ded386e17521851",
+      "acceptedCommands": 0
+    }
+  ],
+  "errors": [],
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 1\n\n    at file:///tmp/astrix-m002-browser-verification.mjs:51:10"
+}

@@ -1,0 +1,408 @@
+{
+  "startedAt": "2026-11-22T15:10:55.942Z",
+  "authority": "local-stub / local-simulation-only",
+  "url": "http://127.0.0.1:4173/?seed=1337&freeze=1&tx=-14&tz=-8&ty=22&dist=78",
+  "browser": "Chromium + SwiftShader (software WebGL)",
+  "steps": [
+    {
+      "name": "fresh world before first save",
+      "acceptedCommands": 0,
+      "save": {
+        "schema": 3,
+        "key": "astrix:m002:v3:seed:1337",
+        "status": "new",
+        "persistent": false,
+        "message": "New local world."
+      },
+      "stateHash": "3b349831ed4f402c"
+    },
+    {
+      "name": "two keyboard harvests",
+      "acceptedCommands": 2,
+      "inventory": {
+        "stone": 48,
+        "wood": 24,
+        "fiber": 2
+      },
+      "save": {
+        "schema": 3,
+        "key": "astrix:m002:v3:seed:1337",
+        "status": "saved",
+        "persistent": true,
+        "message": "Saved locally."
+      },
+      "lastAction": "harvested 1 fiber from shrub"
+    },
+    {
+      "name": "deposit two fiber",
+      "acceptedCommands": 3,
+      "stateHash": "db8f9466570b2ec5",
+      "tick": 0,
+      "inventory": {
+        "stone": 48,
+        "wood": 24
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "fiber": 2
+        }
+      },
+      "lastAction": "Stored 2 fiber · Saved locally."
+    },
+    {
+      "name": "start seed job",
+      "acceptedCommands": 4,
+      "stateHash": "c81aebfda2f1af50",
+      "tick": 0,
+      "inventory": {
+        "stone": 48,
+        "wood": 24
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {}
+      },
+      "lastAction": "Started seed production · Saved locally."
+    },
+    {
+      "name": "finish seeds",
+      "acceptedCommands": 5,
+      "stateHash": "6839ecd91ed09ec3",
+      "tick": 1,
+      "inventory": {
+        "stone": 48,
+        "wood": 24
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "seed": 3
+        }
+      },
+      "lastAction": "Advanced 1 simulation tick · Saved locally."
+    },
+    {
+      "name": "build farm with carried resources",
+      "acceptedCommands": 6,
+      "stateHash": "4b757e8e36e2c18a",
+      "tick": 1,
+      "inventory": {
+        "stone": 36,
+        "wood": 30,
+        "ore": 8
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "seed": 3
+        }
+      },
+      "lastAction": "Advanced 1 simulation tick · Saved locally."
+    },
+    {
+      "name": "plant crop zero",
+      "acceptedCommands": 7,
+      "stateHash": "3ee158d95ad2f83a",
+      "tick": 1,
+      "inventory": {
+        "stone": 36,
+        "wood": 30,
+        "ore": 8
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "seed": 2
+        }
+      },
+      "lastAction": "Planted crop:0 · Saved locally."
+    },
+    {
+      "name": "grow crop in exactly four ticks",
+      "acceptedCommands": 8,
+      "stateHash": "6eeeac51736ade4d",
+      "tick": 5,
+      "inventory": {
+        "stone": 36,
+        "wood": 30,
+        "ore": 8
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "seed": 2
+        }
+      },
+      "lastAction": "Advanced 4 simulation ticks · Saved locally."
+    },
+    {
+      "name": "harvest food and fiber into carried bag",
+      "acceptedCommands": 9,
+      "stateHash": "77f4e44a272691a7",
+      "tick": 5,
+      "inventory": {
+        "stone": 36,
+        "wood": 30,
+        "ore": 8,
+        "food": 6,
+        "fiber": 1
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "seed": 2
+        }
+      },
+      "lastAction": "Harvested crop:0: 6 food + 1 fiber · Saved locally."
+    },
+    {
+      "name": "deposit food",
+      "acceptedCommands": 10,
+      "stateHash": "8e57d435e775270d",
+      "tick": 5,
+      "inventory": {
+        "stone": 36,
+        "wood": 30,
+        "ore": 8,
+        "food": 4,
+        "fiber": 1
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "seed": 2,
+          "food": 2
+        }
+      },
+      "lastAction": "Stored 2 food · Saved locally."
+    },
+    {
+      "name": "start ration production",
+      "acceptedCommands": 11,
+      "stateHash": "64f602a64523371f",
+      "tick": 5,
+      "inventory": {
+        "stone": 36,
+        "wood": 30,
+        "ore": 8,
+        "food": 4,
+        "fiber": 1
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "seed": 2
+        }
+      },
+      "lastAction": "Started rations production · Saved locally."
+    },
+    {
+      "name": "rations unfinished after one tick",
+      "acceptedCommands": 12,
+      "stateHash": "53a29828e9dfd405",
+      "tick": 6,
+      "inventory": {
+        "stone": 36,
+        "wood": 30,
+        "ore": 8,
+        "food": 4,
+        "fiber": 1
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "seed": 2
+        }
+      },
+      "lastAction": "Advanced 1 simulation tick · Saved locally."
+    },
+    {
+      "name": "rations finished after second tick",
+      "acceptedCommands": 13,
+      "stateHash": "36b7292fad50632c",
+      "tick": 7,
+      "inventory": {
+        "stone": 36,
+        "wood": 30,
+        "ore": 8,
+        "food": 4,
+        "fiber": 1
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "seed": 2,
+          "rations": 3
+        }
+      },
+      "lastAction": "Advanced 1 simulation tick · Saved locally."
+    },
+    {
+      "name": "withdraw two rations",
+      "acceptedCommands": 14,
+      "stateHash": "39cf99c90b4bf54f",
+      "tick": 7,
+      "inventory": {
+        "stone": 36,
+        "wood": 30,
+        "ore": 8,
+        "food": 4,
+        "fiber": 1,
+        "rations": 2
+      },
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "seed": 2,
+          "rations": 1
+        }
+      },
+      "lastAction": "Collected 2 rations · Saved locally."
+    }
+  ],
+  "errors": [],
+  "restored": {
+    "stateHash": "39cf99c90b4bf54f",
+    "save": {
+      "schema": 3,
+      "key": "astrix:m002:v3:seed:1337",
+      "status": "restored",
+      "persistent": true,
+      "message": "Restored 14 accepted commands."
+    },
+    "life": {
+      "tick": 7,
+      "stockpile": {
+        "id": "stockpile:founder",
+        "x": -50,
+        "z": -32,
+        "capacity": 200,
+        "inventory": {
+          "rations": 1,
+          "seed": 2
+        }
+      },
+      "jobs": [],
+      "crops": [
+        {
+          "id": "crop:0",
+          "plantedTick": null,
+          "growthTicks": null,
+          "ready": false
+        },
+        {
+          "id": "crop:1",
+          "plantedTick": null,
+          "growthTicks": null,
+          "ready": false
+        },
+        {
+          "id": "crop:2",
+          "plantedTick": null,
+          "growthTicks": null,
+          "ready": false
+        },
+        {
+          "id": "crop:3",
+          "plantedTick": null,
+          "growthTicks": null,
+          "ready": false
+        },
+        {
+          "id": "crop:4",
+          "plantedTick": null,
+          "growthTicks": null,
+          "ready": false
+        },
+        {
+          "id": "crop:5",
+          "plantedTick": null,
+          "growthTicks": null,
+          "ready": false
+        },
+        {
+          "id": "crop:6",
+          "plantedTick": null,
+          "growthTicks": null,
+          "ready": false
+        },
+        {
+          "id": "crop:7",
+          "plantedTick": null,
+          "growthTicks": null,
+          "ready": false
+        },
+        {
+          "id": "crop:8",
+          "plantedTick": null,
+          "growthTicks": null,
+          "ready": false
+        }
+      ]
+    },
+    "inventory": {
+      "fiber": 1,
+      "food": 4,
+      "ore": 8,
+      "rations": 2,
+      "stone": 36,
+      "wood": 30
+    }
+  },
+  "keyboardGuard": true,
+  "mobile": {
+    "viewport": [
+      390,
+      844
+    ],
+    "tabs": true,
+    "gatherButton": true,
+    "tickAccepted": true,
+    "physicalDeviceTested": false
+  },
+  "injectedStorageFailure": {
+    "acceptedInMemory": true,
+    "persistent": false,
+    "failureVisible": true,
+    "originalBytesUntouched": true
+  },
+  "status": "passed",
+  "finishedAt": "2026-11-22T15:14:36.161Z"
+}

@@ -1,0 +1,71 @@
+{
+  "environment": "Chromium against Vite production build at 127.0.0.1:4173",
+  "date": "2026-11-22",
+  "checks": [
+    {
+      "name": "production blocks raw debug state and F/G/debugMutations",
+      "beforeHash": "3ded386e17521851",
+      "afterHash": "3ded386e17521851",
+      "acceptedCommands": 0
+    },
+    {
+      "name": "browser harvest dispatches and atomically saves",
+      "hash": "9c189604cd35c113",
+      "inventory": {
+        "stone": 48,
+        "wood": 28
+      },
+      "sequence": 1,
+      "journal": {
+        "schema": 1,
+        "seed": 1337,
+        "starterInventory": {
+          "stone": 48,
+          "wood": 24
+        },
+        "entries": [
+          {
+            "command": {
+              "schema": 1,
+              "id": "harvest:0:e%3A30%2C30%3A4",
+              "type": "harvest",
+              "entityId": "e:30,30:4",
+              "expectedRevision": 0
+            },
+            "sequence": 0,
+            "revision": 1,
+            "hash": "9c189604cd35c113",
+            "outcome": {
+              "type": "harvest",
+              "entityId": "e:30,30:4",
+              "resource": "wood",
+              "amount": 4
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "harvest snapshot restores exactly once without duplicate starter grant",
+      "hash": "9c189604cd35c113",
+      "inventory": {
+        "stone": 48,
+        "wood": 28
+      },
+      "save": {
+        "schema": 1,
+        "key": "astrix:m002:v1:seed:1337",
+        "status": "restored",
+        "persistent": true,
+        "message": "Restored 1 accepted command."
+      }
+    }
+  ],
+  "errors": [
+    {
+      "page": "http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1",
+      "error": "ReferenceError: index is not defined"
+    }
+  ],
+  "failure": "page.waitForFunction: ReferenceError: index is not defined\n    at eval (eval at <anonymous> (eval at predicate (eval at evaluate (:370:30))), <anonymous>:3:37)\n    at eval (eval at <anonymous> (eval at predicate (eval at evaluate (:370:30))), <anonymous>:3:47)\n    at eval (eval at predicate (eval at evaluate (:370:30)), <anonymous>:3:54)\n    at predicate (eval at evaluate (:370:30), <anonymous>:7:27)\n    at next (eval at evaluate (:370:30), <anonymous>:29:33)\n    at eval (eval at evaluate (:370:30), <anonymous>:42:13)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at refreshed (/tmp/astrix-m002-browser-verification.mjs:15:14)\n    at buildAll (/tmp/astrix-m002-browser-verification.mjs:31:11)\n    at async file:///tmp/astrix-m002-browser-verification.mjs:82:3"
+}

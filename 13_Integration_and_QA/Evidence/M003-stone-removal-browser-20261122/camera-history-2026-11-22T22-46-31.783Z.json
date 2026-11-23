@@ -1,0 +1,106 @@
+{
+  "scope": "unbuilt exact camera materialization history",
+  "steps": [
+    {
+      "label": "original",
+      "entities": 105,
+      "chunksGenerated": 81,
+      "loadedChunks": 49,
+      "cachedChunks": 81,
+      "inspection": 45,
+      "stateHash": "e659504b056654dc",
+      "camera": {
+        "x": 31.125538530723567,
+        "y": 48.677571179402165,
+        "z": 49.75805544060598
+      }
+    },
+    {
+      "label": "original after cairn inspect",
+      "entities": 105,
+      "chunksGenerated": 81,
+      "loadedChunks": 49,
+      "cachedChunks": 81,
+      "inspection": 45,
+      "stateHash": "e659504b056654dc",
+      "camera": {
+        "x": 31.125538530723567,
+        "y": 48.677571179402165,
+        "z": 49.75805544060598
+      }
+    },
+    {
+      "label": "original after ore inspect",
+      "entities": 105,
+      "chunksGenerated": 81,
+      "loadedChunks": 49,
+      "cachedChunks": 81,
+      "inspection": 45,
+      "stateHash": "e659504b056654dc",
+      "camera": {
+        "x": 31.125538530723567,
+        "y": 48.677571179402165,
+        "z": 49.75805544060598
+      }
+    },
+    {
+      "label": "original after waystone inspect",
+      "entities": 105,
+      "chunksGenerated": 81,
+      "loadedChunks": 49,
+      "cachedChunks": 81,
+      "inspection": 45,
+      "stateHash": "e659504b056654dc",
+      "camera": {
+        "x": 31.125538530723567,
+        "y": 48.677571179402165,
+        "z": 49.75805544060598
+      }
+    },
+    {
+      "label": "waystone",
+      "entities": 105,
+      "chunksGenerated": 81,
+      "loadedChunks": 49,
+      "cachedChunks": 81,
+      "inspection": 45,
+      "stateHash": "e659504b056654dc",
+      "camera": {
+        "x": 25.336987776033197,
+        "y": 66.73896203538159,
+        "z": 42.349048339615116
+      }
+    },
+    {
+      "label": "waystone after canvas escape",
+      "entities": 105,
+      "chunksGenerated": 81,
+      "loadedChunks": 49,
+      "cachedChunks": 81,
+      "inspection": 45,
+      "stateHash": "e659504b056654dc",
+      "camera": {
+        "x": 25.336987776033197,
+        "y": 66.73896203538159,
+        "z": 42.349048339615116
+      }
+    },
+    {
+      "label": "original final",
+      "entities": 105,
+      "chunksGenerated": 81,
+      "loadedChunks": 49,
+      "cachedChunks": 81,
+      "inspection": 45,
+      "stateHash": "e659504b056654dc",
+      "camera": {
+        "x": 31.125538530723567,
+        "y": 48.677571179402165,
+        "z": 49.75805544060598
+      }
+    }
+  ],
+  "errors": [],
+  "failedResponses": [],
+  "status": "completed"
+}

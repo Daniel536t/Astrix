@@ -1,0 +1,106 @@
+{
+  "url": "http://18.116.53.201/?scene=map&seed=1337&freeze=1",
+  "errors": [
+    {
+      "args": [
+        "THREE.Object3D.add: object not an instance of THREE.Object3D.",
+        null
+      ],
+      "stack": {
+        "callFrames": [
+          {
+            "functionName": "Ct",
+            "scriptId": "5",
+            "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js",
+            "lineNumber": 0,
+            "columnNumber": 1901
+          },
+          {
+            "functionName": "add",
+            "scriptId": "5",
+            "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js",
+            "lineNumber": 0,
+            "columnNumber": 60359
+          },
+          {
+            "functionName": "Vn",
+            "scriptId": "4",
+            "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js",
+            "lineNumber": 44,
+            "columnNumber": 68879
+          },
+          {
+            "functionName": "",
+            "scriptId": "4",
+            "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js",
+            "lineNumber": 44,
+            "columnNumber": 68961
+          }
+        ]
+      }
+    }
+  ],
+  "metrics": {
+    "seed": 1337,
+    "worldSize": 2048,
+    "chunkSize": 32,
+    "nearRadius": 3,
+    "seaLevel": 0,
+    "loadedChunks": 0,
+    "cachedChunks": 5,
+    "chunksGenerated": 5,
+    "generationMs": 86.2,
+    "initialLoadMs": 374,
+    "entities": 12,
+    "trees": 9,
+    "pinkTrees": 1,
+    "pinkOverflow": 0,
+    "natureInstances": 0,
+    "edits": 0,
+    "harvested": 0,
+    "inventory": {
+      "stone": 48,
+      "wood": 24
+    },
+    "life": null,
+    "structures": 0,
+    "m2": null,
+    "nearTriangles": 0,
+    "macroTriangles": 102156,
+    "rendererCalls": 3,
+    "rendererTriangles": 121548,
+    "rendererGeometries": 3,
+    "rendererTextures": 2,
+    "streamPerf": {
+      "chunkGenP50": 0,
+      "chunkGenP95": 0,
+      "chunkGenMax": 0,
+      "chunkMeshP50": 0,
+      "chunkMeshP95": 0,
+      "chunkMeshMax": 0,
+      "macroP50": 161.1,
+      "macroMax": 161.1,
+      "macroSampleP50": 8.7,
+      "macroSampleMax": 8.7,
+      "macroCacheHits": 0,
+      "chunkSamples": 0,
+      "macroSamples": 1
+    },
+    "save": {
+      "schema": 3,
+      "key": "astrix:m002:v3:seed:1337",
+      "status": "new",
+      "persistent": false,
+      "message": "New local world."
+    },
+    "harvestable": "hero:styl_shrub:-14:-8",
+    "acceptedCommands": 0,
+    "stateHash": "e659504b056654dc",
+    "debugMutations": false,
+    "authority": "local-stub / local-simulation-only",
+    "inspection": null,
+    "lastAction": "",
+    "persistenceMessage": "New local world."
+  },
+  "ready": true
+}

@@ -1,0 +1,97 @@
+{
+  "startedAt": "2026-11-22T19:01:14.691Z",
+  "url": "http://127.0.0.1:4173/",
+  "browser": "Chromium + SwiftShader (software WebGL)",
+  "steps": [
+    {
+      "name": "real mouse hover identifies Waystone",
+      "card": {
+        "hidden": false,
+        "mode": "hover",
+        "ref": "siteId:site:waystone",
+        "name": "Waystone",
+        "category": "Architecture · landmark",
+        "description": "A tall forked Noxel landmark. Its cream stone and teal inlay mark a place of interest; it is not a resource rock.",
+        "facts": [
+          "Purpose\nNavigation landmark · not harvestable",
+          "Art\nProvisional Noxel design"
+        ],
+        "selected": null,
+        "hovered": "Waystone"
+      }
+    },
+    {
+      "name": "click pins; Close and Escape dismiss",
+      "card": {
+        "hidden": false,
+        "mode": "pinned",
+        "ref": "siteId:site:waystone",
+        "name": "Waystone",
+        "category": "Architecture · landmark",
+        "description": "A tall forked Noxel landmark. Its cream stone and teal inlay mark a place of interest; it is not a resource rock.",
+        "facts": [
+          "Purpose\nNavigation landmark · not harvestable",
+          "Art\nProvisional Noxel design"
+        ],
+        "selected": "Waystone",
+        "hovered": null
+      }
+    },
+    {
+      "name": "pale blocks identified as persistent resource",
+      "card": {
+        "hidden": false,
+        "mode": "pinned",
+        "ref": "entityId:hero:styl_rock_medium:-6:-10",
+        "name": "Stone boulder",
+        "category": "Natural resource",
+        "description": "An intentional pale block-stone outcrop. Harvest it to carry stone for construction.",
+        "facts": [
+          "Resource\nstone",
+          "Remaining\n8 · 3 per gather",
+          "Status\nAvailable · provisional art"
+        ],
+        "selected": "Stone boulder",
+        "hovered": null
+      }
+    },
+    {
+      "name": "keyboard list, selection, focus and dismissal",
+      "listCount": 274
+    },
+    {
+      "name": "desktop orbit drag does not select"
+    },
+    {
+      "name": "all desktop inspection",
+      "readOnly": true,
+      "stateHash": "3b349831ed4f402c",
+      "acceptedCommands": 0
+    },
+    {
+      "name": "dynamic natural mesh refresh retains target identities",
+      "targetCount": 271
+    },
+    {
+      "name": "pinned crop refreshes after accepted harvest and life mesh rebuild",
+      "card": {
+        "hidden": false,
+        "mode": "pinned",
+        "ref": "cropId:crop:0",
+        "name": "Terrace crop plot 1",
+        "category": "Settlement infrastructure · farm plot",
+        "description": "An empty tilled terrace plot. Plant it with seed from the Settlement panel; there is no plant here yet.",
+        "facts": [
+          "State\nEmpty · needs 1 seed",
+          "Yield\nPlant through the Settlement panel"
+        ],
+        "selected": "Terrace crop plot 1",
+        "hovered": null
+      }
+    }
+  ],
+  "errors": [],
+  "physicalDeviceTested": false,
+  "physicalGpuTested": false,
+  "failure": "AssertionError [ERR_ASSERTION]: entityId:hero:styl_rock_medium:-6:-10 projected into viewport\n    at tap (file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-inspection-browser-20261122/browser-verification.mjs:70:10)\n    at async file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-inspection-browser-20261122/browser-verification.mjs:232:22"
+}

@@ -1,0 +1,66 @@
+{
+  "environment": "Chromium against Vite production build at 127.0.0.1:4173",
+  "date": "2026-11-22",
+  "checks": [
+    {
+      "name": "production blocks raw debug state and F/G/debugMutations",
+      "beforeHash": "3ded386e17521851",
+      "afterHash": "3ded386e17521851",
+      "acceptedCommands": 0
+    },
+    {
+      "name": "browser harvest dispatches and atomically saves",
+      "hash": "9c189604cd35c113",
+      "inventory": {
+        "stone": 48,
+        "wood": 28
+      },
+      "sequence": 1,
+      "journal": {
+        "schema": 1,
+        "seed": 1337,
+        "starterInventory": {
+          "stone": 48,
+          "wood": 24
+        },
+        "entries": [
+          {
+            "command": {
+              "schema": 1,
+              "id": "harvest:0:e%3A30%2C30%3A4",
+              "type": "harvest",
+              "entityId": "e:30,30:4",
+              "expectedRevision": 0
+            },
+            "sequence": 0,
+            "revision": 1,
+            "hash": "9c189604cd35c113",
+            "outcome": {
+              "type": "harvest",
+              "entityId": "e:30,30:4",
+              "resource": "wood",
+              "amount": 4
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "harvest snapshot restores exactly once without duplicate starter grant",
+      "hash": "9c189604cd35c113",
+      "inventory": {
+        "stone": 48,
+        "wood": 28
+      },
+      "save": {
+        "schema": 1,
+        "key": "astrix:m002:v1:seed:1337",
+        "status": "restored",
+        "persistent": true,
+        "message": "Restored 1 accepted command."
+      }
+    }
+  ],
+  "errors": [],
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n3 !== 4\n\n    at file:///tmp/astrix-m002-browser-verification.mjs:83:10"
+}

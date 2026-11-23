@@ -19,6 +19,9 @@ import { FARM_RULES } from './construction';
 import { inventorySnapshot } from './canonical';
 
 export type StructureKind = 'house' | 'path' | 'terrace';
+/** M002 design 1 is immutable replay content; design 2 is the founder candidate. */
+export const FOUNDER_DESIGN_VERSION = 2 as const;
+export type StructureDesignVersion = typeof FOUNDER_DESIGN_VERSION;
 
 export type ModuleKind =
   | 'floor'
@@ -71,6 +74,8 @@ export interface Structure {
   modules: StructureModule[];
   cost: Partial<Record<ResourceType, number>>;
   builtRevision: number;
+  /** Absent means legacy M002 design 1; never infer it from the renderer. */
+  designVersion?: StructureDesignVersion;
   provisional: true;
 }
 
@@ -90,6 +95,20 @@ export interface StructureProposal {
   /** Optional path metadata; the path is laid along the rect centreline. */
   approach?: { x: number; z: number };
   terraces?: number;
+  /** Deliberate content selection carried by schema-2 commands. */
+  designVersion?: StructureDesignVersion;
+}
+
+/**
+ * Single source of truth for structure costs. The planners and the build UI
+ * both read these; a building cannot advertise one price and charge another.
+ */
+export const HOUSE_COST: Partial<Record<ResourceType, number>> = { wood: 10, stone: 18 };
+export const TERRACE_COST: Partial<Record<ResourceType, number>> = { wood: 6, stone: 12 };
+
+/** A path pays one stone per metre of corridor width. */
+export function pathCost(width: number): Partial<Record<ResourceType, number>> {
+  return { stone: width };
 }
 
 export interface SurfaceSample {
@@ -111,6 +130,7 @@ export interface StructurePlan {
   envelope: VoxelRegion[];
   /** Expected prepared surface, checked again at execution time. */
   surface: SurfaceSample[];
+  designVersion?: StructureDesignVersion;
   terraces?: TerraceBand[];
 }
 
@@ -137,6 +157,7 @@ export function structureDigest(plan: StructurePlan): string {
     String(plan.floorY),
     `${plan.origin.x},${plan.origin.y},${plan.origin.z}`,
     String(plan.rot),
+    ...(plan.designVersion === FOUNDER_DESIGN_VERSION ? ['design:2'] : []),
     `m:${plan.modules.length}`,
   ];
   for (const m of plan.modules) {
@@ -326,7 +347,7 @@ function planHouse(world: World, proposal: StructureProposal): StructurePlanResu
     origin: { x: cx, y: floorY, z: cz },
     rot: 0,
     modules,
-    cost: { wood: 10, stone: 18 },
+    cost: { ...HOUSE_COST },
     envelope: footprintEnvelope(rect, floorY, floorY + 4, 2),
     surface,
   };
@@ -400,7 +421,7 @@ function planPath(world: World, proposal: StructureProposal): StructurePlanResul
     origin: { x: (rect.x0 + rect.x1 + 1) / 2, y: minY, z: cz },
     rot: 0,
     modules,
-    cost: { stone: width },
+    cost: pathCost(width),
     envelope: footprintEnvelope(rect, minY - 1, maxY + 2, 0),
     surface,
   };
@@ -519,7 +540,7 @@ function planTerraces(world: World, proposal: StructureProposal): StructurePlanR
     origin: { x: cx, y: minY, z: (rect.z0 + rect.z1 + 1) / 2 },
     rot: 0,
     modules,
-    cost: { wood: 6, stone: 12 },
+    cost: { ...TERRACE_COST },
     envelope: footprintEnvelope(rect, minY - 1, maxY + 2, 1),
     surface,
     terraces: bands,
@@ -529,10 +550,94 @@ function planTerraces(world: World, proposal: StructureProposal): StructurePlanR
 }
 
 export function planStructure(world: World, proposal: StructureProposal): StructurePlanResult {
+  if (proposal.designVersion === FOUNDER_DESIGN_VERSION) return planFounderDesign(world, proposal);
+  if (proposal.designVersion !== undefined) {
+    return fail('plan', 'unsupported_design', [`unsupported structure design ${String(proposal.designVersion)}`]);
+  }
   if (proposal.kind === 'house') return planHouse(world, proposal);
   if (proposal.kind === 'path') return planPath(world, proposal);
   return planTerraces(world, proposal);
 }
+
+// ---------- design 2: bounded founder candidate ----------
+// This deliberately leaves every legacy planner above untouched. The extra wall
+// primitives represent voids, not decorative windows; their asset-level volume
+// interpretation remains Review Required (the founder 4–9 volume target).
+function planFounderDesign(world: World, proposal: StructureProposal): StructurePlanResult {
+  if (proposal.kind === 'path') return planFounderPath(world, proposal);
+  const planned = proposal.kind === 'house' ? planHouse(world, proposal) : planTerraces(world, proposal);
+  if (!planned.ok) return planned;
+  if (proposal.kind === 'terrace') {
+    // Crop rows stay compact authoritative aggregates. Their faceted foliage is
+    // derived presentation only; no plant-level existence or yield is invented.
+    planned.plan.designVersion = FOUNDER_DESIGN_VERSION;
+    planned.plan.id = `structure:${structureDigest(planned.plan)}`;
+    return planned;
+  }
+  const rect = normalizeRect(proposal.rect);
+  const x0 = rect.x0, x1 = rect.x1 + 1;
+  const z0 = rect.z0, z1 = rect.z1 + 1;
+  const y = proposal.floorY, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  const t = 0.6, h = 3.2;
+  const modules: StructureModule[] = [];
+  // One structural stone family: lighting, not painted face variation, shades it.
+  const wall = (x: number, bottom: number, z: number, w: number, height: number, d: number, kind: StructureModule['kind'] = 'wall') => {
+    modules.push({ kind, x, y: bottom, z, w, h: height, d, tone: 'stone' });
+  };
+  wall(cx, y - 0.4, cz, 8, 0.4, 6, 'floor');
+  wall(cx, y, z0 + t / 2, 8, h, t);
+  const innerZ0 = z0 + t, innerZ1 = z1 - t;
+  wall(x0 + t / 2, y, (innerZ0 + innerZ1) / 2, t, h, innerZ1 - innerZ0);
+  const doorZ = (proposal.door?.z ?? rect.z0) + 0.5;
+  const door0 = doorZ - 0.6, door1 = doorZ + 0.6;
+  const eastX = x1 - t / 2;
+  wall(eastX, y, (innerZ0 + door0) / 2, t, h, door0 - innerZ0);
+  wall(eastX, y, (door1 + innerZ1) / 2, t, h, innerZ1 - door1);
+  wall(eastX, y + 2.2, doorZ, t, 0.4, 1.2, 'lintel');
+  wall(eastX, y + 2.6, doorZ, t, 0.6, 1.2);
+  const southZ = z1 - t / 2;
+  for (const [a, b] of [[x0 + t, cx - 2.6], [cx - 1.4, cx + 1.4], [cx + 2.6, x1 - t]]) {
+    wall((a + b) / 2, y, southZ, b - a, h, t);
+  }
+  for (const wx of [cx - 2, cx + 2]) {
+    wall(wx, y, southZ, 1.2, 1, t);
+    wall(wx, y + 2.4, southZ, 1.2, 0.8, t, 'lintel');
+  }
+  wall(cx, y + h, cz, 8, 0.4, 6, 'roof');
+  wall(cx, y + h + 0.4, z0 + 0.15, 8, 0.3, 0.3, 'parapet');
+  wall(cx, y + h + 0.4, z1 - 0.15, 8, 0.3, 0.3, 'parapet');
+  wall(cx - 3.85, y + h + 0.4, cz, 0.3, 0.3, 5.4, 'parapet');
+  wall(cx + 3.85, y + h + 0.4, cz, 0.3, 0.3, 5.4, 'parapet');
+  planned.plan.modules = modules;
+  planned.plan.designVersion = FOUNDER_DESIGN_VERSION;
+  planned.plan.envelope = footprintEnvelope(rect, y - 1, y + 4, 2);
+  planned.plan.id = `structure:${structureDigest(planned.plan)}`;
+  return planned;
+}
+
+function planFounderPath(world: World, proposal: StructureProposal): StructurePlanResult {
+  const planned = planPath(world, proposal);
+  if (!planned.ok) return planned;
+  const modules: StructureModule[] = [];
+  const heights = planned.plan.modules.filter((m) => m.kind === 'path').map((m) => m.y);
+  const z0 = planned.plan.rect.z0, z1 = planned.plan.rect.z1 + 1;
+  let start = 0;
+  for (let end = 1; end <= heights.length; end++) {
+    if (end < heights.length && heights[end] === heights[start]) continue;
+    const x = planned.plan.rect.x0 + start, width = end - start;
+    const cx = x + width / 2, y = heights[start];
+    modules.push({ kind: 'path', x: cx, y, z: (z0 + z1) / 2, w: width, h: 0.12, d: 3, tone: 'gravel' });
+    for (const z of [z0 + 0.075, z1 - 0.075]) {
+      modules.push({ kind: 'curb', x: cx, y, z, w: width, h: 0.22, d: 0.15, tone: 'stone' });
+    }
+    start = end;
+  }
+  planned.plan.modules = modules;
+  planned.plan.designVersion = FOUNDER_DESIGN_VERSION;
+  planned.plan.id = `structure:${structureDigest(planned.plan)}`;
+  return planned;
+}
+
 
 // ---------- authorization ----------
 export interface StructureLimits {
@@ -713,6 +818,7 @@ export function executeStructure(
     modules: plan.modules.map((m) => ({ ...m })),
     cost: { ...plan.cost },
     builtRevision: world.revision,
+    ...(plan.designVersion === FOUNDER_DESIGN_VERSION ? { designVersion: FOUNDER_DESIGN_VERSION } : {}),
     provisional: true,
   };
   world.structures.set(structure.id, structure);

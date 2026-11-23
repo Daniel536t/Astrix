@@ -519,11 +519,11 @@ test('executor re-checks surface and obstructions before charging resources', ()
   if (!token.ok || !token.authorization) return;
   const extra = {
     id: 'test:house-rock',
-    kind: 'styl_rock_small' as const,
+    kind: 'styl_ore' as const,
     chunk: '30,30',
     x: -56.5, y: 11, z: -43.5,
     rot: 0, scale: 1, variant: 0,
-    resource: 'stone' as const, remaining: 2, yieldPerHarvest: 1,
+    resource: 'ore' as const, remaining: 2, yieldPerHarvest: 1,
     harvested: false, provisional: false, authored: false,
   };
   blocked.world.entities.set(extra.id, extra);

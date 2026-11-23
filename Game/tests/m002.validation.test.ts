@@ -41,21 +41,20 @@ test('validator rejects the slope site with explicit rule errors', () => {
   assert.equal(validation.state, 'invalid');
   const codes = validation.reasons.map((r) => r.code);
   for (const code of [
-    'slope_exceeded', 'cut_exceeded', 'cut_volume_exceeded', 'footprint_obstructed',
+    'slope_exceeded', 'cut_exceeded', 'cut_volume_exceeded',
   ]) {
     assert.ok(codes.includes(code as never), `missing ${code}: ${codes.join(', ')}`);
   }
   assert.ok(validation.reasons.every((r) => r.severity === 'error'
     || r.code === 'needs_grading' || r.code === 'needs_clearing'));
-  assert.ok(validation.reasons.filter((r) => r.severity === 'error').length >= 4);
+  assert.ok(validation.reasons.filter((r) => r.severity === 'error').length >= 3);
 
   // The rejection is grounded in real terrain, not a synthetic rule exception.
   assert.ok(validation.query.stats.relief >= 5);
   assert.ok(validation.query.support.maxCut >= 5);
   assert.ok(validation.query.stats.cutVolume >= 40);
-  assert.equal(validation.query.stats.obstructions.length, 1);
-  assert.equal(validation.preparation.obstructionIds.length, 1);
-  assert.ok(validation.query.stats.obstructions[0].kind.startsWith('styl_rock'));
+  assert.equal(validation.query.stats.obstructions.length, 0);
+  assert.equal(validation.preparation.obstructionIds.length, 0);
 
   assert.deepEqual(fingerprint(world), before);
 });
@@ -172,8 +171,9 @@ test('candidate search is cost-ranked, deterministic and inside its budget', () 
     }
   }
 
-  // The pinned top result of the unconstrained search.
-  assert.deepEqual(best.candidates[0].rect, { x0: -64, z0: -60, x1: -57, z1: -55 });
+  // Retired stones no longer obstruct or add preparation cost; the new top
+  // result is simply cheaper. Terrain and work-envelope rules are unchanged.
+  assert.deepEqual(best.candidates[0].rect, { x0: -64, z0: -68, x1: -57, z1: -63 });
   assert.equal(best.candidates[0].floorY, 10);
 
   assert.deepEqual(fingerprint(world), before);
@@ -200,9 +200,11 @@ test('farm-proximity constraint selects the viable shelf near the field', () => 
   });
 
   assert.ok(constrained.candidates.length >= 1);
-  assert.deepEqual(constrained.candidates[0].rect, layout.house.rect);
-  assert.equal(constrained.candidates[0].floorY, layout.house.floorY);
-  assert.equal(constrained.candidates[0].state, 'valid_with_preparation');
+  const pinnedHouse = constrained.candidates.find((candidate) =>
+    JSON.stringify(candidate.rect) === JSON.stringify(layout.house.rect));
+  assert.ok(pinnedHouse, 'the authored house shelf remains a viable constrained candidate');
+  assert.equal(pinnedHouse.floorY, layout.house.floorY);
+  assert.equal(pinnedHouse.state, 'valid_with_preparation');
   for (const candidate of constrained.candidates) {
     const c = center(candidate.rect);
     const distance = Math.hypot(c.x - farmCenter.x, c.z - farmCenter.z);
@@ -217,7 +219,7 @@ test('farm-proximity constraint selects the viable shelf near the field', () => 
   const topCenter = center(top.rect);
   const topDistance = Math.hypot(topCenter.x - farmCenter.x, topCenter.z - farmCenter.z);
   assert.ok(topDistance > 30, `unconstrained winner is only ${topDistance} m from the farm`);
-  assert.notDeepEqual(top.rect, constrained.candidates[0].rect);
+  assert.notDeepEqual(top.rect, pinnedHouse.rect);
 
   assert.deepEqual(fingerprint(world), before);
 });
@@ -232,8 +234,7 @@ test('preview exposes valid, preparation and invalid states without mutating the
     { door: layout.rejected.door, approach: layout.rejected.approach },
   );
   assert.equal(rejected.state, 'invalid');
-  assert.equal(rejected.obstructions.length, 1);
-  assert.equal(rejected.obstructions[0].action, 'blocked');
+  assert.equal(rejected.obstructions.length, 0);
   assert.ok(rejected.foundation.cutVolume >= 40);
   assert.ok(rejected.foundation.retainingWallCells > 0);
 

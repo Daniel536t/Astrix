@@ -1,0 +1,76 @@
+{
+  "startedAt": "2026-11-22T18:45:18.734Z",
+  "url": "http://127.0.0.1:4173/",
+  "browser": "Chromium + SwiftShader (software WebGL)",
+  "steps": [
+    {
+      "name": "real mouse hover identifies Waystone",
+      "card": {
+        "hidden": false,
+        "mode": "hover",
+        "ref": "siteId:site:waystone",
+        "name": "Waystone",
+        "category": "Architecture · landmark",
+        "description": "A tall forked Noxel landmark. Its cream stone and teal inlay mark a place of interest; it is not a resource rock.",
+        "facts": [
+          "Purpose\nNavigation landmark · not harvestable",
+          "Art\nProvisional Noxel design"
+        ],
+        "selected": null,
+        "hovered": "Waystone"
+      }
+    },
+    {
+      "name": "click pins; Close and Escape dismiss",
+      "card": {
+        "hidden": false,
+        "mode": "pinned",
+        "ref": "siteId:site:waystone",
+        "name": "Waystone",
+        "category": "Architecture · landmark",
+        "description": "A tall forked Noxel landmark. Its cream stone and teal inlay mark a place of interest; it is not a resource rock.",
+        "facts": [
+          "Purpose\nNavigation landmark · not harvestable",
+          "Art\nProvisional Noxel design"
+        ],
+        "selected": "Waystone",
+        "hovered": null
+      }
+    },
+    {
+      "name": "pale blocks identified as persistent resource",
+      "card": {
+        "hidden": false,
+        "mode": "pinned",
+        "ref": "entityId:hero:styl_rock_medium:-6:-10",
+        "name": "Stone boulder",
+        "category": "Natural resource",
+        "description": "An intentional pale block-stone outcrop. Harvest it to carry stone for construction.",
+        "facts": [
+          "Resource\nstone",
+          "Remaining\n8 · 3 per gather",
+          "Status\nAvailable · provisional art"
+        ],
+        "selected": "Stone boulder",
+        "hovered": null
+      }
+    },
+    {
+      "name": "keyboard list, selection, focus and dismissal",
+      "listCount": 274
+    },
+    {
+      "name": "desktop orbit drag does not select"
+    },
+    {
+      "name": "all desktop inspection",
+      "readOnly": true,
+      "stateHash": "3b349831ed4f402c",
+      "acceptedCommands": 0
+    }
+  ],
+  "errors": [],
+  "physicalDeviceTested": false,
+  "physicalGpuTested": false,
+  "failure": "AssertionError [ERR_ASSERTION]: cropId:crop:0 projected into viewport\n    at pin (file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-inspection-browser-20261122/browser-verification.mjs:59:10)\n    at async file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-inspection-browser-20261122/browser-verification.mjs:191:16"
+}

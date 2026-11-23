@@ -1,0 +1,56 @@
+{
+  "genesisEntities": 12,
+  "builds": [
+    {
+      "projectId": "house",
+      "outcome": {
+        "type": "build",
+        "structureId": "structure:64ab1b289e1b667a",
+        "costPaid": {
+          "stone": 18,
+          "wood": 10
+        },
+        "resourcesGained": {}
+      }
+    },
+    {
+      "projectId": "path",
+      "outcome": {
+        "type": "build",
+        "structureId": "structure:5cab39869064e73d",
+        "costPaid": {
+          "stone": 9
+        },
+        "resourcesGained": {}
+      }
+    },
+    {
+      "projectId": "farm",
+      "outcome": {
+        "type": "build",
+        "structureId": "structure:54ccf53e11387e5f",
+        "costPaid": {
+          "stone": 12,
+          "wood": 6
+        },
+        "resourcesGained": {
+          "ore": 8,
+          "wood": 12
+        }
+      }
+    }
+  ],
+  "builtEntities": 10,
+  "inventory": {
+    "stone": 9,
+    "wood": 20,
+    "ore": 8
+  },
+  "snapshotKinds": {
+    "styl_cairn": 1,
+    "styl_shrub": 1,
+    "styl_tree_cluster": 4,
+    "styl_tree_spire": 1,
+    "styl_tree_table": 3
+  }
+}

@@ -1,0 +1,230 @@
+{
+  "environment": "Chromium against Vite production build at 127.0.0.1:4173",
+  "date": "2026-11-22",
+  "checks": [
+    {
+      "name": "production blocks raw debug state and F/G/debugMutations",
+      "beforeHash": "3ded386e17521851",
+      "afterHash": "3ded386e17521851",
+      "acceptedCommands": 0
+    },
+    {
+      "name": "browser harvest dispatches and atomically saves",
+      "hash": "9c189604cd35c113",
+      "inventory": {
+        "stone": 48,
+        "wood": 28
+      },
+      "sequence": 1,
+      "journal": {
+        "schema": 1,
+        "seed": 1337,
+        "starterInventory": {
+          "stone": 48,
+          "wood": 24
+        },
+        "entries": [
+          {
+            "command": {
+              "schema": 1,
+              "id": "harvest:0:e%3A30%2C30%3A4",
+              "type": "harvest",
+              "entityId": "e:30,30:4",
+              "expectedRevision": 0
+            },
+            "sequence": 0,
+            "revision": 1,
+            "hash": "9c189604cd35c113",
+            "outcome": {
+              "type": "harvest",
+              "entityId": "e:30,30:4",
+              "resource": "wood",
+              "amount": 4
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "harvest snapshot restores exactly once without duplicate starter grant",
+      "hash": "9c189604cd35c113",
+      "inventory": {
+        "stone": 48,
+        "wood": 28
+      },
+      "save": {
+        "schema": 1,
+        "key": "astrix:m002:v1:seed:1337",
+        "status": "restored",
+        "persistent": true,
+        "message": "Restored 1 accepted command."
+      }
+    },
+    {
+      "name": "saved record clears and snapshot-tail boundary restores",
+      "before": {
+        "structures": 3,
+        "accepted": 4
+      },
+      "cleared": {
+        "structures": 0,
+        "inventory": {
+          "stone": 48,
+          "wood": 24
+        }
+      },
+      "restoredHash": "9c189604cd35c113"
+    },
+    {
+      "name": "desktop restored house/path/farm",
+      "hash": "5508a2b3b180c49f",
+      "inventory": {
+        "ore": 8,
+        "stone": 9,
+        "wood": 24
+      },
+      "structures": 3,
+      "save": {
+        "schema": 1,
+        "key": "astrix:m002:v1:seed:1337",
+        "status": "restored",
+        "persistent": true,
+        "message": "Restored 4 accepted commands."
+      },
+      "metrics": {
+        "seed": 1337,
+        "worldSize": 2048,
+        "chunkSize": 32,
+        "nearRadius": 3,
+        "seaLevel": 0,
+        "loadedChunks": 49,
+        "cachedChunks": 81,
+        "chunksGenerated": 81,
+        "generationMs": 373.3,
+        "initialLoadMs": 1958,
+        "entities": 437,
+        "trees": 94,
+        "pinkTrees": 3,
+        "pinkOverflow": 10,
+        "natureInstances": 267,
+        "edits": 167,
+        "harvested": 1,
+        "inventory": {
+          "ore": 8,
+          "stone": 9,
+          "wood": 24
+        },
+        "structures": 3,
+        "m2": {
+          "projectsBuilt": 3,
+          "structures": 3,
+          "selected": null,
+          "lastBuild": "",
+          "inventory": {
+            "ore": 8,
+            "stone": 9,
+            "wood": 24
+          },
+          "revision": 173,
+          "acceptedCommands": 4,
+          "stateHash": "5508a2b3b180c49f"
+        },
+        "nearTriangles": 100086,
+        "macroTriangles": 98588,
+        "rendererCalls": 47,
+        "rendererTriangles": 199862,
+        "rendererGeometries": 39,
+        "rendererTextures": 4,
+        "streamPerf": {
+          "chunkGenP50": 3.5,
+          "chunkGenP95": 5.4,
+          "chunkGenMax": 6.6,
+          "chunkMeshP50": 8.1,
+          "chunkMeshP95": 40.9,
+          "chunkMeshMax": 91.7,
+          "macroP50": 132.8,
+          "macroMax": 132.8,
+          "macroSampleP50": 69.7,
+          "macroSampleMax": 69.7,
+          "macroCacheHits": 0,
+          "chunkSamples": 44,
+          "macroSamples": 1
+        },
+        "save": {
+          "schema": 1,
+          "key": "astrix:m002:v1:seed:1337",
+          "status": "restored",
+          "persistent": true,
+          "message": "Restored 4 accepted commands."
+        },
+        "harvestable": "e:30,30:4",
+        "acceptedCommands": 4,
+        "stateHash": "5508a2b3b180c49f",
+        "debugMutations": false,
+        "authority": "local-stub / local-simulation-only",
+        "lastAction": "",
+        "persistenceMessage": "Restored 4 accepted commands."
+      }
+    },
+    {
+      "name": "mobile clean view restores built world",
+      "hash": "5508a2b3b180c49f",
+      "structures": 3
+    },
+    {
+      "name": "mobile interface fits viewport",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "panel": {
+        "x": 52,
+        "y": 60,
+        "width": 330,
+        "height": 312.84375
+      }
+    },
+    {
+      "name": "browser snapshot-tail replay matches live",
+      "expected": "5508a2b3b180c49f",
+      "actual": "5508a2b3b180c49f",
+      "sequence": 4
+    },
+    {
+      "name": "browser rejects and quarantines corrupt save",
+      "status": "corrupt",
+      "quarantined": "{broken",
+      "originalKeyCleared": true
+    },
+    {
+      "name": "browser storage fault keeps game usable but reports volatile work",
+      "structures": 1,
+      "accepted": 1,
+      "save": {
+        "schema": 1,
+        "key": "astrix:m002:v1:seed:1337",
+        "status": "unavailable",
+        "persistent": false,
+        "message": "Save failed: QA quota. Latest accepted work is not safely persisted."
+      }
+    },
+    {
+      "name": "production action=dig ignored even with debug requests",
+      "edits": 0,
+      "acceptedCommands": 0
+    },
+    {
+      "name": "scripted build uses accepted commands and persists",
+      "structures": 3,
+      "sequence": 3,
+      "hash": "5612602490e5e9b7",
+      "journalSequences": [
+        0,
+        1,
+        2
+      ]
+    }
+  ],
+  "errors": [],
+  "disposition": "Browser checks passed; not a formal closure approval."
+}

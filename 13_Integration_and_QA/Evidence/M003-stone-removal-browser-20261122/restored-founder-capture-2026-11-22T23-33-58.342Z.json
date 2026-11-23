@@ -1,0 +1,216 @@
+{
+  "scope": "built founder settlement before and after genuine production reload",
+  "startedAt": "2026-11-22T23:33:58.343Z",
+  "errors": [],
+  "responseFailures": [],
+  "screenshots": [
+    {
+      "phase": "production-built-founder-settlement",
+      "filename": "production-built-founder-settlement-2026-11-22T23-33-58.342Z.png"
+    },
+    {
+      "phase": "production-restored-founder-settlement",
+      "filename": "production-restored-founder-settlement-2026-11-22T23-33-58.342Z.png"
+    }
+  ],
+  "steps": [
+    {
+      "phase": "built",
+      "entities": 135,
+      "chunksGenerated": 90,
+      "stateHash": "5b05e32aed0a9a05",
+      "structures": 3,
+      "inventory": {
+        "stone": 9,
+        "wood": 20,
+        "ore": 8
+      },
+      "life": {
+        "tick": 0,
+        "stockpile": {
+          "id": "stockpile:founder",
+          "x": -50,
+          "z": -32,
+          "capacity": 200,
+          "inventory": {}
+        },
+        "jobs": [],
+        "crops": [
+          {
+            "id": "crop:0",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:1",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:2",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:3",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:4",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:5",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:6",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:7",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:8",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          }
+        ]
+      },
+      "acceptedCommands": 3,
+      "save": {
+        "schema": 3,
+        "key": "astrix:m002:v3:seed:1337",
+        "status": "saved",
+        "persistent": true,
+        "message": "Saved locally."
+      },
+      "structureNames": [
+        "Door path",
+        "Founder's house",
+        "Terraced field"
+      ]
+    },
+    {
+      "phase": "restored",
+      "entities": 88,
+      "chunksGenerated": 81,
+      "stateHash": "5b05e32aed0a9a05",
+      "structures": 3,
+      "inventory": {
+        "ore": 8,
+        "stone": 9,
+        "wood": 20
+      },
+      "life": {
+        "tick": 0,
+        "stockpile": {
+          "id": "stockpile:founder",
+          "x": -50,
+          "z": -32,
+          "capacity": 200,
+          "inventory": {}
+        },
+        "jobs": [],
+        "crops": [
+          {
+            "id": "crop:0",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:1",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:2",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:3",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:4",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:5",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:6",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:7",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:8",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          }
+        ]
+      },
+      "acceptedCommands": 3,
+      "save": {
+        "schema": 3,
+        "key": "astrix:m002:v3:seed:1337",
+        "status": "restored",
+        "persistent": true,
+        "message": "Restored 3 accepted commands."
+      },
+      "structureNames": [
+        "Door path",
+        "Founder's house",
+        "Terraced field"
+      ]
+    }
+  ],
+  "camera": {
+    "position": {
+      "x": -8.069353854064133,
+      "y": 58.327626223447396,
+      "z": 3.7091882415880306
+    },
+    "target": {
+      "x": -43.00000000000001,
+      "y": 13.999999999999993,
+      "z": -40.99999999999999
+    }
+  },
+  "status": "captured",
+  "finishedAt": "2026-11-22T23:35:02.669Z"
+}

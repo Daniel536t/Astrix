@@ -1,0 +1,18 @@
+{
+  "scope": "actual production build-camera materialization",
+  "steps": [
+    {
+      "label": "original",
+      "entities": 105,
+      "chunksGenerated": 81,
+      "cachedChunks": 81,
+      "loadedChunks": 49,
+      "targets": 45,
+      "stateHash": "e659504b056654dc"
+    }
+  ],
+  "errors": [],
+  "responseFailures": [],
+  "status": "failed",
+  "failure": "page.waitForFunction: Timeout 60000ms exceeded.\n    at metrics (/home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/diagnose-materialization-trace.mjs:14:14)\n    at /home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/diagnose-materialization-trace.mjs:28:11"
+}

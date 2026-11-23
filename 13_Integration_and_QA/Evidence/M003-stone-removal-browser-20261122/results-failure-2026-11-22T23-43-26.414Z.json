@@ -1,0 +1,490 @@
+{
+  "startedAt": "2026-11-22T23:40:24.131Z",
+  "url": "http://18.116.53.201/",
+  "productionBuild": true,
+  "browser": "Chromium + SwiftShader (software WebGL)",
+  "authority": "local-stub / local-simulation-only",
+  "retiredNames": [
+    "Stone Boulder",
+    "Small stone deposit",
+    "Large stone outcrop"
+  ],
+  "retiredEntityIds": [
+    "hero:styl_rock_medium:-6:-10"
+  ],
+  "desktop": {
+    "checks": [
+      {
+        "name": "retained stone cairn inspection",
+        "nameShown": "Stone cairn",
+        "readOnly": true
+      },
+      {
+        "name": "retained ore inspection",
+        "nameShown": "Purple-seam ore deposit",
+        "readOnly": true
+      },
+      {
+        "name": "retained landmark inspection",
+        "nameShown": "Waystone",
+        "readOnly": true
+      },
+      {
+        "name": "keyboard natural gathering",
+        "acceptedCommands": 1,
+        "stateHash": "d3468462dca44d4f",
+        "inventory": {
+          "stone": 48,
+          "wood": 24,
+          "fiber": 1
+        },
+        "stockpile": {},
+        "save": {
+          "schema": 3,
+          "key": "astrix:m002:v3:seed:1337",
+          "status": "saved",
+          "persistent": true,
+          "message": "Saved locally."
+        }
+      },
+      {
+        "name": "real deposit to founder stockpile",
+        "acceptedCommands": 2,
+        "stateHash": "7df33c50a3611eb3",
+        "inventory": {
+          "stone": 48,
+          "wood": 24
+        },
+        "stockpile": {
+          "fiber": 1
+        },
+        "save": {
+          "schema": 3,
+          "key": "astrix:m002:v3:seed:1337",
+          "status": "saved",
+          "persistent": true,
+          "message": "Saved locally."
+        }
+      },
+      {
+        "name": "founder house built",
+        "acceptedCommands": 3,
+        "stateHash": "979841ce611bb834",
+        "inventory": {
+          "stone": 30,
+          "wood": 14
+        },
+        "stockpile": {
+          "fiber": 1
+        },
+        "save": {
+          "schema": 3,
+          "key": "astrix:m002:v3:seed:1337",
+          "status": "saved",
+          "persistent": true,
+          "message": "Saved locally."
+        }
+      },
+      {
+        "name": "door path built",
+        "acceptedCommands": 4,
+        "stateHash": "1d1307002e1cfdd0",
+        "inventory": {
+          "stone": 21,
+          "wood": 14
+        },
+        "stockpile": {
+          "fiber": 1
+        },
+        "save": {
+          "schema": 3,
+          "key": "astrix:m002:v3:seed:1337",
+          "status": "saved",
+          "persistent": true,
+          "message": "Saved locally."
+        }
+      },
+      {
+        "name": "terraced field built",
+        "acceptedCommands": 5,
+        "stateHash": "97c8b8ff48087e72",
+        "inventory": {
+          "stone": 9,
+          "wood": 20,
+          "ore": 8
+        },
+        "stockpile": {
+          "fiber": 1
+        },
+        "save": {
+          "schema": 3,
+          "key": "astrix:m002:v3:seed:1337",
+          "status": "saved",
+          "persistent": true,
+          "message": "Saved locally."
+        }
+      },
+      {
+        "name": "built Founder's house inspection",
+        "nameShown": "Founder's house",
+        "readOnly": true
+      },
+      {
+        "name": "built Door path inspection",
+        "nameShown": "Door path",
+        "readOnly": true
+      },
+      {
+        "name": "built Terraced field inspection",
+        "nameShown": "Terraced field",
+        "readOnly": true
+      }
+    ],
+    "genesis": {
+      "names": [
+        "Blossom tree",
+        "Cluster tree",
+        "Fiber shrub",
+        "Founder stockpile",
+        "Purple-seam ore deposit",
+        "Spire tree",
+        "Stone cairn",
+        "Table-canopy tree",
+        "Trail marker",
+        "Waystone"
+      ],
+      "targetCount": 45
+    },
+    "rendering": {
+      "entities": 105,
+      "natureInstances": 42,
+      "loadedChunks": 49,
+      "rendererCalls": 42,
+      "rendererTriangles": 184918
+    },
+    "pointerInspection": {
+      "requested": "Waystone",
+      "selected": "Waystone"
+    },
+    "builtResources": {
+      "stone": 9,
+      "wood": 20,
+      "ore": 8
+    },
+    "farmClearing": {
+      "preparationResources": {
+        "ore": 8,
+        "wood": 12
+      },
+      "oreTargetAbsentAfterGathering": true
+    },
+    "structureTargets": [
+      {
+        "name": "Founder's house",
+        "ref": {
+          "structureId": "structure:64ab1b289e1b667a"
+        }
+      },
+      {
+        "name": "Door path",
+        "ref": {
+          "structureId": "structure:5cab39869064e73d"
+        }
+      },
+      {
+        "name": "Terraced field",
+        "ref": {
+          "structureId": "structure:54ccf53e11387e5f"
+        }
+      }
+    ],
+    "beforeBuild": {
+      "stone": 48,
+      "wood": 24
+    },
+    "builtCatalog": {
+      "names": [
+        "Blossom tree",
+        "Cluster tree",
+        "Door path",
+        "Fiber shrub",
+        "Founder stockpile",
+        "Founder's house",
+        "Spire tree",
+        "Stone cairn",
+        "Table-canopy tree",
+        "Terraced field",
+        "Trail marker",
+        "Waystone"
+      ],
+      "targetCount": 64
+    },
+    "persistedEntityDeltaKinds": {
+      "styl_cairn": 1,
+      "styl_shrub": 1,
+      "styl_tree_cluster": 4,
+      "styl_tree_spire": 1,
+      "styl_tree_table": 3
+    },
+    "saveBeforeReload": {
+      "schema": 3,
+      "snapshotNextSequence": 5,
+      "journalCommands": [
+        "harvest",
+        "deposit",
+        "build",
+        "build",
+        "build"
+      ],
+      "retiredSnapshotEntities": 0,
+      "cairnRetained": true,
+      "oreEntityAbsentAfterAcceptedGathering": true,
+      "recoveredOre": 8,
+      "recoveredWood": 12
+    },
+    "originalViewRestored": {
+      "names": [
+        "Cluster tree",
+        "Door path",
+        "Fiber shrub",
+        "Founder stockpile",
+        "Founder's house",
+        "Spire tree",
+        "Stone cairn",
+        "Table-canopy tree",
+        "Terrace crop plot 1",
+        "Terrace crop plot 2",
+        "Terrace crop plot 3",
+        "Terrace crop plot 4",
+        "Terrace crop plot 5",
+        "Terrace crop plot 6",
+        "Terrace crop plot 7",
+        "Terrace crop plot 8",
+        "Terrace crop plot 9",
+        "Terraced field",
+        "Trail marker",
+        "Waystone"
+      ],
+      "targetCount": 55
+    },
+    "restored": {
+      "names": [
+        "Blossom tree",
+        "Cluster tree",
+        "Door path",
+        "Fiber shrub",
+        "Founder stockpile",
+        "Founder's house",
+        "Spire tree",
+        "Stone cairn",
+        "Table-canopy tree",
+        "Terrace crop plot 1",
+        "Terrace crop plot 2",
+        "Terrace crop plot 3",
+        "Terrace crop plot 4",
+        "Terrace crop plot 5",
+        "Terrace crop plot 6",
+        "Terrace crop plot 7",
+        "Terrace crop plot 8",
+        "Terrace crop plot 9",
+        "Terraced field",
+        "Trail marker",
+        "Waystone"
+      ],
+      "targetCount": 73
+    },
+    "persistence": {
+      "sameStateHash": true,
+      "carriedPreserved": true,
+      "stockpilePreserved": true,
+      "structuresPreserved": 3,
+      "commands": 5,
+      "originalViewEntitiesBeforeReload": 105,
+      "originalViewEntitiesAfterReload": 103,
+      "equivalentHistoryEntitiesAfterReload": 144,
+      "finalSettlementFocusEntitiesBeforeReload": 144,
+      "finalSettlementFocusChunksBeforeReload": 99,
+      "restoredProjectCameraChunks": 99,
+      "unchangedCanonicalHash": "97c8b8ff48087e72",
+      "persistedEntityDeltas": 10,
+      "note": "Unchanged procedural entities regenerate deterministically from visited chunks. Equivalent construction histories are compared separately from an original-founder-only restore. Camera-dependent materialization does not alter canonical persistence bytes or state hash."
+    },
+    "materializationObservation": {
+      "originalBeforeConstruction": 105,
+      "originalAfterReload": 103,
+      "afterConstructionFinalFocus": 144,
+      "equivalentHistoryAfterReload": 144,
+      "note": "Actual browser materialization totals after revisiting the project cameras are recorded rather than assumed. Exact totals depend on camera history and selection transitions; equivalent canonical hashes and saved bytes are the persistence contract. The final settlement-focus shift remains a distinct camera phase."
+    },
+    "keyboardMovementCamera": {
+      "before": {
+        "x": 31.125538530723567,
+        "z": 49.75805544060598
+      },
+      "after": {
+        "x": 10.43447386058535,
+        "z": 23.274700354896723
+      },
+      "distance": 33.607860000000066
+    }
+  },
+  "mobile": {},
+  "errors": [],
+  "responseFailures": [],
+  "requests": [
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-14&tz=-8&ty=22&dist=78"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-10&tz=-14&ty=19&dist=28&pitch=35"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-14&tz=-8&ty=22&dist=78"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-14&tz=-8&ty=22&dist=78"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-14&tz=-8&ty=22&dist=78"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=96&tz=-64&ty=30&dist=78"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    }
+  ],
+  "console": [],
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n83 !== 81\n\n    at file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/verify-production.mjs:378:10",
+  "status": "failed",
+  "finishedAt": "2026-11-22T23:43:26.414Z"
+}

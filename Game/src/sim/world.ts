@@ -10,6 +10,8 @@
 // generator version, parameters and chunk coordinates; edits are recorded
 // separately and re-applied when a chunk is regenerated.
 import type { Structure } from './structures';
+import type { LifeState } from './economy';
+import { isStoneReplay } from './stone-compat';
 
 export const WORLD_SIZE = 2048;
 export const HALF = WORLD_SIZE / 2;
@@ -156,6 +158,22 @@ export interface VoxelChunk {
 
 // Natural assets are the project's Styl (`nat_`) pipeline (AS-001 v2), not
 // Noxel architecture. Noxel remains the human-made kit/waystone/marker system.
+// Retired only as world content. The names remain in the serialized type so
+// old snapshots and accepted harvest journals can be migrated without rejecting
+// otherwise valid saves. Generation, collision and inspection never use them.
+export const RETIRED_STONE_KINDS = new Set<EntityKind>([
+  'styl_rock_small', 'styl_rock_medium', 'styl_rock_large',
+]);
+export const isRetiredStoneKind = (kind: EntityKind): boolean => RETIRED_STONE_KINDS.has(kind);
+export type ActiveEntityKind = Exclude<EntityKind,
+  'styl_rock_small' | 'styl_rock_medium' | 'styl_rock_large'>;
+
+function liveEntity(world: World, id: string): Entity | null {
+  const entity = world.entities.get(id);
+  return !entity || (isRetiredStoneKind(entity.kind) && !isStoneReplay(world))
+    || world.entityRemovals.has(id) ? null : entity;
+}
+
 export type EntityKind =
   | 'styl_tree_spire'
   | 'styl_tree_table'
@@ -230,13 +248,20 @@ export interface World {
   chunks: Map<string, VoxelChunk>;
   entities: Map<string, Entity>;
   entityChunks: Map<string, string[]>;
+  /** Chunks whose deterministic natural-entity state has been changed. */
+  entityChanges: Set<string>;
+  /** Tombstones for removed deterministic natural entities. */
+  entityRemovals: Set<string>;
   /** Authoritative built structures (house, path, terraces, crops). */
   structures: Map<string, Structure>;
   sites: NoxelSite[];
   regions: RegionInfo[];
   /** chunk key -> local voxel index -> material. Durable, compact edits. */
   edits: Map<string, Map<number, number>>;
+  /** Global local-player carried bag; bounded in schema 3, legacy in 1/2. */
   inventory: Record<string, number>;
+  /** Present only after schema-3 genesis/restoration. */
+  life?: LifeState;
   dirty: Set<string>;
   stats: WorldStats;
   authoredPlaced: boolean;
@@ -266,6 +291,8 @@ export function createWorld(seed = 1337): World {
     chunks: new Map(),
     entities: new Map(),
     entityChunks: new Map(),
+    entityChanges: new Set(),
+    entityRemovals: new Set(),
     structures: new Map(),
     sites: [],
     regions: REGIONS,
@@ -647,18 +674,14 @@ export function generateChunk(world: World, cx: number, cz: number): VoxelChunk 
     }
     // Recompute the cache for edited chunks.
     for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-      for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-        let topSolid = Y_MIN;
-        let topMat: number = chunk.topMaterials[lz * CHUNK_SIZE + lx];
-        for (let y = Y_MAX - 1; y >= Y_MIN; y--) {
-          const m = chunk.data[localIndex(lx, yToIndex(y), lz)];
-          if (isSolid(m)) { topSolid = y; topMat = m; break; }
-        }
-        chunk.heights[lz * CHUNK_SIZE + lx] = clamp(topSolid - Y_MIN, 0, WORLD_HEIGHT - 1);
-        chunk.topMaterials[lz * CHUNK_SIZE + lx] = topMat;
-      }
+      for (let lx = 0; lx < CHUNK_SIZE; lx++) updateColumnCache(chunk, lx, lz);
     }
   }
+  // Non-air counts are derived renderer statistics, not durable world state.
+  // Edited base air may become solid (and vice versa) during restoration.
+  let editedNonAir = 0;
+  for (const material of chunk.data) if (material !== MAT.AIR) editedNonAir++;
+  world.stats.voxelsFilled += editedNonAir - nonAir;
 
   world.chunks.set(key, chunk);
   world.stats.chunksGenerated++;
@@ -670,10 +693,37 @@ export function generateChunk(world: World, cx: number, cz: number): VoxelChunk 
   return chunk;
 }
 
+/** A base-terrain cache shared by edited and unedited regeneration. Natural
+ * scenery never depends on later voxel edits; this also lets a snapshot restore
+ * a harvested chunk without materializing unrelated neighbouring chunks. */
+const baseColumnCache = new WeakMap<World, Map<string, { heights: Uint8Array; topMaterials: Uint8Array }>>();
+
+function baseColumns(world: World, chunk: VoxelChunk): { heights: Uint8Array; topMaterials: Uint8Array } {
+  let cache = baseColumnCache.get(world);
+  if (!cache) { cache = new Map(); baseColumnCache.set(world, cache); }
+  const cached = cache.get(chunk.key);
+  if (cached) return cached;
+  const columns = { heights: new Uint8Array(chunk.heights), topMaterials: new Uint8Array(chunk.topMaterials) };
+  for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      const x = chunkOriginX(chunk.cx) + lx, z = chunkOriginZ(chunk.cz) + lz;
+      const h = surfaceHeightAt(world.seed, x, z);
+      const slope = slopeAt(world.seed, x, z, h);
+      const index = lz * CHUNK_SIZE + lx;
+      columns.heights[index] = clamp(h - Y_MIN, 0, WORLD_HEIGHT - 1);
+      columns.topMaterials[index] = topMaterialAt(world.seed, x, z, h, slope);
+    }
+  }
+  cache.set(chunk.key, columns);
+  return columns;
+}
+
 export function evictChunk(world: World, key: string): boolean {
   if (!world.chunks.has(key)) return false;
   world.chunks.delete(key);
   world.stats.chunksEvicted++;
+  // Chunk bytes and column caches are regenerated on demand. Entities remain
+  // authoritative: eviction must not forget their persistent state.
   return true;
 }
 
@@ -692,13 +742,23 @@ export function setVoxel(world: World, x: number, y: number, z: number, m: MatId
   if (y < Y_MIN || y >= Y_MAX) return false;
   if (x < -HALF || z < -HALF || x >= HALF || z >= HALF) return false;
   const cx = worldToChunkX(x), cz = worldToChunkZ(z);
+  const idx = localIndex(worldToLocalX(x), yToIndex(y), worldToLocalZ(z));
+  const previousEdit = world.edits.get(chunkKey(cx, cz))?.get(idx);
+  // A chunk evicted after an earlier edit can regenerate with that durable
+  // material already applied. Dropping the edit here would make it disappear
+  // on the next eviction/restoration, even though the current write no-ops.
+  if (previousEdit === m) return false;
   const chunk = ensureChunk(world, cx, cz);
   if (!chunk) return false;
-  const idx = localIndex(worldToLocalX(x), yToIndex(y), worldToLocalZ(z));
-  if (chunk.data[idx] === m) return false;
-  chunk.data[idx] = m;
   let edits = world.edits.get(chunk.key);
   if (!edits) { edits = new Map(); world.edits.set(chunk.key, edits); }
+  // An idempotent write must still restore a durable delta discarded by an
+  // older snapshot or delta decoder. It is not a new authoritative revision.
+  if (chunk.data[idx] === m) {
+    if (!edits.has(idx)) edits.set(idx, m);
+    return false;
+  }
+  chunk.data[idx] = m;
   edits.set(idx, m);
   chunk.dirty = true;
   world.dirty.add(chunk.key);
@@ -754,13 +814,16 @@ export function waterDepthAt(world: World, x: number, z: number): number {
 
 // ---------- entities ----------
 function addEntity(world: World, e: Entity): void {
-  if (world.entities.has(e.id)) return;
+  if (world.entities.has(e.id) || (isRetiredStoneKind(e.kind) && !isStoneReplay(world))
+    || world.entityRemovals.has(e.id)) return;
   world.entities.set(e.id, e);
   let list = world.entityChunks.get(e.chunk);
   if (!list) { list = []; world.entityChunks.set(e.chunk, list); }
   list.push(e.id);
   world.stats.entities = world.entities.size;
-  world.revision++;
+  // Generation is deterministic and advances no player-command precondition.
+  // Authored scaffolding may transiently change it; the snapshot restores the
+  // saved revision after placing that scaffolding.
 }
 
 /**
@@ -771,14 +834,16 @@ function addEntity(world: World, e: Entity): void {
  */
 export function removeEntity(world: World, id: string): boolean {
   const e = world.entities.get(id);
-  if (!e) return false;
+  if (!e || (isRetiredStoneKind(e.kind) && !isStoneReplay(world))) return false;
   world.entities.delete(id);
   const list = world.entityChunks.get(e.chunk);
   if (list) {
     const i = list.indexOf(id);
     if (i >= 0) list.splice(i, 1);
-    if (list.length === 0) world.entityChunks.delete(e.chunk);
+    if (list.length === 0) world.entityChunks.set(e.chunk, []);
   }
+  world.entityChanges.add(e.chunk);
+  if (!e.authored) world.entityRemovals.add(id);
   if (e.kind.startsWith('styl_tree')) world.stats.trees = Math.max(0, world.stats.trees - 1);
   if (e.kind === 'styl_tree_blossom') world.stats.pinkTrees = Math.max(0, world.stats.pinkTrees - 1);
   world.stats.entities = world.entities.size;
@@ -808,16 +873,28 @@ function rockScore(wx: number, wz: number, seed: number): number {
 }
 
 function generateEntities(world: World, chunk: VoxelChunk): void {
-  if (world.entityChunks.has(chunk.key)) return;
+  generateEntityChunk(world, chunk.cx, chunk.cz);
+}
+
+/** @internal Replays deterministic generation for snapshot entity deltas. */
+export function generateEntityChunk(world: World, cx: number, cz: number): void {
+  const key = chunkKey(cx, cz);
+  if (world.entityChunks.has(key)) return;
+  const chunk = ensureChunk(world, cx, cz);
+  if (!chunk) return;
+
   const rnd = mulberry32((hash2i(chunk.cx, chunk.cz, world.seed + 900) * 4294967296) >>> 0);
   const ox = chunkOriginX(chunk.cx), oz = chunkOriginZ(chunk.cz);
+  const columns = baseColumns(world, chunk);
   let n = 0;
+  let naturalTrees = 0;
+  let naturalPinkTrees = 0;
 
   const localSurface = (lx: number, lz: number): number => {
-    return chunk.heights[lz * CHUNK_SIZE + lx] + Y_MIN + 1;
+    return columns.heights[lz * CHUNK_SIZE + lx] + Y_MIN;
   };
   const localTop = (lx: number, lz: number): MatId => {
-    return chunk.topMaterials[lz * CHUNK_SIZE + lx] as MatId;
+    return columns.topMaterials[lz * CHUNK_SIZE + lx] as MatId;
   };
   const localSlope = (lx: number, lz: number): number => {
     const h = localSurface(lx, lz);
@@ -846,19 +923,20 @@ function generateEntities(world: World, chunk: VoxelChunk): void {
 
       const treeChance = forest > 0.50 ? 0.72 : forest > 0.30 ? 0.25 : 0.05;
       if (top === MAT.GRASS && slope <= 2 && roll < treeChance) {
-        // Species mix from AS-001 §10: T1 28%, T2 34%, T3 26%, T4 12%.
-        // The 25% world pink cap is enforced per insertion, with T3 fallback.
+        // The cap is a deterministic natural-generation property. It cannot
+        // depend on which chunks a renderer loaded before this one.
         let kind: EntityKind;
         let variant: number;
         const speciesRoll = rnd();
         if (speciesRoll < 0.12) {
-          if ((world.stats.pinkTrees + 1) > 0.25 * (world.stats.trees + 1)) {
+          if ((naturalPinkTrees + 1) > 0.25 * (naturalTrees + 1)) {
             kind = 'styl_tree_cluster';
             variant = Math.floor(rnd() * 3);
             world.stats.pinkOverflow++;
           } else {
             kind = 'styl_tree_blossom';
             variant = Math.floor(rnd() * 2);
+            naturalPinkTrees++;
             world.stats.pinkTrees++;
           }
         } else if (speciesRoll < 0.40) {
@@ -871,6 +949,7 @@ function generateEntities(world: World, chunk: VoxelChunk): void {
           kind = 'styl_tree_cluster';
           variant = Math.floor(rnd() * 3);
         }
+        naturalTrees++;
         world.stats.trees++;
         addEntity(world, {
           id: entityId(chunk.key, n++),
@@ -883,18 +962,24 @@ function generateEntities(world: World, chunk: VoxelChunk): void {
         continue;
       }
       if (top === MAT.GRASS && rocky > 0.46 && roll < 0.38) {
+        // Consume the retired stone form's random draws and allocate its old
+        // sequence ID, but do not insert an entity. Later natural placements
+        // therefore remain byte-for-byte compatible with recorded saves.
         const sizeRoll = rnd();
         const kind: EntityKind = sizeRoll < 0.55 ? 'styl_rock_small'
           : sizeRoll < 0.90 ? 'styl_rock_medium' : 'styl_rock_large';
-        const remaining = kind === 'styl_rock_small' ? 4 : kind === 'styl_rock_medium' ? 8 : 12;
-        addEntity(world, {
-          id: entityId(chunk.key, n++),
-          kind, chunk: chunk.key, x: wx + 0.5, y: h, z: wz + 0.5,
+        const id = entityId(chunk.key, n++);
+        const record = {
+          id, kind, chunk: chunk.key, x: wx + 0.5, y: h, z: wz + 0.5,
+          resource: 'stone' as const,
+          remaining: kind === 'styl_rock_small' ? 4 : kind === 'styl_rock_medium' ? 8 : 12,
+          yieldPerHarvest: 3, harvested: false, provisional: true, authored: false,
           rot: Math.floor(rnd() * 24) * (Math.PI / 12),
           scale: 0.9 + rnd() * 0.2, variant: Math.floor(rnd() * 3),
-          resource: 'stone', remaining, yieldPerHarvest: 3,
-          harvested: false, provisional: true, authored: false,
-        });
+        };
+        // Only entities that existed in an accepted old save get tombstones,
+        // during explicit migration. Ordinary generation must restore exactly.
+        if (isStoneReplay(world)) addEntity(world, record);
         continue;
       }
       if (top === MAT.STONE && rocky > 0.58 && roll < 0.18) {
@@ -930,6 +1015,7 @@ function addAuthoredEntity(world: World, kind: EntityKind, x: number, z: number,
   // A hero asset owns its spot: clear any generated entity that would overlap
   // it, rather than silently dropping the authored composition.
   const ids = world.entityChunks.get(key) ?? [];
+  if (isRetiredStoneKind(kind) && !isStoneReplay(world)) return;
   for (const id of ids) {
     const e = world.entities.get(id);
     if (e && Math.hypot(e.x - x, e.z - z) < 2.6) {
@@ -939,14 +1025,18 @@ function addAuthoredEntity(world: World, kind: EntityKind, x: number, z: number,
     }
   }
   world.entityChunks.set(key, ids.filter((id) => world.entities.has(id)));
+  // Authored composition is durable state: it can clear overlapping natural
+  // entities, so save the complete affected chunk rather than only its heroes.
+  world.entityChanges.add(key);
 
   const id = `hero:${kind}:${Math.round(x)}:${Math.round(z)}`;
   const before = world.entities.size;
-  addEntity(world, {
+  const entity: Entity = {
     id, kind, chunk: key, x: x + 0.5, y, z: z + 0.5,
     rot, scale, variant, resource, remaining, yieldPerHarvest,
     harvested: false, provisional: true, authored: true,
-  });
+  };
+  addEntity(world, entity);
   if (world.entities.size > before && kind.startsWith('styl_tree')) {
     world.stats.trees++;
     if (kind === 'styl_tree_blossom') world.stats.pinkTrees++;
@@ -999,7 +1089,8 @@ export function nearestHarvestable(
   let best: Entity | null = null;
   let bestD = radius * radius;
   for (const e of world.entities.values()) {
-    if (e.harvested || !e.resource || e.remaining <= 0) continue;
+    if (isRetiredStoneKind(e.kind) || world.entityRemovals.has(e.id)
+      || e.harvested || !e.resource || e.remaining <= 0) continue;
     if (resource && e.resource !== resource) continue;
     const d = (e.x - x) ** 2 + (e.z - z) ** 2;
     if (d < bestD) { bestD = d; best = e; }
@@ -1010,15 +1101,35 @@ export function nearestHarvestable(
 export interface HarvestResult { entity: Entity; resource: ResourceType; amount: number; }
 
 export function harvestEntity(world: World, id: string): HarvestResult | null {
-  const e = world.entities.get(id);
+  const e = liveEntity(world, id);
   if (!e || e.harvested || !e.resource || e.remaining <= 0) return null;
   const amount = Math.min(e.yieldPerHarvest, e.remaining);
+  if (world.life && Object.values(world.inventory).reduce((sum, n) => sum + n, 0) + amount > 120) return null;
   e.remaining -= amount;
+  if (!e.authored) world.entityChanges.add(e.chunk);
   e.harvestedOnce = true;
   if (e.remaining <= 0) e.harvested = true;
   world.inventory[e.resource] = (world.inventory[e.resource] ?? 0) + amount;
   world.revision++;
   return { entity: e, resource: e.resource, amount };
+}
+
+/** Remove every retired source after verified historical replay. This migration
+ * creates deterministic tombstones but is not a player command or revision. */
+export function retireStoneEntities(world: World): void {
+  for (const e of [...world.entities.values()]) {
+    if (!isRetiredStoneKind(e.kind)) continue;
+    world.entities.delete(e.id);
+    if (!e.authored) world.entityRemovals.add(e.id);
+    world.entityChanges.add(e.chunk);
+    if (!world.entityChunks.has(e.chunk)) world.entityChunks.set(e.chunk, []);
+  }
+  for (const [key, ids] of world.entityChunks) {
+    const active = ids.filter((id) => world.entities.has(id));
+    if (active.length > 0 || world.entityChanges.has(key)) world.entityChunks.set(key, active);
+    else world.entityChunks.delete(key);
+  }
+  world.stats.entities = world.entities.size;
 }
 
 // ---------- persistence / authority boundary ----------

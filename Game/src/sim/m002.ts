@@ -2,10 +2,9 @@
 //
 // The fixture is a bounded slice of the real 2048 m world (seed 1337), not a
 // synthetic heightfield. It contains:
-//   * a rejected house site on a 7 m river-bank slope with a natural boulder;
-//   * a viable house shelf 20 m away with 2 m relief and a natural boulder to
-//     clear during preparation;
-//   * a 3 m farm slope 27 m from the house with a natural blossom tree.
+//   * a rejected house site on a 7 m river-bank slope;
+//   * a viable house shelf 20 m away with 2 m relief and no clearing needed;
+//   * a 3 m farm slope 27 m from the house with a natural blossom tree and ore.
 //
 // The same coordinates, queries and validators are used by the live-world
 // acceptance test. The only difference is how many chunks are materialised.

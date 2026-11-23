@@ -632,6 +632,18 @@ export function executePreparation(
   for (const id of plan.clearEntityIds) {
     if (!world.entities.has(id)) reasons.push(`entity ${id} no longer exists`);
   }
+  if (world.life) {
+    let recovered = 0;
+    for (const id of plan.clearEntityIds) {
+      const entity = world.entities.get(id);
+      if (entity?.resource && entity.remaining > 0) recovered += entity.remaining;
+    }
+    // Check before any voxel or entity changes, preserving legacy unbounded
+    // construction behavior and schema-3 carried-capacity conservation.
+    if (Object.values(world.inventory).reduce((sum, amount) => sum + amount, 0) + recovered > 120) {
+      reasons.push('resources recovered during site clearing would exceed carried capacity 120');
+    }
+  }
   if (reasons.length > 0) return fail('execute', 'unauthorized_edits', reasons);
 
   const inventoryBefore = inventorySnapshot(world);

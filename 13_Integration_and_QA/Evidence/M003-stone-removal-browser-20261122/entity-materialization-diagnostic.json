@@ -1,0 +1,171 @@
+{
+  "restoredStatus": "restored",
+  "stateHash": "97c8b8ff48087e72",
+  "persistedEntities": 10,
+  "steps": [
+    {
+      "step": "genesis",
+      "entities": 12,
+      "chunks": 5
+    },
+    {
+      "step": "house",
+      "entities": 12,
+      "hash": "7df33c50a3611eb3",
+      "nextHash": "979841ce611bb834",
+      "entityChanges": [
+        "30,30",
+        "30,31",
+        "31,30",
+        "31,31"
+      ],
+      "delta": {
+        "added": [],
+        "removed": []
+      }
+    },
+    {
+      "step": "path",
+      "entities": 12,
+      "hash": "979841ce611bb834",
+      "nextHash": "1d1307002e1cfdd0",
+      "entityChanges": [
+        "30,30",
+        "30,31",
+        "31,30",
+        "31,31"
+      ],
+      "delta": {
+        "added": [],
+        "removed": []
+      }
+    },
+    {
+      "step": "farm",
+      "entities": 10,
+      "hash": "1d1307002e1cfdd0",
+      "nextHash": "97c8b8ff48087e72",
+      "entityChanges": [
+        "30,30",
+        "30,31",
+        "31,30",
+        "31,31"
+      ],
+      "delta": {
+        "added": [],
+        "removed": [
+          "hero:styl_ore:-38:-42",
+          "hero:styl_tree_blossom:-28:-38"
+        ]
+      }
+    },
+    {
+      "step": "same founder view materialized",
+      "before": 88,
+      "restored": 88,
+      "beforeGenerated": 81,
+      "restoredGenerated": 81,
+      "delta": {
+        "added": [
+          "e:26,27:3",
+          "e:26,27:6",
+          "e:26,32:1",
+          "e:26,33:7",
+          "e:27,27:4",
+          "e:27,31:0",
+          "e:27,32:0",
+          "e:28,30:3",
+          "e:28,30:5",
+          "e:28,30:6",
+          "e:28,32:0",
+          "e:28,32:3",
+          "e:28,34:2",
+          "e:29,26:1",
+          "e:29,26:2",
+          "e:29,26:3",
+          "e:29,26:6",
+          "e:29,27:3",
+          "e:29,32:3",
+          "e:29,33:0",
+          "e:29,33:1",
+          "e:30,26:0",
+          "e:30,26:3",
+          "e:30,26:4",
+          "e:30,26:5",
+          "e:30,26:6",
+          "e:30,26:7",
+          "e:30,26:8",
+          "e:30,28:3",
+          "e:30,29:0",
+          "e:30,34:1",
+          "e:31,26:0",
+          "e:31,26:2",
+          "e:31,26:4",
+          "e:31,26:6",
+          "e:31,27:0",
+          "e:31,27:5",
+          "e:31,32:1",
+          "e:31,32:5",
+          "e:31,34:1",
+          "e:32,26:2",
+          "e:32,27:0",
+          "e:32,27:1",
+          "e:32,27:2",
+          "e:32,29:6",
+          "e:32,30:0",
+          "e:32,34:2",
+          "e:33,26:0",
+          "e:33,26:1",
+          "e:33,26:2",
+          "e:33,26:3",
+          "e:33,26:4",
+          "e:33,26:5",
+          "e:33,27:0",
+          "e:33,27:2",
+          "e:33,27:4",
+          "e:33,28:0",
+          "e:33,28:1",
+          "e:33,33:5",
+          "e:34,26:0",
+          "e:34,26:1",
+          "e:34,26:2",
+          "e:34,26:3",
+          "e:34,27:0",
+          "e:34,27:1",
+          "e:34,27:2",
+          "e:34,27:3",
+          "e:34,27:5",
+          "e:34,27:7",
+          "e:34,28:0",
+          "e:34,28:1",
+          "e:34,28:2",
+          "e:34,28:4",
+          "e:34,29:0",
+          "e:34,29:1",
+          "e:34,29:2",
+          "e:34,31:5",
+          "e:34,33:2"
+        ],
+        "removed": []
+      }
+    },
+    {
+      "step": "union with original founder camera view",
+      "before": 133,
+      "restored": 133,
+      "beforeGenerated": 98,
+      "restoredGenerated": 98,
+      "delta": {
+        "added": [],
+        "removed": []
+      }
+    },
+    {
+      "step": "union with Waystone pointer camera view",
+      "before": 133,
+      "restored": 133,
+      "beforeGenerated": 98,
+      "restoredGenerated": 98
+    }
+  ]
+}

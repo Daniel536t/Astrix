@@ -1,0 +1,67 @@
+{
+  "startedAt": "2026-11-22T22:55:29.957Z",
+  "url": "http://18.116.53.201/",
+  "productionBuild": true,
+  "browser": "Chromium + SwiftShader (software WebGL)",
+  "authority": "local-stub / local-simulation-only",
+  "retiredNames": [
+    "Stone Boulder",
+    "Small stone deposit",
+    "Large stone outcrop"
+  ],
+  "retiredEntityIds": [
+    "hero:styl_rock_medium:-6:-10"
+  ],
+  "desktop": {
+    "checks": [],
+    "genesis": {
+      "names": [
+        "Blossom tree",
+        "Cluster tree",
+        "Fiber shrub",
+        "Founder stockpile",
+        "Purple-seam ore deposit",
+        "Spire tree",
+        "Stone cairn",
+        "Table-canopy tree",
+        "Trail marker",
+        "Waystone"
+      ],
+      "targetCount": 45
+    }
+  },
+  "mobile": {},
+  "errors": [],
+  "responseFailures": [],
+  "requests": [
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-14&tz=-8&ty=22&dist=78"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    }
+  ],
+  "console": [],
+  "failure": "AssertionError [ERR_ASSERTION]: genesis orbit target x: 76.25107706144712 must equal -14\n    at assertTarget (file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/verify-production.mjs:61:46)\n    at file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/verify-production.mjs:155:3",
+  "status": "failed",
+  "finishedAt": "2026-11-22T22:55:34.160Z"
+}

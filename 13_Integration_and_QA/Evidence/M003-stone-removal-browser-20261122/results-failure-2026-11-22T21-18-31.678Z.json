@@ -1,0 +1,181 @@
+{
+  "startedAt": "2026-11-22T21:16:10.600Z",
+  "url": "http://18.116.53.201/",
+  "productionBuild": true,
+  "browser": "Chromium + SwiftShader (software WebGL)",
+  "authority": "local-stub / local-simulation-only",
+  "retiredNames": [
+    "Stone Boulder",
+    "Small stone deposit",
+    "Large stone outcrop"
+  ],
+  "retiredEntityIds": [
+    "hero:styl_rock_medium:-6:-10"
+  ],
+  "desktop": {
+    "checks": [
+      {
+        "name": "retained stone cairn inspection",
+        "nameShown": "Stone cairn",
+        "readOnly": true
+      },
+      {
+        "name": "retained ore inspection",
+        "nameShown": "Purple-seam ore deposit",
+        "readOnly": true
+      },
+      {
+        "name": "retained landmark inspection",
+        "nameShown": "Waystone",
+        "readOnly": true
+      },
+      {
+        "name": "keyboard natural gathering",
+        "acceptedCommands": 1,
+        "stateHash": "d3468462dca44d4f",
+        "inventory": {
+          "stone": 48,
+          "wood": 24,
+          "fiber": 1
+        },
+        "stockpile": {},
+        "save": {
+          "schema": 3,
+          "key": "astrix:m002:v3:seed:1337",
+          "status": "saved",
+          "persistent": true,
+          "message": "Saved locally."
+        }
+      },
+      {
+        "name": "real deposit to founder stockpile",
+        "acceptedCommands": 2,
+        "stateHash": "7df33c50a3611eb3",
+        "inventory": {
+          "stone": 48,
+          "wood": 24
+        },
+        "stockpile": {
+          "fiber": 1
+        },
+        "save": {
+          "schema": 3,
+          "key": "astrix:m002:v3:seed:1337",
+          "status": "saved",
+          "persistent": true,
+          "message": "Saved locally."
+        }
+      }
+    ],
+    "genesis": {
+      "names": [
+        "Blossom tree",
+        "Cluster tree",
+        "Fiber shrub",
+        "Founder stockpile",
+        "Purple-seam ore deposit",
+        "Spire tree",
+        "Stone cairn",
+        "Table-canopy tree",
+        "Trail marker",
+        "Waystone"
+      ],
+      "targetCount": 45
+    },
+    "rendering": {
+      "entities": 105,
+      "natureInstances": 42,
+      "loadedChunks": 49,
+      "rendererCalls": 42,
+      "rendererTriangles": 184918
+    },
+    "pointerInspection": {
+      "requested": "Waystone",
+      "selected": "Waystone"
+    }
+  },
+  "mobile": {},
+  "errors": [],
+  "responseFailures": [],
+  "requests": [
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-14&tz=-8&ty=22&dist=78"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-14&tz=-8&ty=22&dist=78&tx=-10&tz=-14&ty=19&dist=28&pitch=35"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-14&tz=-8&ty=22&dist=78"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    }
+  ],
+  "console": [],
+  "failure": "page.waitForFunction: Target page, context or browser has been closed\n    at command (/home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/verify-production.mjs:72:14)\n    at /home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/verify-production.mjs:161:9",
+  "status": "failed",
+  "finishedAt": "2026-11-22T21:18:31.678Z"
+}

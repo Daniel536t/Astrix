@@ -14,8 +14,9 @@ import {
   World, MatId, MAT, SEA_LEVEL, Y_MIN, Y_MAX, HALF,
   surfaceAt, topMaterialAtWorld, getVoxel, isSolid,
   worldToChunkX, worldToChunkZ, chunkKey,
-  EntityKind,
+  ActiveEntityKind, EntityKind, isRetiredStoneKind,
 } from './world';
+import { isStoneReplay } from './stone-compat';
 
 export interface Rect {
   x0: number;
@@ -140,15 +141,12 @@ export function columnAt(world: World, x: number, z: number): TerrainColumn {
 // Entity footprints are deliberately explicit. A tree occupies more site than
 // its trunk; a pebble occupies less than a boulder. These are simulation
 // clearance radii, not render bounds.
-export const OBSTRUCTION_RADIUS: Record<EntityKind, number> = {
+export const OBSTRUCTION_RADIUS: Record<ActiveEntityKind, number> = {
   styl_tree_spire: 1.5,
   styl_tree_table: 1.8,
   styl_tree_cluster: 1.9,
   styl_tree_blossom: 1.6,
   styl_shrub: 0.6,
-  styl_rock_small: 0.6,
-  styl_rock_medium: 1.0,
-  styl_rock_large: 1.6,
   styl_ore: 0.9,
   styl_cairn: 0.8,
   waystone: 1.4,
@@ -167,9 +165,16 @@ export interface Obstruction {
 
 function entityChunksForRect(world: World, rect: Rect): string[] {
   const r = normalizeRect(rect);
+  // A rect owns whole voxel cells. Include every chunk whose root could overlap
+  // those cells, without scanning the entire 2048 m world.
+  const radius = Math.max(...Object.values(OBSTRUCTION_RADIUS), 1.5);
+  const minCellX = Math.floor(r.x0 + 0.5 - radius);
+  const maxCellX = Math.ceil(r.x1 + 0.5 + radius) - 1;
+  const minCellZ = Math.floor(r.z0 + 0.5 - radius);
+  const maxCellZ = Math.ceil(r.z1 + 0.5 + radius) - 1;
   const keys: string[] = [];
-  const cx0 = worldToChunkX(r.x0), cx1 = worldToChunkX(r.x1);
-  const cz0 = worldToChunkZ(r.z0), cz1 = worldToChunkZ(r.z1);
+  const cx0 = Math.max(0, worldToChunkX(minCellX)), cx1 = worldToChunkX(maxCellX);
+  const cz0 = Math.max(0, worldToChunkZ(minCellZ)), cz1 = worldToChunkZ(maxCellZ);
   for (let cz = cz0; cz <= cz1; cz++) {
     for (let cx = cx0; cx <= cx1; cx++) keys.push(chunkKey(cx, cz));
   }
@@ -187,9 +192,11 @@ export function obstructionsIn(world: World, rect: Rect): Obstruction[] {
     for (const id of ids) {
       if (seen.has(id)) continue;
       const e = world.entities.get(id);
-      if (!e) continue;
+      if (!e || (isRetiredStoneKind(e.kind) && !isStoneReplay(world)) || world.entityRemovals.has(e.id)) continue;
       seen.add(id);
-      const radius = OBSTRUCTION_RADIUS[e.kind] ?? 1;
+      const radius = isRetiredStoneKind(e.kind)
+        ? e.kind === 'styl_rock_small' ? 0.6 : e.kind === 'styl_rock_medium' ? 1.1 : 1.5
+        : OBSTRUCTION_RADIUS[e.kind as ActiveEntityKind];
       let cells = 0;
       const ex0 = Math.max(r.x0, Math.floor(e.x - radius - 0.5));
       const ex1 = Math.min(r.x1, Math.ceil(e.x + radius - 0.5));

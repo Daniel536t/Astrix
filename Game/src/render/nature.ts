@@ -267,35 +267,7 @@ function shrubGeometry(variant: number): THREE.BufferGeometry {
   return assembly(parts);
 }
 
-// ---------- rocks / ore (block language, AS-001 §8–§9) ----------
-function rockGeometry(size: 'small' | 'medium' | 'large', variant: number): THREE.BufferGeometry {
-  const rnd = mulberry32((size === 'small' ? 5 : size === 'medium' ? 7 : 9) * 7919 + variant * 104729);
-  const j = variant === 0 ? 0 : 1;
-  const jx = () => (rnd() * 2 - 1) * (size === 'small' ? 0.15 : size === 'medium' ? 0.25 : 0.35) * j;
-  const jz = () => (rnd() * 2 - 1) * (size === 'small' ? 0.15 : size === 'medium' ? 0.25 : 0.35) * j;
-
-  if (size === 'small') {
-    return assembly([
-      box(0 + jx(), 0.20, 0 + jz(), 0.80, 0.40, 0.70, STONE),
-      box(0.10 + jx(), 0.50, -0.05 + jz(), 0.50, 0.30, 0.45, STONE),
-      box(-0.20 + jx(), 0.60, 0.10 + jz(), 0.30, 0.20, 0.30, STONE_B),
-    ]);
-  }
-  if (size === 'medium') {
-    return assembly([
-      box(0 + jx(), 0.45, 0 + jz(), 1.80, 0.90, 1.50, STONE),
-      box(0.15 + jx(), 1.10, -0.10 + jz(), 1.20, 0.70, 1.00, STONE),
-      box(-0.40 + jx(), 1.40, 0.25 + jz(), 0.70, 0.50, 0.60, STONE_B),
-    ]);
-  }
-  return assembly([
-    box(0 + jx(), 0.70, 0 + jz(), 3.00, 1.40, 2.40, STONE),
-    box(0.30 + jx(), 1.80, -0.20 + jz(), 1.80, 1.00, 1.40, STONE),
-    box(-0.60 + jx(), 2.40, 0.40 + jz(), 1.10, 0.90, 0.90, STONE_B),
-    box(0.90 + jx(), 2.20, -0.70 + jz(), 0.60, 0.50, 0.55, STONE_SHADE),
-  ]);
-}
-
+// ---------- retained ore / cairn assets (block language) ----------
 function oreGeometry(variant: number): THREE.BufferGeometry {
   const flip = variant === 1 ? -1 : 1;
   const parts = [
@@ -325,9 +297,6 @@ function geometryFor(kind: EntityKind, variant: number): THREE.BufferGeometry | 
   if (kind === 'styl_tree_cluster') return treeGeometry(T3, Math.abs(variant) % 3);
   if (kind === 'styl_tree_blossom') return treeGeometry(T4, Math.abs(variant) % 2);
   if (kind === 'styl_shrub') return shrubGeometry(Math.abs(variant) % 3);
-  if (kind === 'styl_rock_small') return rockGeometry('small', Math.abs(variant) % 3);
-  if (kind === 'styl_rock_medium') return rockGeometry('medium', Math.abs(variant) % 3);
-  if (kind === 'styl_rock_large') return rockGeometry('large', Math.abs(variant) % 3);
   if (kind === 'styl_ore') return oreGeometry(Math.abs(variant) % 2);
   if (kind === 'styl_cairn') return cairnGeometry();
   return null;
@@ -392,6 +361,12 @@ export function buildNoxelNature(
   batched.castShadow = true;
   batched.receiveShadow = true;
   batched.perObjectFrustumCulled = true;
+  // BatchedMesh raycasts expose batchId, not a Mesh per entity. Keep the
+  // authoritative ID and a useful surface anchor beside every GPU instance.
+  batched.userData.inspectableBatchIds = [] as string[];
+  batched.userData.inspectableTargets = [] as Array<{
+    entityId: string; x: number; y: number; z: number;
+  }>;
 
   const geometryIds = new Map<string, number>();
   for (const [key, geo] of geometries) {
@@ -413,6 +388,14 @@ export function buildNoxelNature(
       v.set(e.x, e.y - 0.15, e.z);
       s.setScalar(e.scale);
       batched.setMatrixAt(id, m.compose(v, q, s));
+      batched.userData.inspectableBatchIds[id] = e.id;
+      const targetHeight = e.kind.startsWith('styl_tree_') ? 3.0 * e.scale
+        : e.kind === 'styl_shrub' ? 0.7 * e.scale
+        : e.kind === 'styl_ore' ? 0.65 * e.scale
+        : e.scale;
+      batched.userData.inspectableTargets[id] = {
+        entityId: e.id, x: e.x, y: e.y + targetHeight, z: e.z,
+      };
       instances++;
     }
   }

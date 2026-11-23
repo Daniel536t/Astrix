@@ -65,8 +65,7 @@ test('area stats distinguish the rejected slope from the viable shelf and farm',
   const rejected = q.area(layout.rejected.rect);
   assert.ok(rejected.relief >= 5, `rejected relief ${rejected.relief}`);
   assert.ok(rejected.maxStep <= 2, `rejected maxStep ${rejected.maxStep}`);
-  assert.ok(rejected.obstructedColumns > 0, 'rejected site must have an obstruction');
-  assert.ok(rejected.obstructions.some((o) => o.kind.startsWith('styl_rock')));
+  assert.equal(rejected.obstructedColumns, 0, 'retired stones no longer obstruct terrain');
 
   const house = q.area(layout.house.rect);
   assert.equal(house.relief, 2);
@@ -100,7 +99,7 @@ test('footprint query reports cut, fill and obstructions for a floor', () => {
   const rejected = q.footprint(layout.rejected.rect, layout.rejected.floorY);
   assert.ok(rejected.support.maxCut >= 5);
   assert.ok(rejected.stats.cutVolume >= 40);
-  assert.ok(rejected.obstructions.length > 0);
+  assert.equal(rejected.obstructions.length, 0, 'retired stones cannot block construction');
 });
 
 test('canonical voxel hash ignores derived cache and dirty-flag changes', () => {

@@ -1,0 +1,85 @@
+{
+  "startedAt": "2026-11-22T21:13:09.376Z",
+  "url": "http://18.116.53.201/",
+  "productionBuild": true,
+  "browser": "Chromium + SwiftShader (software WebGL)",
+  "authority": "local-stub / local-simulation-only",
+  "retiredNames": [
+    "Stone Boulder",
+    "Small stone deposit",
+    "Large stone outcrop"
+  ],
+  "retiredEntityIds": [
+    "hero:styl_rock_medium:-6:-10"
+  ],
+  "desktop": {
+    "checks": [
+      {
+        "name": "retained stone cairn inspection",
+        "nameShown": "Stone cairn",
+        "readOnly": true
+      },
+      {
+        "name": "retained ore inspection",
+        "nameShown": "Purple-seam ore deposit",
+        "readOnly": true
+      }
+    ],
+    "genesis": {
+      "names": [
+        "Blossom tree",
+        "Cluster tree",
+        "Fiber shrub",
+        "Founder stockpile",
+        "Purple-seam ore deposit",
+        "Spire tree",
+        "Stone cairn",
+        "Table-canopy tree",
+        "Trail marker",
+        "Waystone"
+      ],
+      "targetCount": 45
+    },
+    "rendering": {
+      "entities": 105,
+      "natureInstances": 42,
+      "loadedChunks": 49,
+      "rendererCalls": 42,
+      "rendererTriangles": 184918
+    }
+  },
+  "mobile": {},
+  "errors": [],
+  "responseFailures": [],
+  "requests": [
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-14&tz=-8&ty=22&dist=78"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-B3z1mQow.css"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/index-tWfNjM7Q.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-core-BAQCSfOu.js"
+    },
+    {
+      "label": "desktop",
+      "status": 200,
+      "url": "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js"
+    }
+  ],
+  "console": [],
+  "failure": "page.screenshot: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n\n    at screenshot (/home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/verify-production.mjs:74:14)\n    at /home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/verify-production.mjs:117:9",
+  "status": "failed",
+  "finishedAt": "2026-11-22T21:14:41.173Z"
+}

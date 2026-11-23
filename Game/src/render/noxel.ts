@@ -167,6 +167,10 @@ export function buildNoxelSite(site: NoxelSite): THREE.Object3D {
   const mesh = site.kind === 'waystone' ? waystone() : marker();
   mesh.position.set(site.x, site.y - 0.12, site.z);
   mesh.rotation.y = site.rot;
+  mesh.userData.siteId = site.id;
+  mesh.userData.inspectTarget = {
+    x: 0, y: site.kind === 'waystone' ? 3.2 : 1.8, z: 0,
+  };
   return mesh;
 }
 
@@ -186,6 +190,8 @@ export function buildKit(): THREE.Object3D[] {
     m.position.x = it.x;
     m.position.z = it.z;
     if (it.name === 'Stair') m.rotation.y = Math.PI / 2;
+    m.userData.kitId = it.name.toLowerCase().replace(' panel', '');
+    m.userData.inspectTarget = { x: 0, y: it.name === 'Waystone' ? 3.2 : 1.2, z: 0 };
     return m;
   });
 }

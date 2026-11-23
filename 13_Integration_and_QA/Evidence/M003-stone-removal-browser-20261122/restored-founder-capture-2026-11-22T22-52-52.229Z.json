@@ -1,0 +1,105 @@
+{
+  "scope": "built founder settlement before and after genuine production reload",
+  "startedAt": "2026-11-22T22:52:52.229Z",
+  "errors": [],
+  "responseFailures": [],
+  "screenshots": [],
+  "steps": [
+    {
+      "phase": "built",
+      "entities": 144,
+      "chunksGenerated": 99,
+      "stateHash": "5b05e32aed0a9a05",
+      "structures": 3,
+      "inventory": {
+        "stone": 9,
+        "wood": 20,
+        "ore": 8
+      },
+      "life": {
+        "tick": 0,
+        "stockpile": {
+          "id": "stockpile:founder",
+          "x": -50,
+          "z": -32,
+          "capacity": 200,
+          "inventory": {}
+        },
+        "jobs": [],
+        "crops": [
+          {
+            "id": "crop:0",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:1",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:2",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:3",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:4",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:5",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:6",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:7",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:8",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          }
+        ]
+      },
+      "acceptedCommands": 3,
+      "save": {
+        "schema": 3,
+        "key": "astrix:m002:v3:seed:1337",
+        "status": "saved",
+        "persistent": true,
+        "message": "Saved locally."
+      },
+      "structureNames": [
+        "Door path",
+        "Founder's house",
+        "Terraced field"
+      ]
+    }
+  ],
+  "captureFailure": "production-built-founder-settlement: capture exceeded 30 seconds",
+  "status": "failed",
+  "failure": "Error: production-built-founder-settlement: capture exceeded 30 seconds\n    at Timeout._onTimeout (file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/capture-restored-settlement.mjs:18:43)\n    at listOnTimeout (node:internal/timers:685:17)\n    at process.processTimers (node:internal/timers:618:7)",
+  "finishedAt": "2026-11-22T22:54:16.806Z"
+}

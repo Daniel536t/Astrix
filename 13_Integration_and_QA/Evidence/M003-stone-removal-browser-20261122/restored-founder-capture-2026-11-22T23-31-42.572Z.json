@@ -1,0 +1,116 @@
+{
+  "scope": "built founder settlement before and after genuine production reload",
+  "startedAt": "2026-11-22T23:31:42.572Z",
+  "errors": [],
+  "responseFailures": [],
+  "screenshots": [],
+  "steps": [
+    {
+      "phase": "built",
+      "entities": 135,
+      "chunksGenerated": 90,
+      "stateHash": "5b05e32aed0a9a05",
+      "structures": 3,
+      "inventory": {
+        "stone": 9,
+        "wood": 20,
+        "ore": 8
+      },
+      "life": {
+        "tick": 0,
+        "stockpile": {
+          "id": "stockpile:founder",
+          "x": -50,
+          "z": -32,
+          "capacity": 200,
+          "inventory": {}
+        },
+        "jobs": [],
+        "crops": [
+          {
+            "id": "crop:0",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:1",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:2",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:3",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:4",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:5",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:6",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:7",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          },
+          {
+            "id": "crop:8",
+            "plantedTick": null,
+            "growthTicks": null,
+            "ready": false
+          }
+        ]
+      },
+      "acceptedCommands": 3,
+      "save": {
+        "schema": 3,
+        "key": "astrix:m002:v3:seed:1337",
+        "status": "saved",
+        "persistent": true,
+        "message": "Saved locally."
+      },
+      "structureNames": [
+        "Door path",
+        "Founder's house",
+        "Terraced field"
+      ]
+    }
+  ],
+  "camera": {
+    "position": {
+      "x": -8.069353854064133,
+      "y": 58.327626223447396,
+      "z": 3.7091882415880306
+    },
+    "target": {
+      "x": -43.00000000000001,
+      "y": 13.999999999999993,
+      "z": -40.99999999999999
+    }
+  },
+  "status": "failed",
+  "failure": "AssertionError [ERR_ASSERTION]: the built settlement must be framed by the real automatic settlement camera\n+ actual - expected\n\n  {\n+   x: -43.00000000000001,\n+   y: 13.999999999999993,\n+   z: -40.99999999999999\n-   x: -43,\n-   y: 14,\n-   z: -41\n  }\n\n    at file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-stone-removal-browser-20261122/capture-restored-settlement.mjs:66:10",
+  "finishedAt": "2026-11-22T23:32:04.669Z"
+}

@@ -1,0 +1,109 @@
+{
+  "environment": "Headless Chromium / software WebGL against Vite production preview at 127.0.0.1:4173",
+  "date": "2026-11-22",
+  "bundle": "/assets/index-D0Cff74d.js",
+  "checks": [
+    {
+      "name": "genesis uses schema 2 and production debug hooks stay inert",
+      "hash": "b8dc647bea044a84",
+      "save": {
+        "schema": 2,
+        "key": "astrix:m002:v2:seed:1337",
+        "status": "new",
+        "persistent": true,
+        "message": "New local world."
+      }
+    },
+    {
+      "name": "schema-2 harvest save restores exactly once",
+      "hash": "cf3c5281650f6ac6",
+      "inventory": {
+        "stone": 48,
+        "wood": 28
+      }
+    },
+    {
+      "name": "normal UI builds bounded founder structures and stores canonical schema-2 commands",
+      "hash": "d1e79035f68ee923",
+      "inventory": {
+        "stone": 9,
+        "wood": 24,
+        "ore": 8
+      },
+      "save": {
+        "schema": 2,
+        "key": "astrix:m002:v2:seed:1337",
+        "status": "restored",
+        "persistent": true,
+        "message": "Restored 1 accepted command."
+      },
+      "modules": [
+        {
+          "kind": "terrace",
+          "count": 14
+        },
+        {
+          "kind": "path",
+          "count": 9
+        },
+        {
+          "kind": "house",
+          "count": 19
+        }
+      ]
+    },
+    {
+      "name": "browser reload reconstructs exact founder state",
+      "hash": "d1e79035f68ee923",
+      "accepted": 4,
+      "rendererCalls": 49,
+      "triangles": 200882
+    },
+    {
+      "name": "browser snapshot-tail replay matches the live founder world",
+      "hash": "d1e79035f68ee923",
+      "accepted": 4
+    },
+    {
+      "name": "wide daylight restores voxel terrain and founder construction",
+      "camera": {
+        "position": [
+          1.2041113374347532,
+          44.47702802216335,
+          15.57868241488081
+        ],
+        "shadowEnabled": true
+      }
+    },
+    {
+      "name": "close south/east facade inspection rendered",
+      "camera": {
+        "position": [
+          -40.74233023481932,
+          17.258742811845373,
+          -34.15207791381877
+        ],
+        "target": [
+          -56.5,
+          12.6,
+          -41.5
+        ]
+      }
+    },
+    {
+      "name": "faceted crop and stepped terrace inspection rendered"
+    },
+    {
+      "name": "mobile founder world and project inspection fit viewport",
+      "panel": {
+        "x": 52,
+        "y": 60,
+        "width": 330,
+        "height": 312.84375
+      },
+      "hash": "d1e79035f68ee923"
+    }
+  ],
+  "errors": [],
+  "disposition": "Production-browser implementation evidence only; not art acceptance or formal M002 closure."
+}

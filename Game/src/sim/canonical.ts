@@ -12,6 +12,7 @@ import {
   Entity,
 } from './world';
 import { VoxelRegion, envelopeContains } from './terrain';
+import { FOUNDER_DESIGN_VERSION } from './structures';
 
 export interface StateHash {
   /** 16 hex characters: two independent 32-bit lanes. */
@@ -230,6 +231,8 @@ export function canonicalStructureHash(world: World): string {
     h.u32(Math.round(s.y * 1000));
     h.u32(Math.round(s.z * 1000));
     h.u32(Math.round(s.rot * 10000));
+    // Legacy hash input is byte-identical. Design 2 adds an explicit tag.
+    if (s.designVersion === FOUNDER_DESIGN_VERSION) h.string('design:2');
     h.u32(s.modules.length);
     for (const m of s.modules) {
       h.string(m.kind);

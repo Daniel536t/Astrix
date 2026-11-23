@@ -1,0 +1,39 @@
+{
+  "startedAt": "2026-11-22T19:43:11.946Z",
+  "url": "http://18.116.53.201/?seed=1337&freeze=1&tx=-6&tz=-10&ty=18&dist=22&yaw=0&pitch=48",
+  "browser": "Chromium + SwiftShader",
+  "steps": [
+    {
+      "name": "public desktop click identifies intentional Stone boulder",
+      "card": {
+        "hidden": false,
+        "name": "Stone boulder",
+        "description": "An intentional pale block-stone outcrop. Harvest it to carry stone for construction."
+      }
+    },
+    {
+      "name": "public emulated touch displays card and 44 px Close works",
+      "card": {
+        "hidden": false,
+        "name": "Stone boulder",
+        "description": "An intentional pale block-stone outcrop. Harvest it to carry stone for construction."
+      },
+      "close": {
+        "x": 159,
+        "y": 841,
+        "width": 44,
+        "height": 44
+      }
+    }
+  ],
+  "errors": [],
+  "requestFailures": [],
+  "assets": [
+    "http://18.116.53.201/assets/index-CmgcNKmU.js",
+    "http://18.116.53.201/assets/three-core-BAQCSfOu.js",
+    "http://18.116.53.201/assets/three-renderer-BjqbDaYq.js",
+    "http://18.116.53.201/assets/index-B3z1mQow.css"
+  ],
+  "status": "passed",
+  "finishedAt": "2026-11-22T19:44:31.291Z"
+}

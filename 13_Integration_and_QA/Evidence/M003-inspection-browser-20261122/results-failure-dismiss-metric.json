@@ -1,0 +1,28 @@
+{
+  "startedAt": "2026-11-22T18:29:29.433Z",
+  "url": "http://127.0.0.1:4173/",
+  "browser": "Chromium + SwiftShader (software WebGL)",
+  "steps": [
+    {
+      "name": "real mouse hover identifies Waystone",
+      "card": {
+        "hidden": false,
+        "mode": "hover",
+        "ref": "siteId:site:waystone",
+        "name": "Waystone",
+        "category": "Architecture · landmark",
+        "description": "A tall forked Noxel landmark. Its cream stone and teal inlay mark a place of interest; it is not a resource rock.",
+        "facts": [
+          "Purpose\nNavigation landmark · not harvestable",
+          "Art\nProvisional Noxel design"
+        ],
+        "selected": null,
+        "hovered": "Waystone"
+      }
+    }
+  ],
+  "errors": [],
+  "physicalDeviceTested": false,
+  "physicalGpuTested": false,
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n'Waystone' !== null\n\n    at file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-inspection-browser-20261122/browser-verification.mjs:107:57"
+}

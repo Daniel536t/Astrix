@@ -1,0 +1,35 @@
+{
+  "scope": "actual built founder structures through production Build controls",
+  "browser": "Chromium / SwiftShader software WebGL",
+  "errors": [],
+  "failedResponses": [],
+  "steps": [
+    "genesis ready",
+    "accepted and saved house",
+    "accepted and saved path",
+    "accepted and saved farm",
+    "capture failed"
+  ],
+  "startedAt": "2026-11-22T21:52:45.337Z",
+  "built": {
+    "structures": 3,
+    "commands": 3,
+    "inventory": {
+      "stone": 9,
+      "wood": 20,
+      "ore": 8
+    },
+    "stockpile": {},
+    "hash": "5b05e32aed0a9a05",
+    "save": {
+      "schema": 3,
+      "key": "astrix:m002:v3:seed:1337",
+      "status": "saved",
+      "persistent": true,
+      "message": "Saved locally."
+    }
+  },
+  "captureFailure": "Error: bounded CDP capture timeout\n    at Timeout._onTimeout (file:///home/ubuntu/as/[eval1]:24:72)\n    at listOnTimeout (node:internal/timers:685:17)\n    at process.processTimers (node:internal/timers:618:7)",
+  "status": "failed",
+  "finishedAt": "2026-11-22T21:53:57.956Z"
+}

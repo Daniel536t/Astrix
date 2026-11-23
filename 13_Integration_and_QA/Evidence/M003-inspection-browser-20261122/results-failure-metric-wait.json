@@ -1,0 +1,28 @@
+{
+  "startedAt": "2026-11-22T18:26:55.467Z",
+  "url": "http://127.0.0.1:4173/",
+  "browser": "Chromium + SwiftShader (software WebGL)",
+  "steps": [
+    {
+      "name": "real mouse hover identifies Waystone",
+      "card": {
+        "hidden": false,
+        "mode": "hover",
+        "ref": "siteId:site:waystone",
+        "name": "Waystone",
+        "category": "Architecture · landmark",
+        "description": "A tall forked Noxel landmark. Its cream stone and teal inlay mark a place of interest; it is not a resource rock.",
+        "facts": [
+          "Purpose\nNavigation landmark · not harvestable",
+          "Art\nProvisional Noxel design"
+        ],
+        "selected": null,
+        "hovered": "Waystone"
+      }
+    }
+  ],
+  "errors": [],
+  "physicalDeviceTested": false,
+  "physicalGpuTested": false,
+  "failure": "page.waitForFunction: Timeout 30000ms exceeded.\n    at settle (/home/ubuntu/as/13_Integration_and_QA/Evidence/M003-inspection-browser-20261122/browser-verification.mjs:53:11)\n    at async pin (/home/ubuntu/as/13_Integration_and_QA/Evidence/M003-inspection-browser-20261122/browser-verification.mjs:57:3)\n    at async file:///home/ubuntu/as/13_Integration_and_QA/Evidence/M003-inspection-browser-20261122/browser-verification.mjs:102:18"
+}

@@ -1,0 +1,30 @@
+2026-11-23T00:51:48.046Z STEP genesis
+2026-11-23T00:51:50.676Z STEP retained stone cairn
+CAPTURE SKIPPED desktop-retained-cairn.png: capture disabled for functional-only run
+2026-11-23T00:51:52.031Z STEP retained ore
+CAPTURE SKIPPED desktop-retained-ore.png: capture disabled for functional-only run
+2026-11-23T00:51:58.312Z STEP retained landmark
+CAPTURE SKIPPED desktop-waystone-inspection.png: capture disabled for functional-only run
+2026-11-23T00:52:04.546Z STEP pointer selection
+CAPTURE SKIPPED desktop-pointer-inspection.png: capture disabled for functional-only run
+2026-11-23T00:52:42.291Z STEP keyboard natural gathering
+2026-11-23T00:52:42.613Z STEP real deposit to founder stockpile
+2026-11-23T00:52:43.618Z STEP build house
+2026-11-23T00:52:48.381Z STEP founder house built
+2026-11-23T00:52:59.731Z STEP door path built
+2026-11-23T00:53:03.761Z STEP terraced field built
+2026-11-23T00:53:03.798Z STEP built inspection and save assertions
+2026-11-23T00:53:03.822Z STEP built Founder's house
+2026-11-23T00:53:08.855Z STEP built Door path
+2026-11-23T00:53:12.977Z STEP built Terraced field
+CAPTURE SKIPPED desktop-founder-settlement.png: capture disabled for functional-only run
+2026-11-23T00:53:45.835Z STEP desktop reload at original founder camera
+CAPTURE SKIPPED desktop-original-founder-view-restored.png: capture disabled for functional-only run
+2026-11-23T00:53:45.894Z STEP read-only revisit of house camera
+2026-11-23T00:53:46.552Z STEP read-only revisit of path camera
+2026-11-23T00:53:47.049Z STEP read-only revisit of farm camera
+CAPTURE SKIPPED desktop-restored-settlement.png: capture disabled for functional-only run
+CAPTURE SKIPPED desktop-keyboard-movement.png: capture disabled for functional-only run
+CAPTURE SKIPPED desktop-changed-view.png: capture disabled for functional-only run
+desktop error: THREE.Object3D.add: object not an instance of THREE.Object3D. undefined
+CAPTURE SKIPPED failure-2026-11-23T00-55-41.964Z-0.png: capture disabled for functional-only run

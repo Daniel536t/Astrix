@@ -1,0 +1,120 @@
+
+> noxel-world@0.0.1 typecheck
+> tsc --noEmit
+
+
+> noxel-world@0.0.1 test
+> node tools/run-tests.mjs
+
+✔ browser command helpers use canonical envelope ordering (303.53894ms)
+✔ schema-2 browser save restores inventory once and preserves an accepted snapshot tail (700.233706ms)
+✔ legacy browser saves retain their exact bytes and restore the journal tail (374.577151ms)
+✔ rejected commands leave the saved record and ordered history unchanged (114.358642ms)
+✔ invalid saves are quarantined byte-for-byte before a fresh genesis (341.328158ms)
+✔ malformed schema-2 saves are quarantined without falling back to legacy (496.185025ms)
+✔ failed quarantine preserves original bytes and reports volatile state (167.650351ms)
+✔ quota and policy failures do not falsely claim work is persistent (327.331613ms)
+✔ programmatic camera views synchronously use the requested orbit target (3.620487ms)
+✔ M002 fixture is deterministic across independent builds (1358.957992ms)
+✔ column query agrees with the authoritative voxel volume (408.585293ms)
+✔ area stats distinguish the rejected slope from the viable shelf and farm (401.663192ms)
+✔ footprint query reports cut, fill and obstructions for a floor (418.29498ms)
+✔ canonical voxel hash ignores derived cache and dirty-flag changes (1027.009774ms)
+✔ canonical voxel hash detects an unauthorized edit outside the envelope (733.746853ms)
+✔ authorized edit inside the envelope leaves protected terrain and resources unchanged (641.867127ms)
+✔ inventory hash is canonical and order-independent (522.484898ms)
+✔ entity hash detects an unauthorized entity change without changing terrain (592.280219ms)
+✔ hash coverage is exactly the protected region minus the envelope (484.483543ms)
+✔ new chunks outside the envelope are detected even when voxels are untouched (609.382047ms)
+✔ live 2048 m world: authorized edit leaves protected terrain unchanged (2549.671507ms)
+✔ schema-2 commands select only design 2 and preserve harvest schema 1 (289.151964ms)
+✔ legacy planning, structure hashes and snapshots remain byte-compatible (309.099243ms)
+✔ founder house has full-thickness door and window voids and bounded wall spans (148.783696ms)
+✔ founder paths consolidate equal-height runs and preserve the stepped profile (251.189506ms)
+✔ schema-2 structures round-trip exactly through snapshots and tail replay (535.51691ms)
+✔ crop aggregates have bounded presentation volumes without plant lifecycle claims (131.384043ms)
+✔ founder architecture casts and receives shadows (114.138065ms)
+✔ accepted build commands replay deterministically from genesis with stable receipts (1340.12326ms)
+✔ duplicate accepted command is idempotent but cannot be reused for different work (119.370388ms)
+✔ invalid, stale, unaffordable and unknown commands never change world or history (914.477085ms)
+✔ snapshot-tail replay matches live state and refuses an incompatible boundary (1004.85756ms)
+✔ browser-generated harvest IDs accept generated and authored entities and replay (215.539307ms)
+✔ harvest, eviction and regeneration survive snapshot and genesis replay (895.706549ms)
+✔ snapshot validation is non-mutating and journal corruption is never replayed (628.128098ms)
+✔ the 2048 m world replays through the same bounded authority and preserves outside terrain (1102.454119ms)
+✔ journal entries are bounded and rejected rather than partially accepted (112.117109ms)
+✔ the three playable projects inspect as buildable and read-only (708.249175ms)
+✔ the playable slice builds house, path and farm with exact costs (669.718408ms)
+✔ an unaffordable build is refused before any terrain is graded (583.483682ms)
+✔ planning is read-only, deterministic and bounded (1197.362032ms)
+✔ house preparation applies exactly the planned voxel edits (1004.893882ms)
+✔ preparation clears authorized obstructions and credits their resources (717.579601ms)
+✔ execution rejects forged, stale or over-limit authorization before writing (822.845075ms)
+✔ preparation is deterministic across independent replays (994.391295ms)
+✔ planning rejects malformed targets and uncleared obstructions (620.68291ms)
+✔ executor refuses a plan whose obstruction set changed after authorization (634.769741ms)
+✔ the execution guard rejects a plan that escapes its own envelope (597.019681ms)
+✔ authorized execution never touches voxels outside the work envelope (636.508114ms)
+✔ an entity rooted in the adjacent x chunk obstructs the footprint (599.049218ms)
+✔ an entity rooted in the adjacent z chunk obstructs the footprint (521.462236ms)
+✔ a disjoint adjacent-chunk entity does not obstruct and a boundary root invalidates a token (542.593512ms)
+✔ a structure authorization fault rolls back preparation, resources and entities (599.531057ms)
+✔ an obstruction introduced between preparation and structure execution rolls all work back (466.857654ms)
+✔ full snapshot round trip, eviction and derived regeneration preserve every authoritative field (1145.061881ms)
+✔ chunk eviction retains generated entities and all harvest state (441.898798ms)
+✔ corrupt, incompatible and duplicate snapshot fields are rejected without mutation (478.731328ms)
+✔ structure plans refuse unprepared ground and wrong surface materials (673.992859ms)
+✔ house build pays its exact cost and changes no terrain voxels (584.077646ms)
+✔ path preparation uses its exact envelope and requires a gravel top (709.735097ms)
+✔ terraces plan from pinned bands, require soil, and pay exact costs (663.70308ms)
+✔ structure authorization rejects forged, stale, poor and out-of-envelope work (587.594719ms)
+✔ executor re-checks surface and obstructions before charging resources (1029.516268ms)
+✔ the pinned M002 scenario is deterministic and leaves outside terrain alone (1046.17135ms)
+✔ validator rejects the slope site with explicit rule errors (704.522276ms)
+✔ validator separates footprint errors from preparation work (550.885216ms)
+✔ validator accepts the house shelf with preparation only (540.453485ms)
+✔ validator accepts a flat footprint with no preparation (486.928184ms)
+✔ candidate search is cost-ranked, deterministic and inside its budget (654.32562ms)
+✔ search honours the wall-clock budget (448.536485ms)
+✔ farm-proximity constraint selects the viable shelf near the field (603.491875ms)
+✔ preview exposes valid, preparation and invalid states without mutating the world (505.331308ms)
+✔ deterministic generation: same seed, same chunks, entities and sites (419.48749ms)
+✔ different seed changes the terrain (294.276326ms)
+✔ chunk generation is independent of generation order (205.932798ms)
+✔ surfaceAt is the exposed top face, not the height model (1069.007815ms)
+✔ material layers: grass top over soil and stone, with no air pocket below (1061.976608ms)
+✔ water columns hold water at sea level and report depth (1062.170723ms)
+✔ voxel edits are authoritative, recorded as deltas and reversible (2179.534588ms)
+✔ entities sit on the exposed surface, not one metre below it (1159.327046ms)
+✔ harvesting is owned by the simulation and depletes the entity (1075.880666ms)
+✔ world manifest pins generator parameters (108.597042ms)
+✔ simulation layer does not import the renderer or three.js (2.280126ms)
+✔ chunk-local indexing matches world coordinates (108.217256ms)
+ℹ tests 84
+ℹ suites 0
+ℹ pass 84
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 54489.186985
+
+> noxel-world@0.0.1 build
+> vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 28 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   1.19 kB │ gzip:   0.54 kB
+dist/assets/index-CP3IsjGm.css   10.53 kB │ gzip:   2.86 kB
+dist/assets/index-D0Cff74d.js   681.51 kB │ gzip: 183.42 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.33s
+
+[exited with code 0]

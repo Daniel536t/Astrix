@@ -1,0 +1,177 @@
+{
+  "environment": "Chromium against Vite production build at 127.0.0.1:4173",
+  "date": "2026-11-22",
+  "checks": [
+    {
+      "name": "production blocks raw debug state and F/G/debugMutations",
+      "beforeHash": "3ded386e17521851",
+      "afterHash": "3ded386e17521851",
+      "acceptedCommands": 0
+    },
+    {
+      "name": "browser harvest dispatches and atomically saves",
+      "hash": "9c189604cd35c113",
+      "inventory": {
+        "stone": 48,
+        "wood": 28
+      },
+      "sequence": 1,
+      "journal": {
+        "schema": 1,
+        "seed": 1337,
+        "starterInventory": {
+          "stone": 48,
+          "wood": 24
+        },
+        "entries": [
+          {
+            "command": {
+              "schema": 1,
+              "id": "harvest:0:e%3A30%2C30%3A4",
+              "type": "harvest",
+              "entityId": "e:30,30:4",
+              "expectedRevision": 0
+            },
+            "sequence": 0,
+            "revision": 1,
+            "hash": "9c189604cd35c113",
+            "outcome": {
+              "type": "harvest",
+              "entityId": "e:30,30:4",
+              "resource": "wood",
+              "amount": 4
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "harvest snapshot restores exactly once without duplicate starter grant",
+      "hash": "9c189604cd35c113",
+      "inventory": {
+        "stone": 48,
+        "wood": 28
+      },
+      "save": {
+        "schema": 1,
+        "key": "astrix:m002:v1:seed:1337",
+        "status": "restored",
+        "persistent": true,
+        "message": "Restored 1 accepted command."
+      }
+    },
+    {
+      "name": "saved record clears and snapshot-tail boundary restores",
+      "before": {
+        "structures": 3,
+        "accepted": 4
+      },
+      "cleared": {
+        "structures": 0,
+        "inventory": {
+          "stone": 48,
+          "wood": 24
+        }
+      },
+      "restoredHash": "9c189604cd35c113"
+    },
+    {
+      "name": "desktop restored house/path/farm",
+      "hash": "5508a2b3b180c49f",
+      "inventory": {
+        "ore": 8,
+        "stone": 9,
+        "wood": 24
+      },
+      "structures": 3,
+      "save": {
+        "schema": 1,
+        "key": "astrix:m002:v1:seed:1337",
+        "status": "restored",
+        "persistent": true,
+        "message": "Restored 4 accepted commands."
+      },
+      "metrics": {
+        "seed": 1337,
+        "worldSize": 2048,
+        "chunkSize": 32,
+        "nearRadius": 3,
+        "seaLevel": 0,
+        "loadedChunks": 49,
+        "cachedChunks": 81,
+        "chunksGenerated": 81,
+        "generationMs": 367,
+        "initialLoadMs": 1936,
+        "entities": 437,
+        "trees": 94,
+        "pinkTrees": 3,
+        "pinkOverflow": 10,
+        "natureInstances": 267,
+        "edits": 167,
+        "harvested": 1,
+        "inventory": {
+          "ore": 8,
+          "stone": 9,
+          "wood": 24
+        },
+        "structures": 3,
+        "m2": {
+          "projectsBuilt": 3,
+          "structures": 3,
+          "selected": null,
+          "lastBuild": "",
+          "inventory": {
+            "ore": 8,
+            "stone": 9,
+            "wood": 24
+          },
+          "revision": 173,
+          "acceptedCommands": 4,
+          "stateHash": "5508a2b3b180c49f"
+        },
+        "nearTriangles": 100086,
+        "macroTriangles": 98588,
+        "rendererCalls": 47,
+        "rendererTriangles": 199862,
+        "rendererGeometries": 39,
+        "rendererTextures": 4,
+        "streamPerf": {
+          "chunkGenP50": 3.4,
+          "chunkGenP95": 4.8,
+          "chunkGenMax": 6.31,
+          "chunkMeshP50": 8.1,
+          "chunkMeshP95": 43.9,
+          "chunkMeshMax": 86.8,
+          "macroP50": 148.4,
+          "macroMax": 148.4,
+          "macroSampleP50": 73.3,
+          "macroSampleMax": 73.3,
+          "macroCacheHits": 0,
+          "chunkSamples": 44,
+          "macroSamples": 1
+        },
+        "save": {
+          "schema": 1,
+          "key": "astrix:m002:v1:seed:1337",
+          "status": "restored",
+          "persistent": true,
+          "message": "Restored 4 accepted commands."
+        },
+        "harvestable": "e:30,30:4",
+        "acceptedCommands": 4,
+        "stateHash": "5508a2b3b180c49f",
+        "debugMutations": false,
+        "authority": "local-stub / local-simulation-only",
+        "lastAction": "",
+        "persistenceMessage": "Restored 4 accepted commands."
+      }
+    },
+    {
+      "name": "mobile clean view restores built world",
+      "hash": "5508a2b3b180c49f",
+      "structures": 3
+    }
+  ],
+  "errors": [],
+  "failure": "page.waitForFunction: Timeout 30000ms exceeded.\n    at ready (/tmp/astrix-m002-browser-verification.mjs:24:14)\n    at async file:///tmp/astrix-m002-browser-verification.mjs:130:3"
+}

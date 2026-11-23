@@ -1,0 +1,80 @@
+2026-11-22T08:21:06.343Z starting production verification
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x106400390e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x106400390e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x106400390e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x106400390e00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=38&pitch=23&dist=78&tx=-43&ty=14&tz=-41&radius=4 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=38&pitch=23&dist=78&tx=-43&ty=14&tz=-41&radius=4 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&action=all&ui=0&t=0.5&yaw=38&pitch=20&dist=22&tx=-58.5&ty=14.2&tz=-38.5&radius=2 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&action=all&ui=0&t=0.5&yaw=38&pitch=20&dist=22&tx=-58.5&ty=14.2&tz=-38.5&radius=2 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&action=all&ui=0&t=0.42&yaw=25&pitch=40&dist=23&tx=-36&ty=15&tz=-36&radius=2 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&action=all&ui=0&t=0.42&yaw=25&pitch=40&dist=23&tx=-36&ty=15&tz=-36&radius=2 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&t=0.42&yaw=38&pitch=23&dist=82&tx=-43&ty=14&tz=-41&radius=3 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&t=0.42&yaw=38&pitch=23&dist=82&tx=-43&ty=14&tz=-41&radius=3 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+2026-11-22T08:50:05.410Z starting production verification
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x19c003bda00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x19c003bda00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x19c003bda00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x19c003bda00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=38&pitch=23&dist=78&tx=-43&ty=14&tz=-41&radius=4 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=38&pitch=23&dist=78&tx=-43&ty=14&tz=-41&radius=4 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&action=all&ui=0&t=0.5&yaw=38&pitch=20&dist=22&tx=-58.5&ty=14.2&tz=-38.5&radius=2 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&action=all&ui=0&t=0.5&yaw=38&pitch=20&dist=22&tx=-58.5&ty=14.2&tz=-38.5&radius=2 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+2026-11-22T08:55:22.104Z starting production verification
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x2d64003c3200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x2d64003c3200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x2d64003c3200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x2d64003c3200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=38&pitch=23&dist=78&tx=-43&ty=14&tz=-41&radius=4 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=38&pitch=23&dist=78&tx=-43&ty=14&tz=-41&radius=4 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.5&yaw=65&pitch=15&dist=18&tx=-56.5&ty=12.6&tz=-41.5&radius=2 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.5&yaw=65&pitch=15&dist=18&tx=-56.5&ty=12.6&tz=-41.5&radius=2 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=25&pitch=40&dist=23&tx=-32&ty=15&tz=-38&radius=2 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=25&pitch=40&dist=23&tx=-32&ty=15&tz=-38&radius=2 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&t=0.42&yaw=38&pitch=23&dist=82&tx=-43&ty=14&tz=-41&radius=3 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&t=0.42&yaw=38&pitch=23&dist=82&tx=-43&ty=14&tz=-41&radius=3 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+2026-11-22T08:59:05.619Z starting production verification
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x5f4003c0200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x5f4003c0200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x5f4003c0200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 [.WebGL-0x5f4003c0200]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&debug=1&debugMutations=1 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=38&pitch=23&dist=78&tx=-43&ty=14&tz=-41&radius=4 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=38&pitch=23&dist=78&tx=-43&ty=14&tz=-41&radius=4 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.5&yaw=65&pitch=15&dist=18&tx=-56.5&ty=12.6&tz=-41.5&radius=2 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.5&yaw=65&pitch=15&dist=18&tx=-56.5&ty=12.6&tz=-41.5&radius=2 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=25&pitch=40&dist=23&tx=-32&ty=15&tz=-38&radius=2 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&ui=0&t=0.42&yaw=25&pitch=40&dist=23&tx=-32&ty=15&tz=-38&radius=2 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.
+WARNING http://127.0.0.1:4173/?freeze=1&t=0.42&yaw=38&pitch=23&dist=82&tx=-43&ty=14&tz=-41&radius=3 THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+WARNING http://127.0.0.1:4173/?freeze=1&t=0.42&yaw=38&pitch=23&dist=82&tx=-43&ty=14&tz=-41&radius=3 THREE.WebGLShadowMap: PCFSoftShadowMap has been removed. Using PCFShadowMap instead.

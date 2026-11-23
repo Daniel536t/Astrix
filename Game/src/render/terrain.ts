@@ -396,15 +396,140 @@ interface MacroSampleCache {
   sampleMs: number;
 }
 
-// The macro LOD samples the deterministic base surface, which does not change
-// when the camera moves or when near chunks are edited. Cache the sample grid
-// per seed/step so a 48 m rebuild only pays for geometry, not resampling.
-const macroSampleCache = new Map<string, MacroSampleCache>();
+export interface MacroTerrainSample { x: number; z: number; height: number; top: MatId; underwater: boolean; }
+
+// Cache the deterministic base grid and the authoritative edited grid separately.
+// Base entries never need invalidation. Edited entries are scoped by World identity
+// (two same-seed worlds can have different edits) and by both the coarse edit
+// revision and chunk streaming, since evicting/regenerating data and snapshot
+// restoration do not necessarily produce a new coarse revision. Only chunks with
+// durable voxel deltas are materialized; the other 64x64 cells remain base samples.
+interface MacroWorldCaches {
+  base: Map<number, MacroSampleCache>;
+  edited: Map<string, MacroSampleCache>;
+  /** Sparse authoritative columns, independent of the mesh sampling resolution. */
+  columns: Map<string, Map<number, { height: number; top: MatId }>>;
+  revision: number;
+}
+const macroSampleCache = new WeakMap<World, MacroWorldCaches>();
+
+function syncMacroColumns(world: World, caches: MacroWorldCaches): void {
+  if (world.revision === caches.revision) return;
+  // Snapshot restore replaces edits and chunks before assigning its saved
+  // revision. Never mix remembered columns from that previous world state.
+  caches.columns.clear();
+  // A normal edit has already updated the loaded chunk, so it costs only the
+  // edited chunks. Restored/evicted edited chunks are generated on demand.
+  for (const [key, edits] of world.edits) {
+    if (!edits.size || !world.chunks.has(key)) continue;
+    const chunk = world.chunks.get(key)!;
+    const ox = chunkOriginX(chunk.cx), oz = chunkOriginZ(chunk.cz);
+    const columns = new Map<number, { height: number; top: MatId }>();
+    for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+      for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+        const col = lz * CHUNK_SIZE + lx;
+        columns.set((ox + lx + HALF) * WORLD_SIZE + oz + lz + HALF, {
+          height: chunk.heights[col] + Y_MIN + 1,
+          top: chunk.topMaterials[col] as MatId,
+        });
+      }
+    }
+    caches.columns.set(key, columns);
+  }
+  caches.edited.clear();
+  caches.revision = world.revision;
+}
+
+function macroColumn(world: World, caches: MacroWorldCaches, key: string, index: number) {
+  let columns = caches.columns.get(key);
+  if (columns) return columns.get(index);
+  const [cx, cz] = key.split(',').map(Number);
+  if (!ensureChunk(world, cx, cz)) return undefined;
+  // Capture once after loading. Loaded chunks are cheap and do not require
+  // walking every voxel; this remains O(32x32) per edited chunk.
+  const chunk = world.chunks.get(key)!;
+  columns = new Map();
+  const ox = chunkOriginX(cx), oz = chunkOriginZ(cz);
+  for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      const col = lz * CHUNK_SIZE + lx;
+      columns.set((ox + lx + HALF) * WORLD_SIZE + oz + lz + HALF, {
+        height: chunk.heights[col] + Y_MIN + 1,
+        top: chunk.topMaterials[col] as MatId,
+      });
+    }
+  }
+  caches.columns.set(key, columns);
+  return columns.get(index);
+}
+
+function macroEditKey(world: World): string {
+  // Include a commutative content fingerprint as well as count: eviction and
+  // snapshot restore bypass the coarse World.revision path, and a restored
+  // delta can have the same number of cells with different indices/materials.
+  return [...world.edits.entries()]
+    .filter(([, edits]) => edits.size > 0)
+    .map(([key, edits]) => {
+      let sum = 0;
+      let mixed = 0;
+      for (const [index, material] of edits) {
+        const value = Math.imul(index + 1, 31) + material;
+        sum = (sum + value) | 0;
+        mixed = (mixed ^ Math.imul(value, 0x45d9f3b)) | 0;
+      }
+      return `${key}:${edits.size}:${sum}:${mixed}`;
+    })
+    .sort()
+    .join('|');
+}
+
+function editedMacroSamples(world: World, step: number, cache: MacroSampleCache): MacroSampleCache {
+  const caches = macroSampleCache.get(world)!;
+  const key = `${step}:${macroEditKey(world)}`;
+  const cached = caches.edited.get(key);
+  if (cached) return cached;
+
+  for (const [chunk, edits] of world.edits) {
+    if (edits.size && !caches.columns.has(chunk)) macroColumn(world, caches, chunk, 0);
+  }
+
+  const t0 = performance.now();
+  const { N, heights, tops, underwater } = cache;
+  const sample = {
+    N,
+    heights: new Int16Array(heights),
+    tops: new Uint8Array(tops),
+    underwater: new Uint8Array(underwater),
+    sampleMs: cache.sampleMs,
+  };
+  for (let j = 0; j < N; j++) {
+    for (let i = 0; i < N; i++) {
+      const x = Math.round(-HALF + (i + 0.5) * step);
+      const z = Math.round(-HALF + (j + 0.5) * step);
+      const chunk = chunkKey(worldToChunkX(x), worldToChunkZ(z));
+      if (!world.edits.get(chunk)?.size) continue;
+      const idx = j * N + i;
+      const edited = macroColumn(world, caches, chunk, (x + HALF) * WORLD_SIZE + z + HALF);
+      if (!edited) continue;
+      sample.heights[idx] = edited.height;
+      sample.tops[idx] = edited.top;
+      sample.underwater[idx] = sample.heights[idx] < SEA_LEVEL ? 1 : 0;
+    }
+  }
+  sample.sampleMs = performance.now() - t0;
+  caches.edited.set(key, sample);
+  return sample;
+}
 
 function macroSamples(world: World, step: number): MacroSampleCache {
-  const key = `${world.seed}:${GENERATOR_VERSION}:${step}`;
-  const cached = macroSampleCache.get(key);
-  if (cached) return cached;
+  let caches = macroSampleCache.get(world);
+  if (!caches) {
+    caches = { base: new Map(), edited: new Map(), columns: new Map(), revision: -1 };
+    macroSampleCache.set(world, caches);
+  }
+  syncMacroColumns(world, caches);
+  const cached = caches.base.get(step);
+  if (cached) return editedMacroSamples(world, step, cached);
 
   const t0 = performance.now();
   const N = Math.ceil(WORLD_SIZE / step);
@@ -448,8 +573,22 @@ function macroSamples(world: World, step: number): MacroSampleCache {
     N, heights, tops, underwater,
     sampleMs: performance.now() - t0,
   };
-  macroSampleCache.set(key, cache);
-  return cache;
+  caches.base.set(step, cache);
+  return editedMacroSamples(world, step, cache);
+}
+
+/** Authoritative macro-grid value at a world column (step defaults to 8 m). */
+export function sampleMacroTerrain(world: World, x: number, z: number, step = 8): MacroTerrainSample {
+  const cache = macroSamples(world, step);
+  const i = Math.max(0, Math.min(cache.N - 1, Math.floor((x + HALF) / step)));
+  const j = Math.max(0, Math.min(cache.N - 1, Math.floor((z + HALF) / step)));
+  const idx = j * cache.N + i;
+  return {
+    x: -HALF + (i + 0.5) * step,
+    z: -HALF + (j + 0.5) * step,
+    height: cache.heights[idx], top: cache.tops[idx] as MatId,
+    underwater: cache.underwater[idx] !== 0,
+  };
 }
 
 /**
@@ -460,8 +599,8 @@ function macroSamples(world: World, step: number): MacroSampleCache {
 export function buildMacroMesh(world: World, opts: MacroOptions): MacroResult {
   const totalT0 = performance.now();
   const { step, hole } = opts;
-  const cacheKey = `${world.seed}:${GENERATOR_VERSION}:${step}`;
-  const sampleCached = macroSampleCache.has(cacheKey);
+  const cacheKey = `${step}:${macroEditKey(world)}`;
+  const sampleCached = macroSampleCache.get(world)?.edited.has(cacheKey) ?? false;
   const cache = macroSamples(world, step);
   const { N, heights, tops, underwater } = cache;
   const holeCell = new Uint8Array(N * N);
@@ -632,6 +771,7 @@ export class VoxelTerrainView {
   private macroSamples: number[] = [];
   private macroSampleSamples: number[] = [];
   private macroCacheHits = 0;
+  private macroEditKey: string | null = null;
   onChunksChanged: (() => void) | null = null;
 
   constructor(world: World, scene: THREE.Scene, opts: VoxelTerrainViewOptions = {}) {
@@ -661,7 +801,10 @@ export class VoxelTerrainView {
       this.rebuildMacro(focus, mode, true);
     }
 
-    if (mode === 'map') return;
+    if (mode === 'map') {
+      if (macroEditKey(this.world) !== this.macroEditKey) this.rebuildMacro(focus, mode, true);
+      return;
+    }
 
     this.ensureChunks(focus, false);
     for (const key of this.loaded) {
@@ -669,7 +812,9 @@ export class VoxelTerrainView {
     }
 
     const moved = Math.hypot(focus.x - this.macroFocus.x, focus.z - this.macroFocus.z);
-    if (this.macroMode !== mode || moved > 48) this.rebuildMacro(focus, mode, false);
+    if (this.macroMode !== mode || moved > 48 || macroEditKey(this.world) !== this.macroEditKey) {
+      this.rebuildMacro(focus, mode, false);
+    }
   }
 
   private ensureChunks(focus: THREE.Vector3, immediate: boolean): void {
@@ -763,6 +908,7 @@ export class VoxelTerrainView {
       }
     }
     this.onChunksChanged?.();
+    if (this.macro) this.rebuildMacro(this.macroFocus, this.mode, true);
   }
 
   private rebuildMacro(focus: THREE.Vector3, mode: ViewMode, force: boolean): void {
@@ -794,6 +940,7 @@ export class VoxelTerrainView {
     this.macroGroup.add(result.mesh);
     this.macroFocus.copy(focus);
     this.macroMode = mode;
+    this.macroEditKey = macroEditKey(this.world);
     recordSample(this.macroSamples, performance.now() - macroT0);
     if (result.sampleCached) this.macroCacheHits++;
     else recordSample(this.macroSampleSamples, result.sampleMs);

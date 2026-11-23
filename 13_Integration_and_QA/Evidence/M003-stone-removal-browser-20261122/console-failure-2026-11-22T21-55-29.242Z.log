@@ -1,0 +1,22 @@
+2026-11-22T21:52:33.021Z STEP genesis
+2026-11-22T21:52:37.016Z STEP retained stone cairn
+CAPTURE SKIPPED desktop-retained-cairn.png: capture disabled for functional-only run
+2026-11-22T21:52:37.384Z STEP retained ore
+CAPTURE SKIPPED desktop-retained-ore.png: capture disabled for functional-only run
+2026-11-22T21:52:40.047Z STEP retained landmark
+CAPTURE SKIPPED desktop-waystone-inspection.png: capture disabled for functional-only run
+2026-11-22T21:52:49.598Z STEP pointer selection
+CAPTURE SKIPPED desktop-pointer-inspection.png: capture disabled for functional-only run
+2026-11-22T21:54:23.346Z STEP keyboard natural gathering
+2026-11-22T21:54:23.560Z STEP real deposit to founder stockpile
+2026-11-22T21:54:24.727Z STEP build house
+2026-11-22T21:54:29.632Z STEP founder house built
+2026-11-22T21:54:38.467Z STEP door path built
+2026-11-22T21:54:44.414Z STEP terraced field built
+2026-11-22T21:54:45.154Z STEP built inspection and save assertions
+2026-11-22T21:54:45.179Z STEP built Founder's house
+2026-11-22T21:54:51.956Z STEP built Door path
+2026-11-22T21:54:56.283Z STEP built Terraced field
+CAPTURE SKIPPED desktop-founder-settlement.png: capture disabled for functional-only run
+2026-11-22T21:55:29.208Z STEP desktop reload
+CAPTURE SKIPPED failure-2026-11-22T21-55-29.242Z-0.png: capture disabled for functional-only run

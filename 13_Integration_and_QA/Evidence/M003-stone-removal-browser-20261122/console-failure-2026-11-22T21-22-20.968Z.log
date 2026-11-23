@@ -1,0 +1,54 @@
+2026-11-22T21:18:35.863Z STEP genesis
+2026-11-22T21:18:39.921Z STEP retained stone cairn
+CAPTURE WARNING desktop-retained-cairn.png: locator.screenshot: Timeout 14985.820000000002ms exceeded.
+Call log:
+[2m  - taking element screenshot[22m
+[2m  - waiting for fonts to load...[22m
+[2m  - fonts loaded[22m
+[2m  - attempting scroll into view action[22m
+[2m    - waiting for element to be stable[22m
+
+2026-11-22T21:18:59.591Z STEP retained ore
+CAPTURE WARNING desktop-retained-ore.png: locator.screenshot: Timeout 14990.707999999999ms exceeded.
+Call log:
+[2m  - taking element screenshot[22m
+[2m  - waiting for fonts to load...[22m
+[2m  - fonts loaded[22m
+[2m  - attempting scroll into view action[22m
+[2m    - waiting for element to be stable[22m
+
+2026-11-22T21:19:33.345Z STEP retained landmark
+CAPTURE WARNING desktop-waystone-inspection.png: locator.screenshot: Timeout 14992.625ms exceeded.
+Call log:
+[2m  - taking element screenshot[22m
+[2m  - waiting for fonts to load...[22m
+[2m  - fonts loaded[22m
+[2m  - attempting scroll into view action[22m
+[2m    - waiting for element to be stable[22m
+
+2026-11-22T21:19:57.810Z STEP pointer selection
+CAPTURE WARNING desktop-pointer-inspection.png: locator.screenshot: Timeout 14922.356ms exceeded.
+Call log:
+[2m  - taking element screenshot[22m
+[2m  - waiting for fonts to load...[22m
+[2m  - fonts loaded[22m
+[2m  - attempting scroll into view action[22m
+[2m    - waiting for element to be stable[22m
+
+2026-11-22T21:21:06.257Z STEP keyboard natural gathering
+2026-11-22T21:21:06.471Z STEP real deposit to founder stockpile
+2026-11-22T21:21:06.514Z STEP build house
+2026-11-22T21:21:10.842Z STEP founder house built
+2026-11-22T21:21:20.571Z STEP door path built
+2026-11-22T21:21:33.609Z STEP terraced field built
+2026-11-22T21:21:33.641Z STEP built inspection and save assertions
+2026-11-22T21:21:33.673Z STEP built Founder's house
+2026-11-22T21:21:38.394Z STEP built Door path
+2026-11-22T21:21:43.822Z STEP built Terraced field
+CAPTURE WARNING failure-2026-11-22T21-22-20.968Z-0.png: locator.screenshot: Timeout 14993.790999999997ms exceeded.
+Call log:
+[2m  - taking element screenshot[22m
+[2m  - waiting for fonts to load...[22m
+[2m  - fonts loaded[22m
+[2m  - attempting scroll into view action[22m
+[2m    - waiting for element to be stable[22m
