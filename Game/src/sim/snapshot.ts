@@ -5,6 +5,7 @@ import {
   CHUNK_SIZE, CHUNK_VOLUME, CHUNKS_PER_SIDE, Entity, EntityKind,
   GENERATOR_VERSION, HALF, MatId, ResourceType, World, WorldManifest,
   createWorld, placeAuthoredSites, worldManifest, ensureChunk, isRetiredStoneKind,
+  markEditsChanged, isSupportedGenerator, MAX_MAT_ID,
 } from './world';
 import { FOUNDER_DESIGN_VERSION, Structure } from './structures';
 import {
@@ -351,12 +352,14 @@ export function validateWorldSnapshot(value: unknown): WorldSnapshot {
   }
   const schema = value.schema;
   const m = value.manifest;
+  // Every supported generator restores with its own version; v1 saves keep
+  // GENERATOR_VERSION exactly, so their manifests and hashes are unchanged.
   const params = {
     size: 2048, chunkSize: CHUNK_SIZE, yMin: -16, yMax: 112,
-    seaLevel: 0, generatorVersion: GENERATOR_VERSION,
+    seaLevel: 0, generatorVersion: isSupportedGenerator(m.generatorVersion) ? m.generatorVersion : GENERATOR_VERSION,
   };
   if (m.schema !== 1 || !uint(m.seed, 0xffffffff)
-    || m.generatorVersion !== params.generatorVersion
+    || !isSupportedGenerator(m.generatorVersion)
     || m.size !== params.size || m.chunkSize !== params.chunkSize
     || m.yMin !== params.yMin || m.yMax !== params.yMax || m.seaLevel !== params.seaLevel
     || !/^[0-9a-f]{8}$/.test(String(m.paramsHash))) {
@@ -371,7 +374,7 @@ export function validateWorldSnapshot(value: unknown): WorldSnapshot {
     || !Array.isArray(value.entityChunks) || !Array.isArray(value.structures)) {
     throw new Error('snapshot has invalid authoritative-state fields');
   }
-  const world = createWorld(m.seed);
+  const world = createWorld(m.seed, params.generatorVersion);
   // The manifest hash is checked against the actual restored configuration.
   if (worldManifest(world).paramsHash !== m.paramsHash) throw new Error('snapshot manifest hash mismatch');
 
@@ -387,7 +390,7 @@ export function validateWorldSnapshot(value: unknown): WorldSnapshot {
     const cells: Array<{ i: number; m: number }> = [];
     for (const cell of raw.cells) {
       if (!isObject(cell) || !uint(cell.i, CHUNK_VOLUME - 1) || cellIds.has(cell.i)
-        || !uint(cell.m, 9)) throw new Error('snapshot contains an invalid voxel edit');
+        || !uint(cell.m, MAX_MAT_ID)) throw new Error('snapshot contains an invalid voxel edit');
       cellIds.add(cell.i);
       cells.push({ i: cell.i, m: cell.m });
     }
@@ -509,6 +512,7 @@ export function restoreWorldSnapshotExact(world: World, input: WorldSnapshot): v
   for (const delta of snapshot.edits) {
     world.edits.set(delta.chunk, new Map(delta.cells.map((e) => [e.i, e.m as MatId])));
   }
+  markEditsChanged(world);
   // Recreate authored site records. Suppress their entity placement so the
   // exact saved entity records below cannot be affected by a modified chunk.
   if (world.authoredPlaced) {
@@ -559,7 +563,7 @@ export function restoreWorldSnapshotExact(world: World, input: WorldSnapshot): v
 
 export function worldFromSnapshot(snapshot: WorldSnapshot): World {
   const valid = validateWorldSnapshot(snapshot);
-  const world = createWorld(valid.manifest.seed);
+  const world = createWorld(valid.manifest.seed, valid.manifest.generatorVersion);
   restoreWorldSnapshot(world, valid);
   return world;
 }

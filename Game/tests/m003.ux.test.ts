@@ -13,7 +13,8 @@ test('touch controls are exposed with accessible names and browser zoom remains 
   assert.doesNotMatch(controls!, /aria-hidden/);
   assert.match(controls!, /aria-label="World movement and zoom controls"/);
   const buttons = [...html.matchAll(/<button\b[^>]*>/g)].map((match) => match[0]);
-  assert.equal(buttons.length, 8);
+  // 5 pad + Gather + 2 zoom + Jump (explore, touch) + Walk/Builder view mode switch.
+  assert.equal(buttons.length, 10);
   for (const button of buttons) assert.match(button, /aria-label="[^"]+"/);
 });
 

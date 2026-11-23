@@ -2,6 +2,7 @@
 // A single Web Storage key gives browsers an atomic snapshot + journal replace.
 import { CommandJournal, GameSession } from './session';
 import { WorldSnapshot } from '../sim/snapshot';
+import { GENERATOR_VERSION } from '../sim/world';
 
 export const SAVE_SCHEMA = 1 as const;
 export const DESIGN_SAVE_SCHEMA = 2 as const;
@@ -59,7 +60,20 @@ export class BrowserSaveStore {
   private schema: SaveRecord['schema'] = CURRENT_SAVE_SCHEMA;
   private persistent = false;
 
-  constructor(private readonly storage: KeyValueStorage | null, private readonly seed: number) {}
+  /**
+   * `newWorldGenerator` applies only when no save exists for this seed. An
+   * existing save always restores on the generator recorded in its snapshot
+   * and journal, so older worlds keep loading unchanged.
+   */
+  constructor(
+    private readonly storage: KeyValueStorage | null,
+    private readonly seed: number,
+    private readonly newWorldGenerator = GENERATOR_VERSION,
+  ) {}
+
+  private genesis(): GameSession {
+    return GameSession.genesis(this.seed, this.newWorldGenerator);
+  }
 
   load(): LoadResult {
     let raw: string | null = null;
@@ -79,7 +93,7 @@ export class BrowserSaveStore {
       if (!this.storage) return this.unavailable('Local storage is unavailable; this session is volatile.');
       this.status = 'new';
       this.message = 'New local world.';
-      return this.result(GameSession.genesis(this.seed));
+      return this.result(this.genesis());
     }
     const key = saveKey(this.seed, schema);
     try {
@@ -98,7 +112,7 @@ export class BrowserSaveStore {
         this.storage.removeItem(key);
         this.status = 'corrupt';
         this.message = `Save rejected: ${(error as Error).message}. Original bytes quarantined; started a new world.`;
-        return this.result(GameSession.genesis(this.seed));
+        return this.result(this.genesis());
       } catch (quarantineError) {
         return this.unavailable(`Save rejected: ${(error as Error).message}; quarantine failed: ${(quarantineError as Error).message}. Original save left untouched; this session is volatile.`);
       }
@@ -144,6 +158,6 @@ export class BrowserSaveStore {
     this.status = 'unavailable';
     this.message = message;
     this.persistent = false;
-    return this.result(GameSession.genesis(this.seed));
+    return this.result(this.genesis());
   }
 }

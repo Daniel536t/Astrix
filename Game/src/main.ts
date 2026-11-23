@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import './styles.css';
 import {
   TimeState, advanceTime, surfaceAt, setVoxel, MAT,
-  nearestHarvestable, WORLD_SIZE, CHUNK_SIZE, SEA_LEVEL, Entity,
+  nearestHarvestable, WORLD_SIZE, CHUNK_SIZE, SEA_LEVEL, Entity, LATEST_GENERATOR_VERSION,
 } from './sim/world';
 import { VoxelTerrainView, ViewMode } from './render/terrain';
 import { buildNoxelNature } from './render/nature';
@@ -11,6 +11,11 @@ import { Sky, timeLabel } from './render/sky';
 import { OrbitRig } from './render/camera';
 import { M2Game } from './app/m2';
 import { M2_PROJECTS } from './app/projects';
+import { M002_LAYOUT } from './sim/m002';
+import { FOUNDER_STOCKPILE } from './sim/economy';
+import { FrameStats } from './app/perf';
+import { ExploreController, INTERACT_REACH } from './app/explore';
+import { FaunaView } from './render/fauna';
 import { LifeGame } from './app/life';
 import { GameSession } from './app/session';
 import { BrowserSaveStore } from './app/persistence';
@@ -93,7 +98,10 @@ if (typeof ResizeObserver !== 'undefined') new ResizeObserver(resizeRenderer).ob
 
 // ---- world (sim layer) ----
 const loadT0 = performance.now();
-const store = new BrowserSaveStore(window.localStorage, worldSeed);
+// New worlds use the latest terrain generator; ?generator=1 creates a classic
+// v1 world. An existing save always restores on its own recorded generator.
+const newWorldGenerator = num('generator', LATEST_GENERATOR_VERSION, 1, LATEST_GENERATOR_VERSION, true);
+const store = new BrowserSaveStore(window.localStorage, worldSeed, newWorldGenerator);
 const loaded = store.load();
 const session = loaded.session;
 const world = session.world;
@@ -135,8 +143,33 @@ const natureGroup = new THREE.Group();
 natureGroup.name = 'styl_nature';
 scene.add(natureGroup);
 let lifeGame: LifeGame | null = null;
+let explore: ExploreController | null = null;
+
+/** Switch between walking the founder (explore) and the settlement overview (builder). */
+function toggleMode(force?: 'explore' | 'builder'): void {
+  if (!explore) return;
+  const next = force ?? (explore.active ? 'builder' : 'explore');
+  if (next === 'explore') explore.enter(); else explore.exit();
+  document.body.classList.toggle('explore', explore.active);
+  document.body.classList.remove('show-build', 'show-life');
+  // Narrow screens: walking shows the world drawer instead of the Settlement panel.
+  if (explore.active && matchMedia('(max-width: 760px)').matches) {
+    const worldDrawer = document.getElementById('world-drawer') as HTMLInputElement | null;
+    if (worldDrawer) worldDrawer.checked = true;
+  }
+  const button = document.getElementById('mode-button');
+  if (button) button.textContent = explore.active ? 'Builder view' : 'Walk';
+}
 let sceneInspector: SceneInspector | null = null;
-terrainView.onChunksChanged = () => { natureDirty = true; };
+let faunaDirty = true;
+terrainView.onChunksChanged = () => { natureDirty = true; faunaDirty = true; };
+// Living creatures (ambient tier) for the resident near chunks.
+const fauna = isMap || isKit ? null : new FaunaView(world);
+if (fauna) scene.add(fauna.group);
+// Construction previews query the settlement envelope several times a second;
+// keep it resident so chunk lifetime sweeps never thrash it.
+for (const r of M002_LAYOUT.envelope) terrainView.pinRect(r.x0, r.z0, r.x1, r.z1);
+terrainView.pinRect(FOUNDER_STOCKPILE.x - 4, FOUNDER_STOCKPILE.z - 4, FOUNDER_STOCKPILE.x + 4, FOUNDER_STOCKPILE.z + 4);
 
 if (isMap) {
   terrainView.update(rig.target, 'map');
@@ -224,7 +257,11 @@ function placeAt(cx: number, cz: number): boolean {
 }
 
 function harvestNearest(deplete = false): Entity | null {
-  const e = nearestHarvestable(world, rig.target.x, rig.target.z, 40);
+  // Explore mode gathers what the founder can reach; builder mode keeps the
+  // overview's 40 m radius around the camera target.
+  const ch = explore?.active ? explore.character : null;
+  const e = ch ? nearestHarvestable(world, ch.x, ch.z, INTERACT_REACH + 1.5)
+    : nearestHarvestable(world, rig.target.x, rig.target.z, 40);
   if (!e) return null;
   let total = 0;
   let resource = '';
@@ -292,12 +329,16 @@ for (const b of padButtons) {
   b.addEventListener('pointercancel', release);
   b.addEventListener('lostpointercapture', release);
 }
-document.getElementById('gather-nearest')?.addEventListener('click', () => {
+function gather(): void {
   if (!harvestNearest() && !lastAction.startsWith('harvest rejected')
     && !lastAction.startsWith('natural gathering is unavailable')) {
-    lastAction = 'no harvestable resource within 40 m';
+    lastAction = explore?.active ? 'nothing to gather within reach — walk up to a tree, shrub or ore'
+      : 'no harvestable resource within 40 m';
   }
-});
+}
+document.getElementById('gather-nearest')?.addEventListener('click', gather);
+document.getElementById('jump-button')?.addEventListener('pointerdown', (e) => { e.preventDefault(); explore?.jump(); });
+document.getElementById('mode-button')?.addEventListener('click', () => toggleMode());
 
 for (const b of controls.querySelectorAll<HTMLButtonElement>('[data-zoom]')) {
   b.addEventListener('pointerdown', (e) => {
@@ -341,6 +382,10 @@ if (isMap) {
 // ---- HUD / metrics ----
 let m2Game: M2Game | null = null;
 
+const frameWork = new FrameStats();
+const frameInterval = new FrameStats();
+let lastFrameAt = 0;
+
 function metrics() {
   let edits = 0;
   for (const m of world.edits.values()) edits += m.size;
@@ -348,11 +393,17 @@ function metrics() {
   for (const e of world.entities.values()) if (e.harvestedOnce) harvested++;
   return {
     seed: worldSeed,
+    generatorVersion: world.params.generatorVersion,
     worldSize: WORLD_SIZE,
     chunkSize: CHUNK_SIZE,
     nearRadius,
     seaLevel: SEA_LEVEL,
     loadedChunks: terrainView.loadedChunks,
+    residentChunks: terrainView.residentChunks,
+    pendingChunkBuilds: terrainView.pendingChunkBuilds,
+    sweptChunks: terrainView.evictedBySweep,
+    frameWork: frameWork.report(),
+    frameInterval: frameInterval.report(),
     cachedChunks: world.chunks.size,
     chunksGenerated: world.stats.chunksGenerated,
     generationMs: Math.round(world.stats.generationMs * 10) / 10,
@@ -384,6 +435,8 @@ function metrics() {
     inspection: sceneInspector?.metrics() ?? null,
     lastAction,
     persistenceMessage,
+    explore: explore?.metrics() ?? null,
+    fauna: fauna?.metrics() ?? null,
   };
 }
 window.__metrics = metrics();
@@ -394,16 +447,27 @@ let frames = 0;
 const coarse = matchMedia('(pointer: coarse)').matches;
 
 function frame(timestamp?: number) {
+  const workStart = performance.now();
+  if (lastFrameAt > 0) frameInterval.record(workStart - lastFrameAt);
+  lastFrameAt = workStart;
   timer.update(timestamp);
   const dt = Math.min(timer.getDelta(), 0.1);
   advanceTime(time, dt * speed);
   rig.update(dt);
+  explore?.update(dt);
+  if (fauna) {
+    if (faunaDirty) { fauna.sync(terrainView.loadedChunkKeys); faunaDirty = false; }
+    const ch = explore?.active ? explore.character : null;
+    if (!freeze) fauna.update(dt, { threats: ch ? [{ x: ch.x, z: ch.z }] : [], night: time.t < 0.2 || time.t > 0.82 });
+    else fauna.update(0, { threats: [], night: false });
+  }
 
   sky.setFocus(rig.target);
   sky.update(time.t);
   if (isMap) scene.fog = null;
 
   const mode: ViewMode = isMap ? 'map' : isKit ? 'kit' : 'world';
+  terrainView.setWaterTime(freeze ? 0 : timer.getElapsed());
   terrainView.update(rig.target, mode);
   if (natureDirty && !isMap && frames % 2 === 0) rebuildNature();
   if (natureGroup) natureGroup.visible = !isMap;
@@ -411,16 +475,23 @@ function frame(timestamp?: number) {
   sceneInspector?.update();
 
   renderer.render(scene, rig.camera);
+  frameWork.record(performance.now() - workStart);
 
   if (frames % 6 === 0) {
     window.__metrics = metrics();
     if (!noUi && !isMap && !isKit) {
       const m = window.__metrics;
-      const hint = coarse
-        ? 'tap to inspect · drag: orbit · two fingers: move + zoom'
-        : debugMutations
-          ? 'DEV ONLY · click: inspect · F: dig · G: place · H: harvest · space: pause'
-          : 'hover: identify · click: inspect · drag: orbit · WASD: move · H: harvest · space: pause';
+      const walking = !!explore?.active;
+      const reach = walking && explore?.reachable
+        ? `<b>E: gather ${explore.reachable.resource ?? ''} from ${explore.reachable.kind.replace('styl_', '').replace(/_/g, ' ')}</b> · ` : '';
+      const hint = walking
+        ? (coarse ? 'pad: walk · drag: look · Jump · Gather · Builder view'
+          : 'WASD: walk · Shift: run · Space: jump · E: gather · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
+        : coarse
+          ? 'tap to inspect · drag: orbit · two fingers: move + zoom'
+          : debugMutations
+            ? 'DEV ONLY · click: inspect · F: dig · G: place · H: harvest · P: pause'
+            : 'hover: identify · click: inspect · drag: orbit · WASD: pan · H: harvest · Tab: walk · P: pause';
       const persistence = m.save.persistent ? m.save.message
         : m.save.status === 'unavailable' ? `VOLATILE — ${m.save.message}` : m.save.message;
       const built = m.m2 ? `${m.m2.projectsBuilt}/${M2_PROJECTS.length} built` : '';
@@ -429,7 +500,7 @@ function frame(timestamp?: number) {
         `${timeLabel(time.t)} · ${time.paused ? 'paused' : 'day ' + Math.round(time.dayLengthSec) + 's'}` +
         ` · wood ${m.inventory.wood ?? 0} · stone ${m.inventory.stone ?? 0}` +
         ` · ${m.structures} structure${m.structures === 1 ? '' : 's'}${built ? ` (${built})` : ''}` +
-        `<br><span class="dim">${lastAction ? lastAction + ' · ' : ''}${hint} · ${persistence}</span>`;
+        `<br><span class="dim">${reach}${lastAction ? lastAction + ' · ' : ''}${hint} · ${persistence}</span>`;
     }
   }
 
@@ -455,7 +526,14 @@ window.addEventListener('keydown', (e) => {
     window.dispatchEvent(new KeyboardEvent('keyup', { key: e.key }));
     return;
   }
-  if (e.code === 'Space') { time.paused = !time.paused; e.preventDefault(); }
+  // Key map (documented in 00_Project_Core/Controls.md): P pauses time; Space
+  // is jump in explore mode (handled by the explore controller).
+  if (e.key === 'p' || e.key === 'P') time.paused = !time.paused;
+  if (e.code === 'Space' && !explore?.active) e.preventDefault();
+  if (e.key === 'Tab' && explore) { e.preventDefault(); toggleMode(); }
+  if ((e.key === 'e' || e.key === 'E') && explore?.active) gather();
+  if (e.key === 'b' || e.key === 'B') { document.body.classList.toggle('show-build'); document.body.classList.remove('show-life'); }
+  if (e.key === 'i' || e.key === 'I') { document.body.classList.toggle('show-life'); document.body.classList.remove('show-build'); }
   if (e.key === '1') time.t = 0.22;
   if (e.key === '2') time.t = 0.50;
   if (e.key === '3') time.t = 0.78;
@@ -470,12 +548,7 @@ window.addEventListener('keydown', (e) => {
     const changed = placeAt(Math.round(rig.target.x), Math.round(rig.target.z));
     lastAction = changed ? 'placed a stone voxel' : 'no voxel change';
   }
-  if (e.key === 'h' || e.key === 'H') {
-    if (!harvestNearest() && !lastAction.startsWith('harvest rejected')
-      && !lastAction.startsWith('natural gathering is unavailable')) {
-      lastAction = 'no harvestable resource within 40 m';
-    }
-  }
+  if (e.key === 'h' || e.key === 'H') gather();
 }, { capture: true });
 
 if (action) applyScriptedAction();
@@ -504,6 +577,16 @@ if (!isMap && !isKit) {
     sceneInspector?.setVisible(false);
   }
   if (action === 'build' || action === 'all') m2Game.buildAll();
+
+  // The founder character. Explore is the default way to play; scripted
+  // evidence captures (action=, ui=0, explicit camera params) and ?mode=builder
+  // start in the settlement overview.
+  let storage: Storage | null = null;
+  try { storage = window.localStorage; } catch { storage = null; }
+  explore = new ExploreController({ world, scene, rig, storage, spawn: { x: -18, z: -18 } });
+  const scripted = action !== '' || noUi || params.has('tx') || params.has('dist');
+  const startMode = params.get('mode') ?? (scripted ? 'builder' : 'explore');
+  if (startMode === 'explore') toggleMode('explore');
 }
 
 // Render-harness contract: renderer/camera are read-only handles for visual

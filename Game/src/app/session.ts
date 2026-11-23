@@ -2,7 +2,7 @@
 // durable input; rejected attempts, renderer work and terrain queries are not.
 import {
   ResourceType, World, createWorld, generateWorld, harvestEntity, placeAuthoredSites,
-  retireStoneEntities, isRetiredStoneKind,
+  retireStoneEntities, isRetiredStoneKind, GENERATOR_VERSION, GENERATOR_V2,
 } from '../sim/world';
 import { M002_LAYOUT } from '../sim/m002';
 import { LocalAuthorizer } from '../sim/preparation';
@@ -106,6 +106,12 @@ export interface JournalEntry {
 export interface CommandJournal {
   schema: typeof JOURNAL_SCHEMA | typeof DESIGN_JOURNAL_SCHEMA | typeof CURRENT_JOURNAL_SCHEMA;
   seed: number;
+  /**
+   * Terrain generator of the world this journal replays on. Absent means v1:
+   * every save written before generator v2 omits the field, so its canonical
+   * bytes (and hashes) are unchanged.
+   */
+  generatorVersion?: typeof GENERATOR_V2;
   starterInventory: Record<string, number>;
   entries: JournalEntry[];
 }
@@ -271,22 +277,35 @@ function isResources(value: unknown): value is Record<string, number> {
   return object(value) && Object.values(value).every((amount) => uint(amount));
 }
 
-export function createJournal(seed = 1337, schema: CommandJournal['schema'] = CURRENT_JOURNAL_SCHEMA): CommandJournal {
+export function createJournal(
+  seed = 1337, schema: CommandJournal['schema'] = CURRENT_JOURNAL_SCHEMA, generatorVersion = GENERATOR_VERSION,
+): CommandJournal {
+  if (generatorVersion !== GENERATOR_VERSION && schema !== CURRENT_JOURNAL_SCHEMA) {
+    throw new Error('legacy journal schemas only exist for generator v1');
+  }
   return {
     schema, seed,
+    ...(generatorVersion === GENERATOR_V2 ? { generatorVersion: GENERATOR_V2 } : {}),
     starterInventory: inventory(M002_STARTER_INVENTORY), entries: [],
   };
+}
+
+/** Generator version a journal replays on (absent field = v1). */
+export function journalGenerator(journal: Pick<CommandJournal, 'generatorVersion'>): number {
+  return journal.generatorVersion ?? GENERATOR_VERSION;
 }
 
 /** Validate an entire journal without changing a live session. */
 export function validateJournal(value: unknown): CommandJournal {
   if (!object(value) || (value.schema !== JOURNAL_SCHEMA && value.schema !== DESIGN_JOURNAL_SCHEMA && value.schema !== CURRENT_JOURNAL_SCHEMA)
     || !uint(value.seed) || value.seed > 0xffffffff
-    || !Array.isArray(value.entries) || value.entries.length > MAX_JOURNAL_ENTRIES) {
+    || !Array.isArray(value.entries) || value.entries.length > MAX_JOURNAL_ENTRIES
+    || 'generatorVersion' in value && (value.generatorVersion !== GENERATOR_V2 || value.schema !== CURRENT_JOURNAL_SCHEMA)) {
     throw new Error('invalid command journal');
   }
   const journal: CommandJournal = {
     schema: value.schema, seed: value.seed,
+    ...('generatorVersion' in value ? { generatorVersion: GENERATOR_V2 } : {}),
     starterInventory: inventory(value.starterInventory), entries: [],
   };
   const ids = new Set<string>();
@@ -325,7 +344,7 @@ export function validateJournal(value: unknown): CommandJournal {
   if (JSON.stringify(journal) !== JSON.stringify(value)) throw new Error('non-canonical command journal');
   // This slice has one deterministic genesis configuration. A changed starter
   // grant must not pass unnoticed when replay begins from a later snapshot.
-  if (JSON.stringify(journal.starterInventory) !== JSON.stringify(createJournal(value.seed, value.schema).starterInventory)) {
+  if (JSON.stringify(journal.starterInventory) !== JSON.stringify(createJournal(value.seed, value.schema, journalGenerator(journal)).starterInventory)) {
     throw new Error('journal starter inventory is incompatible with this version');
   }
   return journal;
@@ -350,8 +369,12 @@ export class GameSession {
     this.structureAuthorizer = new LocalStructureAuthorizer({ envelope: M002_LAYOUT.envelope });
   }
 
-  static genesis(seed = 1337): GameSession {
-    return new GameSession(genesisWorld(seed), createJournal(seed));
+  /** A new current-schema world. `generatorVersion` defaults to v1 for API compatibility. */
+  static genesis(seed = 1337, generatorVersion = GENERATOR_VERSION): GameSession {
+    return new GameSession(
+      genesisWorld(seed, inventory(M002_STARTER_INVENTORY), CURRENT_JOURNAL_SCHEMA, generatorVersion),
+      createJournal(seed, CURRENT_JOURNAL_SCHEMA, generatorVersion),
+    );
   }
 
   /** Compatibility entry point for recorded M002 fixtures and saved worlds. */
@@ -438,8 +461,8 @@ export class GameSession {
   /** Replay already-authenticated current-state commands. */
   private static replayCurrent(journal: CommandJournal): GameSession {
     const session = new GameSession(
-      genesisWorld(journal.seed, journal.starterInventory, journal.schema),
-      createJournal(journal.seed, journal.schema),
+      genesisWorld(journal.seed, journal.starterInventory, journal.schema, journalGenerator(journal)),
+      createJournal(journal.seed, journal.schema, journalGenerator(journal)),
     );
     for (const entry of journal.entries) session.replayEntry(entry);
     return session;
@@ -448,7 +471,10 @@ export class GameSession {
   private static restoreCurrent(snapshot: WorldSnapshot, journal: CommandJournal, next: number): GameSession {
     const world = worldFromSnapshot(snapshot);
     if (world.seed !== journal.seed) throw new Error('snapshot and journal seeds differ');
-    const genesis = genesisWorld(journal.seed, journal.starterInventory, journal.schema);
+    if (world.params.generatorVersion !== journalGenerator(journal)) {
+      throw new Error('snapshot and journal terrain generators differ');
+    }
+    const genesis = genesisWorld(journal.seed, journal.starterInventory, journal.schema, journalGenerator(journal));
     if (next === 0 && legacyStoneHash(snapshot) !== canonicalWorldHash(genesis, 0, journal.schema)) {
       throw new Error('genesis snapshot does not match journal configuration');
     }
@@ -457,6 +483,7 @@ export class GameSession {
     }
     const session = GameSession.fromValidatedBoundary(world, {
       schema: journal.schema, seed: journal.seed,
+      ...(journal.generatorVersion ? { generatorVersion: journal.generatorVersion } : {}),
       starterInventory: { ...journal.starterInventory }, entries: journal.entries.slice(0, next),
     });
     for (const entry of journal.entries.slice(next)) session.replayEntry(entry);
@@ -636,8 +663,8 @@ export class GameSession {
 }
 
 export function genesisWorld(seed: number, starter = inventory(M002_STARTER_INVENTORY),
-  schema: CommandJournal['schema'] = CURRENT_JOURNAL_SCHEMA): World {
-  const world = generateWorld(seed, 0);
+  schema: CommandJournal['schema'] = CURRENT_JOURNAL_SCHEMA, generatorVersion = GENERATOR_VERSION): World {
+  const world = generateWorld(seed, 0, generatorVersion);
   world.inventory = { ...starter };
   if (schema === CURRENT_JOURNAL_SCHEMA) world.life = createLifeState();
   return world;

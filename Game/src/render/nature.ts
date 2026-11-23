@@ -291,7 +291,22 @@ function cairnGeometry(): THREE.BufferGeometry {
 }
 
 // ---------- asset lookup ----------
+// Variant geometry is a pure function of (kind, variant). Build each once and
+// reuse it: BatchedMesh.addGeometry copies the data, so the cached source is
+// never disposed by a nature rebuild.
+const geometryCache = new Map<string, THREE.BufferGeometry | null>();
+
 function geometryFor(kind: EntityKind, variant: number): THREE.BufferGeometry | null {
+  const key = `${kind}:${variant}`;
+  if (geometryCache.has(key)) return geometryCache.get(key)!;
+  const built = buildGeometryFor(kind, variant);
+  const flat = built && built.index ? built.toNonIndexed() : built;
+  if (flat && flat !== built) built?.dispose();
+  geometryCache.set(key, flat);
+  return flat;
+}
+
+function buildGeometryFor(kind: EntityKind, variant: number): THREE.BufferGeometry | null {
   if (kind === 'styl_tree_spire') return treeGeometry(T1, Math.abs(variant) % 4);
   if (kind === 'styl_tree_table') return treeGeometry(T2, Math.abs(variant) % 4);
   if (kind === 'styl_tree_cluster') return treeGeometry(T3, Math.abs(variant) % 3);
@@ -339,7 +354,7 @@ export function buildNoxelNature(
     const [kind, variantStr] = key.split(':');
     const geo = geometryFor(kind as EntityKind, Number(variantStr));
     if (!geo) continue;
-    geometries.set(key, geo.index ? geo.toNonIndexed() : geo);
+    geometries.set(key, geo);
     triangles += (geo.attributes.position.count / 3) * list.length;
     instanceCount += list.length;
   }

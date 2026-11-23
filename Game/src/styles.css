@@ -637,3 +637,47 @@ body.clean .inspector, body.map .inspector { display: none !important; }
   .inspector { bottom: max(14px, env(safe-area-inset-bottom)); width: 280px; }
   #inspect-card, .inspect-list { max-height: calc(100dvh - 88px); }
 }
+
+/* ---- explore mode (walking the founder) ---- */
+#mode-button {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  padding: 8px 14px;
+  color: #F4EFE3;
+  background: rgba(27, 32, 43, 0.82);
+  border: 1px solid rgba(244, 239, 227, 0.28);
+  border-radius: 8px;
+  font: 600 12px/1 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+#mode-button:focus-visible { outline: 2px solid #D7C778; outline-offset: 2px; }
+body.clean #mode-button, body.kit #mode-button, body.map #mode-button { display: none; }
+
+/* Desktop: in explore mode the panels stay out of the way until asked for (B / I). */
+@media (min-width: 761px) {
+  body.explore:not(.show-build) #build-panel { display: none !important; }
+  body.explore:not(.show-life) #life-panel { display: none !important; }
+}
+
+.jump-touch { display: none; }
+@media (pointer: coarse) {
+  body.explore .jump-touch {
+    display: block;
+    position: fixed;
+    right: max(92px, calc(env(safe-area-inset-right) + 78px));
+    bottom: max(172px, calc(env(safe-area-inset-bottom) + 164px));
+    z-index: 7;
+    width: 64px;
+    height: 44px;
+    color: #F4EFE3;
+    background: #2E8C86;
+    border: 1px solid #7FD0C6;
+    border-radius: 8px;
+    font: 600 12px/1 ui-sans-serif, system-ui, sans-serif;
+    touch-action: manipulation;
+  }
+}
+#hud b { color: #F4E8A4; font-weight: 600; }

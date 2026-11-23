@@ -9,13 +9,15 @@
 // ocean surface extends far beyond the 2048 m playable island.
 import * as THREE from 'three';
 import palette from '../data/palette.json';
+import { meshChunkWater, installFarWaterHole, waterTime } from './water';
 import {
   World, VoxelChunk, MatId, SurfaceSample, GENERATOR_VERSION,
   WORLD_SIZE, HALF, CHUNK_SIZE, CHUNKS_PER_SIDE, CHUNK_AREA, WORLD_HEIGHT,
   Y_MIN, Y_MAX, SEA_LEVEL, MAT, isOpaque,
   chunkKey, chunkOriginX, chunkOriginZ, localIndex, yToIndex,
   worldToChunkX, worldToChunkZ, worldToLocalX, worldToLocalZ,
-  getVoxel, ensureChunk, evictChunk, surfaceHeightAt, baseTopMaterial, hash2i, fbm2,
+  getVoxel, ensureChunk, evictChunk, hash2i, fbm2,
+  editVersion, baseHeightAt, baseTopMaterialFor,
 } from '../sim/world';
 
 const M = palette.materials as Record<string, { hex: string }>;
@@ -42,6 +44,8 @@ const COL = {
   gravel: c(H('stone_body_b')).clone().lerp(c(H('sand')), 0.35),
   ore: c(H('ore_crystal')),
   moss: c(H('grass_cap')).clone().lerp(c(H('stone_body_b')), 0.35),
+  snow: c(H('snow')),
+  snowShade: c(H('snow')).clone().lerp(c(H('stone_shade')), 0.35),
   waterRim: c(H('water_rim')),
   waterShallow: c(H('water_shallow')),
   waterMid: c(H('water_mid')),
@@ -100,6 +104,7 @@ function colorForKey(key: number): THREE.Color {
     else if (mat === MAT.SOIL) color = COL.ochre;
     else if (mat === MAT.ORE) color = COL.ore;
     else if (mat === MAT.MOSS) color = COL.moss;
+    else if (mat === MAT.SNOW) color = COL.snow;
     else color = COL.stoneTop;
   } else if (axis === 1 && dir === 0) {
     color = COL.stoneShade;
@@ -120,6 +125,8 @@ function colorForKey(key: number): THREE.Color {
       color = depth <= 1 ? COL.gravel : body;
     } else if (mat === MAT.ORE) {
       color = COL.ore;
+    } else if (mat === MAT.SNOW) {
+      color = depth === 0 ? COL.snowShade : body;
     } else if (mat === MAT.BEDROCK) {
       color = COL.stoneShade;
     } else {
@@ -350,7 +357,7 @@ export function buildWaterSurface(world: World, size = 20000, segments = 96): TH
     // The water plane samples the seabed only for a narrow shore rim. A depth
     // ramp on a 47 m grid missed the 10 m river entirely and turned it white;
     // the river and lake read better as the same deep water as the sea.
-    const h = surfaceHeightAt(world.seed, Math.round(x), Math.round(z));
+    const h = baseHeightAt(world.seed, world.params.generatorVersion, Math.round(x), Math.round(z));
     const shore = smoothstep(-0.9, -0.15, h) * (1 - smoothstep(-0.15, 0.4, h));
     const n = hash2i(Math.floor(x / 45), Math.floor(z / 45), world.seed + 501);
     tmp.copy(COL.waterMid).lerp(COL.waterDeep, 0.35 + 0.35 * n);
@@ -463,7 +470,19 @@ function macroColumn(world: World, caches: MacroWorldCaches, key: string, index:
   return columns.get(index);
 }
 
+const macroEditKeyMemo = new WeakMap<World, { version: number; key: string }>();
+
+/** Memoized by the world's edit version: O(1) per frame unless edits changed. */
 function macroEditKey(world: World): string {
+  const version = editVersion(world);
+  const memo = macroEditKeyMemo.get(world);
+  if (memo && memo.version === version) return memo.key;
+  const key = computeMacroEditKey(world);
+  macroEditKeyMemo.set(world, { version, key });
+  return key;
+}
+
+function computeMacroEditKey(world: World): string {
   // Include a commutative content fingerprint as well as count: eviction and
   // snapshot restore bypass the coarse World.revision path, and a restored
   // delta can have the same number of cells with different indices/materials.
@@ -542,7 +561,7 @@ function macroSamples(world: World, step: number): MacroSampleCache {
   for (let j = 0; j < N; j++) {
     for (let i = 0; i < N; i++) {
       const x = cellX(i), z = cellZ(j);
-      const h = surfaceHeightAt(world.seed, Math.round(x), Math.round(z));
+      const h = baseHeightAt(world.seed, world.params.generatorVersion, Math.round(x), Math.round(z));
       const idx = j * N + i;
       heights[idx] = h;
       if (h < SEA_LEVEL) underwater[idx] = 1;
@@ -565,7 +584,8 @@ function macroSamples(world: World, step: number): MacroSampleCache {
         slope = Math.max(slope, Math.abs(h - nh));
         if (nh < SEA_LEVEL + 1) nearWater = true;
       }
-      tops[idx] = baseTopMaterial(world.seed, Math.round(x), Math.round(z), h, slope, nearWater);
+      tops[idx] = baseTopMaterialFor(world.seed, world.params.generatorVersion,
+        Math.round(x), Math.round(z), h, slope, nearWater);
     }
   }
 
@@ -647,6 +667,7 @@ export function buildMacroMesh(world: World, opts: MacroOptions): MacroResult {
       );
     }
     if (top === MAT.ORE) return COL.ore.clone().multiplyScalar(shade);
+    if (top === MAT.SNOW) return COL.snow.clone().multiplyScalar(0.94 + 0.08 * shade);
     // Forest-floor patches break up the uniform green of the far LOD. They
     // are a colour approximation, not extra geometry; the near ring has real
     // Styl trees.
@@ -744,7 +765,7 @@ export interface VoxelTerrainViewOptions {
   mapMacroStep?: number;
 }
 
-interface ChunkView { mesh: THREE.Mesh; triangles: number; }
+interface ChunkView { mesh: THREE.Mesh; water: THREE.Mesh | null; triangles: number; }
 
 /**
  * Owns the near chunk meshes, macro LOD and water surface. It reads world
@@ -772,6 +793,14 @@ export class VoxelTerrainView {
   private macroSampleSamples: number[] = [];
   private macroCacheHits = 0;
   private macroEditKey: string | null = null;
+  /** Main-thread milliseconds per frame for streaming and dirty re-meshing. */
+  frameBudgetMs = 6;
+  private pendingChunks = 0;
+  private sweepCounter = 0;
+  private sweptChunks = 0;
+  private pinned = new Set<string>();
+  private waterGroup = new THREE.Group();
+  private farWaterHole: { value: THREE.Vector4 };
   onChunksChanged: (() => void) | null = null;
 
   constructor(world: World, scene: THREE.Scene, opts: VoxelTerrainViewOptions = {}) {
@@ -784,7 +813,10 @@ export class VoxelTerrainView {
     this.macroGroup.name = 'macro_lod';
     this.group.add(this.nearGroup, this.macroGroup);
     this.water = buildWaterSurface(world);
+    this.farWaterHole = installFarWaterHole(this.water.material as THREE.Material);
     this.group.add(this.water);
+    this.waterGroup.name = 'near_water';
+    this.group.add(this.waterGroup);
     scene.add(this.group);
   }
 
@@ -794,10 +826,15 @@ export class VoxelTerrainView {
     this.rebuildMacro(focus, 'world', true);
   }
 
+  /** Advance presentation-only water animation (seconds). */
+  setWaterTime(seconds: number): void { waterTime.value = seconds; }
+
   update(focus: THREE.Vector3, mode: ViewMode = 'world'): void {
     if (mode !== this.mode) {
       this.mode = mode;
       this.nearGroup.visible = mode !== 'map';
+      this.waterGroup.visible = mode !== 'map';
+      if (mode === 'map') this.farWaterHole.value.set(0, 0, 0, 0);
       this.rebuildMacro(focus, mode, true);
     }
 
@@ -806,10 +843,10 @@ export class VoxelTerrainView {
       return;
     }
 
-    this.ensureChunks(focus, false);
-    for (const key of this.loaded) {
-      if (this.world.dirty.has(key)) this.rebuildChunk(key);
-    }
+    const frameStart = performance.now();
+    this.ensureChunks(focus, false, frameStart);
+    this.rebuildDirty(focus, frameStart);
+    if (++this.sweepCounter % 30 === 0) this.sweepResident(focus);
 
     const moved = Math.hypot(focus.x - this.macroFocus.x, focus.z - this.macroFocus.z);
     if (this.macroMode !== mode || moved > 48 || macroEditKey(this.world) !== this.macroEditKey) {
@@ -817,24 +854,33 @@ export class VoxelTerrainView {
     }
   }
 
-  private ensureChunks(focus: THREE.Vector3, immediate: boolean): void {
+  /**
+   * Stream the near ring nearest-first within a per-frame time budget. At least
+   * one chunk is built per frame so streaming always makes progress.
+   */
+  private ensureChunks(focus: THREE.Vector3, immediate: boolean, frameStart = performance.now()): void {
     const ccx = worldToChunkX(Math.round(focus.x));
     const ccz = worldToChunkZ(Math.round(focus.z));
     let changed = false;
-    let budget = immediate ? Number.MAX_SAFE_INTEGER : 2;
 
+    const missing: Array<{ cx: number; cz: number; d: number }> = [];
     for (let dz = -this.nearRadius; dz <= this.nearRadius; dz++) {
       for (let dx = -this.nearRadius; dx <= this.nearRadius; dx++) {
         const cx = ccx + dx, cz = ccz + dz;
         if (cx < 0 || cz < 0 || cx >= CHUNKS_PER_SIDE || cz >= CHUNKS_PER_SIDE) continue;
-        const key = chunkKey(cx, cz);
-        if (this.loaded.has(key)) continue;
-        if (budget <= 0) continue;
-        this.buildChunk(cx, cz);
-        budget--;
-        changed = true;
+        if (this.loaded.has(chunkKey(cx, cz))) continue;
+        missing.push({ cx, cz, d: dx * dx + dz * dz });
       }
     }
+    missing.sort((a, b) => a.d - b.d);
+    let built = 0;
+    for (const m of missing) {
+      if (!immediate && built > 0 && performance.now() - frameStart >= this.frameBudgetMs) break;
+      this.buildChunk(m.cx, m.cz);
+      built++;
+      changed = true;
+    }
+    this.pendingChunks = missing.length - built;
 
     const margin = this.nearRadius + 1;
     for (const key of [...this.loaded]) {
@@ -867,6 +913,7 @@ export class VoxelTerrainView {
     if (existing) {
       this.nearGroup.remove(existing.mesh);
       existing.mesh.geometry.dispose();
+      if (existing.water) { this.waterGroup.remove(existing.water); existing.water.geometry.dispose(); }
     }
 
     const meshT0 = performance.now();
@@ -877,7 +924,9 @@ export class VoxelTerrainView {
     mesh.receiveShadow = true;
     mesh.castShadow = false;
     this.nearGroup.add(mesh);
-    this.chunks.set(key, { mesh, triangles });
+    const water = meshChunkWater(this.world, chunk);
+    if (water) this.waterGroup.add(water);
+    this.chunks.set(key, { mesh, water, triangles: triangles + (water?.userData.waterTriangles ?? 0) });
     this.loaded.add(key);
     this.world.dirty.delete(key);
   }
@@ -887,9 +936,11 @@ export class VoxelTerrainView {
     if (view) {
       this.nearGroup.remove(view.mesh);
       view.mesh.geometry.dispose();
+      if (view.water) { this.waterGroup.remove(view.water); view.water.geometry.dispose(); }
       this.chunks.delete(key);
     }
     this.loaded.delete(key);
+    if (this.pinned.has(key)) return;
     this.world.dirty.delete(key);
     evictChunk(this.world, key);
   }
@@ -898,6 +949,63 @@ export class VoxelTerrainView {
     const [cx, cz] = key.split(',').map(Number);
     this.buildChunk(cx, cz);
   }
+
+  /** Re-mesh dirty loaded chunks nearest-first, sharing the frame budget. */
+  private rebuildDirty(focus: THREE.Vector3, frameStart: number): void {
+    const ccx = worldToChunkX(Math.round(focus.x));
+    const ccz = worldToChunkZ(Math.round(focus.z));
+    const dirty: Array<{ key: string; d: number }> = [];
+    for (const key of this.loaded) {
+      if (!this.world.dirty.has(key)) continue;
+      const [cx, cz] = key.split(',').map(Number);
+      dirty.push({ key, d: (cx - ccx) ** 2 + (cz - ccz) ** 2 });
+    }
+    if (dirty.length === 0) return;
+    dirty.sort((a, b) => a.d - b.d);
+    let rebuilt = 0;
+    for (const { key } of dirty) {
+      if (rebuilt > 0 && performance.now() - frameStart >= this.frameBudgetMs) break;
+      this.rebuildChunk(key);
+      rebuilt++;
+    }
+    if (rebuilt > 0) this.onChunksChanged?.();
+  }
+
+  /**
+   * Chunk lifetime policy. Meshing generates a ring of neighbour chunks, and
+   * simulation queries can generate more; none of those were ever released.
+   * Resident chunk bytes are derived (regenerated from seed + durable edits),
+   * so anything outside the keep radius that is not loaded or pinned is freed.
+   */
+  private sweepResident(focus: THREE.Vector3): void {
+    const ccx = worldToChunkX(Math.round(focus.x));
+    const ccz = worldToChunkZ(Math.round(focus.z));
+    const keep = this.nearRadius + 2;
+    for (const key of [...this.world.chunks.keys()]) {
+      if (this.loaded.has(key) || this.pinned.has(key)) continue;
+      const [cx, cz] = key.split(',').map(Number);
+      if (Math.abs(cx - ccx) <= keep && Math.abs(cz - ccz) <= keep) continue;
+      evictChunk(this.world, key);
+      this.world.dirty.delete(key);
+      this.sweptChunks++;
+    }
+  }
+
+  /**
+   * Keep the chunks under a world-space rectangle resident (for example the
+   * settlement envelope that construction previews query several times a second).
+   */
+  pinRect(minX: number, minZ: number, maxX: number, maxZ: number): void {
+    for (let cz = worldToChunkZ(minZ) - 1; cz <= worldToChunkZ(maxZ) + 1; cz++) {
+      for (let cx = worldToChunkX(minX) - 1; cx <= worldToChunkX(maxX) + 1; cx++) {
+        if (cx >= 0 && cz >= 0 && cx < CHUNKS_PER_SIDE && cz < CHUNKS_PER_SIDE) this.pinned.add(chunkKey(cx, cz));
+      }
+    }
+  }
+
+  get residentChunks(): number { return this.world.chunks.size; }
+  get pendingChunkBuilds(): number { return this.pendingChunks; }
+  get evictedBySweep(): number { return this.sweptChunks; }
 
   rebuildAround(x: number, z: number): void {
     const cx = worldToChunkX(x), cz = worldToChunkZ(z);
@@ -933,6 +1041,7 @@ export class VoxelTerrainView {
         minZ: chunkOriginZ(ccz - this.nearRadius),
         maxZ: chunkOriginZ(ccz + this.nearRadius) + CHUNK_SIZE,
       };
+      this.farWaterHole.value.set(hole.minX, hole.minZ, hole.maxX, hole.maxZ);
     }
     const result = buildMacroMesh(this.world, { step, hole });
     this.macro = result.mesh;
@@ -954,7 +1063,11 @@ export class VoxelTerrainView {
     return t;
   }
   get macroTriangleCount(): number { return this.macroTriangles; }
-  get drawCalls(): number { return this.loaded.size + (this.macro ? 1 : 0) + 1; }
+  get drawCalls(): number {
+    let water = 0;
+    for (const v of this.chunks.values()) if (v.water) water++;
+    return this.loaded.size + water + (this.macro ? 1 : 0) + 1;
+  }
   get nearRadiusChunks(): number { return this.nearRadius; }
   /** Clear the rolling timing window before a measurement run. */
   resetPerf(): void {
