@@ -48,5 +48,7 @@ are cached for a year, so a new deploy takes effect on the next page load.
 | 2026-11-23 17:06 | `20261123T170634Z-642dd69` | Resize, URL-param and constant fixes | Resize and bad-param checks on the live URL |
 | 2026-11-23 19:24 | `20261123T192419Z-93386e8` | Living world phases 1–2: terrain v2 valley and mountain river, flowing water, walking founder, wildlife, chunk workers, village kit (`?scene=kit`) | 150/150 tests in the deploy script; live headless check: v2 world, 3 workers, 69 creatures, explore mode, 0 console errors |
 
+| 2026-11-23 19:42 | `20261123T194224Z-c4b82cf` | Real-time settlement simulation (tick every 2 s), save throttling, single-writer tab lease | 154/154 tests; live tick-rate check |
+
 Rollback to the previous release: `deploy/boxd/deploy.sh --rollback`. Owner deployment authority (2026-11-23): normal,
 reversible development builds may be deployed at verified checkpoints.
