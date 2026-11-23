@@ -1,8 +1,19 @@
 # REF-003 — Owner references, 2026-11-23
 
-**Source:** four phone screenshots sent by the owner in chat on 2026-11-23. The owner said they are
-"not exactly what I want" and asked engineering to take what is useful. The original image files are
-not in the repo yet; add them to `05_Noxel_Studio/Reference_Images/` as `REF-003_a.png` … `REF-003_d.png`.
+**Source:** four phone screenshots supplied by the owner on 2026-11-23 and uploaded by the owner to the
+repository (commit `9094086`). The owner said they are "not exactly what I want" and asked engineering to
+take what is useful. They are preserved byte-for-byte, under their original file names, in
+`05_Noxel_Studio/Reference_Images/` (moved there with `git mv`; no re-encoding, cropping or recreation):
+
+| Ref | File | Origin as far as known |
+|---|---|---|
+| a | `Screenshot_2026-11-23-15-39-03-833_com.openai.chatgpt.jpg` | Micro-voxel village render; viewed in the ChatGPT app. Creator unknown. |
+| b | `Screenshot_2026-11-23-15-38-53-846_com.openai.chatgpt.jpg` | Aerial valley build in a Minecraft-style voxel game; carries a creator watermark (bottom left). |
+| c | `Screenshot_2026-11-23-15-38-58-114_com.openai.chatgpt.jpg` | *Minecraft Legends*-style ground-level gameplay scene. |
+| d | `Screenshot_2026-11-23-15-38-49-086_com.openai.chatgpt.jpg` | AI-generated cozy voxel valley illustration. |
+
+All four are phone screenshots (status bar and letterboxing included). They are direction references
+only and third-party work; ASTrix must not copy their models, textures or layouts.
 
 **Use:** inspiration for direction, scale and features only. Several are screenshots of other games
 (Minecraft-style builds, a *Minecraft Legends*-style scene) or AI art, and one carries a creator watermark.
@@ -33,7 +44,7 @@ These need an explicit owner ruling. Engineering will not silently overturn appr
 |---|---|---|---|
 | Trees and shrubs are **Styl faceted organics**, not voxels | D-012, ADB §2 | Cube-built trees and shrubs | Replace Styl with **voxel-built organics** (clusters of small cubes, 0.25–0.5 m), keeping faceting only where it reads well, or drop it entirely. |
 | Noxel architecture is **pale monolithic stone, flat roofs**; "M1 has no pitched roofs" | Noxel guide v1.0 §1, seed guide line 73 | Timber frame, plaster, steep thatch and shingle roofs | Add a **village tier**: timber + plaster + pitched voxel roof. Keep pale stone for foundations, wells, bridges. |
-| Only three mesh languages; a fourth needs an owner decision | ADB §2 | Blocky people and animals | Characters and animals as **box-built figures** (the Noxel box pipeline at 0.1 m quantum). No new language needed. |
+| Only three mesh languages; a fourth needs an owner decision | ADB §2 | Blocky people and animals | Characters and animals as **box-built figures**. **Owner ruling 2026-11-23: block-built, articulated, species-specific silhouettes; this supersedes the Styl/faceted instruction for characters, wildlife, vegetation, architecture and props.** |
 | No SSAO or post-processing | ADB §6 | Soft contact shadows and mist | Allow cheap **height fog and per-vertex ambient occlusion** baked by the mesher; still no screen-space post effects. |
 | Highlands are a blocky mesa, max height ~92 m, no snow | `sim/world.ts:358-442` | Tall snow peaks framing the valley | Terrain generator v2: taller cliffs, a **SNOW** material above a snowline, the founder valley bounded by mountains. |
 | River is flat at sea level | `sim/world.ts:601-610` | River descending with rapids | Generator v2 rivers that drop in steps with rapids. Bumps `GENERATOR_VERSION`; existing browser saves start a new world. |
