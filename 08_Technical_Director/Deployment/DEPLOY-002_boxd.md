@@ -39,3 +39,14 @@ are cached for a year, so a new deploy takes effect on the next page load.
 - Headless Chromium (software WebGL) on the public URL: `__ready` true, 49 chunks, 47 draw calls,
   194,972 triangles, 0 console errors. Still serving after a resize reboot (nginx is enabled at boot).
 - Not verified: physical-GPU frame rate, real mobile devices.
+
+## Deployment log
+
+| UTC | Release | Contents | Verified |
+|---|---|---|---|
+| 2026-11-23 17:00 | `20261123T170031Z-92ec3d5` | Initial boxd deployment of the M003 build | HTTP 200, render, 0 console errors |
+| 2026-11-23 17:06 | `20261123T170634Z-642dd69` | Resize, URL-param and constant fixes | Resize and bad-param checks on the live URL |
+| 2026-11-23 19:24 | `20261123T192419Z-93386e8` | Living world phases 1–2: terrain v2 valley and mountain river, flowing water, walking founder, wildlife, chunk workers, village kit (`?scene=kit`) | 150/150 tests in the deploy script; live headless check: v2 world, 3 workers, 69 creatures, explore mode, 0 console errors |
+
+Rollback to the previous release: `deploy/boxd/deploy.sh --rollback`. Owner deployment authority (2026-11-23): normal,
+reversible development builds may be deployed at verified checkpoints.
