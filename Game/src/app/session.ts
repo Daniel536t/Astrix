@@ -1,7 +1,7 @@
 // The sole write boundary for the playable M002 slice. Accepted commands are
 // durable input; rejected attempts, renderer work and terrain queries are not.
 import {
-  Entity, ResourceType, World, createWorld, generateWorld, harvestEntity, placeAuthoredSites,
+  ResourceType, World, createWorld, generateWorld, harvestEntity, placeAuthoredSites,
   retireStoneEntities, isRetiredStoneKind,
 } from '../sim/world';
 import { M002_LAYOUT } from '../sim/m002';
@@ -15,7 +15,7 @@ import {
 import { enableStoneReplay, finishStoneReplay } from '../sim/stone-compat';
 import { M2ProjectId, buildProject, projectById } from './projects';
 import {
-  FOUNDER_STOCKPILE_ID, LIFE_RESOURCES, LifeResource, LifeResourceBag, RECIPES, RecipeId,
+  CROP_GROWTH_TICKS, CROP_YIELD, FOUNDER_STOCKPILE_ID, LIFE_RESOURCES, MAX_TICKS_PER_COMMAND, LifeResource, LifeResourceBag, RECIPES, RecipeId,
   advanceTicks, createLifeState, harvestCrop, plantCrop, startProduction, transfer,
 } from '../sim/economy';
 
@@ -200,7 +200,7 @@ export function validateCommand(value: unknown): Command {
     } else if (value.type === 'produce' && value.stockpileId === FOUNDER_STOCKPILE_ID
       && (value.recipe === 'seed' || value.recipe === 'rations')) {
       command = { ...base, type: value.type, stockpileId: value.stockpileId, recipe: value.recipe };
-    } else if (value.type === 'tick' && uint(value.ticks) && value.ticks > 0 && value.ticks <= 64) {
+    } else if (value.type === 'tick' && uint(value.ticks) && value.ticks > 0 && value.ticks <= MAX_TICKS_PER_COMMAND) {
       command = { ...base, type: value.type, ticks: value.ticks };
     } else if (value.type === 'plant' && typeof value.plotId === 'string' && /^crop:[0-8]$/.test(value.plotId)) {
       command = { ...base, type: value.type, plotId: value.plotId };
@@ -243,13 +243,14 @@ function validateOutcome(value: unknown): CommandOutcome {
     outcome = { type: value.type, jobId: value.jobId, stockpileId: value.stockpileId,
       recipe: value.recipe, remainingTicks: value.remainingTicks };
   } else if (value.type === 'plant' && typeof value.plotId === 'string' && /^crop:[0-8]$/.test(value.plotId)
-    && uint(value.plantedTick) && value.growthTicks === 4) {
+    && uint(value.plantedTick) && value.growthTicks === CROP_GROWTH_TICKS) {
     outcome = { type: value.type, plotId: value.plotId, plantedTick: value.plantedTick, growthTicks: value.growthTicks };
   } else if (value.type === 'harvest_crop' && typeof value.plotId === 'string' && /^crop:[0-8]$/.test(value.plotId)
-    && isResources(value.resources) && value.resources.food === 6 && value.resources.fiber === 1) {
-    outcome = { type: value.type, plotId: value.plotId, resources: { food: 6, fiber: 1 } };
+    && isResources(value.resources) && value.resources.food === CROP_YIELD.food && value.resources.fiber === CROP_YIELD.fiber) {
+    outcome = { type: value.type, plotId: value.plotId,
+      resources: { food: CROP_YIELD.food, fiber: CROP_YIELD.fiber } };
   } else if (value.type === 'tick' && uint(value.fromTick) && uint(value.toTick)
-    && value.toTick > value.fromTick && value.toTick - value.fromTick <= 64
+    && value.toTick > value.fromTick && value.toTick - value.fromTick <= MAX_TICKS_PER_COMMAND
     && Array.isArray(value.completedJobs) && Array.isArray(value.readyCrops)) {
     const completedJobs: Array<{ id: string; recipe: RecipeId; output: Record<string, number> }> = value.completedJobs.map((raw: unknown) => {
       if (!object(raw) || !id(raw.id) || (raw.recipe !== 'seed' && raw.recipe !== 'rations')) throw new Error('invalid completed job');
@@ -659,8 +660,4 @@ function containsRetiredStone(entry: JournalEntry): boolean {
         || /^hero:styl_rock_(?:small|medium|large):/.test(entry.command.entityId));
   }
   return entry.outcome.type === 'build' && (entry.outcome.resourcesGained.stone ?? 0) > 0;
-}
-
-export function harvestedEntity(session: GameSession, id: string): Entity | undefined {
-  return session.world.entities.get(id);
 }

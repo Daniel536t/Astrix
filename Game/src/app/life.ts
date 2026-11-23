@@ -1,7 +1,7 @@
 // Playable schema-3 life loop. Every write is a GameSession command; the UI,
 // meshes and persistence are derived from the resulting authoritative world.
 import * as THREE from 'three';
-import { FOUNDER_STOCKPILE_ID, LifeResource, cropReady } from '../sim/economy';
+import { CROP_YIELD_LABEL, FOUNDER_STOCKPILE_ID, LifeResource, cropReady } from '../sim/economy';
 import { World } from '../sim/world';
 import { buildLifeMeshes, disposeLifeMeshes } from '../render/life';
 import { LifeIntent, LifePanel } from '../ui/life';
@@ -119,7 +119,7 @@ function lifeMessage(intent: LifeIntent): string {
   if (intent.type === 'tick') return `Advanced ${intent.ticks} simulation tick${intent.ticks === 1 ? '' : 's'}`;
   if (intent.type === 'plant' || intent.type === 'harvest_crop') {
     return intent.type === 'plant' ? `Planted ${intent.plotId}`
-      : `Harvested ${intent.plotId}: 6 food + 1 fiber`;
+      : `Harvested ${intent.plotId}: ${CROP_YIELD_LABEL}`;
   }
   return '';
 }

@@ -9,6 +9,9 @@ export const STOCKPILE_CAPACITY = 200;
 export const MAX_PRODUCTION_JOBS = 16;
 export const MAX_TICKS_PER_COMMAND = 64;
 export const CROP_GROWTH_TICKS = 4;
+/** Fixed harvest from one ready crop plot. Journal outcomes must match it exactly. */
+export const CROP_YIELD = { food: 6, fiber: 1 } as const;
+export const CROP_YIELD_LABEL = `${CROP_YIELD.food} food + ${CROP_YIELD.fiber} fiber`;
 export const FOUNDER_STOCKPILE_ID = 'stockpile:founder';
 export const FOUNDER_STOCKPILE = { id: FOUNDER_STOCKPILE_ID, x: -50, z: -32, capacity: STOCKPILE_CAPACITY } as const;
 
@@ -170,7 +173,7 @@ export function harvestCrop(world: World, plotId: string): LifeResult<{ food: nu
   if (!cropReady(crop, life.tick)) return rejectLife('crop_not_ready', [`crop needs ${crop.growthTicks - (life.tick - crop.plantedTick)} more ticks`]);
   // Plant growth is the explicit biological source; every other life-loop
   // transformation conserves its declared inputs and outputs.
-  const yieldBag = { food: 6, fiber: 1 };
+  const yieldBag = { food: CROP_YIELD.food, fiber: CROP_YIELD.fiber };
   if (total(world.inventory) + yieldBag.food + yieldBag.fiber > CARRIED_CAPACITY) {
     return rejectLife('capacity_exceeded', [`carried capacity ${CARRIED_CAPACITY} would be exceeded`]);
   }

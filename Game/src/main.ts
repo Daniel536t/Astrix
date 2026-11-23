@@ -10,12 +10,22 @@ import { buildNoxelSite, buildKit } from './render/noxel';
 import { Sky, timeLabel } from './render/sky';
 import { OrbitRig } from './render/camera';
 import { M2Game } from './app/m2';
+import { M2_PROJECTS } from './app/projects';
 import { LifeGame } from './app/life';
 import { GameSession } from './app/session';
 import { BrowserSaveStore } from './app/persistence';
 import { SceneInspector } from './app/inspector';
 
+// A startup failure would otherwise leave a blank canvas with no explanation.
+window.addEventListener('error', (e) => {
+  if (window.__ready) return;
+  const hudEl = document.getElementById('hud');
+  if (hudEl) hudEl.textContent = `ASTrix could not start: ${e.message}. Try reloading, or a browser with WebGL2.`;
+});
+
 const params = new URLSearchParams(location.search);
+// An invalid URL parameter falls back to its default and is reported in the HUD.
+const paramWarnings: string[] = [];
 const num = (k: string, fallback: number, min?: number, max?: number, integer = false) => {
   if (!params.has(k)) return fallback;
   const text = params.get(k) ?? '';
@@ -23,16 +33,19 @@ const num = (k: string, fallback: number, min?: number, max?: number, integer = 
   if (!Number.isFinite(value) || (integer && !Number.isInteger(value))
     || (min !== undefined && value < min) || (max !== undefined && value > max)) {
     const range = min !== undefined && max !== undefined ? ` from ${min} to ${max}` : '';
-    throw new Error(`${k} must be a finite${integer ? ' integer' : ''} number${range}`);
+    paramWarnings.push(`ignored ?${k}= (must be a finite${integer ? ' integer' : ''} number${range})`);
+    return fallback;
   }
   return value;
 };
 
-const seed = Number(params.get('seed'));
-if (params.has('seed') && (!Number.isSafeInteger(seed) || seed < 0 || seed > 0xffffffff)) {
-  throw new Error('seed must be an integer from 0 to 4294967295');
+const seedText = (params.get('seed') ?? '').trim();
+const seed = seedText === '' ? NaN : Number(seedText);
+const seedValid = Number.isSafeInteger(seed) && seed >= 0 && seed <= 0xffffffff;
+if (params.has('seed') && !seedValid) {
+  paramWarnings.push('ignored ?seed= (must be an integer from 0 to 4294967295)');
 }
-const worldSeed = params.has('seed') ? seed : 1337;
+const worldSeed = params.has('seed') && seedValid ? seed : 1337;
 const startT = num('t', 0.42, 0, 1);
 const freeze = params.get('freeze') === '1';
 const sceneMode = params.get('scene') ?? 'world';
@@ -65,6 +78,18 @@ app.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 const rig = new OrbitRig(renderer.domElement);
+
+// Keep the drawing buffer and projection in step with the container, including
+// mobile rotation and browser-chrome changes that fire no window resize.
+function resizeRenderer(): void {
+  const w = Math.max(1, app.clientWidth), h = Math.max(1, app.clientHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(w, h);
+  rig.camera.aspect = w / h;
+  rig.camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resizeRenderer);
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(resizeRenderer).observe(app);
 
 // ---- world (sim layer) ----
 const loadT0 = performance.now();
@@ -175,7 +200,7 @@ if (isMap) scene.fog = null;
 sky.setFocus(rig.target);
 
 // ---- actions (simulation owns the result) ----
-let lastAction = '';
+let lastAction = paramWarnings.join(' · ');
 
 function digAt(cx: number, cz: number, radius = 2, depth = 3): number {
   let edits = 0;
@@ -398,7 +423,7 @@ function frame(timestamp?: number) {
           : 'hover: identify · click: inspect · drag: orbit · WASD: move · H: harvest · space: pause';
       const persistence = m.save.persistent ? m.save.message
         : m.save.status === 'unavailable' ? `VOLATILE — ${m.save.message}` : m.save.message;
-      const built = m.m2 ? `${m.m2.projectsBuilt}/3 built` : '';
+      const built = m.m2 ? `${m.m2.projectsBuilt}/${M2_PROJECTS.length} built` : '';
       hud.innerHTML =
         `<strong>ASTrix — Founder Settlement</strong> · seed ${worldSeed} · ${WORLD_SIZE} × ${WORLD_SIZE} m · 1 m voxels<br>` +
         `${timeLabel(time.t)} · ${time.paused ? 'paused' : 'day ' + Math.round(time.dayLengthSec) + 's'}` +
@@ -438,7 +463,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === ']') speed = Math.min(24, speed * 2);
   if (e.key === '[') speed = Math.max(0.25, speed / 2);
   if ((e.key === 'f' || e.key === 'F') && debugMutations) {
-    const n = digAt(Math.round(rig.target.x), Math.round(rig.target.z), 2, 3);
+    digAt(Math.round(rig.target.x), Math.round(rig.target.z), 2, 3);
     lastAction = 'development-only excavation (not journaled)';
   }
   if ((e.key === 'g' || e.key === 'G') && debugMutations) {

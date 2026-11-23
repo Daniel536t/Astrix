@@ -5,7 +5,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import palette from '../data/palette.json';
 import { World, surfaceAt } from '../sim/world';
 import { StructureModule } from '../sim/structures';
-import { CropPlot, Stockpile } from '../sim/economy';
+import { CropPlot, Stockpile, cropReady } from '../sim/economy';
 
 const M = palette.materials as Record<string, { hex: string }>;
 const H = (key: string) => M[key].hex;
@@ -236,7 +236,7 @@ export function buildLifeMeshes(world: World): THREE.Group {
   for (let index = 0; index < Math.min(rows.length, 9); index++) {
     const id = `crop:${index}`;
     const crop = life.crops.get(id);
-    const ready = crop !== undefined && tickReady(crop, life.tick);
+    const ready = crop !== undefined && cropReady(crop, life.tick);
     const plot = new THREE.Mesh(cropGeometry(rows[index], crop, life.tick), LIFE_MATERIAL);
     plot.name = `life_${id}`;
     plot.castShadow = crop !== undefined;
@@ -252,10 +252,6 @@ export function buildLifeMeshes(world: World): THREE.Group {
     group.add(plot);
   }
   return group;
-}
-
-function tickReady(crop: CropPlot, tick: number): boolean {
-  return tick - crop.plantedTick >= crop.growthTicks;
 }
 
 /** Dispose per-instance geometry; the shared flat-shaded material is retained. */

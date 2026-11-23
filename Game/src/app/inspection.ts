@@ -1,7 +1,7 @@
 // Read-only identity for selectable scene objects. Names and purposes are UI
 // metadata; quantities and existence always come from authoritative world state.
 import { ActiveEntityKind, isRetiredStoneKind, World } from '../sim/world';
-import { cropReady } from '../sim/economy';
+import { CROP_YIELD_LABEL, cropReady } from '../sim/economy';
 import { M2_PROJECTS } from './projects';
 
 export type InspectionRef =
@@ -120,7 +120,7 @@ function cropInspection(world: World, ref: { cropId: string }): InspectionInfo |
       ? 'A planted grain plot. Advance simulation ticks to grow it, then harvest food and fiber.'
       : 'An empty tilled terrace plot. Plant it with seed from the Settlement panel; there is no plant here yet.',
     facts: [{ label: 'State', value: !crop ? 'Empty · needs 1 seed' : ready ? 'Ready to harvest' : 'Growing' },
-      { label: 'Yield', value: crop ? '6 food + 1 fiber when harvested' : 'Plant through the Settlement panel' },
+      { label: 'Yield', value: crop ? `${CROP_YIELD_LABEL} when harvested` : 'Plant through the Settlement panel' },
       ...(crop ? [{ label: 'Growth', value: `${Math.min(life.tick - crop.plantedTick, crop.growthTicks)} / ${crop.growthTicks} ticks` }] : [])],
   };
 }
