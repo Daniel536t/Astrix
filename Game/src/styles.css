@@ -776,3 +776,63 @@ body.clean #enter-screen { display: none; }
 #chain-panel .protection.p-guest { background: #5a4a2a; color: #F2C57C; }
 #chain-panel .protection.p-passkey { background: #2d4a3c; color: #9EE2B8; }
 #chain-panel .protection.p-wallet { background: #3c3566; color: #C9B8FF; }
+
+/* ---- M006 homestead: Farm button, panel, field planner ---- */
+#farm-button {
+  position: fixed; z-index: 9; left: max(14px, env(safe-area-inset-left)); top: max(78px, calc(env(safe-area-inset-top) + 70px));
+  min-height: 36px; padding: 7px 14px; color: #1B202B; background: #D7C778; border: 1px solid #F4E8A4; border-radius: 7px;
+  font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; touch-action: manipulation;
+}
+body.clean #farm-button, body.kit #farm-button, body.map #farm-button { display: none; }
+#homestead-panel {
+  position: fixed; z-index: 12; right: max(14px, env(safe-area-inset-right)); top: max(64px, calc(env(safe-area-inset-top) + 56px));
+  width: min(400px, calc(100vw - 28px)); max-height: calc(100vh - 140px); overflow-y: auto; padding: 10px 14px 14px;
+  color: #F4EFE3; background: rgba(20, 23, 34, 0.94); border: 1px solid rgba(215, 199, 120, 0.55); border-radius: 10px;
+  font: 12px/1.45 ui-sans-serif, system-ui, sans-serif; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+#homestead-panel[hidden], #field-planner[hidden] { display: none; }
+#homestead-panel header { display: flex; align-items: baseline; gap: 10px; }
+#homestead-panel header h2 { margin: 0; font-size: 16px; color: #FFF3D6; flex: 1; }
+#homestead-panel header button { background: none; border: 0; color: #F4EFE3; font-size: 20px; cursor: pointer; }
+#homestead-panel h3 { margin: 12px 0 4px; font-size: 12px; color: #D7C778; letter-spacing: 0.04em; text-transform: uppercase; }
+#homestead-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+#homestead-panel li { padding: 6px 8px; background: rgba(240, 236, 220, 0.05); border-radius: 6px; }
+#homestead-panel .row-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 6px; vertical-align: middle; }
+#homestead-panel button, #field-planner button {
+  padding: 5px 9px; color: #F4EFE3; background: #3a3550; border: 1px solid #7d6fc4; border-radius: 6px;
+  font: 600 11px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; touch-action: manipulation;
+}
+#homestead-panel button.primary, #field-planner button.primary { background: #5E7F2E; border-color: #A9CF6A; }
+#homestead-panel button:disabled, #field-planner button:disabled { opacity: 0.45; cursor: not-allowed; }
+#homestead-panel select { background: #262b3a; color: #F4EFE3; border: 1px solid #555d78; border-radius: 5px; font-size: 11px; padding: 3px; }
+#homestead-panel .dim { color: #B8B2A4; }
+#homestead-panel .warn { color: #F2A65A; }
+#homestead-panel .steward { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+#homestead-panel .crop { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+#homestead-panel .crop-wheat { background: #D9B24A; }
+#homestead-panel .crop-potato { background: #8F9A3E; }
+#homestead-panel .crop-flax { background: #7C9BE0; }
+#field-planner {
+  position: fixed; z-index: 11; left: 50%; transform: translateX(-50%); top: max(88px, calc(env(safe-area-inset-top) + 80px));
+  width: min(520px, calc(100vw - 20px)); padding: 9px 11px; display: flex; flex-direction: column; gap: 6px;
+  color: #F4EFE3; background: rgba(20, 23, 34, 0.92); border: 1px solid rgba(169, 207, 106, 0.6); border-radius: 10px;
+  font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+}
+#field-planner .plan-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+#field-planner .crops button.on { background: #5E7F2E; border-color: #A9CF6A; }
+#field-planner .size b { min-width: 34px; text-align: center; }
+#field-planner .size button { min-width: 30px; }
+#field-planner .plan-info { color: #CFC8B8; font-size: 11px; }
+#field-planner .plan-reasons.ok { color: #9EE2B8; }
+#field-planner .plan-reasons.bad { color: #F2A65A; }
+#field-planner .actions button { padding: 8px 14px; font-size: 12px; }
+body.planning-field #vitals { display: none; }
+@media (pointer: coarse) {
+  #homestead-panel { left: 8px; right: 8px; width: auto; top: auto; bottom: max(8px, env(safe-area-inset-bottom)); max-height: 62vh; }
+  .harvest-touch.work { background: #A9CF6A; border-color: #DDF2B4; font-size: 11px; line-height: 1.1; padding: 2px; }
+  body.planning-field #controls .harvest-touch { display: none; }
+}
+@media (pointer: coarse) and (orientation: landscape) {
+  #field-planner { top: max(8px, env(safe-area-inset-top)); width: min(560px, calc(100vw - 260px)); }
+  #homestead-panel { max-height: calc(100vh - 16px); top: 8px; left: auto; width: min(420px, 60vw); }
+}

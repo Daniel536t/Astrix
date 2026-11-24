@@ -90,14 +90,19 @@ test('crops need water: a dry crop does not grow and withers, losing its seed', 
   field(s); field(s);
   const w = s.world, h = w.homestead!;
   h.villagers = []; // nobody tends the farm in this test
-  Object.assign(h.plots[0], { state: 'growing', growth: 0, moisture: 0, dry: 0 });
+  // A sprouted crop left dry stops growing and then withers.
+  Object.assign(h.plots[0], { state: 'growing', growth: 5, moisture: 0, dry: 0 });
   // Daylight only, so the night pause does not mask the rule.
   w.life!.tick = NIGHT_END;
   for (let i = 0; i < WITHER_TICKS - 1; i++) stepHomestead(w, ++w.life!.tick);
-  assert.equal(h.plots[0].growth, 0);
+  assert.equal(h.plots[0].growth, 5);
   assert.equal(h.plots[0].state, 'growing');
   stepHomestead(w, ++w.life!.tick);
   assert.equal(h.plots[0].state, 'tilled', 'withered back to bare soil');
+  // Seed in dry soil that never sprouted lies dormant instead.
+  Object.assign(h.plots[0], { state: 'growing', growth: 0, moisture: 0, dry: 0 });
+  for (let i = 0; i < WITHER_TICKS * 2; i++) stepHomestead(w, ++w.life!.tick);
+  assert.equal(h.plots[0].state, 'growing');
   Object.assign(h.plots[1], { state: 'growing', growth: 0, moisture: 12, dry: 0 });
   for (let i = 0; i < 20; i++) stepHomestead(w, ++w.life!.tick);
   assert.equal(h.plots[1].growth, 20, 'a watered crop grows every daylight tick');

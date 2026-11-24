@@ -14,14 +14,16 @@ Scripted captures (`?action=`, `?ui=0`, explicit camera params) and `?mode=build
 | Look / orbit | Drag with any mouse button | Drag orbits |
 | Zoom | Wheel (3–60 m, follows trackpad deltas) | Wheel (12–1400 m) |
 | Rotate camera | Drag | Q / E |
-| Gather what you are next to | E (or H) — prompt shows in the HUD, ring marks the target | H (nearest within 40 m of the view centre) |
+| Work the homestead (dig, sow, water, harvest, feed, collect, milk, shear) or gather | E: the HUD names the action in reach; otherwise gathers (H also gathers) — prompt shows in the HUD, ring marks the target | H (nearest within 40 m of the view centre) |
 | Switch mode | Tab, or the **Builder view / Walk** button at top centre | Tab / button |
+| Plan a field (where, size, crop) | F, or Farm → Plan a new field | — |
+| Homestead (fields, people, animals, steward) | Farm button | Farm button |
 | Build panel | B | always shown |
 | Settlement (bag, stockpile, crops) | I | always shown |
 | Pause time | P | P |
 | Time-of-day presets | 1 dawn · 2 noon · 3 dusk · 4 midnight | same |
 | Time speed | [ and ] | same |
-| Inspect objects | Hover / click (Inspect button lists objects) | same |
+| Inspect objects | Developer tool only: `?inspect=1` | same |
 | Dismiss inspector | Escape | Escape |
 
 Typing in a panel field never moves the character or camera.
@@ -37,7 +39,8 @@ Modelled on Minecraft Bedrock's joystick layout: move with the left thumb, look 
 | Zoom | Pinch on the right half, or the + / − buttons |
 | Jump / swim up | **Jump** (bottom right). Tap to jump; hold to swim up. |
 | Dive | **Dive** (appears left of Jump while swimming). Hold to swim down. |
-| Gather | **Gather** button |
+| Use / gather | The yellow button names what it will do ("Dig the flax field", "Draw water"…) |
+| Farm | **Farm** button (top left): fields, people, animals, steward; Plan a new field |
 | Switch mode | **Builder view / Walk** button (top centre) |
 | Panels | Settlement / Build / World tabs (top right). Walk mode opens the World tab. |
 

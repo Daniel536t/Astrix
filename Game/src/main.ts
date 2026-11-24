@@ -25,6 +25,8 @@ import { BrowserSaveStore } from './app/persistence';
 import { SceneInspector } from './app/inspector';
 import { TouchControls } from './app/touch-controls';
 import { VitalsHud } from './app/vitals-hud';
+import { HomesteadGame } from './app/homestead';
+import { DAY_TICKS } from './sim/homestead';
 
 // A startup failure would otherwise leave a blank canvas with no explanation.
 window.addEventListener('error', (e) => {
@@ -205,6 +207,9 @@ function toggleMode(force?: 'explore' | 'builder'): void {
   if (button) button.textContent = explore.active ? 'Builder view' : 'Walk';
 }
 let sceneInspector: SceneInspector | null = null;
+let homesteadGame: HomesteadGame | null = null;
+/** The object inspector is a developer tool now: ?inspect=1 (also in the kit scene). */
+const devInspect = params.get('inspect') === '1' || isKit;
 let faunaDirty = true;
 terrainView.onChunksChanged = () => { natureDirty = true; faunaDirty = true; };
 // Living creatures (ambient tier) for the resident near chunks.
@@ -387,6 +392,8 @@ const touch = moveZone ? new TouchControls({
 }) : null;
 const vitals = noUi || isMap || isKit ? null : new VitalsHud();
 function gather(): void {
+  // In walk mode the Use button works the homestead first (water, dig, sow, harvest, feed...).
+  if (explore?.active && homesteadGame?.useNearest()) return;
   if (!harvestNearest() && !lastAction.startsWith('harvest rejected')
     && !lastAction.startsWith('natural gathering is unavailable')) {
     lastAction = explore?.active ? 'nothing to gather within reach — walk up to a tree, shrub or ore'
@@ -496,6 +503,7 @@ function metrics() {
     realtime: { tickSeconds: TICK_SECONDS, issued: simClock.ticksIssued, leader: lease.isLeader, savePending: saveScheduler.pending },
     fauna: fauna?.metrics() ?? null,
     chain: chainView?.metrics() ?? (chainError ? { error: chainError } : null),
+    homestead: homesteadGame?.metrics() ?? null,
     touch: touch ? { stick: touch.stickActive, x: Math.round(touch.vector.x * 100) / 100, z: Math.round(touch.vector.z * 100) / 100, run: touch.vector.run } : null,
   };
 }
@@ -517,6 +525,7 @@ function frame(timestamp?: number) {
   advanceTime(time, dt * speed);
   rig.update(dt);
   explore?.update(dt);
+  homesteadGame?.update(dt);
   // Real-time simulation. Freeze (evidence captures), pause, hidden tabs and
   // non-leader tabs do not advance settlement time.
   const nowMs = Date.now();
@@ -544,6 +553,12 @@ function frame(timestamp?: number) {
     else fauna.update(0, { threats: [], night: false });
   }
 
+  // With a homestead, the sky follows settlement time so villagers sleep when it is dark.
+  const lifeTick = session.world.homestead ? session.world.life?.tick : undefined;
+  if (lifeTick !== undefined && !freeze) {
+    const frac = Math.min(0.999, Math.max(0, 1 - simClock.secondsToNext / TICK_SECONDS));
+    time.t = ((lifeTick + frac) / DAY_TICKS + 0.23) % 1;
+  }
   sky.setFocus(rig.target);
   sky.update(time.t);
   if (isMap) scene.fog = null;
@@ -569,16 +584,20 @@ function frame(timestamp?: number) {
     if (!noUi && !isMap && !isKit) {
       const m = window.__metrics;
       const walking = !!explore?.active;
-      const reach = walking && explore?.reachable
+      const work = walking ? homesteadGame?.nearest() : null;
+      const reach = work ? `<b>E: ${work.label}</b> · ` : walking && explore?.reachable
         ? `<b>E: gather ${explore.reachable.resource ?? ''} from ${explore.reachable.kind.replace('styl_', '').replace(/_/g, ' ')}</b> · ` : '';
+      const useButton = document.getElementById('gather-nearest');
+      const useLabel = work ? work.label : 'Gather';
+      if (useButton && useButton.textContent !== useLabel) { useButton.textContent = useLabel; useButton.classList.toggle('work', !!work); }
       const hint = walking
-        ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · hold Jump to swim up · Dive'
-          : 'WASD: walk · Shift: run · Space: jump (hold to swim up) · C: dive · E: gather · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
+        ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · hold Jump to swim up · Dive · Farm: fields, people, animals'
+          : 'WASD: walk · Shift: run · Space: jump (hold to swim up) · C: dive · E: use / gather · F: plan a field · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
         : coarse
-          ? 'tap to inspect · drag: orbit · two fingers: move + zoom'
+          ? 'drag: orbit · two fingers: move + zoom'
           : debugMutations
-            ? 'DEV ONLY · click: inspect · F: dig · G: place · H: harvest · P: pause'
-            : 'hover: identify · click: inspect · drag: orbit · WASD: pan · H: harvest · Tab: walk · P: pause';
+            ? 'DEV ONLY · F: dig · G: place · H: harvest · P: pause'
+            : 'drag: orbit · WASD: pan · H: harvest · Tab: walk · P: pause';
       const persistence = m.save.persistent ? m.save.message
         : m.save.status === 'unavailable' ? `VOLATILE — ${m.save.message}` : m.save.message;
       const built = m.m2 ? `${m.m2.projectsBuilt}/${M2_PROJECTS.length} built` : '';
@@ -628,6 +647,9 @@ window.addEventListener('keydown', (e) => {
   if (e.key === '4') time.t = 0.00;
   if (e.key === ']') speed = Math.min(24, speed * 2);
   if (e.key === '[') speed = Math.max(0.25, speed / 2);
+  if ((e.key === 'f' || e.key === 'F') && !debugMutations && explore?.active && homesteadGame) {
+    homesteadGame.startPlanning();
+  }
   if ((e.key === 'f' || e.key === 'F') && debugMutations) {
     digAt(Math.round(rig.target.x), Math.round(rig.target.z), 2, 3);
     lastAction = 'development-only excavation (not journaled)';
@@ -641,7 +663,7 @@ window.addEventListener('keydown', (e) => {
 
 if (action) applyScriptedAction();
 
-if (!isMap) {
+if (!isMap && devInspect) {
   sceneInspector = new SceneInspector({ world, scene, camera: rig.camera,
     canvas: renderer.domElement, terrain: terrainView.group });
   sceneInspector.addRoot(natureGroup);
@@ -657,6 +679,12 @@ if (!isMap && !isKit) {
     m2Game?.toast(message, kind);
   } });
   m2Game.setLifeController(lifeGame);
+  if (!noUi) {
+    homesteadGame = new HomesteadGame({ session, store, scene,
+      onSaved: () => saveScheduler.saved(Date.now()),
+      toast: (message, kind) => { lastAction = message; m2Game?.toast(message, kind); },
+      player: () => { const c = explore?.character; return c && !c.dead ? { x: c.x, z: c.z, heading: c.heading } : null; } });
+  }
   sceneInspector?.addRoot(m2Game.inspectableRoot);
   sceneInspector?.addRoot(lifeGame.inspectableRoot);
   if (noUi) {

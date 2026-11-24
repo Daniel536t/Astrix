@@ -13,7 +13,8 @@ import palette from '../data/palette.json';
 import type { CharacterState } from '../sim/character';
 
 const M = palette.materials as Record<string, { hex: string }>;
-const C = (k: string) => new THREE.Color(M[k].hex);
+/** Palette key, or a literal '#rrggbb' for role colours outside the palette. */
+const C = (k: string) => new THREE.Color(k.startsWith('#') ? k : M[k].hex);
 
 const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
 
@@ -50,10 +51,17 @@ export interface FigureStyle {
   hair: string;
   /** Height scale relative to the 1.7 m founder. */
   scale?: number;
+  /** Work identity: a wide straw hat (farmer), a felt cap (herder). */
+  hat?: { kind: 'straw' | 'cap'; color: string };
+  /** A work apron over the tunic. */
+  apron?: string;
 }
 
 export const FOUNDER_STYLE: FigureStyle = { tunic: 'char_tunic', trousers: 'char_trousers', hair: 'char_hair' };
 export const VILLAGER_STYLE: FigureStyle = { tunic: 'char_tunic_alt', trousers: 'char_trousers', hair: 'char_hair' };
+/** Role looks for homestead villagers (identity per role, small per-person variation via `hair`). */
+export const FARMER_STYLE: FigureStyle = { tunic: '#6E8F3A', trousers: '#5B4632', hair: '#3B2A1E', hat: { kind: 'straw', color: '#D9B65A' }, apron: '#B89B6A' };
+export const HERDER_STYLE: FigureStyle = { tunic: '#3F6E8C', trousers: '#4A4038', hair: '#7A4A2A', hat: { kind: 'cap', color: '#7A2E2E' } };
 
 export interface Figure {
   root: THREE.Group;
@@ -105,6 +113,7 @@ export function buildFigure(style: FigureStyle = FOUNDER_STYLE): Figure {
     { w: 0.40, h: 0.28, d: 0.24, y: 0.18, c: style.tunic },
     { w: 0.46, h: 0.20, d: 0.26, y: 0.42, c: style.tunic },
     { w: 0.22, h: 0.05, d: 0.18, y: 0.62, c: style.tunic },
+    ...(style.apron ? [{ w: 0.36, h: 0.46, d: 0.03, y: -0.06, z: 0.135, c: style.apron }] : []),
   ]);
   const torso = joint('torso', torsoGeo, 0, 0, 0);
   hips.add(torso);
@@ -116,6 +125,13 @@ export function buildFigure(style: FigureStyle = FOUNDER_STYLE): Figure {
     { w: 0.26, h: 0.12, d: 0.06, y: 0.16, z: -0.11, c: style.hair },
     { w: 0.05, h: 0.04, d: 0.03, x: 0.055, y: 0.15, z: 0.12, c: 'char_boots' },
     { w: 0.05, h: 0.04, d: 0.03, x: -0.055, y: 0.15, z: 0.12, c: 'char_boots' },
+    ...(style.hat?.kind === 'straw' ? [
+      { w: 0.52, h: 0.03, d: 0.52, y: 0.30, c: style.hat.color },
+      { w: 0.27, h: 0.10, d: 0.27, y: 0.32, c: style.hat.color },
+    ] : style.hat?.kind === 'cap' ? [
+      { w: 0.28, h: 0.08, d: 0.28, y: 0.30, c: style.hat.color },
+      { w: 0.22, h: 0.02, d: 0.12, y: 0.30, z: 0.17, c: style.hat.color },
+    ] : []),
   ]);
   const head = joint('head', headGeo, 0, 0.66, 0);
   torso.add(head);

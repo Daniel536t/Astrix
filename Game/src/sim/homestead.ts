@@ -12,7 +12,7 @@
 //    except by an explicit biological source (crop growth, animal products,
 //    births), and those are rule-driven, not presentation.
 import type { World } from './world';
-import { MAT, getVoxel, surfaceAt, waterDepthAt } from './world';
+import { MAT, getVoxel, removeEntity, surfaceAt, waterDepthAt } from './world';
 import {
   CARRIED_CAPACITY, FOUNDER_STOCKPILE, FOUNDER_STOCKPILE_ID, LifeResult, RECIPES, total, lifeState,
 } from './economy';
@@ -155,11 +155,12 @@ export interface HomesteadState {
   anchorX: number; anchorZ: number;
   rng: number; nextId: number;
   villagers: Villager[]; plots: Plot[]; enclosures: Enclosure[]; animals: Animal[];
-  /** Goods set down beside a full store; moved inside when there is room. */
+  /** The barn beside the founder store: goods go here when the store is full. */
   overflow: Record<string, number>;
   steward: Steward;
 }
-export const OVERFLOW_CAPACITY = 100;
+/** Barn capacity (in addition to the 200 of the founder store). */
+export const OVERFLOW_CAPACITY = 300;
 
 // ---------- layout (derived from the anchor; never stored twice) ----------
 
@@ -229,10 +230,24 @@ const RESERVED_SITES = [{ x0: -62, z0: -48, x1: -51, z1: -39 }, { x0: -54, z0: -
  */
 export function findHomesteadAnchor(world: World): { x: number; z: number } {
   let best = { x: -36, z: -14, score: Infinity };
-  for (let cz = -20; cz <= 4; cz += 2) {
-    for (let cx = -40; cx <= -24; cx += 2) {
+  // Generate the search area first so its natural features exist, then list them once.
+  for (let z = -40; z <= 50; z += 16) for (let x = -64; x <= 4; x += 16) surfaceAt(world, x, z);
+  const features = [...world.entities.values()].filter((e) => !e.harvested && !world.entityRemovals.has(e.id)
+    && e.x > -80 && e.x < 20 && e.z > -50 && e.z < 60);
+  const sites = world.sites.map((st) => ({ x: (st as { x?: number }).x ?? 0, z: (st as { z?: number }).z ?? 0 }));
+  for (let cz = -24; cz <= 20; cz += 2) {
+    for (let cx = -44; cx <= -20; cx += 2) {
       const fx0 = cx + FOOTPRINT.x0, fz0 = cz + FOOTPRINT.z0, fx1 = cx + FOOTPRINT.x1, fz1 = cz + FOOTPRINT.z1;
       if (RESERVED_SITES.some((r) => fx0 < r.x1 && fx1 > r.x0 && fz0 < r.z1 && fz1 > r.z0)) continue;
+      // Never build over a landmark (waystone, marker, cairn); avoid felling the woods.
+      const rects = homesteadLayout({ anchorX: cx, anchorZ: cz }).map((f) => f.rect);
+      const hit = (x: number, z: number, pad: number) => rects.some((r) => x * DM >= r.x0 - pad * DM && x * DM <= r.x1 + pad * DM && z * DM >= r.z0 - pad * DM && z * DM <= r.z1 + pad * DM);
+      const inside = features.filter((e) => hit(e.x, e.z, 1));
+      if (inside.some((e) => e.kind === 'waystone' || e.kind === 'marker' || e.kind === 'styl_cairn')) continue;
+      if (sites.some((q) => hit(q.x, q.z, 3))) continue;
+      // The authored hero grove is part of the founder scene: keep the buildings off it.
+      const heroes = inside.filter((e) => e.authored).length;
+      const trees = inside.filter((e) => e.kind.startsWith('styl_tree') || e.kind === 'styl_ore').length;
       let lo = Infinity, hi = -Infinity, wet = 0;
       for (let z = fz0; z <= fz1; z += 3) {
         for (let x = fx0; x <= fx1; x += 3) {
@@ -243,7 +258,7 @@ export function findHomesteadAnchor(world: World): { x: number; z: number } {
       }
       // Distance from the farmhouse yard to the store is walking time for every delivery.
       const toStore = len2(cx - 9 - FOUNDER_STOCKPILE.x, cz - 6 - FOUNDER_STOCKPILE.z);
-      const score = (hi - lo) * 2 + wet * 25 + toStore * 1.5;
+      const score = (hi - lo) * 2 + wet * 25 + toStore * 1.5 + trees * 12 + heroes * 60;
       if (score < best.score) best = { x: cx, z: cz, score };
     }
   }
@@ -300,8 +315,22 @@ export function foundHomestead(world: World): LifeResult<{ anchor: { x: number; 
       hunger: Math.floor(rnd(h) * 40), starving: 0, product: Math.floor(rnd(h) * 60), pregnantUntil: 0,
     });
   }
-  // The settlers arrive with seed, straw for the troughs and a little food.
+  // The settlers clear the building plots; the felled timber and brush go into the store.
   const s = stock(world);
+  const cleared: Record<string, number> = {};
+  for (const f of layout) {
+    const r = f.rect;
+    for (const e of [...world.entities.values()].sort((a, b) => a.id.localeCompare(b.id))) {
+      if (e.authored || e.harvested || world.entityRemovals.has(e.id)) continue;
+      if (e.x * DM < r.x0 - 10 || e.x * DM > r.x1 + 10 || e.z * DM < r.z0 - 10 || e.z * DM > r.z1 + 10) continue;
+      if (e.resource && e.remaining > 0) cleared[e.resource] = (cleared[e.resource] ?? 0) + e.remaining;
+      removeEntity(world, e.id);
+    }
+  }
+  for (const [item, amount] of Object.entries(cleared).sort(([a], [b]) => a.localeCompare(b))) {
+    putInto(s.inventory, item, Math.min(amount, Math.max(0, s.capacity - total(s.inventory) - 40)), s.capacity);
+  }
+  // The settlers arrive with seed, straw for the troughs and a little food.
   for (const [item, amount] of Object.entries(FOUNDING_SUPPLIES)) {
     if (!putInto(s.inventory, item, amount, s.capacity)) return { ok: false, code: 'capacity_exceeded', reasons: ['the founder stockpile is too full to receive the settlers\' supplies'] };
   }
@@ -416,7 +445,9 @@ function plan(world: World, h: HomesteadState, v: Villager, tick: number): Task 
     if (ripe && fits(harvestSize(ripe))) {
       return task('harvest', ripe.id, [walk(at(ripe)), work(at(ripe), 1 + 2 * unitsOf(ripe), 'reap'), walk(STOCK), work(STOCK, 1, 'store')]);
     }
-    const thirsty = plots.filter((p) => p.state === 'growing' && p.moisture <= 4 && free(p)).sort((a, b) => a.moisture - b.moisture)[0];
+    // Crops closest to withering first, then the driest.
+    const thirsty = plots.filter((p) => p.state === 'growing' && p.moisture <= 4 && free(p))
+      .sort((a, b) => b.dry - a.dry || a.moisture - b.moisture || a.id.localeCompare(b.id))[0];
     if (thirsty) {
       const legs = v.carry?.item === 'water' ? [] : [walk(well), work(well, 2, 'draw')];
       return task('water', thirsty.id, [...legs, walk(at(thirsty)), work(at(thirsty), 1, 'water_plot')]);
@@ -776,6 +807,9 @@ function stepPlots(h: HomesteadState, tick: number, ev: Events): void {
       p.dry = 0;
       if (tick % rule.drainEvery === 0) p.moisture--;
       if (p.growth >= rule.growTicks) p.state = 'ripe';
+    } else if (p.growth === 0) {
+      // Seed in dry soil lies dormant until it is watered; only sprouted crops wither.
+      continue;
     } else if (++p.dry >= WITHER_TICKS) {
       // A crop left dry withers: the seed is lost and the plot must be sown again.
       Object.assign(p, { state: 'tilled', growth: 0, dry: 0 });
