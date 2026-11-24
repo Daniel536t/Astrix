@@ -1,0 +1,2545 @@
+{
+ "milestone": "M008-vegetation",
+ "kind": "baseline (before vegetation changes)",
+ "build": "local Game/dist built from deploy/boxd 99c6b11 plus the read-only window.__renderBreakdown helper (no render or sim changes)",
+ "environment": "Playwright Chromium, software GL (about 1.4 fps), desktop viewport 1000x600, served from a local copy of Game/dist at https://astrix.local/. Desktop browser only; no mobile measurement in this file.",
+ "probe": "/projects/sandbox/.kiro/artifacts/screenshots/probe/m008-baseline-b.js",
+ "method": "Fresh browser context per view. Warm-up until natureInstances unchanged and pendingChunkBuilds 0 for 3 samples 5 s apart, then 3 s more. renderer.info is the last frame; breakdown is computed from the same frame's matrices. Breakdown main+shadow totals equal renderer.info calls and triangles exactly in all three views.",
+ "views": [
+  {
+   "view": "farm",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=40",
+   "screenshot": "baseline-farm.png",
+   "camera": {
+    "x": -28,
+    "y": 34,
+    "z": 38.6
+   },
+   "warmupMs": 85209,
+   "pageErrors": [],
+   "rendererInfo": {
+    "calls": 106,
+    "triangles": 248364
+   },
+   "breakdownTotals": {
+    "main": {
+     "draws": 70,
+     "triangles": 216466
+    },
+    "shadow": {
+     "draws": 36,
+     "triangles": 31898
+    },
+    "all": {
+     "draws": 106,
+     "triangles": 248364
+    }
+   },
+   "breakdownMatchesRenderer": true,
+   "multiDrawExtension": true,
+   "shadowLights": 1,
+   "metrics": {
+    "rendererCalls": 106,
+    "rendererTriangles": 248364,
+    "natureInstances": 42,
+    "nearTriangles": 101402,
+    "macroTriangles": 129100,
+    "sections": {
+     "homestead": {
+      "meanMs": 1.7,
+      "p95Ms": 0.9,
+      "maxMs": 40.9,
+      "n": 31
+     },
+     "fauna": {
+      "meanMs": 0.7,
+      "p95Ms": 1.3,
+      "maxMs": 2.2,
+      "n": 31
+     },
+     "terrain": {
+      "meanMs": 0.09,
+      "p95Ms": 0.2,
+      "maxMs": 0.8,
+      "n": 31
+     },
+     "render": {
+      "meanMs": 1106.81,
+      "p95Ms": 8.5,
+      "maxMs": 33388,
+      "n": 31
+     },
+     "tick": {
+      "meanMs": 2.18,
+      "p95Ms": 3.9,
+      "maxMs": 6.8,
+      "n": 16
+     }
+    },
+    "fauna": {
+     "total": 60,
+     "rabbit": 46,
+     "deer": 2,
+     "trout": 10,
+     "fox": 2
+    },
+    "homestead": {
+     "villagers": [
+      {
+       "id": "villager:0",
+       "name": "Ada",
+       "role": "farmer",
+       "task": "idle",
+       "target": "idle:villager:0",
+       "x": -35,
+       "z": -6.4,
+       "carry": null,
+       "energy": 96,
+       "hunger": 28
+      },
+      {
+       "id": "villager:1",
+       "name": "Bram",
+       "role": "herder",
+       "task": "idle",
+       "target": "idle:villager:1",
+       "x": -31.7,
+       "z": -9.1,
+       "carry": null,
+       "energy": 96,
+       "hunger": 38
+      }
+     ],
+     "animals": {
+      "cattle": 2,
+      "chicken": 4,
+      "goat": 2,
+      "horse": 2,
+      "pig": 2,
+      "sheep": 3
+     }
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0,
+    "entities": 88,
+    "trees": 84
+   },
+   "owners": {
+    "homestead": {
+     "meshes": 25,
+     "main": {
+      "draws": 25,
+      "triangles": 11436
+     },
+     "shadow": {
+      "draws": 25,
+      "triangles": 11436
+     },
+     "total": {
+      "draws": 50,
+      "triangles": 22872
+     }
+    },
+    "voxel_world": {
+     "meshes": 63,
+     "main": {
+      "draws": 33,
+      "triangles": 189614
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 33,
+      "triangles": 189614
+     }
+    },
+    "fauna": {
+     "meshes": 5,
+     "main": {
+      "draws": 4,
+      "triangles": 11328
+     },
+     "shadow": {
+      "draws": 4,
+      "triangles": 11328
+     },
+     "total": {
+      "draws": 8,
+      "triangles": 22656
+     }
+    },
+    "styl_nature": {
+     "meshes": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 2724
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 8730
+     },
+     "total": {
+      "draws": 2,
+      "triangles": 11454
+     }
+    },
+    "life_state": {
+     "meshes": 2,
+     "main": {
+      "draws": 2,
+      "triangles": 128
+     },
+     "shadow": {
+      "draws": 2,
+      "triangles": 128
+     },
+     "total": {
+      "draws": 4,
+      "triangles": 256
+     }
+    },
+    "noxel_sites": {
+     "meshes": 4,
+     "main": {
+      "draws": 4,
+      "triangles": 276
+     },
+     "shadow": {
+      "draws": 4,
+      "triangles": 276
+     },
+     "total": {
+      "draws": 8,
+      "triangles": 552
+     }
+    },
+    "sky_dome": {
+     "meshes": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 960
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 1,
+      "triangles": 960
+     }
+    },
+    "sun_disc": {
+     "meshes": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    "character": {
+     "meshes": 6,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    "Mesh": {
+     "meshes": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 0,
+      "triangles": 0
+     }
+    }
+   },
+   "entries": [
+    {
+     "owner": "homestead",
+     "mesh": "Mesh",
+     "type": "Mesh",
+     "meshes": 12,
+     "visible": 12,
+     "castShadow": 12,
+     "instances": 12,
+     "main": {
+      "draws": 12,
+      "triangles": 516
+     },
+     "shadow": {
+      "draws": 12,
+      "triangles": 516
+     }
+    },
+    {
+     "owner": "voxel_world",
+     "mesh": "voxel_chunk_#_#",
+     "type": "Mesh",
+     "meshes": 49,
+     "visible": 49,
+     "castShadow": 0,
+     "instances": 49,
+     "main": {
+      "draws": 19,
+      "triangles": 36310
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "voxel_world",
+     "mesh": "water_chunk_#_#",
+     "type": "Mesh",
+     "meshes": 12,
+     "visible": 12,
+     "castShadow": 0,
+     "instances": 12,
+     "main": {
+      "draws": 12,
+      "triangles": 5772
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_rabbit",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 46,
+     "main": {
+      "draws": 1,
+      "triangles": 9384
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 9384
+     }
+    },
+    {
+     "owner": "styl_nature",
+     "mesh": "styl_nature_batch",
+     "type": "BatchedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 42,
+     "main": {
+      "draws": 1,
+      "triangles": 2724
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 8730
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_sheep",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 3,
+     "main": {
+      "draws": 1,
+      "triangles": 2448
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 2448
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "village_cottage_body",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 1392
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 1392
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_paddock",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 984
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 984
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_chicken",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 4,
+     "main": {
+      "draws": 1,
+      "triangles": 960
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 960
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_deer",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 816
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 816
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_goat",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 696
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 696
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_cattle",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 672
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 672
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_pen",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 660
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 660
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_horse",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 624
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 624
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_trout",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 10,
+     "main": {
+      "draws": 1,
+      "triangles": 600
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 600
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_fox",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 528
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 528
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_coop",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 528
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 528
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_pig",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 504
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 504
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "village_well_body",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 492
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 492
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_sty",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 492
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 492
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "homestead_troughs",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 468
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 468
+     }
+    },
+    {
+     "owner": "life_state",
+     "mesh": "stockpile_frame",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 100
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 100
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_waystone",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 96
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 96
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_waystone_glow",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 84
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 84
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_marker",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 60
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 60
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_marker_glow",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 36
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 36
+     }
+    },
+    {
+     "owner": "life_state",
+     "mesh": "stockpile_resources",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 28
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 28
+     }
+    },
+    {
+     "owner": "voxel_world",
+     "mesh": "macro_lod",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 129100
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "voxel_world",
+     "mesh": "water_surface",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 18432
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "sky_dome",
+     "mesh": "sky_dome",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 960
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_wolf",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 0,
+     "castShadow": 0,
+     "instances": 0,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "sun_disc",
+     "mesh": "sun_disc",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "character",
+     "mesh": "Mesh",
+     "type": "Mesh",
+     "meshes": 6,
+     "visible": 0,
+     "castShadow": 0,
+     "instances": 0,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "Mesh",
+     "mesh": "Mesh",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 0,
+     "castShadow": 0,
+     "instances": 0,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    }
+   ]
+  },
+  {
+   "view": "forest",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=50",
+   "screenshot": "baseline-forest.png",
+   "camera": {
+    "x": 235.1,
+    "y": 37.5,
+    "z": -68.5
+   },
+   "warmupMs": 73927,
+   "pageErrors": [],
+   "rendererInfo": {
+    "calls": 74,
+    "triangles": 403068
+   },
+   "breakdownTotals": {
+    "main": {
+     "draws": 39,
+     "triangles": 254680
+    },
+    "shadow": {
+     "draws": 35,
+     "triangles": 148388
+    },
+    "all": {
+     "draws": 74,
+     "triangles": 403068
+    }
+   },
+   "breakdownMatchesRenderer": true,
+   "multiDrawExtension": true,
+   "shadowLights": 1,
+   "metrics": {
+    "rendererCalls": 74,
+    "rendererTriangles": 403068,
+    "natureInstances": 500,
+    "nearTriangles": 90020,
+    "macroTriangles": 129600,
+    "sections": {
+     "homestead": {
+      "meanMs": 1.68,
+      "p95Ms": 0.4,
+      "maxMs": 36.3,
+      "n": 25
+     },
+     "fauna": {
+      "meanMs": 1.29,
+      "p95Ms": 1.8,
+      "maxMs": 2.7,
+      "n": 25
+     },
+     "terrain": {
+      "meanMs": 0.09,
+      "p95Ms": 0.2,
+      "maxMs": 0.5,
+      "n": 25
+     },
+     "render": {
+      "meanMs": 1137.79,
+      "p95Ms": 6.6,
+      "maxMs": 27569,
+      "n": 25
+     },
+     "tick": {
+      "meanMs": 2.74,
+      "p95Ms": 5.1,
+      "maxMs": 7.1,
+      "n": 13
+     }
+    },
+    "fauna": {
+     "total": 102,
+     "deer": 64,
+     "wolf": 37,
+     "fox": 1
+    },
+    "homestead": {
+     "villagers": [
+      {
+       "id": "villager:0",
+       "name": "Ada",
+       "role": "farmer",
+       "task": "idle",
+       "target": "idle:villager:0",
+       "x": -35,
+       "z": -6.4,
+       "carry": null,
+       "energy": 97,
+       "hunger": 26
+      },
+      {
+       "id": "villager:1",
+       "name": "Bram",
+       "role": "herder",
+       "task": "idle",
+       "target": "idle:villager:1",
+       "x": -31.7,
+       "z": -9.1,
+       "carry": null,
+       "energy": 97,
+       "hunger": 36
+      }
+     ],
+     "animals": {
+      "cattle": 2,
+      "chicken": 4,
+      "goat": 2,
+      "horse": 2,
+      "pig": 2,
+      "sheep": 3
+     }
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0,
+    "entities": 732,
+    "trees": 729
+   },
+   "owners": {
+    "voxel_world": {
+     "meshes": 51,
+     "main": {
+      "draws": 28,
+      "triangles": 196726
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 28,
+      "triangles": 196726
+     }
+    },
+    "homestead": {
+     "meshes": 25,
+     "main": {
+      "draws": 6,
+      "triangles": 5904
+     },
+     "shadow": {
+      "draws": 25,
+      "triangles": 11436
+     },
+     "total": {
+      "draws": 31,
+      "triangles": 17340
+     }
+    },
+    "styl_nature": {
+     "meshes": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 21642
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 107100
+     },
+     "total": {
+      "draws": 2,
+      "triangles": 128742
+     }
+    },
+    "fauna": {
+     "meshes": 5,
+     "main": {
+      "draws": 3,
+      "triangles": 29448
+     },
+     "shadow": {
+      "draws": 3,
+      "triangles": 29448
+     },
+     "total": {
+      "draws": 6,
+      "triangles": 58896
+     }
+    },
+    "sky_dome": {
+     "meshes": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 960
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 1,
+      "triangles": 960
+     }
+    },
+    "life_state": {
+     "meshes": 2,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 2,
+      "triangles": 128
+     },
+     "total": {
+      "draws": 2,
+      "triangles": 128
+     }
+    },
+    "noxel_sites": {
+     "meshes": 4,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 4,
+      "triangles": 276
+     },
+     "total": {
+      "draws": 4,
+      "triangles": 276
+     }
+    },
+    "sun_disc": {
+     "meshes": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    "character": {
+     "meshes": 6,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    "Mesh": {
+     "meshes": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 0,
+      "triangles": 0
+     }
+    }
+   },
+   "entries": [
+    {
+     "owner": "voxel_world",
+     "mesh": "voxel_chunk_#_#",
+     "type": "Mesh",
+     "meshes": 49,
+     "visible": 49,
+     "castShadow": 0,
+     "instances": 49,
+     "main": {
+      "draws": 26,
+      "triangles": 48694
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "Mesh",
+     "type": "Mesh",
+     "meshes": 12,
+     "visible": 12,
+     "castShadow": 12,
+     "instances": 12,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 12,
+      "triangles": 516
+     }
+    },
+    {
+     "owner": "styl_nature",
+     "mesh": "styl_nature_batch",
+     "type": "BatchedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 500,
+     "main": {
+      "draws": 1,
+      "triangles": 21642
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 107100
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_deer",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 48,
+     "main": {
+      "draws": 1,
+      "triangles": 19584
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 19584
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_wolf",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 32,
+     "main": {
+      "draws": 1,
+      "triangles": 9600
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 9600
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_sheep",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 3,
+     "main": {
+      "draws": 1,
+      "triangles": 2448
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 2448
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_chicken",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 4,
+     "main": {
+      "draws": 1,
+      "triangles": 960
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 960
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_goat",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 696
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 696
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_cattle",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 672
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 672
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_horse",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 624
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 624
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_pig",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 504
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 504
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_fox",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 264
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 264
+     }
+    },
+    {
+     "owner": "voxel_world",
+     "mesh": "macro_lod",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 129600
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "voxel_world",
+     "mesh": "water_surface",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 18432
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "village_cottage_body",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 1392
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_paddock",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 984
+     }
+    },
+    {
+     "owner": "sky_dome",
+     "mesh": "sky_dome",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 960
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_pen",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 660
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_coop",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 528
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "village_well_body",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 492
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_sty",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 492
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "homestead_troughs",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 468
+     }
+    },
+    {
+     "owner": "life_state",
+     "mesh": "stockpile_frame",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 100
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_waystone",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 96
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_waystone_glow",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 84
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_marker",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 60
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_marker_glow",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 36
+     }
+    },
+    {
+     "owner": "life_state",
+     "mesh": "stockpile_resources",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 28
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_rabbit",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 0,
+     "castShadow": 0,
+     "instances": 0,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_trout",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 0,
+     "castShadow": 0,
+     "instances": 0,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "sun_disc",
+     "mesh": "sun_disc",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "character",
+     "mesh": "Mesh",
+     "type": "Mesh",
+     "meshes": 6,
+     "visible": 0,
+     "castShadow": 0,
+     "instances": 0,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "Mesh",
+     "mesh": "Mesh",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 0,
+     "castShadow": 0,
+     "instances": 0,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    }
+   ]
+  },
+  {
+   "view": "grove-close",
+   "url": "?chain=0&mode=builder&tx=-27&ty=19&tz=-30&yaw=0&pitch=16&dist=15",
+   "screenshot": "baseline-grove-close.png",
+   "camera": {
+    "x": -27,
+    "y": 23.1,
+    "z": -15.6
+   },
+   "warmupMs": 76853,
+   "pageErrors": [],
+   "rendererInfo": {
+    "calls": 66,
+    "triangles": 228826
+   },
+   "breakdownTotals": {
+    "main": {
+     "draws": 30,
+     "triangles": 197180
+    },
+    "shadow": {
+     "draws": 36,
+     "triangles": 31646
+    },
+    "all": {
+     "draws": 66,
+     "triangles": 228826
+    }
+   },
+   "breakdownMatchesRenderer": true,
+   "multiDrawExtension": true,
+   "shadowLights": 1,
+   "metrics": {
+    "rendererCalls": 66,
+    "rendererTriangles": 228826,
+    "natureInstances": 42,
+    "nearTriangles": 102506,
+    "macroTriangles": 129130,
+    "sections": {
+     "homestead": {
+      "meanMs": 2.08,
+      "p95Ms": 0.5,
+      "maxMs": 45.1,
+      "n": 25
+     },
+     "fauna": {
+      "meanMs": 0.92,
+      "p95Ms": 1.5,
+      "maxMs": 2.7,
+      "n": 25
+     },
+     "terrain": {
+      "meanMs": 0.14,
+      "p95Ms": 0.1,
+      "maxMs": 1,
+      "n": 25
+     },
+     "render": {
+      "meanMs": 1135.88,
+      "p95Ms": 11.5,
+      "maxMs": 27516.6,
+      "n": 25
+     },
+     "tick": {
+      "meanMs": 2.66,
+      "p95Ms": 6,
+      "maxMs": 6.4,
+      "n": 14
+     }
+    },
+    "fauna": {
+     "total": 64,
+     "deer": 2,
+     "rabbit": 44,
+     "trout": 17,
+     "fox": 1
+    },
+    "homestead": {
+     "villagers": [
+      {
+       "id": "villager:0",
+       "name": "Ada",
+       "role": "farmer",
+       "task": "idle",
+       "target": "idle:villager:0",
+       "x": -35,
+       "z": -6.4,
+       "carry": null,
+       "energy": 97,
+       "hunger": 27
+      },
+      {
+       "id": "villager:1",
+       "name": "Bram",
+       "role": "herder",
+       "task": "idle",
+       "target": "idle:villager:1",
+       "x": -31.7,
+       "z": -9.1,
+       "carry": null,
+       "energy": 97,
+       "hunger": 37
+      }
+     ],
+     "animals": {
+      "cattle": 2,
+      "chicken": 4,
+      "goat": 2,
+      "horse": 2,
+      "pig": 2,
+      "sheep": 3
+     }
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0,
+    "entities": 105,
+    "trees": 101
+   },
+   "owners": {
+    "voxel_world": {
+     "meshes": 63,
+     "main": {
+      "draws": 17,
+      "triangles": 177086
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 17,
+      "triangles": 177086
+     }
+    },
+    "homestead": {
+     "meshes": 25,
+     "main": {
+      "draws": 7,
+      "triangles": 6372
+     },
+     "shadow": {
+      "draws": 25,
+      "triangles": 11436
+     },
+     "total": {
+      "draws": 32,
+      "triangles": 17808
+     }
+    },
+    "fauna": {
+     "meshes": 5,
+     "main": {
+      "draws": 4,
+      "triangles": 11076
+     },
+     "shadow": {
+      "draws": 4,
+      "triangles": 11076
+     },
+     "total": {
+      "draws": 8,
+      "triangles": 22152
+     }
+    },
+    "styl_nature": {
+     "meshes": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 1686
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 8730
+     },
+     "total": {
+      "draws": 2,
+      "triangles": 10416
+     }
+    },
+    "sky_dome": {
+     "meshes": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 960
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 1,
+      "triangles": 960
+     }
+    },
+    "life_state": {
+     "meshes": 2,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 2,
+      "triangles": 128
+     },
+     "total": {
+      "draws": 2,
+      "triangles": 128
+     }
+    },
+    "noxel_sites": {
+     "meshes": 4,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 4,
+      "triangles": 276
+     },
+     "total": {
+      "draws": 4,
+      "triangles": 276
+     }
+    },
+    "sun_disc": {
+     "meshes": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    "character": {
+     "meshes": 6,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    "Mesh": {
+     "meshes": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "total": {
+      "draws": 0,
+      "triangles": 0
+     }
+    }
+   },
+   "entries": [
+    {
+     "owner": "voxel_world",
+     "mesh": "voxel_chunk_#_#",
+     "type": "Mesh",
+     "meshes": 49,
+     "visible": 49,
+     "castShadow": 0,
+     "instances": 49,
+     "main": {
+      "draws": 15,
+      "triangles": 29524
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "Mesh",
+     "type": "Mesh",
+     "meshes": 12,
+     "visible": 12,
+     "castShadow": 12,
+     "instances": 12,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 12,
+      "triangles": 516
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_rabbit",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 44,
+     "main": {
+      "draws": 1,
+      "triangles": 8976
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 8976
+     }
+    },
+    {
+     "owner": "styl_nature",
+     "mesh": "styl_nature_batch",
+     "type": "BatchedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 42,
+     "main": {
+      "draws": 1,
+      "triangles": 1686
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 8730
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_sheep",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 3,
+     "main": {
+      "draws": 1,
+      "triangles": 2448
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 2448
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_trout",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 17,
+     "main": {
+      "draws": 1,
+      "triangles": 1020
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 1020
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_chicken",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 4,
+     "main": {
+      "draws": 1,
+      "triangles": 960
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 960
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_deer",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 816
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 816
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_goat",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 696
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 696
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_cattle",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 672
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 672
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_horse",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 624
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 624
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "herd_pig",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 2,
+     "main": {
+      "draws": 1,
+      "triangles": 504
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 504
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "homestead_troughs",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 468
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 468
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_fox",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 264
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 264
+     }
+    },
+    {
+     "owner": "voxel_world",
+     "mesh": "macro_lod",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 129130
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "voxel_world",
+     "mesh": "water_surface",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 18432
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "village_cottage_body",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 1392
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_paddock",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 984
+     }
+    },
+    {
+     "owner": "sky_dome",
+     "mesh": "sky_dome",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 1,
+      "triangles": 960
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_pen",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 660
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_coop",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 528
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "village_well_body",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 492
+     }
+    },
+    {
+     "owner": "homestead",
+     "mesh": "facility_sty",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 492
+     }
+    },
+    {
+     "owner": "life_state",
+     "mesh": "stockpile_frame",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 100
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_waystone",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 96
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_waystone_glow",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 84
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_marker",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 60
+     }
+    },
+    {
+     "owner": "noxel_sites",
+     "mesh": "noxel_marker_glow",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 36
+     }
+    },
+    {
+     "owner": "life_state",
+     "mesh": "stockpile_resources",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 1,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 1,
+      "triangles": 28
+     }
+    },
+    {
+     "owner": "voxel_world",
+     "mesh": "water_chunk_#_#",
+     "type": "Mesh",
+     "meshes": 12,
+     "visible": 12,
+     "castShadow": 0,
+     "instances": 12,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "fauna",
+     "mesh": "fauna_wolf",
+     "type": "InstancedMesh",
+     "meshes": 1,
+     "visible": 0,
+     "castShadow": 0,
+     "instances": 0,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "sun_disc",
+     "mesh": "sun_disc",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 1,
+     "castShadow": 0,
+     "instances": 1,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "character",
+     "mesh": "Mesh",
+     "type": "Mesh",
+     "meshes": 6,
+     "visible": 0,
+     "castShadow": 0,
+     "instances": 0,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    },
+    {
+     "owner": "Mesh",
+     "mesh": "Mesh",
+     "type": "Mesh",
+     "meshes": 1,
+     "visible": 0,
+     "castShadow": 0,
+     "instances": 0,
+     "main": {
+      "draws": 0,
+      "triangles": 0
+     },
+     "shadow": {
+      "draws": 0,
+      "triangles": 0
+     }
+    }
+   ]
+  }
+ ]
+}

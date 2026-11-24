@@ -28,6 +28,7 @@ import { VitalsHud } from './app/vitals-hud';
 import { HomesteadGame } from './app/homestead';
 import { DAY_TICKS } from './sim/homestead';
 import { buildAnimalShowcase } from './render/animal-showcase';
+import { renderBreakdown } from './app/render-breakdown';
 
 // A startup failure would otherwise leave a blank canvas with no explanation.
 window.addEventListener('error', (e) => {
@@ -737,6 +738,8 @@ if (!isMap && !isKit) {
 // measurements. Normal/production simulation state is exposed only as metrics.
 // Mutable inspection handles require a development build and explicit opt-in.
 window.__probe = { renderer, camera: rig.camera };
+// Read-only draw call / triangle breakdown per scene owner (main + shadow pass).
+window.__renderBreakdown = () => renderBreakdown(scene, { camera: rig.camera, renderer });
 if (import.meta.env.DEV && params.get('debug') === '1') {
   Object.assign(window.__probe, { THREE, terrainView });
   window.__scene = scene;
