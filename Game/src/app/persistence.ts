@@ -1,6 +1,6 @@
 // Browser persistence is a transport concern; GameSession remains DOM-free.
 // A single Web Storage key gives browsers an atomic snapshot + journal replace.
-import { CommandJournal, GameSession } from './session';
+import { COMPACT_AT, CommandJournal, GameSession } from './session';
 import { WorldSnapshot } from '../sim/snapshot';
 import { GENERATOR_VERSION } from '../sim/world';
 
@@ -147,6 +147,8 @@ export class BrowserSaveStore {
       if (session.world.seed !== this.seed) throw new Error('save seed does not match this browser session');
       const schema = session.journal.schema;
       if (schema !== SAVE_SCHEMA && schema !== DESIGN_SAVE_SCHEMA && schema !== CURRENT_SAVE_SCHEMA) throw new Error('unsupported journal schema');
+      // Long play would otherwise grow the save by ~240 bytes per tick without bound.
+      if (session.journal.entries.length >= COMPACT_AT) session.compact();
       const record: SaveRecord = {
         schema, seed: this.seed,
         snapshot: session.snapshot, journal: session.journal,

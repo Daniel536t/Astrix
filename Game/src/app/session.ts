@@ -148,9 +148,18 @@ export interface CommandJournal {
    * bytes (and hashes) are unchanged.
    */
   generatorVersion?: typeof GENERATOR_V2;
+  /**
+   * Present once history has been compacted: entries before `sequence` were
+   * dropped because a snapshot authenticated against `hash` (the state hash at
+   * that boundary) covers them. Such a journal restores from its snapshot; it
+   * cannot be replayed from genesis.
+   */
+  base?: { sequence: number; hash: string };
   starterInventory: Record<string, number>;
   entries: JournalEntry[];
 }
+/** A save compacts its journal once it holds this many entries (about 100 KB of ticks). */
+export const COMPACT_AT = 400;
 export interface CommandReceipt {
   ok: true;
   duplicate: boolean;
@@ -429,18 +438,29 @@ export function validateJournal(value: unknown): CommandJournal {
     || 'generatorVersion' in value && (value.generatorVersion !== GENERATOR_V2 || value.schema !== CURRENT_JOURNAL_SCHEMA)) {
     throw new Error('invalid command journal');
   }
+  let base: { sequence: number; hash: string } | undefined;
+  if ('base' in value) {
+    const b = value.base;
+    if (value.schema !== CURRENT_JOURNAL_SCHEMA || !object(b) || !uint(b.sequence) || b.sequence < 1 || b.sequence > 10_000_000
+      || typeof b.hash !== 'string' || !/^[0-9a-f]{16}$/.test(b.hash) || Object.keys(b).length !== 2) {
+      throw new Error('invalid journal base');
+    }
+    base = { sequence: b.sequence, hash: b.hash };
+  }
+  const first = base?.sequence ?? 0;
   const journal: CommandJournal = {
     schema: value.schema, seed: value.seed,
     ...('generatorVersion' in value ? { generatorVersion: GENERATOR_V2 } : {}),
+    ...(base ? { base } : {}),
     starterInventory: inventory(value.starterInventory), entries: [],
   };
   const ids = new Set<string>();
   for (let i = 0; i < value.entries.length; i++) {
     const raw = value.entries[i];
-    if (!object(raw) || raw.sequence !== i || !uint(raw.revision)
+    if (!object(raw) || raw.sequence !== first + i || !uint(raw.revision)
       || typeof raw.hash !== 'string' || !/^[0-9a-f]{16}$/.test(raw.hash)) throw new Error('non-contiguous or invalid journal entry');
     const entry: JournalEntry = {
-      command: validateCommand(raw.command), sequence: i,
+      command: validateCommand(raw.command), sequence: first + i,
       revision: raw.revision, hash: raw.hash, outcome: validateOutcome(raw.outcome),
     };
     if ((entry.command.type === 'build' || entry.command.type === 'harvest')
@@ -497,7 +517,8 @@ function referencesRetiredStone(entry: JournalEntry): boolean {
 }
 
 export class GameSession {
-  readonly journal: CommandJournal;
+  /** Replaced (not mutated) when history is compacted. */
+  journal: CommandJournal;
   private readonly prepAuthorizer: LocalAuthorizer;
   private readonly structureAuthorizer: LocalStructureAuthorizer;
   private readonly ids = new Map<string, JournalEntry>();
@@ -528,6 +549,7 @@ export class GameSession {
    * reconstruction only when their original stone obstructions required it. */
   static replay(input: unknown): GameSession {
     const journal = validateJournal(input);
+    if (journal.base) throw new Error('a compacted journal restores from its snapshot; it has no genesis history to replay');
     try {
       return GameSession.replayCurrent(journal);
     } catch (currentError) {
@@ -552,7 +574,11 @@ export class GameSession {
     const snapshot = validateWorldSnapshot(snapshotInput);
     if (snapshot.schema !== journal.schema) throw new Error('snapshot and journal schemas differ');
     const next = snapshot.nextSequence;
-    if (next > journal.entries.length) throw new Error('snapshot is ahead of the journal');
+    const first = journal.base?.sequence ?? 0;
+    if (next < first) throw new Error('snapshot is older than the compacted journal');
+    if (next - first > journal.entries.length) throw new Error('snapshot is ahead of the journal');
+    // History before a base is gone: the snapshot is the authority, checked against the base hash.
+    if (journal.base) return GameSession.restoreCurrent(snapshot, journal, next);
     // Current saves (including every migrated boundary) keep their exact hash.
     // Try them before reconstructing a compatible old journal. Deposit-only
     // migrated saves no longer carry an explicit stone command to classify them.
@@ -618,15 +644,18 @@ export class GameSession {
     if (next === 0 && legacyStoneHash(snapshot) !== canonicalWorldHash(genesis, 0, journal.schema)) {
       throw new Error('genesis snapshot does not match journal configuration');
     }
-    if (next > 0 && legacyStoneHash(snapshot) !== journal.entries[next - 1].hash) {
+    const first = journal.base?.sequence ?? 0;
+    const boundary = next === first ? journal.base?.hash : journal.entries[next - first - 1].hash;
+    if (next > 0 && legacyStoneHash(snapshot) !== boundary) {
       throw new Error('snapshot hash does not match its journal boundary');
     }
     const session = GameSession.fromValidatedBoundary(world, {
       schema: journal.schema, seed: journal.seed,
       ...(journal.generatorVersion ? { generatorVersion: journal.generatorVersion } : {}),
-      starterInventory: { ...journal.starterInventory }, entries: journal.entries.slice(0, next),
+      ...(journal.base ? { base: { ...journal.base } } : {}),
+      starterInventory: { ...journal.starterInventory }, entries: journal.entries.slice(0, next - first),
     });
-    for (const entry of journal.entries.slice(next)) session.replayEntry(entry);
+    for (const entry of journal.entries.slice(next - first)) session.replayEntry(entry);
     return session;
   }
 
@@ -669,7 +698,27 @@ export class GameSession {
 
   private snapshotSchema(): WorldSnapshot['schema'] { return this.journal.schema; }
 
-  get nextSequence(): number { return this.journal.entries.length; }
+  get nextSequence(): number { return (this.journal.base?.sequence ?? 0) + this.journal.entries.length; }
+
+  /**
+   * Drop journal entries that the current state already covers. The state hash
+   * is unchanged and the journal keeps the boundary hash, so a save written
+   * afterwards restores exactly (snapshot checked against the base). Old
+   * command ids are forgotten; ids carry their sequence number, so they cannot recur.
+   */
+  compact(): boolean {
+    const entries = this.journal.entries;
+    if (entries.length === 0 || this.journal.schema !== CURRENT_JOURNAL_SCHEMA) return false;
+    const j = this.journal;
+    this.journal = {
+      schema: j.schema, seed: j.seed,
+      ...(j.generatorVersion ? { generatorVersion: j.generatorVersion } : {}),
+      base: { sequence: this.nextSequence, hash: entries[entries.length - 1].hash },
+      starterInventory: j.starterInventory, entries: [],
+    };
+    this.ids.clear();
+    return true;
+  }
   get snapshot(): WorldSnapshot {
     return createWorldSnapshot(this.world, this.nextSequence, this.snapshotSchema());
   }
@@ -683,7 +732,7 @@ export class GameSession {
     return `${kind}:${this.nextSequence}:${encodeURIComponent(target)}`;
   }
 
-  entry(sequence: number): JournalEntry | undefined { return this.journal.entries[sequence]; }
+  entry(sequence: number): JournalEntry | undefined { return this.journal.entries[sequence - (this.journal.base?.sequence ?? 0)]; }
 
   dispatch(input: unknown): CommandReceipt | CommandRejection {
     let command: Command;
