@@ -18,6 +18,8 @@ import {
 } from './world';
 import type { ActiveEntityKind } from './world';
 import { OBSTRUCTION_RADIUS } from './terrain';
+// M010: a sapling's trunk is thinner than a mature tree's (the stage the renderer draws).
+import { STAGE_TRUNK, growthStage } from './vegetation';
 
 export const CHARACTER_RADIUS = 0.3;
 export const CHARACTER_HEIGHT = 1.7;
@@ -223,7 +225,7 @@ function resolveEntities(world: World, s: CharacterState): void {
         const e = world.entities.get(id);
         if (!e || e.harvested || isRetiredStoneKind(e.kind) || world.entityRemovals.has(id)) continue;
         // Collide with the trunk or body, not the canopy footprint used for clearance.
-        const body = e.kind.startsWith('styl_tree_') ? 0.45 * e.scale
+        const body = e.kind.startsWith('styl_tree_') ? STAGE_TRUNK[growthStage(e) ?? 'mature'] * e.scale
           : (OBSTRUCTION_RADIUS[e.kind as ActiveEntityKind] ?? 0.5) * 0.75 * e.scale;
         if (e.kind === 'styl_shrub') continue;
         if (s.y > e.y + 3 || s.y + CHARACTER_HEIGHT < e.y) continue;
@@ -448,7 +450,7 @@ export function canStandAt(world: World, x: number, y: number, z: number): boole
         const e = world.entities.get(id);
         if (!e || e.harvested || isRetiredStoneKind(e.kind) || world.entityRemovals.has(id) || e.kind === 'styl_shrub') continue;
         if (y > e.y + 3 || y + CHARACTER_HEIGHT < e.y) continue;
-        const body = e.kind.startsWith('styl_tree_') ? 0.45 * e.scale
+        const body = e.kind.startsWith('styl_tree_') ? STAGE_TRUNK[growthStage(e) ?? 'mature'] * e.scale
           : (OBSTRUCTION_RADIUS[e.kind as ActiveEntityKind] ?? 0.5) * 0.75 * e.scale;
         if (Math.hypot(x - e.x, z - e.z) < body + CHARACTER_RADIUS + 0.1) return false;
       }

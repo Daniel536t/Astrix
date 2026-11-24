@@ -12,8 +12,9 @@ import { BrowserSaveStore } from './persistence';
 import {
   CROPS, CROP_RULES, CropKind, DM, FIELD_MAX, FIELD_MIN, HomesteadAction, MOISTURE_MAX, Policy, Role, SPECIES, SPECIES_RULES,
   checkField, cropStage, fenceCost, fieldUnits, homesteadLayout, nearbyActions, recentHomesteadEvents, unitsOf, findFieldSpot,
-  dayTime, OVERFLOW_CAPACITY,
+  dayTime, OVERFLOW_CAPACITY, HOMESTEAD_NAV_VERSION, homesteadGates, isNavHomestead,
 } from '../sim/homestead';
+import { expandPath, navCell, navStats, gateLabel } from '../sim/nav';
 import { FOUNDER_STOCKPILE_ID } from '../sim/economy';
 import { HomesteadView } from '../render/homestead';
 import { residentSurfaceAt, surfaceAt } from '../sim/world';
@@ -89,11 +90,23 @@ export class HomesteadGame {
     return r;
   }
 
-  /** Schema-3 worlds without a homestead get one: the settlers arrive (a journaled command). */
+  /**
+   * Schema-3 worlds without a homestead get one under settlement rules v2 (a
+   * journaled command). A legacy homestead loads with its exact saved hash and
+   * is then switched by a journaled `upgrade_homestead` command, so villagers
+   * navigate in old worlds too.
+   */
   private ensureFounded(): void {
-    if (!this.available || this.world.homestead) return;
-    const r = this.send({ type: 'found_homestead' });
-    if (r.ok) this.o.toast('Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.', 'good');
+    if (!this.available) return;
+    if (!this.world.homestead) {
+      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_NAV_VERSION });
+      if (r.ok) this.o.toast('Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.', 'good');
+      return;
+    }
+    if (!isNavHomestead(this.world.homestead)) {
+      const r = this.send({ type: 'upgrade_homestead' });
+      if (r.ok) this.o.toast('The homestead now has gates and doors: villagers walk real routes around fences, buildings and trees.', 'good');
+    }
   }
 
   // ---------- actions near the player ----------
@@ -294,8 +307,17 @@ export class HomesteadGame {
         <span class="row-actions">${canChange ? `<select data-field="${p.id}" aria-label="Crop for this field">${CROPS.map((c) => `<option value="${c}" ${c === p.crop ? 'selected' : ''}>${CROP_RULES[c].label}</option>`).join('')}</select>` : ''}
         <button type="button" data-remove="${p.id}" aria-label="Remove this field">Remove</button></span></li>`;
     }).join('') || '<li class="dim">No fields yet. Plan one: you choose the place, the size and the crop.</li>';
-    const people = h.villagers.map((v) => `<li><b>${v.name}</b> · ${v.role} · ${task(v.task?.kind)}${v.carry ? ` · carrying ${v.carry.item.startsWith('harvest') ? 'a harvest' : `${v.carry.amount} ${v.carry.item}`}` : ''}
-      · energy ${v.energy}% · ${v.hunger >= 70 ? '<b class="warn">hungry</b>' : 'fed'}
+    const route = (v: (typeof h.villagers)[number]) => {
+      const n = v.nav;
+      if (!n || !isNavHomestead(h)) return '';
+      if (n.blocked) return ` · <b class="warn">can't get there: ${n.blocked.reason}</b> (${life.tick - n.blocked.since} ticks)`;
+      if (n.opening) return ` · opening the ${gateLabel(n.opening)}`;
+      const steps = v.task?.legs[v.task.leg]?.op === 'walk' ? expandPath(n.path, navCell(v.x), navCell(v.z)).length / 2 : 0;
+      return steps ? ` · walking, ${steps} m to go` : '';
+    };
+    const gaveUp = (v: (typeof h.villagers)[number]) => (v.avoid ?? []).map((a) => `<br><span class="warn">gave up ${a.target.replace(/:.*/, '')} (${a.reason}); retries in ${Math.max(0, a.until - life.tick)} ticks</span>`).join('');
+    const people = h.villagers.map((v) => `<li><b>${v.name}</b> · ${v.role} · ${task(v.task?.kind)}${route(v)}${v.carry ? ` · carrying ${v.carry.item.startsWith('harvest') ? 'a harvest' : `${v.carry.amount} ${v.carry.item}`}` : ''}
+      · energy ${v.energy}% · ${v.hunger >= 70 ? '<b class="warn">hungry</b>' : 'fed'}${gaveUp(v)}
       <span class="row-actions"><button type="button" data-assign="${v.id}" data-role="${v.role === 'farmer' ? 'herder' : 'farmer'}">Make ${v.role === 'farmer' ? 'herder' : 'farmer'}</button></span></li>`).join('');
     const animals = SPECIES.map((sp) => {
       const list = h.animals.filter((a) => a.species === sp);
@@ -305,6 +327,12 @@ export class HomesteadGame {
       return `<li><b>${list.length} ${name}</b>${young ? ` (${young} young)` : ''} · ${SPECIES_RULES[sp].purpose}${hungry ? ` · <b class="warn">${hungry} hungry</b>` : ''}</li>`;
     }).join('');
     const troughs = h.enclosures.map((e) => `${homesteadLayout(h).find((f) => f.id === e.id)!.label.toLowerCase()}: water ${e.water}, feed ${e.feed}, pasture ${e.grass}%${e.id === 'coop' && e.eggs ? `, ${e.eggs} eggs` : ''}`).join(' · ');
+    const gates = homesteadGates(h).map((g) => {
+      const state = h.gates?.find((x) => x.id === g.id)?.state ?? 'closed';
+      const btn = (to: string, label: string) => state === to ? '' : `<button type="button" data-gate="${g.id}" data-state="${to}">${label}</button>`;
+      return `<li><b>${g.label}</b> · ${state === 'locked' ? '<b class="warn">locked: villagers cannot pass</b>' : state === 'open' ? 'open' : 'closed (villagers open and close it)'}
+        <span class="row-actions">${btn('open', 'Open')}${btn('closed', 'Close')}${btn('locked', 'Lock')}</span></li>`;
+    }).join('');
     const st = h.steward;
     const pol = (a: 'assign_role' | 'expand_field', label: string) => `<label>${label} <select data-policy="${a}">${(['auto', 'approve', 'off'] as Policy[]).map((p) => `<option value="${p}" ${st.policy[a] === p ? 'selected' : ''}>${p === 'auto' ? 'may act' : p === 'approve' ? 'ask me first' : 'never'}</option>`).join('')}</select></label>`;
     const proposals = st.proposals.map((p) => `<li>${p.reason}<span class="row-actions"><button type="button" class="primary" data-approve="${p.id}">Approve</button><button type="button" data-decline="${p.id}">Decline</button></span></li>`).join('');
@@ -321,6 +349,7 @@ export class HomesteadGame {
       <div class="row-actions"><button type="button" class="primary" data-plan-new>Plan a new field</button><span class="dim">seed in store ${stock.seed ?? 0} (${reserve} reserved for sowing)</span></div>
       <h3>People</h3><ul>${people}</ul>
       <h3>Animals</h3><ul>${animals}</ul><p class="dim">${troughs}</p>
+      ${gates ? `<h3>Gates and doors</h3><ul>${gates}</ul>` : ''}
       <h3>Steward <span class="dim">(AI agent)</span></h3>
       <div class="steward"><label><input type="checkbox" data-steward ${st.enabled ? 'checked' : ''}> Steward on</label> ${pol('assign_role', 'Reassign jobs')} ${pol('expand_field', 'Fence new fields')}</div>
       ${proposals ? `<ul class="proposals">${proposals}</ul>` : '<p class="dim">No requests.</p>'}
@@ -337,6 +366,7 @@ export class HomesteadGame {
       if (!confirm('Remove this field? Anything growing there is lost and the fence wood is not returned.')) return;
       r = this.send({ type: 'remove_field', fieldId: b.dataset.remove }, b.dataset.remove);
     }
+    if (b.dataset.gate) r = this.send({ type: 'set_gate', gateId: b.dataset.gate, state: b.dataset.state }, b.dataset.gate);
     if (b.dataset.assign) r = this.send({ type: 'assign_role', villagerId: b.dataset.assign, role: b.dataset.role, actor: 'player' }, b.dataset.assign);
     if (b.dataset.approve) r = this.send({ type: 'resolve_proposal', proposalId: b.dataset.approve, approve: true }, b.dataset.approve);
     if (b.dataset.decline) r = this.send({ type: 'resolve_proposal', proposalId: b.dataset.decline, approve: false }, b.dataset.decline);
@@ -386,7 +416,13 @@ export class HomesteadGame {
     return {
       tick: life.tick, day: dayTime(life.tick),
       fields: h.plots.map((p) => ({ id: p.id, crop: p.crop, x: p.x, z: p.z, w: p.w, d: p.d, state: p.state, stage: cropStage(p), growth: p.growth, moisture: p.moisture })),
-      villagers: h.villagers.map((v) => ({ id: v.id, name: v.name, role: v.role, task: v.task?.kind ?? null, target: v.task?.target ?? null, x: v.x / DM, z: v.z / DM, carry: v.carry, energy: v.energy, hunger: v.hunger })),
+      villagers: h.villagers.map((v) => ({ id: v.id, name: v.name, role: v.role, task: v.task?.kind ?? null, target: v.task?.target ?? null, leg: v.task?.leg ?? null,
+        legOp: v.task?.legs[v.task.leg]?.op ?? null, x: v.x / DM, z: v.z / DM, carry: v.carry, energy: v.energy, hunger: v.hunger,
+        nav: v.nav ? { corners: v.nav.path.length / 2, dest: v.nav.dest, opening: v.nav.opening ?? null, opened: v.nav.opened ?? null, blocked: v.nav.blocked ?? null } : null,
+        avoid: v.avoid ?? [] })),
+      rules: h.version,
+      gates: (h.gates ?? []).map((g) => ({ ...g })),
+      navStats: { ...navStats(this.world) },
       animals: Object.fromEntries(SPECIES.map((sp) => [sp, h.animals.filter((a) => a.species === sp).length])),
       enclosures: h.enclosures.map((e) => ({ ...e })),
       overflow: { ...h.overflow },

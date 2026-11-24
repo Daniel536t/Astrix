@@ -15,6 +15,7 @@ import type { HomesteadState } from './homestead';
 import { isStoneReplay } from './stone-compat';
 import { Hydrology } from './hydrology';
 import { TerrainV2, V2Column } from './terrain-v2';
+import { treeTimber } from './vegetation';
 
 export const WORLD_SIZE = 2048;
 export const HALF = WORLD_SIZE / 2;
@@ -1219,9 +1220,37 @@ export function nearestHarvestable(
 
 export interface HarvestResult { entity: Entity; resource: ResourceType; amount: number; }
 
+/**
+ * Settlement rules v2 (M010): growth stage sets tree yield and footprint, and
+ * villagers navigate. Active once the world's homestead is version 2 (founded
+ * or upgraded by a journaled command); earlier worlds keep legacy rules, so
+ * their replays and hashes are unchanged.
+ */
+export function stageRulesActive(world: World): boolean {
+  return (world.homestead?.version ?? 0) >= 2;
+}
+
+/**
+ * Under stage rules a tree's first cut sets its record to the stage's timber
+ * (a sapling holds 2 wood, an old tree 16). Idempotent after the first cut.
+ */
+export function applyStageTimber(world: World, e: Entity): void {
+  if (!stageRulesActive(world) || e.harvestedOnce) return;
+  const t = treeTimber(e);
+  if (!t) return;
+  e.remaining = t.total;
+  e.yieldPerHarvest = t.cut;
+}
+
 export function harvestEntity(world: World, id: string): HarvestResult | null {
   const e = liveEntity(world, id);
   if (!e || e.harvested || !e.resource || e.remaining <= 0) return null;
+  // Capacity is checked against the stage yield, then the record changes.
+  if (stageRulesActive(world) && !e.harvestedOnce && treeTimber(e)) {
+    const t = treeTimber(e)!;
+    if (world.life && Object.values(world.inventory).reduce((sum, n) => sum + n, 0) + Math.min(t.cut, t.total) > 120) return null;
+    applyStageTimber(world, e);
+  }
   const amount = Math.min(e.yieldPerHarvest, e.remaining);
   if (world.life && Object.values(world.inventory).reduce((sum, n) => sum + n, 0) + amount > 120) return null;
   e.remaining -= amount;

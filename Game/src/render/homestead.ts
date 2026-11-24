@@ -9,8 +9,9 @@ import type { World } from '../sim/world';
 import { residentSurfaceAt, surfaceAt } from '../sim/world';
 import {
   CROP_RULES, DM, Facility, HomesteadState, MOISTURE_MAX, Plot, SPECIES, Species, TROUGH_MAX, cropStage, fieldRect,
-  dayTime, homesteadLayout, SPECIES_RULES, unitsOf,
+  dayTime, homesteadLayout, SPECIES_RULES, unitsOf, fieldOpening, homesteadGates,
 } from '../sim/homestead';
+import type { GateState } from '../sim/nav';
 import { AnimalBatch } from './animal-kit';
 import { SNAP_DISTANCE } from './smooth';
 import { ANIMAL_MODELS } from './animal-models';
@@ -56,23 +57,56 @@ const hash = (a: number, b: number, c = 0) => {
 
 const WOOD = '#8A6440', WOOD_DARK = '#5E4128', STRAW = '#D8BE6A', SOIL = '#6B4A30', SOIL_WET = '#4A3222';
 const WATER = '#4F9CC4', STONE = '#8C8C86', MUD = '#6E5238';
+const STRAW_WOOD = '#B0875A', IRON = '#2E2B2A';
 
-/** Fence posts and two rails around a rect (metres, local to `ox, oz`), with a gate gap on the +z side. */
-function fence(list: B[], x0: number, z0: number, x1: number, z1: number, ground: (x: number, z: number) => number, gate = true): void {
+/** A gap in a fence: on its -z (`n`) or +z (`s`) side, between world x `from` and `to` (the sim's opening or gate). */
+interface FenceGap { side: 'n' | 's'; from: number; to: number }
+
+/** Fence posts and two rails around a rect (world metres), leaving the given gaps open. */
+function fence(list: B[], x0: number, z0: number, x1: number, z1: number, ground: (x: number, z: number) => number, gaps: FenceGap[] = []): void {
   const post = (x: number, z: number) => { const y = ground(x, z); list.push({ w: 0.16, h: 1.05, d: 0.16, x, y, z, c: WOOD_DARK }); };
   const rail = (ax: number, az: number, bx: number, bz: number) => {
     const len = Math.hypot(bx - ax, bz - az), y = (ground(ax, az) + ground(bx, bz)) / 2, ry = Math.atan2(bz - az, bx - ax);
     for (const h of [0.45, 0.85]) list.push({ w: len, h: 0.09, d: 0.07, x: (ax + bx) / 2, y: y + h, z: (az + bz) / 2, c: WOOD, ry: -ry });
   };
-  const side = (ax: number, az: number, bx: number, bz: number, skipMiddle: boolean) => {
+  /** Posts about every 2 m plus at each gap end; rails everywhere except across a gap. */
+  const side = (ax: number, az: number, bx: number, bz: number, open: Array<[number, number]>) => {
     const len = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.round(len / 2));
-    for (let i = 0; i <= n; i++) post(ax + ((bx - ax) * i) / n, az + ((bz - az) * i) / n);
-    for (let i = 0; i < n; i++) {
-      if (skipMiddle && i === Math.floor(n / 2)) continue;
-      rail(ax + ((bx - ax) * i) / n, az + ((bz - az) * i) / n, ax + ((bx - ax) * (i + 1)) / n, az + ((bz - az) * (i + 1)) / n);
+    const ts = new Set<number>();
+    for (let i = 0; i <= n; i++) ts.add((len * i) / n);
+    for (const [a, b] of open) { ts.add(a); ts.add(b); }
+    const sorted = [...ts].filter((t) => t >= 0 && t <= len + 1e-6).sort((a, b) => a - b);
+    const at = (t: number) => [ax + ((bx - ax) * t) / len, az + ((bz - az) * t) / len] as const;
+    for (const t of sorted) post(...at(t));
+    for (let i = 0; i + 1 < sorted.length; i++) {
+      const a = sorted[i], b = sorted[i + 1], mid = (a + b) / 2;
+      if (b - a < 1e-3 || open.some(([g0, g1]) => mid > g0 && mid < g1)) continue;
+      rail(...at(a), ...at(b));
     }
   };
-  side(x0, z0, x1, z0, false); side(x1, z0, x1, z1, false); side(x1, z1, x0, z1, gate); side(x0, z1, x0, z0, false);
+  // Gap positions are world x; turn them into distances along each side.
+  const north = gaps.filter((g) => g.side === 'n').map((g) => [g.from - x0, g.to - x0] as [number, number]);
+  const south = gaps.filter((g) => g.side === 's').map((g) => [x1 - g.to, x1 - g.from] as [number, number]);
+  side(x0, z0, x1, z0, north); side(x1, z0, x1, z1, []); side(x1, z1, x0, z1, south); side(x0, z1, x0, z0, []);
+}
+
+/**
+ * A field gate or pen gate leaf on a -z fence edge from world (x, z) to (x + 1, z).
+ * Closed: across the opening. Open: swung 90° into the enclosure. Locked: closed with an iron bar.
+ */
+function gateLeaf(list: B[], x: number, z: number, state: GateState, ground: (x: number, z: number) => number): void {
+  const y = ground(x + 0.5, z + 0.3);
+  if (state === 'open') {
+    const lx = x + 0.1;
+    list.push({ w: 0.08, h: 1.0, d: 0.08, x: lx, y, z: z + 0.05, c: WOOD_DARK }, { w: 0.08, h: 1.0, d: 0.08, x: lx, y, z: z + 0.9, c: WOOD_DARK });
+    for (const h of [0.3, 0.8]) list.push({ w: 0.07, h: 0.09, d: 0.86, x: lx, y: y + h, z: z + 0.48, c: STRAW_WOOD });
+    list.push({ w: 0.06, h: 0.08, d: 0.86, x: lx, y: y + 0.55, z: z + 0.48, c: WOOD });
+    return;
+  }
+  list.push({ w: 0.08, h: 1.0, d: 0.08, x: x + 0.1, y, z, c: WOOD_DARK }, { w: 0.08, h: 1.0, d: 0.08, x: x + 0.9, y, z, c: WOOD_DARK });
+  for (const h of [0.3, 0.8]) list.push({ w: 0.86, h: 0.09, d: 0.07, x: x + 0.5, y: y + h, z, c: STRAW_WOOD });
+  list.push({ w: 0.86, h: 0.08, d: 0.06, x: x + 0.5, y: y + 0.55, z, c: WOOD });
+  if (state === 'locked') list.push({ w: 0.12, h: 0.32, d: 0.12, x: x + 0.9, y: y + 0.4, z: z - 0.06, c: IRON });
 }
 
 /** A trough that shows its real contents: water level and a pile of straw. */
@@ -136,7 +170,9 @@ function fieldMesh(world: World, p: Plot, ground: (x: number, z: number) => numb
     }
   }
   const lx0 = p.x - 0.15, lz0 = p.z - 0.15, lx1 = p.x + p.w + 0.15, lz1 = p.z + p.d + 0.15;
-  fence(list, lx0, lz0, lx1, lz1, ground);
+  // The walk-in gap is where the navigation grid leaves the fence open.
+  const gap = fieldOpening(p);
+  fence(list, lx0, lz0, lx1, lz1, ground, [{ side: 's', from: gap.x, to: gap.x + 1 }]);
   const m = mesh(list, `field_${p.id}`);
   m.userData = { fieldId: p.id, crop: p.crop, state: p.state, stage, units: unitsOf(p), moisture: p.moisture };
   return m;
@@ -273,6 +309,7 @@ export class HomesteadView {
   private troughKey = '';
   private lastTick = -1;
   private tickAt = 0;
+  private revisionSeen = -1;
 
   constructor(private readonly world: World, private readonly tickSeconds: number) {
     this.group.name = 'homestead';
@@ -307,8 +344,9 @@ export class HomesteadView {
         g.add(well);
         continue;
       }
-      // Enclosures: fence around the rect, plus a shelter that matches the species.
-      fence(list, r.x0, r.z0, r.x1, r.z1, this.ground);
+      // Enclosures: fence around the rect with a gap for the gate (its leaf is drawn with the troughs, as it moves), plus a shelter.
+      const gate = homesteadGates(h).find((g) => g.id === `gate:${f.id}`);
+      fence(list, r.x0, r.z0, r.x1, r.z1, this.ground, gate ? [{ side: 'n', from: gate.x, to: gate.x + 1 }] : []);
       if (f.kind === 'coop') {
         const y = this.lowest({ x0: r.x0 + 0.5, z0: r.z0 + 0.5, x1: r.x0 + 3.5, z1: r.z0 + 3 });
         list.push({ w: 3, h: 0.5, d: 2.5, x: r.x0 + 2, y, z: r.z0 + 1.75, c: STONE });
@@ -375,6 +413,8 @@ export class HomesteadView {
       this.refreshFields(h);
       this.refreshTroughs(h);
     }
+    // A gate set by the owner between ticks shows at once.
+    if (this.world.revision !== this.revisionSeen) { this.revisionSeen = this.world.revision; this.refreshTroughs(h); }
     const alpha = Math.min(1, (performance.now() - this.tickAt) / (this.tickSeconds * 1000));
     this.herd.draw(this.world, h, alpha, frameDt, this.ground);
     this.drawPeople(h, alpha, frameDt);
@@ -391,7 +431,7 @@ export class HomesteadView {
 
   private refreshTroughs(h: HomesteadState): void {
     const key = h.enclosures.map((e) => `${e.id}:${Math.round(e.water / 3)}:${Math.round(e.feed / 3)}:${e.eggs > 0 ? 1 : 0}`).join('|')
-      + `|barn:${Math.ceil(Object.values(h.overflow).reduce((a, b) => a + b, 0) / 20)}`;
+      + `|barn:${Math.ceil(Object.values(h.overflow).reduce((a, b) => a + b, 0) / 20)}|gates:${(h.gates ?? []).map((g) => g.state).join(',')}`;
     if (key === this.troughKey) return;
     this.troughKey = key;
     for (const c of this.dynamic.children) (c as THREE.Mesh).geometry.dispose();
@@ -417,6 +457,11 @@ export class HomesteadView {
     for (let i = 0; i < Math.ceil(loose / 20); i++) {
       const x = bx - 1.2 + (i % 4) * 0.8, z = bz - 0.6 + Math.floor(i / 4) % 2 * 0.8, y = by + Math.floor(i / 8) * 0.55;
       list.push({ w: 0.62, h: 0.52, d: 0.62, x, y, z, c: i % 2 ? '#B89B6A' : '#9C7A4C' });
+    }
+    // Gate leaves show the simulated state (closed for a legacy homestead, which has no gates in its state).
+    for (const g of homesteadGates(h)) {
+      if (!g.id.startsWith('gate:')) continue;
+      gateLeaf(list, g.x, g.z, h.gates?.find((x) => x.id === g.id)?.state ?? 'closed', this.ground);
     }
     if (list.length) this.dynamic.add(mesh(list, 'homestead_troughs'));
   }

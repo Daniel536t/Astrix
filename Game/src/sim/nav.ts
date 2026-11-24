@@ -1,0 +1,754 @@
+// M010 navigation: a reusable, deterministic walking layer over the
+// authoritative world, for villagers today and any later profession.
+//
+// Layers (all derived, never saved; rebuilt only when their inputs change):
+//  - terrain: walking height and water depth of every 1 m column in a window
+//    around the settlement, read from the voxels (keyed on the edit overlay);
+//  - nature and structures: trees by growth stage, bushes, ore, landmarks and
+//    built modules (keyed on the world revision);
+//  - features supplied by the caller (the homestead): buildings with doors,
+//    fences on cell edges with openings and gates, occupied cells, crop costs.
+//
+// Rules: neighbouring columns may differ by at most MAX_STEP metre (a step);
+// more is a cliff. Water deeper than WADE_MAX is dangerous and impassable;
+// shallower water is a ford with a cost. A bridge (or any deck) supplies a
+// walking height that overrides the water. Fences block the cell edge they
+// stand on; a gate or door is an edge that is passable unless locked, and the
+// walker has to stop and open it when closed. Diagonal moves never cut a
+// blocked corner, a fence or a gate, so every gate crossing is orthogonal.
+//
+// Search is A* with integer costs, an admissible octile heuristic and a total
+// order on the open list (f, then h, then cell index), so equal inputs give
+// equal paths everywhere. Every search is bounded by an expansion budget the
+// caller passes in. A walker stores its route (corner cells), the grid hash it
+// was planned on and its destination; any grid change (a gate locked, a tree
+// felled, a field marked, a voxel edit) changes the hash and the walker
+// replans from where it stands. All of that is plain integer/string state, so
+// a restored snapshot continues exactly as the live run did.
+import type { World } from './world';
+import {
+  CHUNK_SIZE, HALF, chunkKey, editVersion, isRetiredStoneKind, surfaceAt, waterDepthAt,
+  worldToChunkX, worldToChunkZ,
+} from './world';
+import { STAGE_FOOTPRINT, growthStage } from './vegetation';
+
+export type GateState = 'open' | 'closed' | 'locked';
+export const GATE_STATES: readonly GateState[] = ['closed', 'locked', 'open'];
+
+/** Why a cell cannot be stood on (0 = it can). */
+export const BLOCK = {
+  none: 0, outside: 1, deep_water: 2, building: 3, occupied: 4, tree: 5, rock: 6, landmark: 7, structure: 8,
+} as const;
+export type BlockReason = keyof typeof BLOCK;
+const REASON_NAMES = Object.keys(BLOCK) as BlockReason[];
+export const REASON_TEXT: Record<BlockReason, string> = {
+  none: 'open ground', outside: 'outside the settlement', deep_water: 'deep water', building: 'a building',
+  occupied: 'an occupied space', tree: 'a tree', rock: 'a rock', landmark: 'a landmark', structure: 'a built wall',
+};
+
+// Costs are tenths of a metre walked, so the octile heuristic is admissible.
+export const COST_STRAIGHT = 10;
+export const COST_DIAGONAL = 14;
+/** Extra for a one-metre step up or down. */
+export const COST_STEP = 6;
+/** Extra for wading a shallow ford. */
+export const COST_FORD = 20;
+/** Extra for crossing a gate or door (opening and closing it). */
+export const COST_GATE = 4;
+/** Extra for pushing through a bush. */
+export const COST_BUSH = 8;
+/** Highest height difference (m) between neighbouring columns a walker can step. */
+export const MAX_STEP = 1;
+/** Deepest water (m) a walker may ford. Deeper is dangerous and avoided. */
+export const WADE_MAX = 1;
+
+const WALL_E = 1, WALL_S = 2, GATE_E = 4, GATE_S = 8;
+
+export interface CellRect { x0: number; z0: number; x1: number; z1: number } // world metres, [x0, x1) cells
+export type Side = 'n' | 's' | 'e' | 'w';
+/** A gate or door on the edge between cell (x, z) and its neighbour on `side`. */
+export interface NavGate { id: string; x: number; z: number; side: Side }
+export interface NavFeatures {
+  /** Stable text of everything below (the cache key). */
+  key: string;
+  /** Walking height over water (bridges, jetties); applied before everything else. */
+  decks: Array<CellRect & { y: number }>;
+  costs: Array<CellRect & { extra: number }>;
+  blocks: Array<CellRect & { reason: BlockReason; id: string }>;
+  /** Cells inside a block that stay walkable (a doorway, a threshold). */
+  clear: CellRect[];
+  /** Fences on the rect's outline; `gaps` are cell edges left open (no gate). */
+  fences: Array<CellRect & { id: string; gaps: Array<{ x: number; z: number; side: Side }> }>;
+  gates: NavGate[];
+  gateStates: Record<string, GateState>;
+}
+
+export function emptyFeatures(key = ''): NavFeatures {
+  return { key, decks: [], costs: [], blocks: [], clear: [], fences: [], gates: [], gateStates: {} };
+}
+
+export interface NavRegion { ox: number; oz: number; w: number; h: number }
+
+interface TerrainLayer { key: string; ground: Int16Array; water: Uint8Array; block: Uint8Array }
+
+export class NavGrid {
+  readonly ground: Int16Array;
+  readonly block: Uint8Array;
+  readonly extra: Uint16Array;
+  readonly walls: Uint8Array;
+  /** Smallest blocking id per blocked cell (deterministic whatever the input order). */
+  readonly blockId = new Map<number, string>();
+  readonly gateAt = new Map<number, string>(); // cell index * 2 + (0 = east edge, 1 = south edge)
+  readonly gateCells = new Map<string, [number, number, number, number]>();
+  readonly gateState = new Map<string, GateState>();
+  hash = '';
+  // Reused search buffers.
+  g: Int32Array; parent: Int32Array; closed: Uint8Array;
+  constructor(readonly ox: number, readonly oz: number, readonly w: number, readonly h: number) {
+    const n = w * h;
+    this.ground = new Int16Array(n); this.block = new Uint8Array(n); this.extra = new Uint16Array(n); this.walls = new Uint8Array(n);
+    this.g = new Int32Array(n); this.parent = new Int32Array(n); this.closed = new Uint8Array(n);
+  }
+  inside(x: number, z: number): boolean { return x >= this.ox && z >= this.oz && x < this.ox + this.w && z < this.oz + this.h; }
+  index(x: number, z: number): number { return (z - this.oz) * this.w + (x - this.ox); }
+  cellX(i: number): number { return this.ox + (i % this.w); }
+  cellZ(i: number): number { return this.oz + Math.floor(i / this.w); }
+  reason(x: number, z: number): BlockReason { return this.inside(x, z) ? REASON_NAMES[this.block[this.index(x, z)]] : 'outside'; }
+  /** The gate on the edge between two orthogonal neighbours, or null. */
+  gateBetween(ax: number, az: number, bx: number, bz: number): string | null {
+    const e = edge(this, ax, az, bx, bz);
+    return e < 0 ? null : this.gateAt.get(e) ?? null;
+  }
+}
+
+/** Edge key of two orthogonal neighbours (both inside), or -1. */
+function edge(g: NavGrid, ax: number, az: number, bx: number, bz: number): number {
+  const dx = bx - ax, dz = bz - az;
+  if (Math.abs(dx) + Math.abs(dz) !== 1 || !g.inside(ax, az) || !g.inside(bx, bz)) return -1;
+  if (dx === 1) return g.index(ax, az) * 2;
+  if (dx === -1) return g.index(bx, bz) * 2;
+  if (dz === 1) return g.index(ax, az) * 2 + 1;
+  return g.index(bx, bz) * 2 + 1;
+}
+
+// ---------- building the grid ----------
+
+interface NavCache { region: string; terrain?: TerrainLayer; worldKey?: string; featureKey?: string; grid?: NavGrid; builds: number; ms: number }
+const caches = new WeakMap<World, Map<string, NavCache>>();
+
+export interface NavStats {
+  /** Obstacle-layer rebuilds, and how many of them changed the grid (new hash). */
+  gridBuilds: number; gridChanges: number; gridMs: number; terrainBuilds: number; terrainMs: number;
+  searches: number; expanded: number; searchMs: number; ticks: number; tickMs: number; maxTickMs: number; lastTickMs: number;
+}
+const stats = new WeakMap<World, NavStats>();
+/** Presentation-only timing counters (never saved or hashed). */
+export function navStats(world: World): NavStats {
+  let s = stats.get(world);
+  if (!s) {
+    s = { gridBuilds: 0, gridChanges: 0, gridMs: 0, terrainBuilds: 0, terrainMs: 0, searches: 0, expanded: 0, searchMs: 0, ticks: 0, tickMs: 0, maxTickMs: 0, lastTickMs: 0 };
+    stats.set(world, s);
+  }
+  return s;
+}
+
+function terrainLayer(world: World, r: NavRegion): TerrainLayer {
+  const t0 = performance.now();
+  const n = r.w * r.h;
+  const ground = new Int16Array(n), water = new Uint8Array(n), block = new Uint8Array(n);
+  for (let z = 0; z < r.h; z++) {
+    for (let x = 0; x < r.w; x++) {
+      const wx = r.ox + x, wz = r.oz + z, i = z * r.w + x;
+      if (wx < -HALF || wz < -HALF || wx >= HALF || wz >= HALF) { block[i] = BLOCK.outside; continue; }
+      // surfaceAt generates a missing chunk (and its natural entities): the
+      // grid is the same whichever chunks a renderer happened to load.
+      ground[i] = surfaceAt(world, wx, wz);
+      const d = Math.max(0, waterDepthAt(world, wx, wz));
+      water[i] = Math.min(255, d);
+      if (d > WADE_MAX) block[i] = BLOCK.deep_water;
+    }
+  }
+  const s = navStats(world);
+  s.terrainBuilds++; s.terrainMs += performance.now() - t0;
+  return { key: '', ground, water, block };
+}
+
+function forRect(g: NavGrid, r: CellRect, f: (i: number, x: number, z: number) => void): void {
+  const x0 = Math.max(r.x0, g.ox), x1 = Math.min(r.x1, g.ox + g.w), z0 = Math.max(r.z0, g.oz), z1 = Math.min(r.z1, g.oz + g.h);
+  for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) f(g.index(x, z), x, z);
+}
+
+/** Block a cell; when several things claim it, the smallest id wins (order-independent). */
+function setBlock(g: NavGrid, i: number, reason: BlockReason, id: string): void {
+  const cur = g.block[i];
+  if (cur === BLOCK.outside || cur === BLOCK.deep_water) return;
+  if (cur !== BLOCK.none) { const prev = g.blockId.get(i); if (prev !== undefined && prev <= id) return; }
+  g.block[i] = BLOCK[reason];
+  g.blockId.set(i, id);
+}
+
+/** Wall bit for the edge on `side` of cell (x, z). */
+function markEdge(g: NavGrid, x: number, z: number, side: Side, bits: 'wall' | 'gate', id?: string): void {
+  let cx = x, cz = z, south = false;
+  if (side === 'e') { /* own east edge */ } else if (side === 'w') cx = x - 1;
+  else if (side === 's') south = true; else { cz = z - 1; south = true; }
+  if (!g.inside(cx, cz)) return;
+  // Edges on the far border of the window belong to no in-grid neighbour.
+  if (!south && !g.inside(cx + 1, cz)) return;
+  if (south && !g.inside(cx, cz + 1)) return;
+  const i = g.index(cx, cz);
+  if (bits === 'wall') { g.walls[i] |= south ? WALL_S : WALL_E; return; }
+  g.walls[i] &= south ? ~WALL_S : ~WALL_E;
+  g.walls[i] |= south ? GATE_S : GATE_E;
+  g.gateAt.set(i * 2 + (south ? 1 : 0), id!);
+  g.gateCells.set(id!, south ? [cx, cz, cx, cz + 1] : [cx, cz, cx + 1, cz]);
+}
+
+const sideOf = (x: number, z: number, side: Side) => `${x},${z},${side}`;
+/** The same edge named from either side, normalised to an east or south edge. */
+function normEdge(x: number, z: number, side: Side): string {
+  if (side === 'w') return sideOf(x - 1, z, 'e');
+  if (side === 'n') return sideOf(x, z - 1, 's');
+  return sideOf(x, z, side);
+}
+
+function applyFeatures(g: NavGrid, f: NavFeatures): void {
+  for (const d of f.decks) forRect(g, d, (i) => { g.ground[i] = d.y; if (g.block[i] === BLOCK.deep_water) g.block[i] = BLOCK.none; });
+  for (const c of f.costs) forRect(g, c, (i) => { g.extra[i] += c.extra; });
+  for (const b of f.blocks) forRect(g, b, (i) => setBlock(g, i, b.reason, b.id));
+  for (const c of f.clear) forRect(g, c, (i) => { if (g.block[i] !== BLOCK.deep_water && g.block[i] !== BLOCK.outside) { g.block[i] = BLOCK.none; g.blockId.delete(i); } });
+  const open = new Set<string>();
+  for (const fe of f.fences) for (const gap of fe.gaps) open.add(normEdge(gap.x, gap.z, gap.side));
+  for (const gt of f.gates) open.add(normEdge(gt.x, gt.z, gt.side));
+  for (const fe of f.fences) {
+    for (let x = fe.x0; x < fe.x1; x++) {
+      if (!open.has(normEdge(x, fe.z0, 'n'))) markEdge(g, x, fe.z0, 'n', 'wall');
+      if (!open.has(normEdge(x, fe.z1 - 1, 's'))) markEdge(g, x, fe.z1 - 1, 's', 'wall');
+    }
+    for (let z = fe.z0; z < fe.z1; z++) {
+      if (!open.has(normEdge(fe.x0, z, 'w'))) markEdge(g, fe.x0, z, 'w', 'wall');
+      if (!open.has(normEdge(fe.x1 - 1, z, 'e'))) markEdge(g, fe.x1 - 1, z, 'e', 'wall');
+    }
+  }
+  for (const gt of [...f.gates].sort((a, b) => a.id.localeCompare(b.id))) {
+    markEdge(g, gt.x, gt.z, gt.side, 'gate', gt.id);
+    const st = f.gateStates[gt.id] ?? 'closed';
+    g.gateState.set(gt.id, st);
+    // A locked gate is a wall for everyone (its gate bit stays, for reports).
+    if (st === 'locked') {
+      const cells = g.gateCells.get(gt.id);
+      if (cells) { const i = g.index(cells[0], cells[1]); g.walls[i] |= cells[2] !== cells[0] ? WALL_E : WALL_S; }
+    }
+  }
+}
+
+/** Trees by growth stage, bushes, ore, landmarks and built modules inside the window. */
+function applyWorld(world: World, g: NavGrid): void {
+  const cx0 = worldToChunkX(Math.max(-HALF, g.ox - 2)), cx1 = worldToChunkX(Math.min(HALF - 1, g.ox + g.w + 1));
+  const cz0 = worldToChunkZ(Math.max(-HALF, g.oz - 2)), cz1 = worldToChunkZ(Math.min(HALF - 1, g.oz + g.h + 1));
+  for (let cz = cz0; cz <= cz1; cz++) {
+    for (let cx = cx0; cx <= cx1; cx++) {
+      const ids = world.entityChunks.get(chunkKey(cx, cz));
+      if (!ids) continue;
+      for (const id of ids) {
+        const e = world.entities.get(id);
+        if (!e || e.harvested || world.entityRemovals.has(id) || isRetiredStoneKind(e.kind)) continue;
+        const ex = Math.floor(e.x), ez = Math.floor(e.z);
+        if (e.kind === 'styl_shrub') {
+          if (g.inside(ex, ez)) g.extra[g.index(ex, ez)] += COST_BUSH;
+          continue;
+        }
+        if (e.kind.startsWith('styl_tree_')) {
+          const r = STAGE_FOOTPRINT[growthStage(e) ?? 'mature'];
+          const reach = Math.ceil(r);
+          for (let z = ez - reach; z <= ez + reach; z++) {
+            for (let x = ex - reach; x <= ex + reach; x++) {
+              const dx = x + 0.5 - e.x, dz = z + 0.5 - e.z;
+              if (dx * dx + dz * dz <= r * r + 1e-9 && g.inside(x, z)) setBlock(g, g.index(x, z), 'tree', e.id);
+            }
+          }
+          continue;
+        }
+        if (g.inside(ex, ez)) setBlock(g, g.index(ex, ez), e.kind === 'styl_ore' || e.kind.startsWith('styl_rock') ? 'rock' : 'landmark', e.id);
+      }
+    }
+  }
+  for (const s of world.sites) {
+    const x = Math.floor(s.x), z = Math.floor(s.z);
+    if (g.inside(x, z)) setBlock(g, g.index(x, z), 'landmark', s.id);
+  }
+  for (const s of [...world.structures.values()].sort((a, b) => a.id.localeCompare(b.id))) {
+    for (const m of s.modules) {
+      if (m.kind === 'crop_row' || m.kind === 'door' || m.kind === 'threshold') continue;
+      // A rotated module is bounded by its half-diagonal (no trigonometry in the hashed sim).
+      const hw = m.rot ? Math.sqrt(m.w * m.w + m.d * m.d) / 2 : m.w / 2;
+      const hd = m.rot ? hw : m.d / 2;
+      for (let z = Math.floor(m.z - hd); z <= Math.floor(m.z + hd); z++) {
+        for (let x = Math.floor(m.x - hw); x <= Math.floor(m.x + hw); x++) {
+          if (!g.inside(x, z) || Math.abs(x + 0.5 - m.x) >= hw || Math.abs(z + 0.5 - m.z) >= hd) continue;
+          const i = g.index(x, z), floor = g.ground[i];
+          // Taller than a step and low enough to walk into: a wall. Lower: a floor or a step.
+          if (m.y + m.h > floor + 1.05 && m.y < floor + 1.7) setBlock(g, i, 'structure', s.id);
+        }
+      }
+    }
+  }
+}
+
+function hashGrid(g: NavGrid): string {
+  let a = 0x811c9dc5, b = 0x9e3779b9;
+  const mix = (v: number) => {
+    a = Math.imul(a ^ (v & 0xffff), 0x01000193);
+    b = Math.imul(b ^ ((v & 0xffff) + 0x9e), 0x85ebca6b); b ^= b >>> 13;
+  };
+  mix(g.ox); mix(g.oz); mix(g.w); mix(g.h);
+  for (let i = 0; i < g.ground.length; i++) {
+    mix(g.ground[i]); mix(g.block[i] === 0 ? 0 : 1); mix(g.extra[i]); mix(g.walls[i]);
+  }
+  return (a >>> 0).toString(16).padStart(8, '0') + (b >>> 0).toString(16).padStart(8, '0');
+}
+
+/**
+ * The navigation grid of a window, current with the world and the caller's
+ * features. Cheap when nothing changed (three string compares); a rebuild is
+ * bounded by the window size.
+ */
+export function navGrid(world: World, region: NavRegion, features: NavFeatures): NavGrid {
+  let byRegion = caches.get(world);
+  if (!byRegion) { byRegion = new Map(); caches.set(world, byRegion); }
+  const rk = `${region.ox},${region.oz},${region.w},${region.h}`;
+  let c = byRegion.get(rk);
+  if (!c) { c = { region: rk, builds: 0, ms: 0 }; byRegion.set(rk, c); }
+  const tKey = `${world.seed}:${world.params.generatorVersion}:${editVersion(world)}`;
+  if (!c.terrain || c.terrain.key !== tKey) {
+    c.terrain = terrainLayer(world, region);
+    c.terrain.key = tKey;
+    c.grid = undefined;
+  }
+  const wKey = `${world.revision}:${world.entityRemovals.size}:${world.structures.size}`;
+  if (c.grid && c.worldKey === wKey && c.featureKey === features.key) return c.grid;
+  const t0 = performance.now();
+  const g = new NavGrid(region.ox, region.oz, region.w, region.h);
+  g.ground.set(c.terrain.ground);
+  g.block.set(c.terrain.block);
+  for (let i = 0; i < g.extra.length; i++) if (c.terrain.water[i] > 0 && g.block[i] === 0) g.extra[i] = COST_FORD;
+  applyWorld(world, g);
+  applyFeatures(g, features);
+  g.hash = hashGrid(g);
+  const s = navStats(world);
+  s.gridBuilds++; s.gridMs += performance.now() - t0;
+  // Keep the old object when nothing that matters changed (search buffers stay warm).
+  if (c.grid && c.grid.hash === g.hash && sameGates(c.grid, g)) { c.worldKey = wKey; c.featureKey = features.key; for (const [k, v] of g.gateState) c.grid.gateState.set(k, v); return c.grid; }
+  c.grid = g; c.worldKey = wKey; c.featureKey = features.key;
+  s.gridChanges++;
+  return g;
+}
+
+function sameGates(a: NavGrid, b: NavGrid): boolean {
+  if (a.gateAt.size !== b.gateAt.size) return false;
+  for (const [k, v] of a.gateAt) if (b.gateAt.get(k) !== v) return false;
+  if (a.blockId.size !== b.blockId.size) return false;
+  for (const [k, v] of a.blockId) if (b.blockId.get(k) !== v) return false;
+  return true;
+}
+
+/** Drop cached grids (tests and tools). */
+export function resetNavCache(world: World): void { caches.delete(world); }
+
+// ---------- moving between cells ----------
+
+export interface SearchOptions {
+  /** Treat locked gates as passable (used only to explain a failure). */
+  ignoreLocked?: boolean;
+  /** Treat trees, bushes and rocks as passable (used only to explain a failure). */
+  ignoreNature?: boolean;
+  maxExpansions: number;
+}
+
+const natureBlock = (b: number) => b === BLOCK.tree || b === BLOCK.rock;
+
+function free(g: NavGrid, i: number, o: SearchOptions): boolean {
+  const b = g.block[i];
+  return b === BLOCK.none || (!!o.ignoreNature && natureBlock(b));
+}
+
+/** Wall state of an orthogonal edge: 0 open, 1 gate (passable), 2 blocked. */
+function edgeState(g: NavGrid, ax: number, az: number, bx: number, bz: number, o: SearchOptions): 0 | 1 | 2 {
+  const e = edge(g, ax, az, bx, bz);
+  if (e < 0) return 2;
+  const bits = g.walls[e >> 1], south = (e & 1) === 1;
+  const wall = bits & (south ? WALL_S : WALL_E), gate = bits & (south ? GATE_S : GATE_E);
+  if (gate) return wall && !o.ignoreLocked ? 2 : 1;
+  return wall ? 2 : 0;
+}
+
+/** Cost of moving from cell a to the neighbour b (dx, dz in -1..1), or -1 when impossible. */
+function moveCost(g: NavGrid, ax: number, az: number, dx: number, dz: number, o: SearchOptions): number {
+  const bx = ax + dx, bz = az + dz;
+  if (!g.inside(bx, bz)) return -1;
+  const ia = g.index(ax, az), ib = g.index(bx, bz);
+  if (!free(g, ib, o)) return -1;
+  const dh = g.ground[ib] - g.ground[ia];
+  if (dh > MAX_STEP || dh < -MAX_STEP) return -1;
+  let cost = (dx !== 0 && dz !== 0 ? COST_DIAGONAL : COST_STRAIGHT) + g.extra[ib] + (dh !== 0 ? COST_STEP : 0);
+  if (dx === 0 || dz === 0) {
+    const s = edgeState(g, ax, az, bx, bz, o);
+    if (s === 2) return -1;
+    if (s === 1) cost += COST_GATE;
+    return cost;
+  }
+  // Diagonal: both corner cells walkable and level enough, and no wall or gate on any of the four edges.
+  const c1 = g.index(bx, az), c2 = g.index(ax, bz);
+  if (!free(g, c1, o) || !free(g, c2, o)) return -1;
+  for (const c of [c1, c2]) {
+    if (Math.abs(g.ground[c] - g.ground[ia]) > MAX_STEP || Math.abs(g.ground[ib] - g.ground[c]) > MAX_STEP) return -1;
+  }
+  if (edgeState(g, ax, az, bx, az, o) !== 0 || edgeState(g, bx, az, bx, bz, o) !== 0
+    || edgeState(g, ax, az, ax, bz, o) !== 0 || edgeState(g, ax, bz, bx, bz, o) !== 0) return -1;
+  return cost;
+}
+
+/** True when a walker can move from cell a to neighbour b right now (gates count as passable unless locked). */
+export function canMove(g: NavGrid, ax: number, az: number, bx: number, bz: number): boolean {
+  const dx = bx - ax, dz = bz - az;
+  if (Math.abs(dx) > 1 || Math.abs(dz) > 1 || (dx === 0 && dz === 0) || !g.inside(ax, az)) return false;
+  return moveCost(g, ax, az, dx, dz, { maxExpansions: 0 }) >= 0;
+}
+
+// ---------- search ----------
+
+/**
+ * A destination: a point in decimetres, how close (dm) the walker must get,
+ * and how far (dm) the point may move before the route is replanned (a
+ * walking animal); fixed destinations use 0.
+ */
+export interface NavGoal { x: number; z: number; reach: number; drift?: number }
+export type PathResult =
+  | { ok: true; cells: number[]; cost: number; expanded: number }
+  | { ok: false; code: 'no_route' | 'budget' | 'outside'; expanded: number };
+
+const cellOfDm = (v: number) => Math.floor(v / 10);
+const centreDm = (c: number) => c * 10 + 5;
+const DIRS: ReadonlyArray<[number, number]> = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
+
+function octile(ax: number, az: number, bx: number, bz: number): number {
+  const dx = Math.abs(ax - bx), dz = Math.abs(az - bz);
+  return COST_STRAIGHT * Math.max(dx, dz) + (COST_DIAGONAL - COST_STRAIGHT) * Math.min(dx, dz);
+}
+
+/** Min-heap ordered by (f, h, cell index): a total order, so ties never depend on insertion. */
+class Heap {
+  private f: number[] = []; private h: number[] = []; private i: number[] = [];
+  get size() { return this.i.length; }
+  private less(a: number, b: number) {
+    return this.f[a] < this.f[b] || (this.f[a] === this.f[b] && (this.h[a] < this.h[b] || (this.h[a] === this.h[b] && this.i[a] < this.i[b])));
+  }
+  private swap(a: number, b: number) {
+    [this.f[a], this.f[b]] = [this.f[b], this.f[a]]; [this.h[a], this.h[b]] = [this.h[b], this.h[a]]; [this.i[a], this.i[b]] = [this.i[b], this.i[a]];
+  }
+  push(f: number, h: number, i: number) {
+    this.f.push(f); this.h.push(h); this.i.push(i);
+    let k = this.i.length - 1;
+    while (k > 0) { const p = (k - 1) >> 1; if (!this.less(k, p)) break; this.swap(k, p); k = p; }
+  }
+  pop(): number {
+    const top = this.i[0], last = this.i.length - 1;
+    this.swap(0, last); this.f.pop(); this.h.pop(); this.i.pop();
+    let k = 0;
+    for (;;) {
+      const l = 2 * k + 1, r = l + 1;
+      let m = k;
+      if (l < this.i.length && this.less(l, m)) m = l;
+      if (r < this.i.length && this.less(r, m)) m = r;
+      if (m === k) break;
+      this.swap(k, m); k = m;
+    }
+    return top;
+  }
+}
+
+/** Cells (world metres) whose centre is within `reach` of the goal point. */
+function isGoal(x: number, z: number, goal: NavGoal): boolean {
+  const dx = centreDm(x) - goal.x, dz = centreDm(z) - goal.z;
+  return dx * dx + dz * dz <= goal.reach * goal.reach;
+}
+
+/**
+ * Shortest route from a point (dm) to a goal. The start cell may itself be
+ * blocked (a walker standing where a gate just locked can still step out).
+ * Returns the cells after the start cell, as flat [x0, z0, x1, z1, ...].
+ */
+export function findPath(world: World, g: NavGrid, from: { x: number; z: number }, goal: NavGoal, o: SearchOptions): PathResult {
+  const t0 = performance.now();
+  const s = navStats(world);
+  s.searches++;
+  const res = search(g, from, goal, o);
+  s.expanded += res.expanded; s.searchMs += performance.now() - t0;
+  return res;
+}
+
+function search(g: NavGrid, from: { x: number; z: number }, goal: NavGoal, o: SearchOptions): PathResult {
+  const sx = cellOfDm(from.x), sz = cellOfDm(from.z);
+  const tx = cellOfDm(goal.x), tz = cellOfDm(goal.z);
+  if (!g.inside(sx, sz)) return { ok: false, code: 'outside', expanded: 0 };
+  g.g.fill(-1); g.closed.fill(0);
+  const start = g.index(sx, sz);
+  const heap = new Heap();
+  const hOf = (x: number, z: number) => Math.max(0, octile(x, z, tx, tz) - goal.reach);
+  g.g[start] = 0; g.parent[start] = -1;
+  heap.push(hOf(sx, sz), hOf(sx, sz), start);
+  let expanded = 0;
+  while (heap.size) {
+    const i = heap.pop();
+    if (g.closed[i]) continue;
+    g.closed[i] = 1;
+    const x = g.cellX(i), z = g.cellZ(i);
+    if ((i !== start || g.block[i] === BLOCK.none || (o.ignoreNature && natureBlock(g.block[i]))) && isGoal(x, z, goal)) {
+      const cells: number[] = [];
+      for (let k = i; k !== start; k = g.parent[k]) cells.push(g.cellZ(k), g.cellX(k));
+      cells.reverse();
+      return { ok: true, cells, cost: g.g[i], expanded };
+    }
+    if (++expanded > o.maxExpansions) return { ok: false, code: 'budget', expanded };
+    for (const [dx, dz] of DIRS) {
+      const c = moveCost(g, x, z, dx, dz, o);
+      if (c < 0) continue;
+      const j = g.index(x + dx, z + dz);
+      if (g.closed[j]) continue;
+      const ng = g.g[i] + c;
+      if (g.g[j] >= 0 && g.g[j] <= ng) continue;
+      g.g[j] = ng; g.parent[j] = i;
+      const h = hOf(x + dx, z + dz);
+      heap.push(ng + h, h, j);
+    }
+  }
+  return { ok: false, code: 'no_route', expanded };
+}
+
+/** What stops a walker reaching a goal: the first locked gate, tree or rock on the best route around it, or the destination itself. */
+export function explainNoRoute(world: World, g: NavGrid, from: { x: number; z: number }, goal: NavGoal, budget: number): { reason: string; by: string; expanded: number } {
+  let expanded = 0;
+  const tx = cellOfDm(goal.x), tz = cellOfDm(goal.z);
+  if (!g.inside(cellOfDm(from.x), cellOfDm(from.z)) || !g.inside(tx, tz)) return { reason: 'the destination is outside the settlement', by: 'outside', expanded };
+  const withGates = findPath(world, g, from, goal, { ignoreLocked: true, maxExpansions: budget });
+  expanded += withGates.expanded;
+  if (withGates.ok) {
+    let px = cellOfDm(from.x), pz = cellOfDm(from.z);
+    for (let k = 0; k < withGates.cells.length; k += 2) {
+      const gate = g.gateBetween(px, pz, withGates.cells[k], withGates.cells[k + 1]);
+      if (gate && g.gateState.get(gate) === 'locked') return { reason: `the ${gateLabel(gate)} is locked`, by: gate, expanded };
+      px = withGates.cells[k]; pz = withGates.cells[k + 1];
+    }
+  }
+  const through = findPath(world, g, from, goal, { ignoreLocked: true, ignoreNature: true, maxExpansions: budget });
+  expanded += through.expanded;
+  if (through.ok) {
+    for (let k = 0; k < through.cells.length; k += 2) {
+      const i = g.index(through.cells[k], through.cells[k + 1]);
+      if (natureBlock(g.block[i])) return { reason: `${REASON_TEXT[REASON_NAMES[g.block[i]]]} blocks the way`, by: g.blockId.get(i) ?? REASON_NAMES[g.block[i]], expanded };
+    }
+  }
+  // Nothing passable near the destination itself?
+  let standable = false, worst: BlockReason = 'none', worstId = '';
+  const r = Math.ceil(goal.reach / 10) + 1;
+  for (let z = tz - r; z <= tz + r; z++) {
+    for (let x = tx - r; x <= tx + r; x++) {
+      if (!g.inside(x, z) || !isGoal(x, z, goal)) continue;
+      const i = g.index(x, z);
+      if (g.block[i] === BLOCK.none) standable = true;
+      else if (worst === 'none') { worst = REASON_NAMES[g.block[i]]; worstId = g.blockId.get(i) ?? worst; }
+    }
+  }
+  if (!standable) return { reason: `the destination is ${worst === 'none' ? 'not walkable' : `taken by ${REASON_TEXT[worst]}`}`, by: worstId || worst, expanded };
+  return { reason: 'no walkable route: cliffs, deep water or fences cut it off', by: 'terrain', expanded };
+}
+
+export function gateLabel(id: string): string {
+  const [kind, name] = id.split(':');
+  return kind === 'door' ? `${name} door` : `${name} gate`;
+}
+
+// ---------- routes as state ----------
+
+/** Keep only the cells where the direction changes (and the last). */
+export function compressPath(cells: number[], startX: number, startZ: number): number[] {
+  const out: number[] = [];
+  let px = startX, pz = startZ, dx = NaN, dz = NaN;
+  for (let k = 0; k < cells.length; k += 2) {
+    const x = cells[k], z = cells[k + 1], ndx = x - px, ndz = z - pz;
+    if (out.length && ndx === dx && ndz === dz) { out[out.length - 2] = x; out[out.length - 1] = z; }
+    else out.push(x, z);
+    dx = ndx; dz = ndz; px = x; pz = z;
+  }
+  return out;
+}
+
+/** Every cell of a compressed route, walking from (startX, startZ). */
+export function expandPath(corners: number[], startX: number, startZ: number): number[] {
+  const out: number[] = [];
+  let x = startX, z = startZ;
+  for (let k = 0; k < corners.length; k += 2) {
+    const tx = corners[k], tz = corners[k + 1];
+    if (x === tx && z === tz && out.length === 0) { out.push(x, z); continue; }
+    let guard = 0;
+    while ((x !== tx || z !== tz) && guard++ < 512) { x += Math.sign(tx - x); z += Math.sign(tz - z); out.push(x, z); }
+  }
+  return out;
+}
+
+/** A walker's route state (saved with the walker; integers and strings only). */
+export interface NavState {
+  /** Corner cells still to walk (world metres, flat x, z pairs). */
+  path: number[];
+  /** Grid hash the route was planned on; any change triggers a replan. */
+  plan: string;
+  /** Destination point (dm) and reach (dm) the route serves. */
+  dest: [number, number, number];
+  /** A closed gate the walker stopped at; it opens it on its next tick. */
+  opening?: string;
+  /** A gate this walker opened and must close behind itself, and the far cell. */
+  opened?: string;
+  far?: [number, number];
+  blocked?: NavBlocked;
+}
+export interface NavBlocked { reason: string; by: string; target: string; since: number }
+
+export interface NavContext {
+  world: World;
+  grid: NavGrid;
+  tick: number;
+  /** Shared search budget for this tick (expansions), decremented by every search. */
+  budget: { left: number };
+  gate(id: string): GateState;
+  setGate(id: string, state: GateState): void;
+  /** May this walker open and close the gate (it is never asked for a locked one). */
+  canOperate(id: string): boolean;
+}
+
+export type NavStep =
+  | { status: 'arrived' }
+  | { status: 'moving' }
+  | { status: 'waiting' }
+  | { status: 'blocked'; reason: string; by: string; fresh: boolean };
+
+const dist = (ax: number, az: number, bx: number, bz: number) => { const dx = bx - ax, dz = bz - az; return Math.sqrt(dx * dx + dz * dz); };
+
+/**
+ * Walk one tick toward a goal: replan when the grid or goal changed, stop to
+ * open closed gates, close them behind, and report a real obstruction when
+ * no route exists. The walker only ever moves along a valid route: there is
+ * no teleport and no straight-line fallback.
+ */
+export function navStep(ctx: NavContext, w: { x: number; z: number; nav?: NavState }, goal: NavGoal, speed: number, target: string): NavStep {
+  const g = ctx.grid;
+  let nav = w.nav;
+  // Open the gate it stopped at (one tick of work), unless it was locked meanwhile.
+  if (nav?.opening) {
+    const id = nav.opening;
+    delete nav.opening;
+    const st = ctx.gate(id);
+    if (st === 'closed' && ctx.canOperate(id)) {
+      ctx.setGate(id, 'open');
+      nav.opened = id;
+      return { status: 'moving' };
+    }
+    if (st === 'locked') nav.plan = '';
+  }
+  const here = (): [number, number] => [cellOfDm(w.x), cellOfDm(w.z)];
+  const finalPoint = (cx: number, cz: number, last: boolean, dest: [number, number, number]): [number, number] =>
+    last && cellOfDm(dest[0]) === cx && cellOfDm(dest[1]) === cz ? [dest[0], dest[1]] : [centreDm(cx), centreDm(cz)];
+  const atFinal = (n: NavState) => {
+    if (n.path.length) return false;
+    const [cx, cz] = here();
+    if (!isGoal(cx, cz, { x: n.dest[0], z: n.dest[1], reach: n.dest[2] })) return false;
+    const [fx, fz] = finalPoint(cx, cz, true, n.dest);
+    return w.x === fx && w.z === fz;
+  };
+  const drift = goal.drift ?? 0;
+  const goalMoved = !nav || nav.dest[2] !== goal.reach
+    || Math.abs(nav.dest[0] - goal.x) > drift || Math.abs(nav.dest[1] - goal.z) > drift;
+  // Blocked with nothing changed: the answer would be the same, so do not search again.
+  if (nav?.blocked && !goalMoved && nav.plan === g.hash && !nav.path.length && nav.blocked.target === target) {
+    closeBehind(ctx, w, nav);
+    return { status: 'blocked', reason: nav.blocked.reason, by: nav.blocked.by, fresh: false };
+  }
+  if (!nav || goalMoved || nav.plan !== g.hash || (!nav.path.length && !atFinal(nav))) {
+    if (ctx.budget.left <= 0) return { status: 'waiting' };
+    const [sx, sz] = here();
+    const res = findPath(ctx.world, g, w, goal, { maxExpansions: ctx.budget.left });
+    ctx.budget.left -= res.expanded;
+    if (!res.ok && res.code === 'budget') return { status: 'waiting' };
+    const keep: Partial<NavState> = nav ? { ...(nav.opened ? { opened: nav.opened } : {}), ...(nav.far ? { far: nav.far } : {}) } : {};
+    if (!res.ok) {
+      const why = res.code === 'outside' ? { reason: 'it is outside the settlement grid', by: 'outside', expanded: 0 }
+        : explainNoRoute(ctx.world, g, w, goal, Math.max(0, ctx.budget.left));
+      ctx.budget.left -= why.expanded;
+      const prev = nav?.blocked;
+      const fresh = !prev || prev.target !== target || prev.reason !== why.reason;
+      nav = { path: [], plan: g.hash, dest: [goal.x, goal.z, goal.reach], ...keep,
+        blocked: { reason: why.reason, by: why.by, target, since: fresh ? ctx.tick : prev!.since } };
+      w.nav = nav;
+      closeBehind(ctx, w, nav);
+      return { status: 'blocked', reason: why.reason, by: why.by, fresh };
+    }
+    // An off-centre start walks to its own cell centre first, so every gate check happens at a centre.
+    // Already in a goal cell: the route is that cell (to the exact spot when it lies inside it).
+    const cells = !res.cells.length ? [sx, sz]
+      : w.x !== centreDm(sx) || w.z !== centreDm(sz) ? [sx, sz, ...res.cells] : res.cells;
+    nav = { path: compressPath(cells, sx, sz), plan: g.hash, dest: [goal.x, goal.z, goal.reach], ...keep };
+    w.nav = nav;
+  }
+  // Walk along the route.
+  let budget = speed;
+  const [sx0, sz0] = here();
+  const cells = expandPath(nav.path, sx0, sz0);
+  let moved = false;
+  while (budget > 0 && cells.length) {
+    const nx = cells[0], nz = cells[1];
+    const [cx, cz] = here();
+    if (w.x === centreDm(cx) && w.z === centreDm(cz) && (nx !== cx || nz !== cz)) {
+      // About to leave a centre for the next cell: is the edge still passable?
+      if (!canMove(g, cx, cz, nx, nz)) { nav.plan = ''; break; }
+      const gate = g.gateBetween(cx, cz, nx, nz);
+      if (gate) {
+        const st = ctx.gate(gate);
+        if (st === 'locked' || (st === 'closed' && !ctx.canOperate(gate))) { nav.plan = ''; break; }
+        if (st === 'closed') { nav.opening = gate; break; }
+        if (nav.opened === gate) nav.far = [nx, nz];
+      }
+    }
+    const [tx, tz] = finalPoint(nx, nz, cells.length === 2, nav.dest);
+    const d = dist(w.x, w.z, tx, tz);
+    if (d <= budget) {
+      w.x = tx; w.z = tz; budget -= d; cells.splice(0, 2); moved = true;
+      if (nav.opened && nav.far && nav.far[0] === nx && nav.far[1] === nz) closeBehind(ctx, w, nav, true);
+      continue;
+    }
+    w.x += Math.round(((tx - w.x) / d) * budget); w.z += Math.round(((tz - w.z) / d) * budget);
+    moved = true;
+    break;
+  }
+  const [ex, ez] = here();
+  nav.path = compressPath(cells, ex, ez);
+  closeBehind(ctx, w, nav);
+  if (nav.blocked) delete nav.blocked;
+  if (!cells.length && atFinal(nav)) return { status: 'arrived' };
+  return moved || nav.opening ? { status: 'moving' } : { status: 'waiting' };
+}
+
+/** Close a gate this walker opened once it is through (or has left it behind). */
+function closeBehind(ctx: NavContext, w: { x: number; z: number }, nav: NavState, through = false): void {
+  if (!nav.opened) return;
+  const cells = ctx.grid.gateCells.get(nav.opened);
+  const cx = cellOfDm(w.x), cz = cellOfDm(w.z);
+  const onGate = !!cells && ((cells[0] === cx && cells[1] === cz) || (cells[2] === cx && cells[3] === cz));
+  if (!through && onGate) return;
+  if (ctx.gate(nav.opened) === 'open') ctx.setGate(nav.opened, 'closed');
+  delete nav.opened;
+  delete nav.far;
+}
+
+/** Decimetre helpers for callers. */
+export const navCell = cellOfDm;
+export const navCentre = centreDm;
+export { CHUNK_SIZE as NAV_CHUNK };

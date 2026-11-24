@@ -21,8 +21,10 @@ import {
 import {
   Actor, CROPS, CropKind, FIELD_MAX, FIELD_MIN, HOMESTEAD_ACTIONS, HomesteadAction, Policy, ROLES, Role, STEWARD_ACTIONS, StewardAction,
   assignRole, expandField, foundHomestead, homesteadAct, markField, permitted, propose, removeField, resolveProposal, seedReserve,
-  setFieldCrop, setStewardPolicy, stepHomestead, FOUNDING_SUPPLIES,
+  setFieldCrop, setStewardPolicy, stepHomestead, FOUNDING_SUPPLIES, GATE_IDS, HOMESTEAD_NAV_VERSION, HOMESTEAD_VERSION,
+  setGate, upgradeHomestead,
 } from '../sim/homestead';
+import { GATE_STATES, GateState } from '../sim/nav';
 
 export const JOURNAL_SCHEMA = 1 as const;
 export const DESIGN_JOURNAL_SCHEMA = 2 as const;
@@ -33,12 +35,17 @@ export type Command = LegacyBuildCommand | BuildCommand | HarvestCommand
 /** M006 homestead commands (schema 3). `actor` attributes steward (AI agent) actions. */
 export type HomesteadCommand = FoundHomesteadCommand | HomesteadActCommand | AssignRoleCommand
   | ExpandFieldCommand | StewardProposeCommand | ResolveProposalCommand | StewardPolicyCommand
-  | MarkFieldCommand | SetCropCommand | RemoveFieldCommand;
+  | MarkFieldCommand | SetCropCommand | RemoveFieldCommand | SetGateCommand | UpgradeHomesteadCommand;
+/** M010: the owner opens, closes or locks a gate or door. */
+export interface SetGateCommand extends CommandEnvelope { type: 'set_gate'; gateId: string; state: GateState }
+/** M010: a legacy (v1) homestead switches to settlement rules v2 (navigation, gates, stage timber). */
+export interface UpgradeHomesteadCommand extends CommandEnvelope { type: 'upgrade_homestead' }
 /** The player lays out a field: where (metres, min corner), how big, and what to grow. */
 export interface MarkFieldCommand extends CommandEnvelope { type: 'mark_field'; x: number; z: number; w: number; d: number; crop: CropKind }
 export interface SetCropCommand extends CommandEnvelope { type: 'set_crop'; fieldId: string; crop: CropKind }
 export interface RemoveFieldCommand extends CommandEnvelope { type: 'remove_field'; fieldId: string }
-export interface FoundHomesteadCommand extends CommandEnvelope { type: 'found_homestead' }
+/** `rules: 2` founds under settlement rules v2 (M010); absent is the legacy homestead every old journal recorded. */
+export interface FoundHomesteadCommand extends CommandEnvelope { type: 'found_homestead'; rules?: typeof HOMESTEAD_NAV_VERSION }
 export interface HomesteadActCommand extends CommandEnvelope { type: 'homestead_act'; action: HomesteadAction; target: string }
 export interface AssignRoleCommand extends CommandEnvelope { type: 'assign_role'; villagerId: string; role: Role; actor: Actor }
 export interface ExpandFieldCommand extends CommandEnvelope { type: 'expand_field'; actor: Actor }
@@ -100,7 +107,9 @@ export type HomesteadOutcome =
   | { type: 'steward_policy'; enabled: boolean; assign_role: Policy; expand_field: Policy }
   | { type: 'mark_field'; fieldId: string; units: number; wood: number }
   | { type: 'set_crop'; fieldId: string; crop: CropKind }
-  | { type: 'remove_field'; fieldId: string };
+  | { type: 'remove_field'; fieldId: string }
+  | { type: 'set_gate'; gateId: string; state: GateState }
+  | { type: 'upgrade_homestead'; version: typeof HOMESTEAD_NAV_VERSION };
 export interface TransferOutcome {
   type: 'deposit' | 'withdraw'; stockpileId: typeof FOUNDER_STOCKPILE_ID;
   resources: Partial<Record<LifeResource, number>>;
@@ -213,7 +222,13 @@ const actorOf = (v: unknown): v is Actor => v === 'player' || v === 'steward';
 
 function validateHomesteadCommand(value: Record<string, unknown>, base: { schema: typeof CURRENT_JOURNAL_SCHEMA; id: string; expectedRevision: number }): Command | null {
   switch (value.type) {
-    case 'found_homestead': return { ...base, type: 'found_homestead' };
+    case 'found_homestead':
+      if (value.rules === undefined) return { ...base, type: 'found_homestead' };
+      return value.rules === HOMESTEAD_NAV_VERSION ? { ...base, type: 'found_homestead', rules: HOMESTEAD_NAV_VERSION } : null;
+    case 'set_gate':
+      if (!GATE_IDS.includes(value.gateId as never) || !GATE_STATES.includes(value.state as GateState)) return null;
+      return { ...base, type: 'set_gate', gateId: value.gateId as string, state: value.state as GateState };
+    case 'upgrade_homestead': return { ...base, type: 'upgrade_homestead' };
     case 'homestead_act':
       if (!HOMESTEAD_ACTIONS.includes(value.action as HomesteadAction) || typeof value.target !== 'string' || !HOMESTEAD_TARGET.test(value.target)) return null;
       return { ...base, type: 'homestead_act', action: value.action as HomesteadAction, target: value.target };
@@ -282,6 +297,11 @@ function validateHomesteadOutcome(value: Record<string, unknown>): CommandOutcom
     case 'remove_field':
       if (typeof value.fieldId !== 'string' || !FIELD_ID.test(value.fieldId)) return null;
       return { type: 'remove_field', fieldId: value.fieldId };
+    case 'set_gate':
+      if (!GATE_IDS.includes(value.gateId as never) || !GATE_STATES.includes(value.state as GateState)) return null;
+      return { type: 'set_gate', gateId: value.gateId as string, state: value.state as GateState };
+    case 'upgrade_homestead':
+      return value.version === HOMESTEAD_NAV_VERSION ? { type: 'upgrade_homestead', version: HOMESTEAD_NAV_VERSION } : null;
   }
   return null;
 }
@@ -493,6 +513,8 @@ export function validateJournal(value: unknown): CommandJournal {
       || (entry.command.type === 'set_crop' || entry.command.type === 'remove_field')
       && (entry.outcome.type === 'set_crop' || entry.outcome.type === 'remove_field') && entry.command.fieldId !== entry.outcome.fieldId
       || entry.command.type === 'set_crop' && entry.outcome.type === 'set_crop' && entry.command.crop !== entry.outcome.crop
+      || entry.command.type === 'set_gate' && entry.outcome.type === 'set_gate'
+      && (entry.command.gateId !== entry.outcome.gateId || entry.command.state !== entry.outcome.state)
       || entry.command.type === 'steward_policy' && entry.outcome.type === 'steward_policy'
       && (entry.command.enabled !== entry.outcome.enabled || entry.command.assign_role !== entry.outcome.assign_role
         || entry.command.expand_field !== entry.outcome.expand_field)) {
@@ -838,7 +860,7 @@ export class GameSession {
     const world = this.world;
     switch (command.type) {
       case 'found_homestead': {
-        const r = foundHomestead(world);
+        const r = foundHomestead(world, command.rules ?? HOMESTEAD_VERSION);
         return r.ok ? { ok: true, value: { type: 'found_homestead', anchorX: r.value.anchor.x, anchorZ: r.value.anchor.z,
           supplies: inventory({ ...FOUNDING_SUPPLIES }) } } : r;
       }
@@ -878,6 +900,14 @@ export class GameSession {
       case 'remove_field': {
         const r = removeField(world, command.fieldId);
         return r.ok ? { ok: true, value: { type: 'remove_field', fieldId: command.fieldId } } : r;
+      }
+      case 'set_gate': {
+        const r = setGate(world, command.gateId, command.state);
+        return r.ok ? { ok: true, value: { type: 'set_gate', gateId: command.gateId, state: command.state } } : r;
+      }
+      case 'upgrade_homestead': {
+        const r = upgradeHomestead(world);
+        return r.ok ? { ok: true, value: { type: 'upgrade_homestead', version: r.value.version } } : r;
       }
       case 'steward_policy': {
         const r = setStewardPolicy(world, command.enabled, { assign_role: command.assign_role, expand_field: command.expand_field });

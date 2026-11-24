@@ -3,7 +3,8 @@
 import { ActiveEntityKind, isRetiredStoneKind, World } from '../sim/world';
 import { CROP_YIELD_LABEL, cropReady } from '../sim/economy';
 import { M2_PROJECTS } from './projects';
-import { SPECIES_INFO, growthStage, treeSpecies, vegetationLabel } from '../sim/vegetation';
+import { SPECIES_INFO, growthStage, treeSpecies, treeTimber, vegetationLabel } from '../sim/vegetation';
+import { stageRulesActive } from '../sim/world';
 
 export type InspectionRef =
   | { entityId: string } | { structureId: string } | { siteId: string }
@@ -55,6 +56,9 @@ function entityInspection(world: World, ref: { entityId: string }): InspectionIn
   const species = treeSpecies(e, world.seed);
   const stage = growthStage(e);
   const label = vegetationLabel(e, world.seed);
+  // Settlement rules v2: an uncut tree holds its stage's timber (shown before the first cut sets the record).
+  const timber = stageRulesActive(world) && !e.harvestedOnce ? treeTimber(e) : null;
+  const left = timber ? timber.total : e.remaining, cut = timber ? timber.cut : e.yieldPerHarvest;
   const harvest = e.resource === 'fiber' ? 'Gather its plant fiber for processing into crop seed.'
     : 'Harvest its timber for carried wood.';
   return {
@@ -62,9 +66,9 @@ function entityInspection(world: World, ref: { entityId: string }): InspectionIn
     category: 'Natural resource',
     description: species ? `${SPECIES_INFO[species].blurb} ${harvest}` : catalog.description,
     facts: [
-      ...(stage ? [{ label: 'Growth', value: `${stage[0].toUpperCase()}${stage.slice(1)} · yield unchanged by stage` }] : []),
+      ...(stage ? [{ label: 'Growth', value: `${stage[0].toUpperCase()}${stage.slice(1)} · ${timber ? `${timber.total} wood at this stage` : 'yield unchanged by stage'}` }] : []),
       { label: 'Resource', value: e.resource ?? 'None' },
-      { label: 'Remaining', value: `${e.remaining} · ${Math.min(e.yieldPerHarvest, e.remaining)} per gather` },
+      { label: 'Remaining', value: `${left} · ${Math.min(cut, left)} per gather` },
       { label: 'Status', value: e.provisional ? 'Available · provisional art' : 'Available' },
     ],
   };

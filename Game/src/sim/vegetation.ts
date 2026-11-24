@@ -6,9 +6,10 @@
 // Entity generation, entity IDs, yields and obstruction radii are therefore
 // unchanged, and so are saves and state hashes.
 //
-// Growth stage is presentational: a sapling still yields exactly the wood its
-// entity record says. It chooses the block-built model and the inspector label,
-// never the resource amount.
+// Growth stage chooses the block-built model and the inspector label. Under
+// settlement rules v2 (M010) it also sets the timber yield and the physical
+// footprint (see the stage tables below); legacy worlds keep the entity
+// record's yield exactly.
 import type { Entity, EntityKind } from './world';
 import { hash2i } from './noise';
 
@@ -87,6 +88,31 @@ export function growthStage(entity: StageInput): GrowthStage | null {
   const s = Math.min(1, Math.max(0, (entity.scale - lo) / span));
   const u = 0.7 * h + 0.3 * s;
   return u < 0.17 ? 'sapling' : u < 0.36 ? 'young' : u < 0.78 ? 'mature' : 'old';
+}
+
+// ---- M010: growth stage as a simulation rule ----
+//
+// The stage above is the single source for both the model the renderer draws
+// and the rules below, so the sapling you see is the sapling the sim uses.
+// Worlds keep their legacy rules (12 wood from any tree, one trunk radius)
+// until they run settlement rules v2 (a homestead founded or upgraded under
+// M010); see `stageRulesActive` in world.ts. Generation never changes, so
+// genesis hashes and old saves are untouched.
+
+/** Navigation footprint (metres from the trunk): a cell is blocked when its centre is this close. */
+export const STAGE_FOOTPRINT: Record<GrowthStage, number> = { sapling: 0.3, young: 0.6, mature: 1.0, old: 1.5 };
+/** Trunk collision radius for the walking character (metres, before entity scale). */
+export const STAGE_TRUNK: Record<GrowthStage, number> = { sapling: 0.15, young: 0.3, mature: 0.45, old: 0.45 };
+/** Total timber a tree of this stage yields, and the amount one cut takes. */
+export const STAGE_WOOD: Record<GrowthStage, { total: number; cut: number }> = {
+  sapling: { total: 2, cut: 2 }, young: { total: 6, cut: 3 }, mature: { total: 12, cut: 4 }, old: { total: 16, cut: 4 },
+};
+
+/** Timber of a tree under stage rules, or null when the entity is not a tree. */
+export function treeTimber(entity: StageInput): { total: number; cut: number } | null {
+  if (!entity.kind.startsWith('styl_tree_')) return null;
+  const stage = growthStage(entity);
+  return stage ? STAGE_WOOD[stage] : null;
 }
 
 /** Presentation variant (0..2) so trees of one species and stage differ. */
