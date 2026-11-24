@@ -162,3 +162,7 @@ In the browser (Chromium, software GL), from `window.__metrics.homestead.navStat
 - First tick after loading a v2 world: about 5–9 ms in the browser (chunks resident) and about 200 ms in Node (chunks generated).
 - In a legacy world before upgrading, and in any world with no v2 homestead, the player's tree harvest still yields 12 wood regardless of stage. This is how the rules are gated, so that old journals replay exactly.
 - The browser runs were desktop software GL only. No phone or real GPU was used.
+
+## Live deployment check
+
+Release `20261124T211145Z-0bbc656` was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd` but not merged to `main`. The served bundle matches the local build (`assets/index-DZOn8jKi.js`). A fresh headless Chromium context (software GL, empty storage, `?chain=0`) founded a new homestead with no page errors. All five gates and doors were present and closed (`door:farmhouse`, `gate:coop`, `gate:paddock`, `gate:pen`, `gate:sty`), along with all 15 animals and both villagers. Over settlement ticks 14 to 32 both villagers were idle or between tasks, and Ada moved once from (-32.5, -8.5) to (-33.5, -6.5). The store did not change in that window. Gate use and deliveries were therefore not seen on the live site. They are shown only by the local runs above. Screenshot: `live-0bbc656.png`.
