@@ -6,7 +6,7 @@ import {
 } from './sim/world';
 import { VoxelTerrainView, ViewMode } from './render/terrain';
 import { buildNoxelNature, lodCounts } from './render/nature';
-import type { LodBatch } from './render/lod';
+import type { LodSet } from './render/lod';
 import { buildNoxelSite, buildKit } from './render/noxel';
 import { Sky, timeLabel } from './render/sky';
 import { OrbitRig } from './render/camera';
@@ -30,6 +30,7 @@ import { HomesteadGame } from './app/homestead';
 import { DAY_TICKS } from './sim/homestead';
 import { buildAnimalShowcase } from './render/animal-showcase';
 import { renderBreakdown } from './app/render-breakdown';
+import { GroundCoverView } from './render/ground-cover';
 
 // A startup failure would otherwise leave a blank canvas with no explanation.
 window.addEventListener('error', (e) => {
@@ -96,6 +97,11 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 app.appendChild(renderer.domElement);
+
+// BatchedMesh draws one call per visible instance without WEBGL_multi_draw
+// (some mobile GPUs). Vegetation then uses bounded merged tiles instead.
+// ?multidraw=0 forces that fallback for testing.
+const multiDraw = params.get('multidraw') !== '0' && renderer.extensions.has('WEBGL_multi_draw');
 
 const scene = new THREE.Scene();
 const rig = new OrbitRig(renderer.domElement);
@@ -168,7 +174,7 @@ const terrainView = new VoxelTerrainView(world, scene, {
 let natureDirty = true;
 let natureInstances = 0;
 // Distance LOD of trees, bushes and stone props (presentation only).
-let natureLod: LodBatch | null = null;
+let natureLod: LodSet | null = null;
 // Stable root: inspector registration survives chunk and harvest rebuilds.
 const natureGroup = new THREE.Group();
 natureGroup.name = 'styl_nature';
@@ -262,7 +268,7 @@ function disposeObject(obj: THREE.Object3D): void {
 function rebuildNature(): void {
   for (const child of natureGroup.children) disposeObject(child);
   natureGroup.clear();
-  const result = buildNoxelNature(world, terrainView.loadedChunkKeys, { camera: rig.camera.position });
+  const result = buildNoxelNature(world, terrainView.loadedChunkKeys, { camera: rig.camera.position, multiDraw });
   // Map mode has no near chunks, so its hidden nature group is legitimately
   // empty. Avoid Three's variadic add() warning when handed an empty spread.
   if (result.group.children.length > 0) natureGroup.add(...result.group.children);
@@ -274,6 +280,10 @@ function rebuildNature(): void {
 }
 
 rebuildNature();
+
+// Render-only grass, flowers, ferns, stones, logs and understory near the view.
+const groundCover = isMap || isKit ? null : new GroundCoverView(world);
+if (groundCover) scene.add(groundCover.group);
 
 const siteGroup = new THREE.Group();
 siteGroup.name = 'noxel_sites';
@@ -500,6 +510,9 @@ function metrics() {
     m2: m2Game?.metrics() ?? null,
     nearTriangles: terrainView.nearTriangles,
     macroTriangles: terrainView.macroTriangleCount,
+    macroVisibleTriangles: terrainView.macroVisibleTriangles,
+    groundCover: groundCover?.metrics() ?? null,
+    multiDraw,
     rendererCalls: renderer.info.render.calls,
     rendererTriangles: renderer.info.render.triangles,
     rendererGeometries: renderer.info.memory.geometries,
@@ -582,6 +595,7 @@ function frame(timestamp?: number) {
     time.t = ((lifeTick + frac) / DAY_TICKS + 0.23) % 1;
   }
   sky.setFocus(rig.target);
+  sky.setShadowView(rig.target, rig.camera.position);
   sky.update(time.t);
   if (isMap) scene.fog = null;
   // Underwater: when the lens is inside water, visibility drops to a few metres.
@@ -594,6 +608,7 @@ function frame(timestamp?: number) {
   terrainView.setWaterTime(freeze ? 0 : timer.getElapsed());
   const tTerrain = performance.now();
   terrainView.update(rig.target, mode);
+  terrainView.cullMacro(rig.camera);
   sections.record('terrain', performance.now() - tTerrain);
   if (natureDirty && !isMap && frames % 2 === 0) rebuildNature();
   const tVegetation = performance.now();
@@ -602,6 +617,9 @@ function frame(timestamp?: number) {
   if (natureLod && !isMap) natureLod.update(rig.camera.position);
   sections.record('vegetation', performance.now() - tVegetation);
   if (natureGroup) natureGroup.visible = !isMap;
+  const tCover = performance.now();
+  groundCover?.update(rig.target, terrainView.loadedChunkKeys);
+  sections.record('groundcover', performance.now() - tCover);
   m2Game?.update(performance.now());
   sceneInspector?.update();
 
@@ -750,7 +768,7 @@ if (!isMap && !isKit) {
 // Mutable inspection handles require a development build and explicit opt-in.
 window.__probe = { renderer, camera: rig.camera };
 // Read-only draw call / triangle breakdown per scene owner (main + shadow pass).
-window.__renderBreakdown = () => renderBreakdown(scene, { camera: rig.camera, renderer });
+window.__renderBreakdown = () => renderBreakdown(scene, { camera: rig.camera, renderer, multiDraw });
 if (import.meta.env.DEV && params.get('debug') === '1') {
   Object.assign(window.__probe, { THREE, terrainView });
   window.__scene = scene;

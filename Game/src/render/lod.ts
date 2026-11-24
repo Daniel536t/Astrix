@@ -88,7 +88,30 @@ export interface LodStats {
   switches: number;
 }
 
-export class LodBatch {
+/** Raycast/keyboard inspection target of one logical instance. */
+export interface LodTarget { entityId: string; x: number; y: number; z: number }
+
+/**
+ * What the vegetation builder and the frame loop need from a LOD renderer.
+ * LodBatch (BatchedMesh, needs WEBGL_multi_draw to stay at a few calls) and
+ * TiledLodMesh (merged static tiles, bounded calls on any GPU) implement it.
+ */
+export interface LodSet {
+  /** Scene objects to add (the renderer's meshes or groups). */
+  readonly objects: THREE.Object3D[];
+  readonly count: number;
+  bandAt(id: number): LodBand;
+  addGeometry(lod: LodBand, geometry: THREE.BufferGeometry): number;
+  addInstance(geometry: LodGeometry, matrix: THREE.Matrix4, position: Vec3Like): number;
+  /** Entity id per instance id and keyboard targets, for inspection. */
+  setInspection(batchIds: string[], targets: LodTarget[]): void;
+  update(camera: Vec3Like, force?: boolean): boolean;
+  stats(): LodStats;
+  drawnTriangles(): number;
+  finish(): void;
+}
+
+export class LodBatch implements LodSet {
   readonly main: THREE.BatchedMesh;
   readonly far: THREE.BatchedMesh;
   readonly bands: LodBands;
@@ -114,9 +137,19 @@ export class LodBatch {
     for (const mesh of [this.main, this.far]) mesh.perObjectFrustumCulled = true;
   }
 
+  get objects(): THREE.Object3D[] { return [this.main, this.far]; }
+
   /** Adds a geometry to the mesh that draws `lod`; returns its geometry id. */
   addGeometry(lod: LodBand, geometry: THREE.BufferGeometry): number {
     return (lod === LOD_FAR ? this.far : this.main).addGeometry(geometry);
+  }
+
+  // BatchedMesh raycasts expose batchId. Both meshes share instance ids, so
+  // both carry the same id list; keyboard targets live on the main mesh only.
+  setInspection(batchIds: string[], targets: LodTarget[]): void {
+    this.main.userData.inspectableBatchIds = batchIds;
+    this.main.userData.inspectableTargets = targets;
+    this.far.userData.inspectableBatchIds = batchIds;
   }
 
   /** Registers a logical instance, initially in the near band; returns its id in both meshes. */
@@ -196,5 +229,229 @@ export class LodBatch {
       mesh.computeBoundingBox();
       mesh.computeBoundingSphere();
     }
+  }
+}
+
+/** Default side (m) of a TiledLodMesh tile: three 32 m chunks. */
+export const LOD_TILE_SIZE = 96;
+
+interface LodTile {
+  key: string;
+  ids: number[];
+  /** Near and mid instances, shadow casting. */
+  main: THREE.Mesh;
+  /** Far instances, no shadow. */
+  far: THREE.Mesh;
+  dirty: boolean;
+}
+
+export interface TiledLodMeshOptions {
+  name: string;
+  material: THREE.Material;
+  bands?: LodBands;
+  moveThreshold?: number;
+  tileSize?: number;
+}
+
+const _tm = new THREE.Matrix4();
+const _tn = new THREE.Matrix3();
+const _tv = new THREE.Vector3();
+const _hits: THREE.Intersection[] = [];
+
+/**
+ * Bounded-draw LOD renderer for GPUs without WEBGL_multi_draw, where a
+ * BatchedMesh costs one draw call per visible instance. Instances are
+ * grouped into square tiles; each tile bakes its near/mid instances into one
+ * shadow-casting mesh and its far instances into one non-casting mesh. A
+ * tile is rebuilt only when one of its instances changes band, so the cost
+ * is at most two calls per visible tile in the main pass and one per tile
+ * inside the shadow box, whatever the tree count. Tiles cull by bounding
+ * sphere like any mesh. Raycasts report `batchId` = instance id (from the
+ * hit triangle), so inspection works exactly as with LodBatch.
+ */
+export class TiledLodMesh implements LodSet {
+  readonly group = new THREE.Group();
+  readonly bands: LodBands;
+  readonly moveThreshold: number;
+  private readonly tileSize: number;
+  private readonly material: THREE.Material;
+  private readonly name: string;
+  private readonly geometries: THREE.BufferGeometry[] = [];
+  private readonly lodOf: LodBand[] = [];
+  private readonly positions: number[] = [];
+  private readonly matrices: THREE.Matrix4[] = [];
+  private readonly geometry: LodGeometry[] = [];
+  private readonly band: LodBand[] = [];
+  private readonly tileOf: LodTile[] = [];
+  private readonly tiles = new Map<string, LodTile>();
+  private readonly lastCamera = new THREE.Vector3(Infinity, Infinity, Infinity);
+  private batchIds: string[] = [];
+  private evaluations = 0;
+  private switches = 0;
+  /** Tile geometry rebuilds so far (for metrics and tests). */
+  tileBuilds = 0;
+
+  constructor(options: TiledLodMeshOptions) {
+    this.bands = options.bands ?? DEFAULT_LOD_BANDS;
+    this.moveThreshold = options.moveThreshold ?? 4;
+    this.tileSize = options.tileSize ?? LOD_TILE_SIZE;
+    this.material = options.material;
+    this.name = options.name;
+    this.group.name = `${options.name}_tiles`;
+  }
+
+  get objects(): THREE.Object3D[] { return [this.group]; }
+  get count(): number { return this.band.length; }
+  get tileCount(): number { return this.tiles.size; }
+  bandAt(id: number): LodBand { return this.band[id]; }
+
+  addGeometry(lod: LodBand, geometry: THREE.BufferGeometry): number {
+    this.geometries.push(geometry);
+    this.lodOf.push(lod);
+    return this.geometries.length - 1;
+  }
+
+  addInstance(geometry: LodGeometry, matrix: THREE.Matrix4, position: Vec3Like): number {
+    const id = this.band.length;
+    this.positions.push(position.x, position.y, position.z);
+    this.matrices.push(matrix.clone());
+    this.geometry.push(geometry);
+    this.band.push(LOD_NEAR);
+    const key = `${Math.floor(position.x / this.tileSize)},${Math.floor(position.z / this.tileSize)}`;
+    let tile = this.tiles.get(key);
+    if (!tile) {
+      const mk = (suffix: string, cast: boolean) => {
+        const mesh = new THREE.Mesh(new THREE.BufferGeometry(), this.material);
+        mesh.name = `${this.name}${suffix}`;
+        mesh.castShadow = cast;
+        mesh.receiveShadow = true;
+        mesh.visible = false;
+        return mesh;
+      };
+      tile = { key, ids: [], main: mk('_tile', true), far: mk('_tile_far', false), dirty: true };
+      this.tiles.set(key, tile);
+      this.group.add(tile.main, tile.far);
+    }
+    tile.ids.push(id);
+    tile.dirty = true;
+    this.tileOf.push(tile);
+    return id;
+  }
+
+  setInspection(batchIds: string[], targets: LodTarget[]): void {
+    this.batchIds = batchIds;
+    this.group.userData.inspectableTargets = targets;
+    for (const tile of this.tiles.values()) {
+      tile.main.userData.inspectableBatchIds = batchIds;
+      tile.far.userData.inspectableBatchIds = batchIds;
+    }
+  }
+
+  private geometryFor(id: number): THREE.BufferGeometry {
+    const g = this.geometry[id], b = this.band[id];
+    return this.geometries[b === LOD_NEAR ? g.near : b === LOD_MID ? g.mid : g.far];
+  }
+
+  /** Bake one tile: near/mid instances into `main`, far ones into `far`. */
+  private buildTile(tile: LodTile): void {
+    for (const [mesh, far] of [[tile.main, false], [tile.far, true]] as const) {
+      const ids = tile.ids.filter((id) => (this.band[id] === LOD_FAR) === far);
+      let vertices = 0;
+      for (const id of ids) vertices += this.geometryFor(id).attributes.position.count;
+      const position = new Float32Array(vertices * 3), normal = new Float32Array(vertices * 3), color = new Float32Array(vertices * 3);
+      const owner = new Uint32Array(vertices / 3);
+      let o = 0;
+      for (const id of ids) {
+        const g = this.geometryFor(id);
+        const gp = g.attributes.position.array as ArrayLike<number>;
+        const gn = g.attributes.normal.array as ArrayLike<number>;
+        const gc = g.attributes.color?.array as ArrayLike<number> | undefined;
+        _tm.copy(this.matrices[id]);
+        _tn.getNormalMatrix(_tm);
+        owner.fill(id, o / 9, o / 9 + gp.length / 9);
+        for (let i = 0; i < gp.length; i += 3, o += 3) {
+          _tv.set(gp[i], gp[i + 1], gp[i + 2]).applyMatrix4(_tm);
+          position[o] = _tv.x; position[o + 1] = _tv.y; position[o + 2] = _tv.z;
+          _tv.set(gn[i], gn[i + 1], gn[i + 2]).applyMatrix3(_tn).normalize();
+          normal[o] = _tv.x; normal[o + 1] = _tv.y; normal[o + 2] = _tv.z;
+          if (gc) { color[o] = gc[i]; color[o + 1] = gc[i + 1]; color[o + 2] = gc[i + 2]; } else color.fill(1, o, o + 3);
+        }
+      }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
+      geometry.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(color, 3));
+      geometry.computeBoundingSphere();
+      mesh.geometry.dispose();
+      mesh.geometry = geometry;
+      mesh.visible = vertices > 0;
+      mesh.userData.triangleOwner = owner;
+    }
+    tile.dirty = false;
+    this.tileBuilds++;
+  }
+
+  update(camera: Vec3Like, force = false): boolean {
+    const dx = camera.x - this.lastCamera.x, dy = camera.y - this.lastCamera.y, dz = camera.z - this.lastCamera.z;
+    if (!force && dx * dx + dy * dy + dz * dz < this.moveThreshold * this.moveThreshold) return false;
+    this.lastCamera.set(camera.x, camera.y, camera.z);
+    const p = this.positions;
+    for (let i = 0; i < this.band.length; i++) {
+      const d = Math.hypot(p[i * 3] - camera.x, p[i * 3 + 1] - camera.y, p[i * 3 + 2] - camera.z);
+      const band = selectLodBand(d, this.band[i], this.bands);
+      if (band === this.band[i]) continue;
+      this.band[i] = band;
+      this.tileOf[i].dirty = true;
+      this.switches++;
+    }
+    this.rebuildDirty();
+    this.evaluations++;
+    return true;
+  }
+
+  private rebuildDirty(): void {
+    for (const tile of this.tiles.values()) if (tile.dirty) this.buildTile(tile);
+  }
+
+  stats(): LodStats {
+    const instances: [number, number, number] = [0, 0, 0];
+    const triangles: [number, number, number] = [0, 0, 0];
+    for (let i = 0; i < this.band.length; i++) {
+      const b = this.band[i];
+      instances[b]++;
+      triangles[b] += this.geometry[i].triangles[b];
+    }
+    return { instances, triangles, evaluations: this.evaluations, switches: this.switches };
+  }
+
+  drawnTriangles(): number {
+    const t = this.stats().triangles;
+    return t[0] + t[1] + t[2];
+  }
+
+  finish(): void {
+    const batchIds = this.batchIds;
+    for (const tile of this.tiles.values()) {
+      for (const mesh of [tile.main, tile.far]) {
+        mesh.userData.inspectableBatchIds = batchIds;
+        // Report the instance under the hit triangle as batchId, like BatchedMesh.
+        mesh.raycast = function (raycaster: THREE.Raycaster, intersects: THREE.Intersection[]) {
+          _hits.length = 0;
+          THREE.Mesh.prototype.raycast.call(this, raycaster, _hits);
+          const owner = this.userData.triangleOwner as Uint32Array | undefined;
+          for (const hit of _hits) {
+            if (owner && hit.faceIndex !== undefined && hit.faceIndex !== null) {
+              (hit as THREE.Intersection & { batchId?: number }).batchId = owner[hit.faceIndex];
+            }
+            intersects.push(hit);
+          }
+        };
+      }
+    }
+    this.rebuildDirty();
+  }
+
+  dispose(): void {
+    for (const tile of this.tiles.values()) { tile.main.geometry.dispose(); tile.far.geometry.dispose(); }
   }
 }

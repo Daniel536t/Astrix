@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { Entity, World } from '../sim/world';
 import { growthStage, isVegetationKind, treeSpecies, vegetationVariant } from '../sim/vegetation';
-import { DEFAULT_LOD_BANDS, LOD_FAR, LOD_MID, LOD_NEAR, LodBand, LodBands, LodBatch, LodGeometry, Vec3Like } from './lod';
+import { DEFAULT_LOD_BANDS, LOD_FAR, LOD_MID, LOD_NEAR, LodBand, LodBands, LodBatch, LodGeometry, LodSet, LodTarget, TiledLodMesh, Vec3Like } from './lod';
 import { VegetationPlan, blocksGeometry, cairnPlan, orePlan, planBlocks, vegetationPlan } from './vegetation-kit';
 
 interface ResolvedModel { key: string; plan: VegetationPlan }
@@ -74,10 +74,10 @@ export interface NatureBuildResult {
   /** Per-band instance and triangle counts at the current LOD. */
   lodCounts: NatureLodCounts;
   /** LOD controller; null when nothing is drawn. */
-  lod: LodBatch | null;
+  lod: LodSet | null;
 }
 
-export function lodCounts(lod: LodBatch | null): NatureLodCounts {
+export function lodCounts(lod: LodSet | null): NatureLodCounts {
   const s = lod?.stats() ?? { instances: [0, 0, 0], triangles: [0, 0, 0] };
   return {
     near: { instances: s.instances[0], triangles: s.triangles[0] },
@@ -92,11 +92,18 @@ export interface NatureBuildOptions {
   /** Camera position for the initial LOD bands; without it every instance starts near. */
   camera?: Vec3Like;
   bands?: LodBands;
+  /**
+   * WEBGL_multi_draw available (default true). Without it a BatchedMesh costs
+   * one draw call per visible instance, so the build uses TiledLodMesh:
+   * merged static tiles with a bounded number of calls.
+   */
+  multiDraw?: boolean;
 }
 
 /**
- * Build the natural assets of the supplied loaded chunks into one LodBatch:
- * a shadow-casting near/mid BatchedMesh and a non-casting far BatchedMesh.
+ * Build the natural assets of the supplied loaded chunks into one LodBatch
+ * (a shadow-casting near/mid BatchedMesh and a non-casting far BatchedMesh),
+ * or into a TiledLodMesh when WEBGL_multi_draw is missing.
  * Entities remain the source of truth; harvested entities are skipped.
  */
 export function buildNoxelNature(
@@ -126,14 +133,17 @@ export function buildNoxelNature(
       + natureGeometry(model, LOD_MID).attributes.position.count;
     farVertices += natureGeometry(model, LOD_FAR).attributes.position.count;
   }
-  const lod = new LodBatch({
-    name: 'styl_nature_batch',
-    material: natureMaterial,
-    maxInstances: live.length,
-    mainVertices,
-    farVertices,
-    bands: options.bands ?? DEFAULT_LOD_BANDS,
-  });
+  const bands = options.bands ?? DEFAULT_LOD_BANDS;
+  const lod: LodSet = options.multiDraw === false
+    ? new TiledLodMesh({ name: 'styl_nature', material: natureMaterial, bands })
+    : new LodBatch({
+      name: 'styl_nature_batch',
+      material: natureMaterial,
+      maxInstances: live.length,
+      mainVertices,
+      farVertices,
+      bands,
+    });
 
   const ids = new Map<string, LodGeometry>();
   for (const [key, model] of models) {
@@ -146,14 +156,10 @@ export function buildNoxelNature(
     });
   }
 
-  // BatchedMesh raycasts expose batchId, not a Mesh per entity. Both meshes
-  // share instance ids, so both carry the same id list. Keyboard targets
-  // live on the main mesh only, so each entity is listed once.
+  // Raycasts report a batchId (instance id), not a Mesh per entity; the id
+  // list maps it to the entity. Keyboard targets list each entity once.
   const batchIds: string[] = [];
-  const targets: Array<{ entityId: string; x: number; y: number; z: number }> = [];
-  lod.main.userData.inspectableBatchIds = batchIds;
-  lod.main.userData.inspectableTargets = targets;
-  lod.far.userData.inspectableBatchIds = batchIds;
+  const targets: LodTarget[] = [];
 
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
@@ -173,9 +179,10 @@ export function buildNoxelNature(
       : e.scale;
     targets[id] = { entityId: e.id, x: e.x, y: e.y + targetHeight, z: e.z };
   }
-  lod.finish();
+  lod.setInspection(batchIds, targets);
   if (options.camera) lod.update(options.camera, true);
-  group.add(lod.main, lod.far);
+  lod.finish();
+  group.add(...lod.objects);
 
   return { group, triangles: lod.drawnTriangles(), instances: live.length, lodCounts: lodCounts(lod), lod };
 }

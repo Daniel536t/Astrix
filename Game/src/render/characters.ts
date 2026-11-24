@@ -4,7 +4,8 @@
 // legs) built from boxes of deliberately varied proportion: a tapered torso,
 // belt, collar, hair cap, hands and boots, so the silhouette reads as a person
 // at gameplay distance without becoming a pile of identical cubes.
-// Animation rotates the rigid parts; there is no skinning.
+// Animation rotates the rigid parts. The parts are drawn as one skinned mesh
+// (one rigid bone per part), so a figure costs one draw call per pass.
 //
 // Scale: 1 unit = 1 m. The founder is 1.7 m tall (ADB §5 human ruler).
 import * as THREE from 'three';
@@ -76,15 +77,54 @@ export interface Figure {
   phase: number;
 }
 
-function joint(name: string, geo: THREE.BufferGeometry, x: number, y: number, z: number): THREE.Group {
+interface Part { joint: THREE.Group; geo: THREE.BufferGeometry }
+
+function joint(parts: Part[], name: string, geo: THREE.BufferGeometry, x: number, y: number, z: number): THREE.Group {
   const g = new THREE.Group();
   g.name = name;
   g.position.set(x, y, z);
-  const mesh = new THREE.Mesh(geo, material);
+  parts.push({ joint: g, geo });
+  return g;
+}
+
+/**
+ * One skinned mesh for the whole figure. Each rigid part is bound with
+ * weight 1 to a bone that sits at its joint, so rotating the joint groups
+ * poses the figure exactly as the old one-mesh-per-part hierarchy did, at
+ * one draw call per pass instead of six.
+ */
+function skinFigure(root: THREE.Group, parts: Part[]): THREE.SkinnedMesh {
+  root.updateMatrixWorld(true);
+  const toRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const bones: THREE.Bone[] = [];
+  const geos = parts.map(({ joint: j, geo }, index) => {
+    const bone = new THREE.Bone();
+    bone.name = `${j.name}_bone`;
+    j.add(bone);
+    bones.push(bone);
+    const g = geo.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(toRoot, j.matrixWorld));
+    const n = g.attributes.position.count;
+    const skinIndex = new Uint16Array(n * 4), skinWeight = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) { skinIndex[i * 4] = index; skinWeight[i * 4] = 1; }
+    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndex, 4));
+    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeight, 4));
+    return g;
+  });
+  const merged = mergeGeometries(geos)!;
+  for (const g of geos) g.dispose();
+  for (const g of new Set(parts.map((p) => p.geo))) g.dispose();
+  const mesh = new THREE.SkinnedMesh(merged, material);
+  mesh.name = 'character_body';
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-  g.add(mesh);
-  return g;
+  root.add(mesh);
+  root.updateMatrixWorld(true);
+  mesh.bind(new THREE.Skeleton(bones));
+  // Fixed bounds in the figure's own space (covers raised arms and the swim
+  // pose), so culling never depends on the pose seen at the first frame.
+  mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.5);
+  mesh.boundingBox = new THREE.Box3(new THREE.Vector3(-1.5, -0.6, -1.5), new THREE.Vector3(1.5, 2.4, 1.5));
+  return mesh;
 }
 
 /** Build a 1.7 m articulated figure. Feet at y = 0, facing +z. */
@@ -93,6 +133,7 @@ export function buildFigure(style: FigureStyle = FOUNDER_STYLE): Figure {
   root.name = 'character';
   const s = style.scale ?? 1;
   root.scale.setScalar(s);
+  const parts: Part[] = [];
 
   // Legs hang from the hip joint at y = 0.82.
   const legGeo = part([
@@ -102,8 +143,8 @@ export function buildFigure(style: FigureStyle = FOUNDER_STYLE): Figure {
   const hips = new THREE.Group();
   hips.name = 'hips';
   hips.position.y = 0.82;
-  const legL = joint('legL', legGeo, 0.1, 0, 0);
-  const legR = joint('legR', legGeo, -0.1, 0, 0);
+  const legL = joint(parts, 'legL', legGeo, 0.1, 0, 0);
+  const legR = joint(parts, 'legR', legGeo, -0.1, 0, 0);
   hips.add(legL, legR);
 
   // Torso: hips block, belt, tapered chest, collar.
@@ -115,7 +156,7 @@ export function buildFigure(style: FigureStyle = FOUNDER_STYLE): Figure {
     { w: 0.22, h: 0.05, d: 0.18, y: 0.62, c: style.tunic },
     ...(style.apron ? [{ w: 0.36, h: 0.46, d: 0.03, y: -0.06, z: 0.135, c: style.apron }] : []),
   ]);
-  const torso = joint('torso', torsoGeo, 0, 0, 0);
+  const torso = joint(parts, 'torso', torsoGeo, 0, 0, 0);
   hips.add(torso);
 
   const headGeo = part([
@@ -133,7 +174,7 @@ export function buildFigure(style: FigureStyle = FOUNDER_STYLE): Figure {
       { w: 0.22, h: 0.02, d: 0.12, y: 0.30, z: 0.17, c: style.hat.color },
     ] : []),
   ]);
-  const head = joint('head', headGeo, 0, 0.66, 0);
+  const head = joint(parts, 'head', headGeo, 0, 0.66, 0);
   torso.add(head);
 
   // Arms hang from the shoulder at y = 0.60 on the torso.
@@ -141,11 +182,12 @@ export function buildFigure(style: FigureStyle = FOUNDER_STYLE): Figure {
     { w: 0.13, h: 0.30, d: 0.14, y: -0.30, c: style.tunic },
     { w: 0.11, h: 0.24, d: 0.12, y: -0.53, c: 'char_skin' },
   ]);
-  const armL = joint('armL', armGeo, 0.29, 0.60, 0);
-  const armR = joint('armR', armGeo, -0.29, 0.60, 0);
+  const armL = joint(parts, 'armL', armGeo, 0.29, 0.60, 0);
+  const armR = joint(parts, 'armR', armGeo, -0.29, 0.60, 0);
   torso.add(armL, armR);
 
   root.add(hips);
+  skinFigure(root, parts);
   return { root, hips, torso, head, armL, armR, legL, legR, phase: 0 };
 }
 

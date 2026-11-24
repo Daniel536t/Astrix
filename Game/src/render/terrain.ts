@@ -104,10 +104,52 @@ export function meshChunk(world: World, chunk: VoxelChunk): MeshResult {
   return geometryFromArrays(meshPadded(paddedFor(world, chunk), chunk.heights, ox, oz, world.seed));
 }
 
+/**
+ * Grid lines of the sea plane: the original `segments` lattice over the
+ * island plus two cells of margin (same vertices, so the same colours), then
+ * lines that double their spacing out to the plane edge. Open ocean far
+ * beyond the 2048 m island is flat, fogged and needs no 208 m vertex grid;
+ * this keeps the near pattern and drops about 90% of the triangles.
+ */
+export function waterGridLines(size: number, segments: number): number[] {
+  const seg = size / segments, coord = (k: number) => -size / 2 + k * seg;
+  const inner: number[] = [];
+  for (let k = 0; k <= segments; k++) if (Math.abs(coord(k)) <= HALF + 2 * seg) inner.push(k);
+  if (inner.length === 0) return [0, segments].map(coord);
+  const keep = new Set(inner);
+  for (let k = inner[0], s = 1; k > 0; s *= 2) { k = Math.max(0, k - s); keep.add(k); }
+  for (let k = inner[inner.length - 1], s = 1; k < segments; s *= 2) { k = Math.min(segments, k + s); keep.add(k); }
+  return [...keep].sort((a, b) => a - b).map(coord);
+}
+
+function waterGridGeometry(size: number, segments: number): THREE.BufferGeometry {
+  const lines = waterGridLines(size, segments), n = lines.length;
+  const positions = new Float32Array(n * n * 3), normals = new Float32Array(n * n * 3);
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      const v = (j * n + i) * 3;
+      positions[v] = lines[i]; positions[v + 2] = lines[j];
+      normals[v + 1] = 1;
+    }
+  }
+  const indices: number[] = [];
+  for (let j = 0; j < n - 1; j++) {
+    for (let i = 0; i < n - 1; i++) {
+      const a = j * n + i, b = (j + 1) * n + i, c = a + 1, d = b + 1;
+      indices.push(a, b, c, c, b, d);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  geo.setIndex(indices);
+  geo.computeBoundingSphere();
+  return geo;
+}
+
 /** One opaque sea-level surface for the whole view. */
 export function buildWaterSurface(world: World, size = 20000, segments = 96): THREE.Mesh {
-  const geo = new THREE.PlaneGeometry(size, size, segments, segments);
-  geo.rotateX(-Math.PI / 2);
+  const geo = waterGridGeometry(size, segments);
   const pos = geo.attributes.position;
   const colors = new Float32Array(pos.count * 3);
   const tmp = new THREE.Color();
@@ -144,14 +186,31 @@ export function buildWaterSurface(world: World, size = 20000, segments = 96): TH
 }
 
 interface MacroHole { minX: number; maxX: number; minZ: number; maxZ: number; }
+/**
+ * Distance tiers of the world-view macro mesh. Cells within `fine` metres
+ * (Chebyshev distance of their block from the focus) keep the base step,
+ * cells within `mid` metres merge 2x2, cells beyond merge 4x4. Blocks are
+ * 4 base cells wide, so tier boundaries never split a coarse cell.
+ */
+export interface MacroTiers { fine: number; mid: number }
+export const DEFAULT_MACRO_TIERS: MacroTiers = { fine: 448, mid: 896 };
+/** Side (m) of a world-view macro tile; tiles outside the camera frustum are not drawn. */
+export const MACRO_TILE = 256;
+
 interface MacroOptions {
   step: number;
   /** Rectangular hole covered by the near 1 m chunk ring. */
   hole?: MacroHole;
+  /** World view focus; with it, far cells use coarser tiers (map mode passes none). */
+  focus?: { x: number; z: number };
+  tiers?: MacroTiers;
 }
 
 interface MacroResult {
+  /** The whole mesh when untiled (no focus); otherwise the first tile. */
   mesh: THREE.Mesh;
+  /** Every tile mesh (one when untiled), each with a bounding box for culling. */
+  meshes: THREE.Mesh[];
   triangles: number;
   sampleMs: number;
   totalMs: number;
@@ -402,12 +461,18 @@ export function buildMacroMesh(world: World, opts: MacroOptions): MacroResult {
   }
 
   const sampleMs = sampleCached ? 0 : cache.sampleMs;
-  const positions: number[] = [];
-  const normals: number[] = [];
-  const colors: number[] = [];
-  const indices: number[] = [];
+  // With a focus the mesh is split into MACRO_TILE square tiles so the view
+  // can skip tiles outside the camera frustum (VoxelTerrainView.cullMacro).
+  // Without one (map mode, tests) it stays a single mesh.
+  const tileCells = opts.focus ? Math.max(1, Math.round(MACRO_TILE / step)) : N;
+  const tilesPerSide = Math.ceil(N / tileCells);
+  type TileBuffers = { positions: number[]; normals: number[]; colors: number[]; indices: number[] };
+  const tileBuffers: TileBuffers[] = [];
+  for (let t = 0; t < tilesPerSide * tilesPerSide; t++) tileBuffers.push({ positions: [], normals: [], colors: [], indices: [] });
+  let buf = tileBuffers[0];
 
   const pushQuad = (p: number[][], n: [number, number, number], color: THREE.Color) => {
+    const { positions, normals, colors, indices } = buf;
     const base = positions.length / 3;
     for (const v of p) {
       positions.push(v[0], v[1], v[2]);
@@ -455,65 +520,152 @@ export function buildMacroMesh(world: World, opts: MacroOptions): MacroResult {
     return COL.grassCap.clone().lerp(COL.stoneB, 0.22).multiplyScalar(shade);
   };
 
-  for (let j = 0; j < N; j++) {
-    for (let i = 0; i < N; i++) {
-      const idx = j * N + i;
-      if (holeCell[idx] || underwater[idx]) continue;
-      const h = heights[idx];
-      const top = tops[idx] as MatId;
-      const x0 = -HALF + i * step, x1 = x0 + step;
-      const z0 = -HALF + j * step, z1 = z0 + step;
-
-      pushQuad(
-        [[x0, h, z0], [x0, h, z1], [x1, h, z1], [x1, h, z0]],
-        [0, 1, 0],
-        topColor(top, h, i, j),
-      );
-
-      const check = (di: number, dj: number) => {
-        const ni = i + di, nj = j + dj;
-        let nh: number;
-        if (ni < 0 || nj < 0 || ni >= N || nj >= N) {
-          // The world edge is ocean. Do not draw a side face down to the
-          // water here; the opaque water plane already covers the boundary.
-          return;
-        } else {
-          const nidx = nj * N + ni;
-          if (holeCell[nidx]) return;
-          nh = underwater[nidx] ? Math.max(SEA_LEVEL - 0.5, heights[nidx]) : heights[nidx];
+  // Cell layout. Without a focus (map mode) every cell is one base cell. In
+  // the world view, 4x4-cell blocks far from the focus merge into 2x2 or 4x4
+  // cells: a far cell covers the same ground with one top and fewer sides.
+  // Coarse cells take the highest land height (keeps ridges and peaks on the
+  // skyline), the material of that highest sub-cell and the mean top colour
+  // of their land sub-cells; a coarse cell that is mostly sea stays sea.
+  const tiers = opts.focus ? (opts.tiers ?? DEFAULT_MACRO_TIERS) : null;
+  const B = 4;
+  const levelOf = (bi: number, bj: number): number => {
+    if (!tiers || !opts.focus) return 1;
+    const cx = -HALF + (bi + 0.5) * B * step, cz = -HALF + (bj + 0.5) * B * step;
+    const d = Math.max(Math.abs(cx - opts.focus.x), Math.abs(cz - opts.focus.z)) - B * step / 2;
+    return d <= tiers.fine ? 1 : d <= tiers.mid ? 2 : 4;
+  };
+  // Render height per base cell (of the cell that covers it) and whether
+  // that cell is drawn as land.
+  const renderH = new Float32Array(N * N);
+  const renderLand = new Uint8Array(N * N);
+  type Cell = { i: number; j: number; k: number; h: number; top: MatId; color: THREE.Color };
+  const cells: Cell[] = [];
+  const colorAcc = new THREE.Color();
+  for (let bj = 0; bj < N; bj += B) {
+    for (let bi = 0; bi < N; bi += B) {
+      const k = levelOf(bi / B, bj / B);
+      for (let j0 = bj; j0 < Math.min(N, bj + B); j0 += k) {
+        for (let i0 = bi; i0 < Math.min(N, bi + B); i0 += k) {
+          let land = 0, total = 0, best = -1;
+          colorAcc.setRGB(0, 0, 0);
+          for (let j = j0; j < Math.min(N, j0 + k); j++) {
+            for (let i = i0; i < Math.min(N, i0 + k); i++) {
+              const idx = j * N + i;
+              total++;
+              if (holeCell[idx] || underwater[idx]) continue;
+              land++;
+              if (best < 0 || heights[idx] > heights[best]) best = idx;
+              if (k > 1) colorAcc.add(topColor(tops[idx] as MatId, heights[idx], i, j));
+            }
+          }
+          if (best < 0 || land * 2 < total) continue;
+          const h = heights[best];
+          const top = tops[best] as MatId;
+          const color = k > 1 ? colorAcc.clone().multiplyScalar(1 / land) : topColor(top, h, i0, j0);
+          cells.push({ i: i0, j: j0, k, h, top, color });
+          for (let j = j0; j < Math.min(N, j0 + k); j++) {
+            for (let i = i0; i < Math.min(N, i0 + k); i++) {
+              renderH[j * N + i] = h;
+              renderLand[j * N + i] = 1;
+            }
+          }
         }
-        if (h <= nh) return;
-        const col = sideColor(top, h, nh, i, j);
-        if (di === 1) {
-          pushQuad([[x1, nh, z0], [x1, h, z0], [x1, h, z1], [x1, nh, z1]], [1, 0, 0], col);
-        } else if (di === -1) {
-          pushQuad([[x0, nh, z0], [x0, nh, z1], [x0, h, z1], [x0, h, z0]], [-1, 0, 0], col);
-        } else if (dj === 1) {
-          pushQuad([[x0, nh, z1], [x1, nh, z1], [x1, h, z1], [x0, h, z1]], [0, 0, 1], col);
-        } else if (dj === -1) {
-          pushQuad([[x0, nh, z0], [x0, h, z0], [x1, h, z0], [x1, nh, z0]], [0, 0, -1], col);
-        }
-      };
-      check(1, 0); check(-1, 0); check(0, 1); check(0, -1);
+      }
     }
   }
 
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geometry.setIndex(indices);
-  geometry.computeBoundingSphere();
+  /** Height a side face drops to beside base cell (ni, nj), or null for no face. */
+  const neighbourDrop = (ni: number, nj: number): number | null => {
+    // The world edge is ocean. Do not draw a side face down to the water
+    // here; the opaque water plane already covers the boundary.
+    if (ni < 0 || nj < 0 || ni >= N || nj >= N) return null;
+    const nidx = nj * N + ni;
+    if (holeCell[nidx]) return null;
+    if (renderLand[nidx]) return renderH[nidx];
+    // Sea, or a land sub-cell of a coarse cell that is mostly sea: the face
+    // runs down to the water so no see-through gap opens above it.
+    return underwater[nidx] ? Math.max(SEA_LEVEL - 0.5, heights[nidx]) : SEA_LEVEL - 0.5;
+  };
 
-  const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
-    vertexColors: true, flatShading: true,
-  }));
-  mesh.name = 'macro_lod';
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
+  for (const { i, j, k, h, top, color } of cells) {
+    buf = tileBuffers[Math.floor(j / tileCells) * tilesPerSide + Math.floor(i / tileCells)];
+    const x0 = -HALF + i * step, x1 = Math.min(HALF, x0 + k * step);
+    const z0 = -HALF + j * step, z1 = Math.min(HALF, z0 + k * step);
+    const span = Math.min(k, N - i), spanZ = Math.min(k, N - j);
+
+    pushQuad(
+      [[x0, h, z0], [x0, h, z1], [x1, h, z1], [x1, h, z0]],
+      [0, 1, 0],
+      color,
+    );
+
+    // One side face per run of equal drop height along each edge. Coarse
+    // cells beside finer ones get several runs, so no gap opens at a tier
+    // boundary; equal-size neighbours give exactly one face as before.
+    const edge = (side: 0 | 1 | 2 | 3) => {
+      const n = side < 2 ? spanZ : span;
+      let runStart = 0, runH: number | null = null;
+      const flush = (end: number) => {
+        if (runH === null || h <= runH) return;
+        const nh = runH;
+        const col = sideColor(top, h, nh, i, j);
+        if (side === 0) {
+          const za = z0 + runStart * step, zb = z0 + end * step;
+          pushQuad([[x1, nh, za], [x1, h, za], [x1, h, zb], [x1, nh, zb]], [1, 0, 0], col);
+        } else if (side === 1) {
+          const za = z0 + runStart * step, zb = z0 + end * step;
+          pushQuad([[x0, nh, za], [x0, nh, zb], [x0, h, zb], [x0, h, za]], [-1, 0, 0], col);
+        } else if (side === 2) {
+          const xa = x0 + runStart * step, xb = x0 + end * step;
+          pushQuad([[xa, nh, z1], [xb, nh, z1], [xb, h, z1], [xa, h, z1]], [0, 0, 1], col);
+        } else {
+          const xa = x0 + runStart * step, xb = x0 + end * step;
+          pushQuad([[xa, nh, z0], [xa, h, z0], [xb, h, z0], [xb, nh, z0]], [0, 0, -1], col);
+        }
+      };
+      for (let t = 0; t < n; t++) {
+        const nh = side === 0 ? neighbourDrop(i + span, j + t)
+          : side === 1 ? neighbourDrop(i - 1, j + t)
+            : side === 2 ? neighbourDrop(i + t, j + spanZ)
+              : neighbourDrop(i + t, j - 1);
+        if (t > 0 && nh === runH) continue;
+        flush(t);
+        runStart = t; runH = nh;
+      }
+      flush(n);
+    };
+    edge(0); edge(1); edge(2); edge(3);
+  }
+
+  const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const meshes: THREE.Mesh[] = [];
+  let triangles = 0;
+  for (let t = 0; t < tileBuffers.length; t++) {
+    const { positions, normals, colors, indices } = tileBuffers[t];
+    if (indices.length === 0 && (tileBuffers.length > 1 || meshes.length > 0)) continue;
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setIndex(indices);
+    geometry.computeBoundingSphere();
+    geometry.computeBoundingBox();
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = tileBuffers.length > 1 ? `macro_lod_tile_${t % tilesPerSide}_${Math.floor(t / tilesPerSide)}` : 'macro_lod';
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    meshes.push(mesh);
+    triangles += indices.length / 3;
+  }
+  if (meshes.length === 0) {
+    const empty = new THREE.Mesh(new THREE.BufferGeometry(), material);
+    empty.name = 'macro_lod';
+    meshes.push(empty);
+  }
   return {
-    mesh,
-    triangles: indices.length / 3,
+    mesh: meshes[0],
+    meshes,
+    triangles,
     sampleMs,
     totalMs: performance.now() - totalT0,
     sampleCached,
@@ -527,6 +679,9 @@ export interface VoxelTerrainViewOptions {
   worldMacroStep?: number;
   mapMacroStep?: number;
 }
+
+const _cullFrustum = new THREE.Frustum();
+const _cullMatrix = new THREE.Matrix4();
 
 interface ChunkView { mesh: THREE.Mesh; water: THREE.Mesh | null; triangles: number; }
 
@@ -546,7 +701,7 @@ export class VoxelTerrainView {
   private chunks = new Map<string, ChunkView>();
   private loaded = new Set<string>();
   private mode: ViewMode = 'world';
-  private macro: THREE.Mesh | null = null;
+  private macro: THREE.Mesh[] = [];
   private macroTriangles = 0;
   private macroFocus = new THREE.Vector3(1e9, 0, 1e9);
   private macroMode: ViewMode | null = null;
@@ -890,7 +1045,7 @@ export class VoxelTerrainView {
       }
     }
     this.onChunksChanged?.();
-    if (this.macro) this.rebuildMacro(this.macroFocus, this.mode, true);
+    if (this.macro.length) this.rebuildMacro(this.macroFocus, this.mode, true);
   }
 
   private rebuildMacro(focus: THREE.Vector3, mode: ViewMode, force: boolean): void {
@@ -899,11 +1054,11 @@ export class VoxelTerrainView {
       if (mode === 'map' || moved <= 48) return;
     }
     const macroT0 = performance.now();
-    if (this.macro) {
-      this.macroGroup.remove(this.macro);
-      this.macro.geometry.dispose();
-      this.macro = null;
+    for (const tile of this.macro) {
+      this.macroGroup.remove(tile);
+      tile.geometry.dispose();
     }
+    this.macro = [];
     const step = mode === 'map' ? this.mapMacroStep : this.worldMacroStep;
     let hole: MacroHole | undefined;
     if (mode !== 'map') {
@@ -917,10 +1072,10 @@ export class VoxelTerrainView {
       };
       this.farWaterHole.value.set(hole.minX, hole.minZ, hole.maxX, hole.maxZ);
     }
-    const result = buildMacroMesh(this.world, { step, hole });
-    this.macro = result.mesh;
+    const result = buildMacroMesh(this.world, { step, hole, focus: mode === 'map' ? undefined : focus });
+    this.macro = result.meshes;
     this.macroTriangles = result.triangles;
-    this.macroGroup.add(result.mesh);
+    this.macroGroup.add(...result.meshes);
     this.macroFocus.copy(focus);
     this.macroMode = mode;
     this.macroEditKey = macroEditKey(this.world);
@@ -937,10 +1092,35 @@ export class VoxelTerrainView {
     return t;
   }
   get macroTriangleCount(): number { return this.macroTriangles; }
+  /** Triangles of the macro tiles left visible by the last cullMacro call. */
+  get macroVisibleTriangles(): number {
+    let t = 0;
+    for (const tile of this.macro) if (tile.visible) t += (tile.geometry.index?.count ?? 0) / 3;
+    return t;
+  }
+
+  /**
+   * Hide macro tiles whose bounding box is outside the camera frustum. Three
+   * only culls by bounding sphere, which never rejects a 256 m tile next to
+   * the camera; the box test also drops far tiles below the frustum when the
+   * camera pitches down. Presentation only, call once per frame before render.
+   */
+  cullMacro(camera: THREE.Camera): void {
+    if (this.macro.length <= 1) { for (const tile of this.macro) tile.visible = true; return; }
+    camera.updateMatrixWorld();
+    _cullMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    _cullFrustum.setFromProjectionMatrix(_cullMatrix);
+    for (const tile of this.macro) {
+      const box = tile.geometry.boundingBox;
+      tile.visible = !box || _cullFrustum.intersectsBox(box);
+    }
+  }
   get drawCalls(): number {
     let water = 0;
     for (const v of this.chunks.values()) if (v.water) water++;
-    return this.loaded.size + water + (this.macro ? 1 : 0) + 1;
+    let macro = 0;
+    for (const tile of this.macro) if (tile.visible) macro++;
+    return this.loaded.size + water + macro + 1;
   }
   get nearRadiusChunks(): number { return this.nearRadius; }
   /** Clear the rolling timing window before a measurement run. */

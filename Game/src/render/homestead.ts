@@ -15,7 +15,7 @@ import { AnimalBatch } from './animal-kit';
 import { SNAP_DISTANCE } from './smooth';
 import { ANIMAL_MODELS } from './animal-models';
 import { FOUNDER_STOCKPILE } from '../sim/economy';
-import { buildCottage, buildWell } from './village-kit';
+import { buildCottage, buildWell, kitMaterial } from './village-kit';
 import { Figure, FARMER_STYLE, HERDER_STYLE, buildFigure, animateFigure, placeFigure } from './characters';
 import type { CharacterState } from '../sim/character';
 
@@ -216,6 +216,50 @@ class Herd {
   }
 }
 
+/**
+ * Bake the static homestead pieces that share the flat vertex-colour
+ * material (farmhouse, well, enclosure fences and shelters) into one mesh.
+ * They never move, so one draw per pass replaces one per building; the
+ * geometry and colours are unchanged. Pieces with other materials (lit
+ * windows) stay separate.
+ */
+function mergeStatics(g: THREE.Group): THREE.Group {
+  g.updateMatrixWorld(true);
+  const geos: THREE.BufferGeometry[] = [];
+  const facilities: string[] = [];
+  const keep: THREE.Object3D[] = [];
+  g.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    if (m.material === MAT || m.material === kitMaterial) {
+      geos.push(m.geometry.clone().applyMatrix4(m.matrixWorld));
+      m.geometry.dispose();
+      let f: THREE.Object3D | null = m;
+      while (f && f !== g && f.userData.facility === undefined) f = f.parent;
+      if (f && f.userData.facility !== undefined && !facilities.includes(f.userData.facility)) facilities.push(f.userData.facility);
+    } else {
+      keep.push(m);
+    }
+  });
+  const out = new THREE.Group();
+  out.name = g.name;
+  if (geos.length) {
+    const merged = new THREE.Mesh(mergeGeometries(geos)!, MAT);
+    for (const geo of geos) geo.dispose();
+    merged.name = 'homestead_statics';
+    merged.castShadow = true;
+    merged.receiveShadow = true;
+    merged.userData.facilities = facilities;
+    out.add(merged);
+  }
+  for (const m of keep) {
+    m.updateMatrixWorld(true);
+    m.matrixWorld.decompose(m.position, m.quaternion, m.scale);
+    out.add(m);
+  }
+  return out;
+}
+
 // ---------- the view ----------
 
 export class HomesteadView {
@@ -298,7 +342,7 @@ export class HomesteadView {
       m.userData.facility = f.id;
       g.add(m);
     }
-    return g;
+    return mergeStatics(g);
   }
 
   private lowest(r: { x0: number; z0: number; x1: number; z1: number }): number {

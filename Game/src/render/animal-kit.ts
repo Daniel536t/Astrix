@@ -161,10 +161,19 @@ export class AnimalBatch {
     this.mesh.count = 0;
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
-    this.mesh.frustumCulled = false;
+    // Culled as a whole by a sphere around this frame's instances (end()),
+    // so a herd that is off screen or outside the sun's shadow box costs no
+    // draw call. Every animal still exists and moves in the simulation.
+    this.mesh.frustumCulled = true;
+    this.mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 0);
   }
 
-  begin(): void { this.n = 0; }
+  /** Margin (m) around instance origins covering the largest model and pose. */
+  static readonly BOUNDS_MARGIN = 4;
+  private readonly lo = new THREE.Vector3();
+  private readonly hi = new THREE.Vector3();
+
+  begin(): void { this.n = 0; this.lo.set(Infinity, Infinity, Infinity); this.hi.set(-Infinity, -Infinity, -Infinity); }
 
   push(p: AnimalPose): boolean {
     if (this.n >= this.capacity) return false;
@@ -175,6 +184,7 @@ export class AnimalBatch {
     this.v.set(p.x, p.y - lie * this.model.legLen * 0.7 * p.scale, p.z);
     this.s.set(p.scale, p.scale, p.scale);
     this.mesh.setMatrixAt(i, this.m.compose(this.v, this.q, this.s));
+    this.lo.min(this.v); this.hi.max(this.v);
     this.anim.setXYZW(i, p.phase, p.legSwing, p.headPitch, p.tailWag);
     this.state.setXYZW(i, p.male ? 1 : 0, p.young ? 1 : 0, lie, p.extra);
     return true;
@@ -183,6 +193,11 @@ export class AnimalBatch {
   end(): void {
     this.mesh.count = this.n;
     this.mesh.visible = this.n > 0;
+    const sphere = this.mesh.boundingSphere!;
+    if (this.n > 0) {
+      sphere.center.addVectors(this.lo, this.hi).multiplyScalar(0.5);
+      sphere.radius = this.lo.distanceTo(this.hi) / 2 + AnimalBatch.BOUNDS_MARGIN;
+    }
     // Upload only the instances in use, not the whole capacity.
     for (const [a, stride] of [[this.mesh.instanceMatrix, 16], [this.anim, 4], [this.state, 4]] as const) {
       a.clearUpdateRanges();

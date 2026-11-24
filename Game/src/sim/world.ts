@@ -969,7 +969,11 @@ function entityId(chunk: string, i: number): string {
   return `e:${chunk}:${i}`;
 }
 
-function forestScore(wx: number, wz: number, seed: number): number {
+/**
+ * Pure forest-density field used by entity generation. Exported read-only for
+ * render decoration (render/ground-cover.ts); changing it changes worlds.
+ */
+export function forestScore(wx: number, wz: number, seed: number): number {
   const east = Math.exp(-(((wx - 220) / 260) ** 2 + ((wz + 110) / 220) ** 2));
   const north = Math.exp(-(((wx - 20) / 300) ** 2 + ((wz + 300) / 190) ** 2));
   const west = Math.exp(-(((wx + 340) / 200) ** 2 + ((wz - 120) / 180) ** 2));
@@ -980,7 +984,8 @@ function forestScore(wx: number, wz: number, seed: number): number {
     + moisture * 0.38 - 0.22 - valley * 0.34;
 }
 
-function rockScore(wx: number, wz: number, seed: number): number {
+/** Pure rockiness field used by entity generation (same contract as forestScore). */
+export function rockScore(wx: number, wz: number, seed: number): number {
   const mountain = fbm2(wx / 330, wz / 330, seed + 202, 3);
   const ridge = 1 - Math.abs(2 * fbm2(wx / 140, wz / 140, seed + 203, 3) - 1);
   return mountain * 0.55 + ridge * 0.45;
