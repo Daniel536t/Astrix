@@ -690,6 +690,36 @@ body.clean #mode-button, body.kit #mode-button, body.map #mode-button { display:
   }
 }
 
+/* ---- banners (M009): Home / To banner / Plant, a small column on the right,
+   above the zoom buttons, clear of the joystick half and the Jump / Gather thumb area. */
+.banner-pad { display: none; }
+@media (pointer: coarse) {
+  body.explore .banner-pad {
+    display: flex; flex-direction: column; gap: 8px; position: fixed; z-index: 7;
+    right: max(22px, calc(env(safe-area-inset-right) + 14px));
+    bottom: max(300px, calc(env(safe-area-inset-bottom) + 292px));
+  }
+  .banner-pad .pb {
+    width: 64px; height: 40px; border-radius: 10px; font-size: 11px; line-height: 1.05;
+    border-width: 2px; touch-action: none;
+  }
+  .banner-pad .home { border-color: #B34A3C; }
+  .banner-pad .field { border-color: #F2CF4A; }
+  .banner-pad .field.empty { opacity: 0.55; }
+  .banner-pad .plant { background: rgba(242, 207, 74, 0.28); border-color: #F2CF4A; }
+  .banner-pad .pb.channeling {
+    background: conic-gradient(rgba(244, 232, 164, 0.75) var(--p, 0deg), rgba(22, 26, 38, 0.55) 0);
+  }
+  body.planning-field .banner-pad { display: none; }
+}
+@media (pointer: coarse) and (orientation: landscape) {
+  body.explore .banner-pad {
+    right: max(112px, calc(env(safe-area-inset-right) + 104px));
+    bottom: max(112px, calc(env(safe-area-inset-bottom) + 104px));
+  }
+}
+#hud .returning { color: #F4E8A4; }
+
 /* ---- vitals: health, stamina, breath ---- */
 #vitals {
   position: fixed; z-index: 8; left: 50%; transform: translateX(-50%);

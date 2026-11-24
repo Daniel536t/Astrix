@@ -15,8 +15,9 @@ test('touch controls are exposed with accessible names and browser zoom remains 
   // Movement is a joystick zone (left half of the screen), not buttons.
   assert.match(html, /<div id="move-zone" aria-label="[^"]+">/);
   const buttons = [...html.matchAll(/<button\b[^>]*>/g)].map((match) => match[0]);
-  // Gather + Jump + Dive + 2 zoom + Walk/Builder view mode switch.
-  assert.equal(buttons.length, 6);
+  // Gather + Jump + Dive + 2 zoom + Walk/Builder view mode switch
+  // + M009 banners (Return home, Return to banner, Plant banner).
+  assert.equal(buttons.length, 9);
   for (const button of buttons) assert.match(button, /aria-label="[^"]+"/);
 });
 

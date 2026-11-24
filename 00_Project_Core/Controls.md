@@ -11,6 +11,9 @@ Scripted captures (`?action=`, `?ui=0`, explicit camera params) and `?mode=build
 | Run | Shift | Shift = faster pan |
 | Jump | Space (hold to swim up in water) | — |
 | Dive | Hold C while swimming | — |
+| Plant banner (mark this spot) | V: your one field banner moves to where you stand (dry ground only) | — |
+| Return home | R, then hold still about 1.5 s: back beside your home banner at the founding spot. Moving, jumping or getting hurt cancels; R again cancels | — |
+| Return to banner | T, then hold still about 1.5 s: back beside your field banner | — |
 | Look / orbit | Drag with any mouse button | Drag orbits |
 | Zoom | Wheel (3–60 m, follows trackpad deltas) | Wheel (12–1400 m) |
 | Rotate camera | Drag | Q / E |
@@ -39,6 +42,7 @@ Modelled on Minecraft Bedrock's joystick layout: move with the left thumb, look 
 | Zoom | Pinch on the right half, or the + / − buttons |
 | Jump / swim up | **Jump** (bottom right). Tap to jump; hold to swim up. |
 | Dive | **Dive** (appears left of Jump while swimming). Hold to swim down. |
+| Banners | A small column on the right, above the zoom buttons: **Home** (return home), **To banner** (return to your field banner; dimmed until one is planted), **Plant** (plant or move your field banner here). Tap Home or To banner, then keep the joystick thumb off for about 1.5 s; the button fills as a ring while you wait. |
 | Use / gather | The yellow button names what it will do ("Dig the flax field", "Draw water"…) |
 | Farm | **Farm** button (top left): fields, people, animals, steward; Plan a new field |
 | Switch mode | **Builder view / Walk** button (top centre) |
@@ -57,6 +61,17 @@ Every control tracks its own finger, so looking or jumping never stops or replac
 | Health (red bar) | Out of breath, you lose 10 health per second, so about 10 s to drowning. After 4 s without damage it regenerates at 3 per second. |
 | Drowning | "You drowned". After 3 s you respawn on the last dry ground you stood on, with full health, breath and stamina. |
 | Getting out | Swim at the surface into a bank up to about 2 m high to climb out. |
+
+## Banners (checkpoints)
+
+| Banner | What it is |
+|---|---|
+| Home banner (red cloth, gold cap) | Planted beside the spot where every world first puts you (the founder's area). Always there; cannot be moved. |
+| Field banner (yellow cloth) | Your one personal checkpoint. Plant it anywhere on dry ground; planting again moves it. |
+| Returning | You land on dry, open ground next to the banner (never inside blocks, trees or water). If the land there is not loaded yet, you wait a moment while it streams in. |
+| Saving | Banners are kept in this browser with your walking position, per world. They are not part of the settlement save, so they never change it. |
+
+If you ever get stuck (a hole deeper than a double jump, about 2.5 m), use **Return home** or **Return to banner**.
 
 ## Known gaps
 

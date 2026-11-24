@@ -33,6 +33,12 @@ export const EXHAUSTED_SWIM_SPEED = 1.0;
 export const JUMP_SPEED = 6.6;
 /** A second tap while airborne launches again at this speed (a higher total jump, enough to leave a two-voxel hole). */
 export const DOUBLE_JUMP_SPEED = 8.4;
+/**
+ * Water drags a jump from a wading bed (was 0.7, a 0.49 m hop whose whole
+ * descent fell inside the landing buffer; 0.85 gives about 0.72 m, leaving a
+ * usable window for the second tap).
+ */
+export const WADE_JUMP_FACTOR = 0.85;
 /** A tap this close to the ground (m) while falling is buffered as a ground jump. */
 const JUMP_BUFFER_REACH = 0.6;
 const JUMP_BUFFER_TIME = 0.15;
@@ -303,12 +309,15 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
   } else {
     const wantJump = input.jump || s.jumpBuffer > 0;
     if (wantJump && s.grounded) {
-      s.vy = wading ? JUMP_SPEED * 0.7 : JUMP_SPEED; s.grounded = false; s.jumped = true; s.jumpBuffer = 0;
+      s.vy = wading ? JUMP_SPEED * WADE_JUMP_FACTOR : JUMP_SPEED; s.grounded = false; s.jumped = true; s.jumpBuffer = 0;
     } else if (input.jump) {
       if (s.vy <= 0 && (overlaps(world, s.x, s.y - JUMP_BUFFER_REACH, s.z) || structureFloor(world, s.x, s.y + 0.02, s.z) > s.y - JUMP_BUFFER_REACH)) {
         // About to land: remember the tap so it becomes a normal ground jump.
         s.jumpBuffer = JUMP_BUFFER_TIME;
-      } else if (s.jumped && !s.airJumpUsed && !wading) {
+      } else if (s.jumped && !s.airJumpUsed) {
+        // Also from a wading jump (M009): knee-to-waist water in a two-voxel
+        // hole used to be a trap, because the feet were still wet when the
+        // second tap came and the jump flag was cleared every wet step.
         // Second tap in the air after a real jump: a stronger launch, once per jump.
         s.vy = DOUBLE_JUMP_SPEED; s.airJumpUsed = true;
       }
@@ -373,7 +382,8 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
   }
 
   resolveEntities(world, s);
-  if (s.grounded || swimming || wading) { s.airJumpUsed = false; s.jumped = false; }
+  // Landing (also on a wading bed) or swimming re-arms the jumps; wet feet in mid-air do not.
+  if (s.grounded || swimming) { s.airJumpUsed = false; s.jumped = false; }
   if (s.jumpBuffer > 0) s.jumpBuffer = Math.max(0, s.jumpBuffer - dt);
 
   const moved = Math.hypot(s.x - prev.x, s.z - prev.z) / dt;
@@ -415,6 +425,36 @@ function updateVitals(s: CharacterState, depth: number, moving: boolean, dt: num
   }
   // Remember dry footing as the respawn point.
   if (s.mode === 'ground' && s.grounded && depth === 0) s.safe = { x: s.x, y: s.y, z: s.z };
+}
+
+/**
+ * True when a character could stand still at (x, y, z): resident solid ground
+ * under the feet, the box clear of voxels, structures and tree trunks / rocks,
+ * and dry feet (no water in the feet or head cells). Used to place a returning
+ * character next to a banner.
+ */
+export function canStandAt(world: World, x: number, y: number, z: number): boolean {
+  const fx = Math.floor(x), fz = Math.floor(z), fy = Math.floor(y + 1e-3);
+  const below = residentVoxelAt(world, fx, fy - 1, fz);
+  if (below === null || !isSolid(below)) return false;
+  if (overlaps(world, x, y, z)) return false;
+  for (let cy = fy; cy <= Math.floor(y + CHARACTER_HEIGHT - 1e-3); cy++) if (water(world, fx, cy, fz)) return false;
+  const cx = worldToChunkX(fx), cz = worldToChunkZ(fz);
+  for (let dz = -1; dz <= 1; dz++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const ids = world.entityChunks.get(chunkKey(cx + dx, cz + dz));
+      if (!ids) continue;
+      for (const id of ids) {
+        const e = world.entities.get(id);
+        if (!e || e.harvested || isRetiredStoneKind(e.kind) || world.entityRemovals.has(id) || e.kind === 'styl_shrub') continue;
+        if (y > e.y + 3 || y + CHARACTER_HEIGHT < e.y) continue;
+        const body = e.kind.startsWith('styl_tree_') ? 0.45 * e.scale
+          : (OBSTRUCTION_RADIUS[e.kind as ActiveEntityKind] ?? 0.5) * 0.75 * e.scale;
+        if (Math.hypot(x - e.x, z - e.z) < body + CHARACTER_RADIUS + 0.1) return false;
+      }
+    }
+  }
+  return true;
 }
 
 /** Highest standable feet position in a column near `yHint`, or null if not resident. */

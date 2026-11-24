@@ -15,7 +15,7 @@ import { M2_PROJECTS } from './app/projects';
 import { M002_LAYOUT } from './sim/m002';
 import { FOUNDER_STOCKPILE } from './sim/economy';
 import { FrameStats, SectionStats } from './app/perf';
-import { ExploreController, INTERACT_REACH } from './app/explore';
+import { BANNER_NAMES, ExploreController, INTERACT_REACH } from './app/explore';
 import { FaunaView } from './render/fauna';
 import { ChunkWorkerPool } from './render/chunk-pool';
 import { SimClock, SaveScheduler, TabLease, TICK_SECONDS } from './app/sim-clock';
@@ -426,6 +426,31 @@ function gather(): void {
   }
 }
 document.getElementById('gather-nearest')?.addEventListener('click', gather);
+// Banner buttons (M009): act on the press, so a tap works while another finger is down.
+const homeButton = document.getElementById('return-home-button');
+const fieldButton = document.getElementById('return-banner-button');
+const plantButton = document.getElementById('plant-banner-button');
+for (const [el, run] of [
+  [homeButton, () => explore?.startReturn('home')],
+  [fieldButton, () => explore?.startReturn('field')],
+  [plantButton, () => explore?.plantFieldBanner()],
+] as const) {
+  el?.addEventListener('pointerdown', (e) => { e.preventDefault(); run(); });
+  el?.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+/** Channel progress on the touch buttons; the field button dims until a banner is planted. */
+function updateBannerButtons(): void {
+  if (!explore) return;
+  const target = explore.channel.target;
+  const p = explore.channel.progress(performance.now());
+  for (const [el, t] of [[homeButton, 'home'], [fieldButton, 'field']] as const) {
+    if (!el) continue;
+    const on = target === t;
+    el.classList.toggle('channeling', on);
+    el.style.setProperty('--p', on ? `${Math.round(p * 360)}deg` : '0deg');
+  }
+  fieldButton?.classList.toggle('empty', !explore.banners.field);
+}
 document.getElementById('mode-button')?.addEventListener('click', () => toggleMode());
 
 for (const b of controls.querySelectorAll<HTMLButtonElement>('[data-zoom]')) {
@@ -567,6 +592,7 @@ function frame(timestamp?: number) {
   advanceTime(time, dt * speed);
   rig.update(dt);
   explore?.update(dt);
+  updateBannerButtons();
   const tHome = performance.now();
   homesteadGame?.update(dt);
   sections.record('homestead', performance.now() - tHome);
@@ -665,13 +691,15 @@ function frame(timestamp?: number) {
       const useLabel = work ? work.label : 'Gather';
       if (useButton && useButton.textContent !== useLabel) { useButton.textContent = useLabel; useButton.classList.toggle('work', !!work); }
       const hint = walking
-        ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · tap Jump twice to jump higher, hold to swim up · Dive · Farm: fields, people, animals'
-          : 'WASD: walk · Shift: run · Space: jump (tap twice to jump higher, hold to swim up) · C: dive · E: use / gather · F: plan a field · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
+        ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · tap Jump twice to jump higher, hold to swim up · Dive · Plant: mark this spot with your banner · Home / To banner: hold still to return · Farm: fields, people, animals'
+          : 'WASD: walk · Shift: run · Space: jump (tap twice to jump higher, hold to swim up) · C: dive · E: use / gather · V: plant banner · R: return home · T: return to banner · F: plan a field · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
         : coarse
           ? 'drag: orbit · two fingers: move + zoom'
           : debugMutations
             ? 'DEV ONLY · F: dig · G: place · H: harvest · P: pause'
             : 'drag: orbit · WASD: pan · H: harvest · Tab: walk · P: pause';
+      const channelTarget = explore?.channel.target;
+      const channel = channelTarget ? `Returning to your ${BANNER_NAMES[channelTarget]} in ${explore!.channel.remaining(performance.now()).toFixed(1)} s · hold still` : '';
       const persistence = m.save.persistent ? m.save.message
         : m.save.status === 'unavailable' ? `VOLATILE — ${m.save.message}` : m.save.message;
       const built = m.m2 ? `${m.m2.projectsBuilt}/${M2_PROJECTS.length} built` : '';
@@ -681,6 +709,7 @@ function frame(timestamp?: number) {
         (realtimeNote ? ` · ${realtimeNote}` : '') +
         ` · wood ${m.inventory.wood ?? 0} · stone ${m.inventory.stone ?? 0}` +
         ` · ${m.structures} structure${m.structures === 1 ? '' : 's'}${built ? ` (${built})` : ''}` +
+        (channel ? `<br><b class="returning">${channel}</b>` : '') +
         `<br><span class="dim">${reach}${lastAction ? lastAction + ' · ' : ''}${hint} · ${persistence}</span>`;
     }
   }
@@ -783,6 +812,10 @@ if (!isMap && !isKit) {
   let storage: Storage | null = null;
   try { storage = window.localStorage; } catch { storage = null; }
   explore = new ExploreController({ world, scene, rig, storage, spawn: { x: -18, z: -18 } });
+  explore.onNotice = (message, kind) => {
+    lastAction = message;
+    m2Game?.toast(message, kind ?? 'good');
+  };
   const scripted = action !== '' || noUi || params.has('tx') || params.has('dist');
   const startMode = params.get('mode') ?? (scripted ? 'builder' : 'explore');
   if (startMode === 'explore') toggleMode('explore');
