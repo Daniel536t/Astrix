@@ -56,3 +56,10 @@ are cached for a year, so a new deploy takes effect on the next page load.
 
 Rollback to the previous release: `deploy/boxd/deploy.sh --rollback`. Owner deployment authority (2026-11-23): normal,
 reversible development builds may be deployed at verified checkpoints.
+
+## 2026-11-24 06:34 UTC: MB003 identity and persistence
+
+- Program upgraded on devnet; the deployed binary byte-matches the local build (506 432 bytes). Program data extended by 120 000 bytes first.
+- Site release `20261124T063446Z-1601853` (built from the working tree committed as `1f03b91`). Program and client were deployed together because `claim_world` changed.
+- Live check: a fresh browser used Quick Play and got slot 12 (seed 2096322546), then gathered wood on chain. No page errors.
+- Rollback: `./deploy/boxd/deploy.sh astrix --rollback` restores the previous site only. The previous client cannot claim against the new program.
