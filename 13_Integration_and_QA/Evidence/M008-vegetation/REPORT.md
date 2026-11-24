@@ -2,22 +2,22 @@
 
 Scope: the vegetation stage of the approved order (vegetation, then villager navigation, then birds, fish and land mammals). This report covers the tree species and growth stages, bushes and ground vegetation, the distance LOD, the world-asset optimisation done to make room for them, and the checks the owner asked for before any animal expansion.
 
-All numbers below are copied from the JSON files in this folder: `baseline.json` (before), `trees-a.json` (after FEAT-002), `budget.json` (after FEAT-003), `final.json` (final desktop probe) and `mobile.json` (emulated mobile probe).
+All numbers below are copied from the JSON files in this folder: `baseline.json` (before), `trees-a.json` (after FEAT-002), `budget.json` (after FEAT-003), `final.json` (final desktop probe) and `mobile.json` (emulated mobile probe). Section 10 covers the fixes for review v1 (`.agents/tasks/task-m008-vegetation/2026-11-24-151805-review.md`, verdict NEEDS_CHANGES) and takes its numbers from `views-close.json`, `views-zoom.json`, `views-pan.json` and `views-before.json`. Sections 3 to 8 describe the build that was reviewed; where review v1 changed a value (near LOD band 60 to 90 m, shadow box and ground-cover anchors, macro draw runs, near ring at long zoom) section 10 says so.
 
 ## 1. Deployed vs merged
 
 | Item | State |
 | --- | --- |
 | Live release | Unchanged: still `20261124T121804Z-99c6b11`. Nothing from this stage is deployed. |
-| Branch | Committed locally on `deploy/boxd`: 984d317 (render breakdown + baseline), e98e446 (tree species, stages, LOD), abd9010 (ground cover and world-asset optimisation), plus the FEAT-004 commit with this report and `Game/tests/m008.persistence.test.ts`. |
+| Branch | Committed locally on `deploy/boxd`: 984d317 (render breakdown + baseline), e98e446 (tree species, stages, LOD), abd9010 (ground cover and world-asset optimisation), 5be91a3 (FEAT-004: this report and `Game/tests/m008.persistence.test.ts`), plus the review v1 fix commit that adds section 10 and `Game/tests/m008.views.test.ts`. |
 | Main | Not merged to `main`. Not pushed by this stage. |
-| `Game/dist` | Tracked build output left at its committed state. The browser probes used fresh builds copied to `.kiro/artifacts/screenshots/probe/dist` (after) and `probe/dist-base` (before, built from commit 99c6b11 in a separate git worktree). |
+| `Game/dist` | Tracked build output. The review v1 commit updates it to the review v1 build (still not deployed). The browser probes used fresh builds copied to `.kiro/artifacts/screenshots/probe/dist` (after), `probe/dist-base` (before, built from commit 99c6b11 in a separate git worktree) and `probe/dist-rv0` (the reviewed build, 5be91a3, built in a separate git worktree for the section 10 before/after). |
 
 ## 2. Tests vs live browser
 
 ### 2.1 Automated tests (Node, no browser)
 
-`cd Game && npx tsc --noEmit && npm test && npm run build`: tsc clean, **226 of 226 tests pass**, build succeeds. The genesis hash test (`tests/m004.generator.test.ts`, "generator v1 genesis is unchanged by the v2 work", `e659504b056654dc`) passes unchanged.
+`cd Game && npx tsc --noEmit && npm test && npm run build`: tsc clean, **230 of 230 tests pass** after review v1 (226 of 226 at FEAT-004), build succeeds. The genesis hash test (`tests/m004.generator.test.ts`, "generator v1 genesis is unchanged by the v2 work", `e659504b056654dc`) passes unchanged.
 
 Tests added in this stage:
 
@@ -27,6 +27,7 @@ Tests added in this stage:
 | `tests/m008.vegetation.test.ts` | 7 | Species, stages and LOD are pure functions of entity id and position; no RNG draws, saved state or entity ids change; harvested entities are not drawn. |
 | `tests/m008.groundcover.test.ts` | 8 | Ground cover is deterministic, load-order independent, avoids water, edits, structures, homestead cells and tree clearance, adds no entities, leaves the genesis hash alone; shadow policy; macro LOD bounds; no-multi-draw fallback bounded; herd culling sphere covers every animal. |
 | `tests/m008.persistence.test.ts` (new in FEAT-004) | 4 | See 2.2. |
+| `tests/m008.views.test.ts` (new in review v1) | 4 | Wide views draw the visible macro tiles in a few runs and close views still cull; zoomed out, the drawn near ring shrinks while the loaded chunk set is unchanged and the macro fills the gap, and zooming back restores it; the tiled fallback spreads re-bakes over frames while panning and converges when the camera stops; shadow box and ground cover reach the bottom screen edge at long zoom, and the near band is 90 m. |
 
 ### 2.2 Simulation persistence independent of render distance (`tests/m008.persistence.test.ts`)
 
@@ -48,6 +49,12 @@ All browser runs used Playwright headless Chromium with software GL (ANGLE over 
 | Budget (FEAT-003) | `probe/m008-budget-c.js` | `budget.json`, `budget-*.png` |
 | Final desktop (FEAT-004), 1000x600 | `probe/m008-final-a.js` | `final.json`, `final-*.png` |
 | Emulated mobile (FEAT-004) | `probe/m008-mobile-a.js` | `mobile.json`, `mobile-*.png` |
+| Review v1: farm, forest, forest 140 m | `probe/m008-views-a3.js` | `views-close.json`, `views-farm*.png`, `views-forest.png`, `views-forest-clean.png`, `views-forest-140*.png` |
+| Review v1: zoomed out (300, 600, 1400 m) | `probe/m008-views-b3.js` | `views-zoom.json`, `views-farm-{300,600,1400}*.png`, `views-forest-{300,600,1400}*.png` |
+| Review v1: panning | `probe/m008-views-d4.js` | `views-pan.json` |
+| Review v1: reviewed build (5be91a3) for comparison | `probe/m008-views-e4.js` | `views-before.json` |
+
+The review v1 probe scripts are generated from `probe/m008-views.template.js` by `probe/m008-views-gen.mjs`; each saves its JSON through a browser download. The `*-clean.png` screenshots hide the UI panels so the scene can be judged.
 
 View URLs (all with `?chain=0&mode=builder`):
 
@@ -191,3 +198,89 @@ Close-up quality: within 60 m everything is drawn at full detail. Animal models,
 - Predators actually catching prey: not implemented (unchanged from M007b).
 - Villager animation in the browser was seen in screenshots only; the pose correctness of the skinned mesh is verified by test, not by measuring the browser.
 - Wolves near the farm, rabbits and trout in the forest: not in view in these probes.
+- Panning at a real 60 fps. The panning runs in section 10.3 ran at about 8 to 14 rendered frames per second (240 to 366 frames in 20 to 30 s), so the camera moved about 2 to 2.75 m per frame instead of about 0.5 m at 60 fps.
+- Mobile performance on a real device (open gate, section 10.6).
+
+## 10. Review v1 fixes
+
+Review: `.agents/tasks/task-m008-vegetation/2026-11-24-151805-review.md`, verdict NEEDS_CHANGES, six items. All runs below: local build of the review v1 working tree, Playwright headless Chromium, software GL, 1000x600, `WEBGL_multi_draw` present unless `multidraw=0` is forced. Calls and triangles are `renderer.info` (main plus shadow pass); the split is from `__renderBreakdown()`. Nothing here is deployed. The panning runs (`views-pan.json`) used the committed `Game/dist` build; the farm, forest and zoomed-out runs (`views-close.json`, `views-zoom.json`) used the build just before it, which differs only by the added `naturerebuild` section and `natureRebuilds` counter.
+
+### 10.1 Item 1: macro tiles at zoomed-out cameras (fixed)
+
+Two changes, both presentation only:
+
+- **Macro tiles share one buffer** (`buildMacroMesh`, `VoxelTerrainView.cullMacro` in `Game/src/render/terrain.ts`). All 256 m tiles now sit in one vertex and index buffer in row-major order. Each frame, off-screen tiles are still dropped by box test, and each run of consecutive visible tiles is drawn with one call (a run may continue across an off-screen tile of at most 1,500 triangles). Measured: 40 tiles in view at farm 1400 m now cost 1 macro call, and every zoomed-out view below needs 1 to 4; the farm view at 40 m still culls to 4 tiles in 2 calls.
+- **Smaller drawn near ring at long zoom** (`nearDisplayRadius`, `NEAR_DISPLAY_DISTANCES = [220, 450]`). Merging the macro alone was not enough: an intermediate browser run with only the merged macro (same probe views, JSON overwritten by the final run) measured farm 300 m at 121 calls, farm 600 m at 102, farm 1400 m at 97 and forest 600 m at 251,954 triangles, because the 49 near chunk meshes plus their water cost about 75 calls and about 100,000 triangles when the whole ring is on screen. Now, beyond 220 m camera distance only the 5x5 chunks around the target are drawn, and beyond 450 m only the 3x3 (10% hysteresis when zooming back in). The macro mesh is rebuilt with the matching smaller hole. Chunks stay loaded, so fauna, vegetation and the sim see exactly the same chunk set (test "zoomed out, the drawn near ring shrinks while every chunk stays loaded..."). One 1 m voxel covers about 4 pixels at 220 m and about 2 at 450 m in this viewport.
+
+| View (`?chain=0&mode=builder`) | Reviewed build 5be91a3 calls / tris | Review v1 calls / tris | Main pass calls / tris | Shadow pass calls / tris | Macro tiles in view | Near chunks drawn |
+| --- | --- | --- | --- | --- | --- | --- |
+| Farm 300 m (`tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=300`) | 129 / 201,198 | **89 / 148,736** | 69 / 125,568 | 20 / 23,168 | 12 | 25 of 49 |
+| Farm 600 m (`pitch=30&dist=600`) | not measured | **44 / 115,128** | 41 / 104,616 | 3 / 10,512 | 26 | 9 of 49 |
+| Farm 1400 m (`pitch=30&dist=1400`) | not measured | **39 / 117,892** | 39 / 117,892 | 0 / 0 | 40 | 9 of 49 |
+| Farm 1400 m, lowest pitch (`pitch=20&dist=1400`) | 157 / 239,318 | **39 / 117,892** | 39 / 117,892 | 0 / 0 | 40 | 9 of 49 |
+| Forest 300 m (`tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=300`) | not measured | **54 / 180,714** | 35 / 139,426 | 19 / 41,288 | 16 | 25 of 49 |
+| Forest 600 m (`pitch=28&dist=600`) | 103 / 253,252 | **51 / 179,072** | 34 / 137,912 | 17 / 41,160 | 26 | 9 of 49 |
+| Forest 1400 m (`pitch=28&dist=1400`) | not measured | **32 / 150,014** | 32 / 150,014 | 0 / 0 | 37 | 9 of 49 |
+| Forest 1400 m, lowest pitch (`pitch=20&dist=1400`) | not measured | **32 / 150,014** | 32 / 150,014 | 0 / 0 | 37 | 9 of 49 |
+| Forest 1400 m, lowest pitch, `multidraw=0` | not measured | **40 / 150,014** | 40 / 150,014 | 0 / 0 | 37 | 9 of 49 |
+
+The reviewed build was over budget at three of the four zoomed-out views it was measured at (129 and 157 calls; 253,252 triangles). Review v1 stays at or below 89 calls (31 headroom) and 180,714 triangles (69,286 headroom) in every zoomed-out view. `pitch=20` is clamped to the rig's minimum of 0.35 rad (20.05°).
+
+Visible trade-off: at 300 m the drawn 1 m voxel ring is 160 m wide instead of 224 m, and its edge against the 8 m macro terrain is closer to the target (`views-farm-300-clean.png`). At 600 m and beyond the foreground is macro terrain.
+
+### 10.2 Item 4: near LOD band raised to 90 m (fixed)
+
+`DEFAULT_LOD_BANDS.near` is 90 m (was 60); mid stays 130 m, hysteresis 4 m (`Game/src/render/lod.ts`).
+
+| View | Reviewed build (`final.json`) calls / tris | Review v1 (`views-close.json`) calls / tris | Main / shadow calls | Vegetation near / mid / far instances | Vegetation LOD triangles |
+| --- | --- | --- | --- | --- | --- |
+| Farm (`dist=40`) | 80 / 116,486 | **78 / 117,822** | 57 / 21 | 25 / 14 / 3 (was 10 / 29 / 3) | 3,098 (was 2,088) |
+| Forest (`dist=50`) | 40 / 162,690 | **41 / 170,330** | 35 / 6 | 244 / 128 / 128 (was 120 / 252 / 128) | 35,488 (was 27,616) |
+| Forest 140 m | 62 / 201,236 | **59 / 210,498** | 52 / 7 | 66 / 88 / 346 (was 9 / 145 / 346) | 21,670 (was 17,800) |
+
+Headroom to 120 calls / 250,000 triangles: farm 42 / 132,178, forest 79 / 79,670, forest 140 m 61 / 39,502. The forest 140 m view is the tightest view measured; its cost is mostly near voxel terrain (46 main calls, 112,630 triangles). Screenshots: `views-farm.png`, `views-farm-clean.png`, `views-forest.png`, `views-forest-clean.png`, `views-forest-140.png`, `views-forest-140-clean.png`.
+
+### 10.3 Item 2: tiled fallback while panning (fixed: re-bakes split and spread)
+
+`TiledLodMesh` (`Game/src/render/lod.ts`) now marks the near/mid mesh and the far mesh of a tile dirty separately (a near/mid switch re-bakes only the near/mid mesh), and bakes at most 2 tile meshes per frame, nearest tile first (`TILED_LOD_BAKES_PER_UPDATE`). Tiles waiting for a bake keep their previous geometry, which is one band older, and are finished on later frames even when the camera stops.
+
+Method: after warm-up, the probe holds D (builder pan right) without Shift. "Oscillate" alternates D and A for 1.5 s each for about 30 s, staying near the start (mostly band switches). "Sweep" holds D for 20 s (about 500 m, so chunks load). The mean comes from the `vegetation` section sum over the pan frames; `meanMs` is rounded to 0.01 ms in the metrics, which gives at most ±0.013 ms error on these means. "Max" is the section's maximum since page load (it was 0.1 ms before every pan). Chunk loads also rebuild the whole nature set (pre-existing behaviour, not part of the `vegetation` section); review v1 adds a separate `naturerebuild` section so that cost is visible.
+
+| Run (forest `dist=50` unless noted) | Frames | `vegetation` mean / max (ms) | Band evaluations / switches | Tile meshes baked | Most bakes waiting | Nature rebuilds: count, mean / max (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Reviewed build, `multidraw=0`, oscillate | 258 | 1.451 / 15.7 | 85 / 8,400 | not counted in that build | n/a | not measured in that build |
+| **Review v1, `multidraw=0`, oscillate** | 240 | **1.032 / 4.6** | 101 / 2,153 | 419 | 10 | 1, 19.5 / 19.5 |
+| Reviewed build, `multidraw=0`, sweep | 276 | 0.357 / 11.6 | 49 / 3,182 | not counted | n/a | not measured |
+| **Review v1, `multidraw=0`, sweep** | 282 | **0.309 / 6.0** | 65 / 4,216 | 590 | 11 | 40, 3.59 / 20.7 |
+| Review v1, `multidraw=0`, farm oscillate | 366 | 0.084 / 3.0 | 129 / 461 | 480 | 4 | 15, 1.53 / 4.1 |
+| Review v1, multi-draw, oscillate | 258 | 0.017 / 0.2 | 105 / 6,360 | n/a | n/a | 21, 2.55 / 5.5 |
+| Review v1, multi-draw, sweep | 282 | 0.017 / 0.8 | 69 / 3,987 | n/a | n/a | 40, 1.39 / 4.1 |
+
+Every `multidraw=0` run ended with 0 bakes waiting 6 s after the keys were released. Reading: the worst `vegetation` frame on the fallback path fell from 15.7 ms to 4.6 ms (oscillate) and from 11.6 ms to 6.0 ms (sweep); the mean fell from 1.451 to 1.032 ms. The two builds also differ in the near band (60 vs 90 m), so the review v1 fallback bakes more near geometry per tile. Still open: the full nature rebuild after a chunk load reached 20.7 ms on the fallback path (3.59 ms mean over 40 rebuilds), against 4.1 ms with multi-draw. That rebuild existed before this stage; spreading it is not part of review v1. The "switches" counts differ between runs because the camera path depends on the frame rate.
+
+### 10.4 Item 3: shadow box and ground cover anchored to the ground on screen (fixed)
+
+`viewGroundOffset` (`Game/src/render/camera.ts`) finds where the bottom screen edge meets the ground plane through the target. The shadow box lead (`shadowLead`, `Game/src/render/sky.ts`) and the ground-cover centre (`groundCoverOffset`, `Game/src/render/ground-cover.ts`) slide toward the camera so both still reach 8 m past that point. Close views are unchanged (lead 40 m, cover offset 0).
+
+| View | Bottom edge meets ground (m from target, negative = toward camera) | Shadow box lead (m) | Ground-cover offset (m) | Ground-cover pieces / triangles |
+| --- | --- | --- | --- | --- |
+| Farm 40 m | -17.3 | 40 | 0 | 422 / 10,334 |
+| Forest 50 m | -22.3 | 40 | 0 | 509 / 13,676 |
+| Forest 140 m (the review's example) | -62.3 | 29.7 | -18.3 | 523 / 14,102 |
+| Farm 300 m | -129.4 | -37.4 | -85.4 | 274 / 6,186 |
+| Forest 300 m | -133.5 | -41.5 | -89.5 | 190 / 5,146 |
+| Farm / forest 600 m | -258.8 / -267.1 | -166.8 / -175.1 | -214.8 / -223.1 | 0 / 0 |
+
+Limit: ground cover is only placed on drawn near chunks. From 450 m the foreground is macro terrain (section 10.1), so at 600 m and 1400 m no ground cover is drawn; at those distances a grass tuft is well under a pixel. At 300 m the cover disc is clipped to the 5x5 drawn ring. The anchors are checked geometrically in `tests/m008.views.test.ts`, not by measuring shadow pixels in a screenshot.
+
+### 10.5 Item 5: sapling yield and obstruction (decision recorded, no sim change)
+
+Decision: growth stage stays **visual only** in this stage. A sapling keeps the full timber yield of its entity record and the full `OBSTRUCTION_RADIUS`, as section 7 states. No sim, save or hash change was made; the genesis hash test still passes. This must be resolved **before villager navigation**, the next stage, because pathfinding would route around an obstruction disc larger than the drawn sapling. The two options from the review remain: scale the obstruction radius (and possibly yield) by stage, which is a sim change needing a new generator version, or rule out the sapling stage for large harvestable trees so the drawn model matches the sim footprint.
+
+### 10.6 Item 6: mobile proof (open gate)
+
+Still emulated only (section 4: SwiftShader, 4x CPU throttle, `WEBGL_multi_draw` present). No real device was measured in review v1. This stays an **open gate** before the animal stages: run the farm and forest views on a real phone, ideally one without `WEBGL_multi_draw` so the tiled fallback is the path measured.
+
+### 10.7 Visual vs simulated in review v1
+
+Everything changed in review v1 is presentation: macro draw runs, the drawn near ring radius, the LOD band threshold, fallback bake scheduling, shadow box and ground-cover anchors, and the new metrics (`macroTilesInView`, `viewAnchor`, `nearDisplayRadius`, `displayedChunks`, `nearDisplayedTriangles`, `natureRebuilds`, the `naturerebuild` section, fallback `tileBuilds` / `meshBakes` / `pendingBakes`). The loaded chunk set that fauna and vegetation read is unchanged. `tests/m008.persistence.test.ts` (identical sim state across no-render, near, 900 m and fallback runs) passes with these changes.

@@ -33,16 +33,31 @@ const mixHex = (a: string, b: string, k: number, out: THREE.Color) =>
 export const SHADOW_HALF_EXTENT = 100;
 /** How far (m) the shadow box centre sits ahead of the view target. */
 export const SHADOW_LEAD = 40;
+/** Ground (m) the shadow box keeps beyond the bottom screen edge. */
+export const SHADOW_NEAR_MARGIN = 8;
+
+/**
+ * Lead of the shadow box centre for a view whose bottom screen edge meets
+ * the ground `nearOffset` metres along the view direction from the target
+ * (negative = between camera and target, see viewGroundOffset). The lead is
+ * SHADOW_LEAD unless that would leave the nearest on-screen ground outside
+ * the box; then the box slides back so its near edge reaches the bottom of
+ * the screen. Review v1: at long zoom the foreground nearest the camera,
+ * the largest ground on screen, had no shadows while ground far ahead did.
+ */
+export function shadowLead(nearOffset: number): number {
+  return Math.min(SHADOW_LEAD, nearOffset + SHADOW_HALF_EXTENT - SHADOW_NEAR_MARGIN);
+}
 
 const _snapped = new THREE.Vector3();
 const _x = new THREE.Vector3(), _y = new THREE.Vector3(), _z = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 
 /** Shadow box centre for a view: target + SHADOW_LEAD along the horizontal view direction. */
-export function shadowCentre(target: THREE.Vector3, camera: THREE.Vector3, out = new THREE.Vector3()): THREE.Vector3 {
+export function shadowCentre(target: THREE.Vector3, camera: THREE.Vector3, out = new THREE.Vector3(), lead = SHADOW_LEAD): THREE.Vector3 {
   const dx = target.x - camera.x, dz = target.z - camera.z, len = Math.hypot(dx, dz);
   out.copy(target);
-  if (len > 1e-6) { out.x += (dx / len) * SHADOW_LEAD; out.z += (dz / len) * SHADOW_LEAD; }
+  if (len > 1e-6) { out.x += (dx / len) * lead; out.z += (dz / len) * lead; }
   return out;
 }
 
@@ -139,11 +154,13 @@ export class Sky {
   /**
    * Centre the sun shadow box on what the camera looks at: the view target
    * pushed SHADOW_LEAD metres along the horizontal view direction (the
-   * visible ground lies mostly beyond the target). Without a call the box
-   * follows the focus.
+   * visible ground lies mostly beyond the target). With `nearOffset` (where
+   * the bottom screen edge meets the ground) the lead shrinks so the nearest
+   * ground stays inside the box (shadowLead). Without a call the box follows
+   * the focus.
    */
-  setShadowView(target: THREE.Vector3, camera: THREE.Vector3) {
-    shadowCentre(target, camera, this.shadowFocus);
+  setShadowView(target: THREE.Vector3, camera: THREE.Vector3, nearOffset = 0) {
+    shadowCentre(target, camera, this.shadowFocus, shadowLead(nearOffset));
     this.hasShadowView = true;
   }
 

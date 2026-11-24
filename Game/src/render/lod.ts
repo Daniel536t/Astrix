@@ -33,7 +33,14 @@ export interface LodBands {
   hysteresis: number;
 }
 
-export const DEFAULT_LOD_BANDS: LodBands = { near: 60, mid: 130, hysteresis: 4 };
+/**
+ * Near was 60 m in the first M008 pass. Review v1 raised it to 90 m: in the
+ * browser farm view 25 of 42 vegetation instances now draw at full detail
+ * instead of 10 (LOD triangles 2,088 to 3,098); in the forest view 244 of
+ * 500 instead of 120 (27,616 to 35,488). Both stay well inside the budget
+ * (Evidence/M008-vegetation/views-close.json).
+ */
+export const DEFAULT_LOD_BANDS: LodBands = { near: 90, mid: 130, hysteresis: 4 };
 
 /**
  * Pure band selection with hysteresis. With no previous band the thresholds
@@ -242,7 +249,13 @@ interface LodTile {
   main: THREE.Mesh;
   /** Far instances, no shadow. */
   far: THREE.Mesh;
-  dirty: boolean;
+  /** `main` needs a re-bake (a near/mid instance changed geometry or band). */
+  dirtyMain: boolean;
+  /** `far` needs a re-bake (an instance entered or left the far band). */
+  dirtyFar: boolean;
+  /** Tile centre (x, z) for nearest-first rebuild order. */
+  cx: number;
+  cz: number;
 }
 
 export interface TiledLodMeshOptions {
@@ -251,7 +264,16 @@ export interface TiledLodMeshOptions {
   bands?: LodBands;
   moveThreshold?: number;
   tileSize?: number;
+  /** Tile meshes re-baked per update() at most; the rest wait for later frames. */
+  maxBakesPerUpdate?: number;
 }
+
+/**
+ * Default re-bake budget per frame. Panning the forest view at about 40 m/s
+ * dirtied up to 8 of 9 tiles in one update (node harness, review v1); two
+ * meshes per frame keep the worst frame near the median one.
+ */
+export const TILED_LOD_BAKES_PER_UPDATE = 2;
 
 const _tm = new THREE.Matrix4();
 const _tn = new THREE.Matrix3();
@@ -288,12 +310,16 @@ export class TiledLodMesh implements LodSet {
   private batchIds: string[] = [];
   private evaluations = 0;
   private switches = 0;
+  private readonly maxBakes: number;
   /** Tile geometry rebuilds so far (for metrics and tests). */
   tileBuilds = 0;
+  /** Individual mesh bakes so far (a tile rebuild bakes one or both meshes). */
+  meshBakes = 0;
 
   constructor(options: TiledLodMeshOptions) {
     this.bands = options.bands ?? DEFAULT_LOD_BANDS;
     this.moveThreshold = options.moveThreshold ?? 4;
+    this.maxBakes = Math.max(1, options.maxBakesPerUpdate ?? TILED_LOD_BAKES_PER_UPDATE);
     this.tileSize = options.tileSize ?? LOD_TILE_SIZE;
     this.material = options.material;
     this.name = options.name;
@@ -303,6 +329,12 @@ export class TiledLodMesh implements LodSet {
   get objects(): THREE.Object3D[] { return [this.group]; }
   get count(): number { return this.band.length; }
   get tileCount(): number { return this.tiles.size; }
+  /** Tile meshes waiting for a re-bake (spread over the next updates). */
+  get pendingBakes(): number {
+    let n = 0;
+    for (const t of this.tiles.values()) n += (t.dirtyMain ? 1 : 0) + (t.dirtyFar ? 1 : 0);
+    return n;
+  }
   bandAt(id: number): LodBand { return this.band[id]; }
 
   addGeometry(lod: LodBand, geometry: THREE.BufferGeometry): number {
@@ -328,12 +360,17 @@ export class TiledLodMesh implements LodSet {
         mesh.visible = false;
         return mesh;
       };
-      tile = { key, ids: [], main: mk('_tile', true), far: mk('_tile_far', false), dirty: true };
+      const tx = Math.floor(position.x / this.tileSize), tz = Math.floor(position.z / this.tileSize);
+      tile = {
+        key, ids: [], main: mk('_tile', true), far: mk('_tile_far', false), dirtyMain: true, dirtyFar: true,
+        cx: (tx + 0.5) * this.tileSize, cz: (tz + 0.5) * this.tileSize,
+      };
       this.tiles.set(key, tile);
       this.group.add(tile.main, tile.far);
     }
     tile.ids.push(id);
-    tile.dirty = true;
+    tile.dirtyMain = true;
+    tile.dirtyFar = true;
     this.tileOf.push(tile);
     return id;
   }
@@ -352,9 +389,16 @@ export class TiledLodMesh implements LodSet {
     return this.geometries[b === LOD_NEAR ? g.near : b === LOD_MID ? g.mid : g.far];
   }
 
-  /** Bake one tile: near/mid instances into `main`, far ones into `far`. */
+  /**
+   * Bake the dirty meshes of one tile: near/mid instances into `main`, far
+   * ones into `far`. A near/mid switch only re-bakes `main`; entering or
+   * leaving the far band re-bakes both, together, so an instance is never
+   * drawn twice or missing between frames.
+   */
   private buildTile(tile: LodTile): void {
     for (const [mesh, far] of [[tile.main, false], [tile.far, true]] as const) {
+      if (!(far ? tile.dirtyFar : tile.dirtyMain)) continue;
+      this.meshBakes++;
       const ids = tile.ids.filter((id) => (this.band[id] === LOD_FAR) === far);
       let vertices = 0;
       for (const id of ids) vertices += this.geometryFor(id).attributes.position.count;
@@ -387,30 +431,57 @@ export class TiledLodMesh implements LodSet {
       mesh.visible = vertices > 0;
       mesh.userData.triangleOwner = owner;
     }
-    tile.dirty = false;
+    tile.dirtyMain = false;
+    tile.dirtyFar = false;
     this.tileBuilds++;
   }
 
+  /**
+   * Re-evaluates bands once the camera has moved `moveThreshold` metres (or
+   * on `force`), then re-bakes dirty tiles nearest the camera first, at most
+   * `maxBakesPerUpdate` meshes per call. Tiles left dirty keep their previous
+   * (still correct, one band older) geometry and are baked on later calls,
+   * even while the camera stands still. `force` bakes everything at once.
+   * Returns true when it evaluated bands.
+   */
   update(camera: Vec3Like, force = false): boolean {
     const dx = camera.x - this.lastCamera.x, dy = camera.y - this.lastCamera.y, dz = camera.z - this.lastCamera.z;
-    if (!force && dx * dx + dy * dy + dz * dz < this.moveThreshold * this.moveThreshold) return false;
-    this.lastCamera.set(camera.x, camera.y, camera.z);
-    const p = this.positions;
-    for (let i = 0; i < this.band.length; i++) {
-      const d = Math.hypot(p[i * 3] - camera.x, p[i * 3 + 1] - camera.y, p[i * 3 + 2] - camera.z);
-      const band = selectLodBand(d, this.band[i], this.bands);
-      if (band === this.band[i]) continue;
-      this.band[i] = band;
-      this.tileOf[i].dirty = true;
-      this.switches++;
+    const evaluate = force || dx * dx + dy * dy + dz * dz >= this.moveThreshold * this.moveThreshold;
+    if (evaluate) {
+      this.lastCamera.set(camera.x, camera.y, camera.z);
+      const p = this.positions;
+      for (let i = 0; i < this.band.length; i++) {
+        const d = Math.hypot(p[i * 3] - camera.x, p[i * 3 + 1] - camera.y, p[i * 3 + 2] - camera.z);
+        const band = selectLodBand(d, this.band[i], this.bands);
+        const previous = this.band[i];
+        if (band === previous) continue;
+        this.band[i] = band;
+        const tile = this.tileOf[i];
+        tile.dirtyMain = true;
+        if (band === LOD_FAR || previous === LOD_FAR) tile.dirtyFar = true;
+        this.switches++;
+      }
+      this.evaluations++;
     }
-    this.rebuildDirty();
-    this.evaluations++;
-    return true;
+    this.rebuildDirty(force ? Infinity : this.maxBakes, camera);
+    return evaluate;
   }
 
-  private rebuildDirty(): void {
-    for (const tile of this.tiles.values()) if (tile.dirty) this.buildTile(tile);
+  private rebuildDirty(budget = Infinity, camera?: Vec3Like): void {
+    const dirty: LodTile[] = [];
+    for (const tile of this.tiles.values()) if (tile.dirtyMain || tile.dirtyFar) dirty.push(tile);
+    if (dirty.length === 0) return;
+    if (camera && Number.isFinite(budget)) {
+      dirty.sort((a, b) => Math.hypot(a.cx - camera.x, a.cz - camera.z) - Math.hypot(b.cx - camera.x, b.cz - camera.z));
+    }
+    let used = 0;
+    for (const tile of dirty) {
+      const cost = (tile.dirtyMain ? 1 : 0) + (tile.dirtyFar ? 1 : 0);
+      // Always make progress: the first tile is baked even if it exceeds the budget.
+      if (used > 0 && used + cost > budget) break;
+      this.buildTile(tile);
+      used += cost;
+    }
   }
 
   stats(): LodStats {

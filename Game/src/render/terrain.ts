@@ -640,7 +640,63 @@ export function buildMacroMesh(world: World, opts: MacroOptions): MacroResult {
   const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
   const meshes: THREE.Mesh[] = [];
   let triangles = 0;
-  for (let t = 0; t < tileBuffers.length; t++) {
+  if (tileBuffers.length > 1) {
+    // Tiled: every tile's quads go into ONE shared set of vertex and index
+    // buffers, tile after tile in row-major order. Each tile mesh is a view
+    // of its own index range (drawRange) with its own bounding box, so
+    // cullMacro can hide off-screen tiles and then draw each run of
+    // consecutive visible tiles with a single call by widening the first
+    // tile's range. GPU memory is the same as one mesh.
+    let vertexCount = 0, indexCount = 0;
+    for (const b of tileBuffers) { vertexCount += b.positions.length / 3; indexCount += b.indices.length; }
+    const position = new Float32Array(vertexCount * 3), normal = new Float32Array(vertexCount * 3), color = new Float32Array(vertexCount * 3);
+    const index = vertexCount > 65535 ? new Uint32Array(indexCount) : new Uint16Array(indexCount);
+    const ranges: Array<{ t: number; start: number; count: number; box: THREE.Box3 }> = [];
+    let vo = 0, io = 0;
+    for (let t = 0; t < tileBuffers.length; t++) {
+      const b = tileBuffers[t];
+      if (b.indices.length === 0) continue;
+      position.set(b.positions, vo * 3);
+      normal.set(b.normals, vo * 3);
+      color.set(b.colors, vo * 3);
+      for (let k = 0; k < b.indices.length; k++) index[io + k] = b.indices[k] + vo;
+      const box = new THREE.Box3();
+      for (let k = 0; k < b.positions.length; k += 3) {
+        _boxPoint.set(b.positions[k], b.positions[k + 1], b.positions[k + 2]);
+        box.expandByPoint(_boxPoint);
+      }
+      ranges.push({ t, start: io, count: b.indices.length, box });
+      vo += b.positions.length / 3;
+      io += b.indices.length;
+    }
+    const shared = {
+      position: new THREE.BufferAttribute(position, 3),
+      normal: new THREE.BufferAttribute(normal, 3),
+      color: new THREE.BufferAttribute(color, 3),
+      index: new THREE.BufferAttribute(index, 1),
+    };
+    for (const r of ranges) {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', shared.position);
+      geometry.setAttribute('normal', shared.normal);
+      geometry.setAttribute('color', shared.color);
+      geometry.setIndex(shared.index);
+      geometry.setDrawRange(r.start, r.count);
+      geometry.boundingBox = r.box;
+      geometry.boundingSphere = r.box.getBoundingSphere(new THREE.Sphere());
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.name = `macro_lod_tile_${r.t % tilesPerSide}_${Math.floor(r.t / tilesPerSide)}`;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      // cullMacro decides visibility by box; a widened run would fail
+      // three's per-tile sphere test.
+      mesh.frustumCulled = false;
+      mesh.userData.macroRange = { start: r.start, count: r.count };
+      meshes.push(mesh);
+      triangles += r.count / 3;
+    }
+  }
+  for (let t = 0; t < tileBuffers.length && tileBuffers.length === 1; t++) {
     const { positions, normals, colors, indices } = tileBuffers[t];
     if (indices.length === 0 && (tileBuffers.length > 1 || meshes.length > 0)) continue;
     const geometry = new THREE.BufferGeometry();
@@ -682,6 +738,41 @@ export interface VoxelTerrainViewOptions {
 
 const _cullFrustum = new THREE.Frustum();
 const _cullMatrix = new THREE.Matrix4();
+const _boxPoint = new THREE.Vector3();
+/**
+ * cullMacro joins two runs of visible macro tiles across an off-screen tile
+ * of at most this many triangles (it is drawn and clipped by the GPU), to
+ * save a draw call. Coast and sea tiles are small, so wide views collapse to
+ * a few runs.
+ */
+export const MACRO_BRIDGE_TRIANGLES = 1500;
+
+/**
+ * Camera distances (m) past which the drawn near ring shrinks by one more
+ * chunk: radius - 1 beyond the first, radius - 2 beyond the second (never
+ * below 1). Review v1: at builder zoom 300 m and beyond the whole 7x7 ring is
+ * on screen and its 49 chunk meshes plus water cost about 75 calls, while one
+ * voxel there covers 2 to 4 pixels. Chunks stay loaded (sim, fauna and
+ * vegetation still see them); only their meshes are hidden and the macro
+ * mesh fills their area.
+ */
+export const NEAR_DISPLAY_DISTANCES: readonly number[] = [220, 450];
+/** Zooming back in, a level is kept until the distance drops below threshold x this. */
+export const NEAR_DISPLAY_HYSTERESIS = 0.9;
+
+/**
+ * Drawn near ring radius (chunks) for a camera `distance` (m) from its
+ * target, with hysteresis against the previously drawn radius.
+ */
+export function nearDisplayRadius(distance: number, nearRadius: number, previous = nearRadius): number {
+  const prevLevel = nearRadius - previous;
+  let level = 0;
+  for (let i = 0; i < NEAR_DISPLAY_DISTANCES.length; i++) {
+    const t = NEAR_DISPLAY_DISTANCES[i] * (prevLevel > i ? NEAR_DISPLAY_HYSTERESIS : 1);
+    if (distance > t) level = i + 1;
+  }
+  return Math.max(1, Math.min(nearRadius, nearRadius - level));
+}
 
 interface ChunkView { mesh: THREE.Mesh; water: THREE.Mesh | null; triangles: number; }
 
@@ -696,12 +787,21 @@ export class VoxelTerrainView {
   private water: THREE.Mesh;
   private world: World;
   private nearRadius: number;
+  /** Radius (chunks) of the near ring actually drawn; <= nearRadius (see nearDisplayRadius). */
+  private displayRadius: number;
+  /** Macro hole of the last world rebuild, in chunk coordinates (inclusive). */
+  private holeChunks = { minX: 0, maxX: -1, minZ: 0, maxZ: -1 };
+  private displayed = new Set<string>();
+  /** displayRadius the macro hole was last built for. */
+  private macroDisplayRadius = -1;
   private worldMacroStep: number;
   private mapMacroStep: number;
   private chunks = new Map<string, ChunkView>();
   private loaded = new Set<string>();
   private mode: ViewMode = 'world';
   private macro: THREE.Mesh[] = [];
+  private macroVisibility: boolean[] = [];
+  private macroInView = 0;
   private macroTriangles = 0;
   private macroFocus = new THREE.Vector3(1e9, 0, 1e9);
   private macroMode: ViewMode | null = null;
@@ -730,6 +830,7 @@ export class VoxelTerrainView {
   constructor(world: World, scene: THREE.Scene, opts: VoxelTerrainViewOptions = {}) {
     this.world = world;
     this.nearRadius = Math.max(1, opts.nearRadius ?? 3);
+    this.displayRadius = this.nearRadius;
     this.worldMacroStep = Math.max(4, opts.worldMacroStep ?? 8);
     this.mapMacroStep = Math.max(4, opts.mapMacroStep ?? 8);
     this.group.name = 'voxel_world';
@@ -773,8 +874,47 @@ export class VoxelTerrainView {
     if (++this.sweepCounter % 30 === 0) this.sweepResident(focus);
 
     const moved = Math.hypot(focus.x - this.macroFocus.x, focus.z - this.macroFocus.z);
-    if (this.macroMode !== mode || moved > 48 || macroEditKey(this.world) !== this.macroEditKey) {
+    if (this.macroDisplayRadius !== this.displayRadius) {
+      this.rebuildMacro(focus, mode, true);
+    } else if (this.macroMode !== mode || moved > 48 || macroEditKey(this.world) !== this.macroEditKey) {
       this.rebuildMacro(focus, mode, false);
+    }
+    this.applyDisplay(focus);
+  }
+
+  /**
+   * Presentation only: pick the drawn near ring radius for a camera this far
+   * (m) from its target (nearDisplayRadius). Takes effect at the next update().
+   */
+  setViewDistance(distance: number): void {
+    this.displayRadius = nearDisplayRadius(distance, this.nearRadius, this.displayRadius);
+  }
+
+  /** Radius (chunks) of the near ring currently drawn. */
+  get displayRadiusChunks(): number { return this.displayRadius; }
+
+  /**
+   * Show a loaded chunk when it lies in the macro hole (so no gap opens) or
+   * within displayRadius of the focus chunk (leading edge while the macro
+   * waits for its 48 m rebuild). With the full radius every chunk is drawn,
+   * exactly as before.
+   */
+  private applyDisplay(focus: THREE.Vector3): void {
+    const all = this.displayRadius >= this.nearRadius;
+    const ccx = worldToChunkX(Math.round(focus.x));
+    const ccz = worldToChunkZ(Math.round(focus.z));
+    const h = this.holeChunks, r = this.displayRadius;
+    this.displayed.clear();
+    for (const [key, view] of this.chunks) {
+      let show = all;
+      if (!show) {
+        const [cx, cz] = key.split(',').map(Number);
+        show = (cx >= h.minX && cx <= h.maxX && cz >= h.minZ && cz <= h.maxZ)
+          || (Math.abs(cx - ccx) <= r && Math.abs(cz - ccz) <= r);
+      }
+      view.mesh.visible = show;
+      if (view.water) view.water.visible = show;
+      if (show && this.loaded.has(key)) this.displayed.add(key);
     }
   }
 
@@ -1056,6 +1196,7 @@ export class VoxelTerrainView {
     const macroT0 = performance.now();
     for (const tile of this.macro) {
       this.macroGroup.remove(tile);
+      // Tiles share their buffers; disposing each view frees them once.
       tile.geometry.dispose();
     }
     this.macro = [];
@@ -1064,14 +1205,17 @@ export class VoxelTerrainView {
     if (mode !== 'map') {
       const ccx = worldToChunkX(Math.round(focus.x));
       const ccz = worldToChunkZ(Math.round(focus.z));
+      const r = this.displayRadius;
       hole = {
-        minX: chunkOriginX(ccx - this.nearRadius),
-        maxX: chunkOriginX(ccx + this.nearRadius) + CHUNK_SIZE,
-        minZ: chunkOriginZ(ccz - this.nearRadius),
-        maxZ: chunkOriginZ(ccz + this.nearRadius) + CHUNK_SIZE,
+        minX: chunkOriginX(ccx - r),
+        maxX: chunkOriginX(ccx + r) + CHUNK_SIZE,
+        minZ: chunkOriginZ(ccz - r),
+        maxZ: chunkOriginZ(ccz + r) + CHUNK_SIZE,
       };
+      this.holeChunks = { minX: ccx - r, maxX: ccx + r, minZ: ccz - r, maxZ: ccz + r };
       this.farWaterHole.value.set(hole.minX, hole.minZ, hole.maxX, hole.maxZ);
     }
+    this.macroDisplayRadius = this.displayRadius;
     const result = buildMacroMesh(this.world, { step, hole, focus: mode === 'map' ? undefined : focus });
     this.macro = result.meshes;
     this.macroTriangles = result.triangles;
@@ -1086,41 +1230,89 @@ export class VoxelTerrainView {
 
   get loadedChunks(): number { return this.loaded.size; }
   get loadedChunkKeys(): ReadonlySet<string> { return this.loaded; }
+  /** Loaded chunks whose meshes are drawn (all of them unless zoomed out). */
+  get displayedChunkKeys(): ReadonlySet<string> { return this.displayRadius >= this.nearRadius ? this.loaded : this.displayed; }
+  get displayedChunks(): number { return this.displayedChunkKeys.size; }
   get nearTriangles(): number {
     let t = 0;
     for (const v of this.chunks.values()) t += v.triangles;
     return t;
   }
-  get macroTriangleCount(): number { return this.macroTriangles; }
-  /** Triangles of the macro tiles left visible by the last cullMacro call. */
-  get macroVisibleTriangles(): number {
+  /** Triangles of the near chunks currently drawn (see displayedChunkKeys). */
+  get nearDisplayedTriangles(): number {
     let t = 0;
-    for (const tile of this.macro) if (tile.visible) t += (tile.geometry.index?.count ?? 0) / 3;
+    for (const v of this.chunks.values()) if (v.mesh.visible) t += v.triangles;
     return t;
   }
+  get macroTriangleCount(): number { return this.macroTriangles; }
+  /** Triangles the macro draws after the last cullMacro call (runs, including bridged tiles). */
+  get macroVisibleTriangles(): number {
+    let t = 0;
+    for (const tile of this.macro) {
+      if (!tile.visible) continue;
+      const g = tile.geometry;
+      t += Math.min(g.drawRange.count, g.index?.count ?? 0) / 3;
+    }
+    return t;
+  }
+  /** Macro tiles whose box is inside the frustum at the last cullMacro call. */
+  get macroTilesInView(): number { return this.macroInView; }
 
   /**
-   * Hide macro tiles whose bounding box is outside the camera frustum. Three
-   * only culls by bounding sphere, which never rejects a 256 m tile next to
-   * the camera; the box test also drops far tiles below the frustum when the
-   * camera pitches down. Presentation only, call once per frame before render.
+   * Hide macro tiles whose bounding box is outside the camera frustum, then
+   * draw each run of consecutive visible tiles (row-major, sharing one index
+   * buffer) as one call. Three only culls by bounding sphere, which never
+   * rejects a 256 m tile next to the camera; the box test also drops far
+   * tiles below the frustum when the camera pitches down. A run continues
+   * across an off-screen tile of at most MACRO_BRIDGE_TRIANGLES. Review v1:
+   * at the 1400 m builder zoom 40 tiles were on screen and each cost a call.
+   * Presentation only, call once per frame before render.
    */
   cullMacro(camera: THREE.Camera): void {
-    if (this.macro.length <= 1) { for (const tile of this.macro) tile.visible = true; return; }
+    if (this.macro.length <= 1) {
+      for (const tile of this.macro) tile.visible = true;
+      this.macroInView = this.macro.length;
+      return;
+    }
     camera.updateMatrixWorld();
     _cullMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     _cullFrustum.setFromProjectionMatrix(_cullMatrix);
-    for (const tile of this.macro) {
-      const box = tile.geometry.boundingBox;
-      tile.visible = !box || _cullFrustum.intersectsBox(box);
+    const n = this.macro.length;
+    const inView = this.macroVisibility.length === n ? this.macroVisibility : (this.macroVisibility = new Array<boolean>(n));
+    let count = 0;
+    for (let i = 0; i < n; i++) {
+      const box = this.macro[i].geometry.boundingBox;
+      inView[i] = !box || _cullFrustum.intersectsBox(box);
+      if (inView[i]) count++;
+    }
+    this.macroInView = count;
+    let head: THREE.Mesh | null = null, headStart = 0, gap = 0;
+    for (let i = 0; i < n; i++) {
+      const tile = this.macro[i];
+      const range = tile.userData.macroRange as { start: number; count: number };
+      tile.visible = false;
+      if (!inView[i]) { gap += range.count / 3; continue; }
+      if (head && gap <= MACRO_BRIDGE_TRIANGLES) {
+        head.geometry.setDrawRange(headStart, range.start + range.count - headStart);
+      } else {
+        head = tile;
+        headStart = range.start;
+        tile.visible = true;
+        tile.geometry.setDrawRange(headStart, range.count);
+      }
+      gap = 0;
     }
   }
   get drawCalls(): number {
-    let water = 0;
-    for (const v of this.chunks.values()) if (v.water) water++;
+    let near = 0, water = 0;
+    for (const [key, v] of this.chunks) {
+      if (!this.loaded.has(key) || !v.mesh.visible) continue;
+      near++;
+      if (v.water) water++;
+    }
     let macro = 0;
     for (const tile of this.macro) if (tile.visible) macro++;
-    return this.loaded.size + water + macro + 1;
+    return near + water + macro + 1;
   }
   get nearRadiusChunks(): number { return this.nearRadius; }
   /** Clear the rolling timing window before a measurement run. */

@@ -6,10 +6,10 @@ import {
 } from './sim/world';
 import { VoxelTerrainView, ViewMode } from './render/terrain';
 import { buildNoxelNature, lodCounts } from './render/nature';
-import type { LodSet } from './render/lod';
+import { TiledLodMesh, type LodSet } from './render/lod';
 import { buildNoxelSite, buildKit } from './render/noxel';
-import { Sky, timeLabel } from './render/sky';
-import { OrbitRig } from './render/camera';
+import { Sky, shadowLead, timeLabel } from './render/sky';
+import { OrbitRig, alongView, viewGroundOffset } from './render/camera';
 import { M2Game } from './app/m2';
 import { M2_PROJECTS } from './app/projects';
 import { M002_LAYOUT } from './sim/m002';
@@ -30,7 +30,7 @@ import { HomesteadGame } from './app/homestead';
 import { DAY_TICKS } from './sim/homestead';
 import { buildAnimalShowcase } from './render/animal-showcase';
 import { renderBreakdown } from './app/render-breakdown';
-import { GroundCoverView } from './render/ground-cover';
+import { GroundCoverView, groundCoverOffset } from './render/ground-cover';
 
 // A startup failure would otherwise leave a blank canvas with no explanation.
 window.addEventListener('error', (e) => {
@@ -172,6 +172,8 @@ const terrainView = new VoxelTerrainView(world, scene, {
 });
 
 let natureDirty = true;
+/** Full nature rebuilds so far (chunk loads, edits); LOD counters restart with each. */
+let natureRebuilds = 0;
 let natureInstances = 0;
 // Distance LOD of trees, bushes and stone props (presentation only).
 let natureLod: LodSet | null = null;
@@ -275,6 +277,7 @@ function rebuildNature(): void {
   natureGroup.visible = !isMap;
   natureInstances = result.instances;
   natureLod = result.lod;
+  natureRebuilds++;
   sceneInspector?.refreshTargets();
   natureDirty = false;
 }
@@ -284,6 +287,7 @@ rebuildNature();
 // Render-only grass, flowers, ferns, stones, logs and understory near the view.
 const groundCover = isMap || isKit ? null : new GroundCoverView(world);
 if (groundCover) scene.add(groundCover.group);
+const coverFocus = new THREE.Vector3();
 
 const siteGroup = new THREE.Group();
 siteGroup.name = 'noxel_sites';
@@ -500,8 +504,10 @@ function metrics() {
     pinkTrees: world.stats.pinkTrees,
     pinkOverflow: world.stats.pinkOverflow,
     natureInstances,
+    natureRebuilds,
     vegetation: natureLod ? { ...lodCounts(natureLod), drawnTriangles: natureLod.drawnTriangles(),
-      evaluations: natureLod.stats().evaluations, switches: natureLod.stats().switches } : null,
+      evaluations: natureLod.stats().evaluations, switches: natureLod.stats().switches,
+      ...(natureLod instanceof TiledLodMesh ? { tileBuilds: natureLod.tileBuilds, meshBakes: natureLod.meshBakes, pendingBakes: natureLod.pendingBakes } : {}) } : null,
     edits,
     harvested,
     inventory: { ...world.inventory },
@@ -509,8 +515,16 @@ function metrics() {
     structures: world.structures.size,
     m2: m2Game?.metrics() ?? null,
     nearTriangles: terrainView.nearTriangles,
+    nearDisplayedTriangles: terrainView.nearDisplayedTriangles,
+    nearDisplayRadius: terrainView.displayRadiusChunks,
+    displayedChunks: terrainView.displayedChunks,
     macroTriangles: terrainView.macroTriangleCount,
     macroVisibleTriangles: terrainView.macroVisibleTriangles,
+    macroTilesInView: terrainView.macroTilesInView,
+    viewAnchor: (() => {
+      const near = viewGroundOffset(rig.camera, rig.target);
+      return { nearGround: Math.round(near * 10) / 10, shadowLead: Math.round(shadowLead(near) * 10) / 10, coverOffset: Math.round(groundCoverOffset(near) * 10) / 10 };
+    })(),
     groundCover: groundCover?.metrics() ?? null,
     multiDraw,
     rendererCalls: renderer.info.render.calls,
@@ -595,7 +609,10 @@ function frame(timestamp?: number) {
     time.t = ((lifeTick + frac) / DAY_TICKS + 0.23) % 1;
   }
   sky.setFocus(rig.target);
-  sky.setShadowView(rig.target, rig.camera.position);
+  // Where the bottom screen edge meets the ground: the shadow box and ground
+  // cover keep that nearest on-screen ground covered at long zoom.
+  const nearGround = viewGroundOffset(rig.camera, rig.target);
+  sky.setShadowView(rig.target, rig.camera.position, nearGround);
   sky.update(time.t);
   if (isMap) scene.fog = null;
   // Underwater: when the lens is inside water, visibility drops to a few metres.
@@ -607,10 +624,18 @@ function frame(timestamp?: number) {
   const mode: ViewMode = isMap ? 'map' : isKit ? 'kit' : 'world';
   terrainView.setWaterTime(freeze ? 0 : timer.getElapsed());
   const tTerrain = performance.now();
+  // Zoomed out, the drawn near ring shrinks (chunks stay loaded; presentation only).
+  terrainView.setViewDistance(rig.distance);
   terrainView.update(rig.target, mode);
   terrainView.cullMacro(rig.camera);
   sections.record('terrain', performance.now() - tTerrain);
-  if (natureDirty && !isMap && frames % 2 === 0) rebuildNature();
+  if (natureDirty && !isMap && frames % 2 === 0) {
+    // Timed apart from 'vegetation' (band updates): a chunk load rebuilds the
+    // whole nature set, which also re-bakes every fallback tile.
+    const tRebuild = performance.now();
+    rebuildNature();
+    sections.record('naturerebuild', performance.now() - tRebuild);
+  }
   const tVegetation = performance.now();
   // Throttled inside LodBatch: bands are re-evaluated only after the camera
   // moves 4 m, so a still camera costs one distance check per frame.
@@ -618,7 +643,7 @@ function frame(timestamp?: number) {
   sections.record('vegetation', performance.now() - tVegetation);
   if (natureGroup) natureGroup.visible = !isMap;
   const tCover = performance.now();
-  groundCover?.update(rig.target, terrainView.loadedChunkKeys);
+  groundCover?.update(alongView(rig.target, rig.camera.position, groundCoverOffset(nearGround), coverFocus), terrainView.displayedChunkKeys);
   sections.record('groundcover', performance.now() - tCover);
   m2Game?.update(performance.now());
   sceneInspector?.update();

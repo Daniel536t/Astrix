@@ -15,6 +15,33 @@ export type RigMode = 'builder' | 'explore';
 /** Returns the free distance along a ray (<= maxDist), used for arm collision. */
 export type ArmCollider = (from: THREE.Vector3, dir: THREE.Vector3, maxDist: number) => number;
 
+/**
+ * Signed horizontal distance (m) from `target` to where the bottom screen
+ * edge (centre column) meets the horizontal plane through the target,
+ * measured along the camera's horizontal view direction: negative means the
+ * nearest visible ground lies between the camera and the target. Returns 0
+ * when that ray never reaches the plane (camera level or looking up).
+ * Used to anchor the shadow box and ground cover to the ground on screen.
+ */
+export function viewGroundOffset(camera: THREE.PerspectiveCamera, target: THREE.Vector3): number {
+  const p = camera.position;
+  const h = p.y - target.y;
+  const along = Math.hypot(target.x - p.x, target.z - p.z);
+  if (h <= 0) return 0;
+  const down = Math.atan2(h, along) + THREE.MathUtils.degToRad(camera.fov / 2);
+  if (down <= 0) return 0;
+  // Past straight down (down > 90 deg) the hit lies behind the camera.
+  return h / Math.tan(down) - along;
+}
+
+/** `target` moved `offset` metres along the camera's horizontal view direction. */
+export function alongView(target: THREE.Vector3, camera: THREE.Vector3, offset: number, out = new THREE.Vector3()): THREE.Vector3 {
+  const dx = target.x - camera.x, dz = target.z - camera.z, len = Math.hypot(dx, dz);
+  out.copy(target);
+  if (len > 1e-6) { out.x += (dx / len) * offset; out.z += (dz / len) * offset; }
+  return out;
+}
+
 export class OrbitRig {
   readonly camera: THREE.PerspectiveCamera;
   target = new THREE.Vector3(0, 10, 0);

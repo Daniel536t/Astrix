@@ -37,6 +37,20 @@ export const GROUND_COVER_RADIUS = 52;
 export const GROUND_COVER_CELL = 2;
 /** Rebuild the merged mesh after the focus moved this far (m). */
 export const GROUND_COVER_MOVE = 6;
+/** Ground (m) the cover disc keeps beyond the bottom screen edge. */
+export const GROUND_COVER_NEAR_MARGIN = 8;
+
+/**
+ * Offset (m) of the ground-cover focus along the horizontal view direction
+ * from the view target, for a view whose bottom screen edge meets the ground
+ * at `nearOffset` (see viewGroundOffset; negative = toward the camera). Close
+ * views keep the disc on the target (offset 0). At long zoom the disc slides
+ * toward the camera so the nearest, largest ground on screen keeps its cover
+ * (review v1: it used to sit around the target, leaving the foreground bare).
+ */
+export function groundCoverOffset(nearOffset: number): number {
+  return Math.min(0, nearOffset + GROUND_COVER_RADIUS - GROUND_COVER_NEAR_MARGIN);
+}
 
 export type CoverKind = 'grass' | 'flower' | 'fern' | 'stone' | 'log' | 'mushroom' | 'bush' | 'sapling';
 export const COVER_KINDS: readonly CoverKind[] = ['grass', 'flower', 'fern', 'stone', 'log', 'mushroom', 'bush', 'sapling'];
