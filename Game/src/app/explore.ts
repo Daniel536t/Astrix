@@ -9,7 +9,7 @@
 // position only decides *which* resource is in reach.
 import * as THREE from 'three';
 import {
-  CharacterState, FIXED_STEP, createCharacter, findStandingY, stepCharacter,
+  CharacterState, FIXED_STEP, MAX_HEALTH, createCharacter, findStandingY, respawnCharacter, stepCharacter,
 } from '../sim/character';
 import { Entity, World, isSolid, residentVoxelAt, nearestHarvestable } from '../sim/world';
 import { OrbitRig } from '../render/camera';
@@ -26,7 +26,12 @@ export interface ExploreOptions {
   spawn: { x: number; z: number };
 }
 
-interface SavedAvatar { x: number; y: number; z: number; heading: number; }
+interface SavedAvatar {
+  x: number; y: number; z: number; heading: number;
+  health?: number; stamina?: number; safe?: { x: number; y: number; z: number };
+}
+/** Seconds the death screen shows before the character respawns. */
+export const RESPAWN_DELAY = 3;
 
 export class ExploreController {
   active = false;
@@ -34,6 +39,14 @@ export class ExploreController {
   private prev: CharacterState | null = null;
   private accumulator = 0;
   private jumpQueued = false;
+  private jumpHeld = false;
+  private diveHeld = false;
+  private deadFor = 0;
+  /** Deaths this session (for the HUD and metrics). */
+  deaths = 0;
+  /** Called once when the character dies and once when it respawns. */
+  onDeath: ((cause: string) => void) | null = null;
+  onRespawn: (() => void) | null = null;
   private figure: Figure;
   private readonly marker: THREE.Mesh;
   private readonly smoothTarget = new THREE.Vector3();
@@ -41,6 +54,8 @@ export class ExploreController {
   private readonly key: string;
   private steps = 0;
   private spawnAttempts = 0;
+  /** Where the character will appear once its terrain is resident. */
+  private pendingSpawn: { x: number; z: number } | null = null;
   /** The resource currently within reach, if any. */
   reachable: Entity | null = null;
 
@@ -61,12 +76,25 @@ export class ExploreController {
 
     window.addEventListener('keydown', (e) => {
       if (!this.active) return;
-      if (e.code === 'Space') { this.jumpQueued = true; e.preventDefault(); }
+      if (e.code === 'Space') { if (!e.repeat) this.setJumpHeld(true); e.preventDefault(); }
+      if (e.code === 'KeyC') this.diveHeld = true;
     });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space') this.setJumpHeld(false);
+      if (e.code === 'KeyC') this.diveHeld = false;
+    });
+    window.addEventListener('blur', () => { this.jumpHeld = false; this.diveHeld = false; });
   }
 
-  /** Request a jump (touch button). */
+  /** Request a single jump. */
   jump(): void { this.jumpQueued = true; }
+  /** Jump button or Space: a press jumps; holding swims upward. */
+  setJumpHeld(held: boolean): void {
+    if (held && !this.jumpHeld) this.jumpQueued = true;
+    this.jumpHeld = held;
+  }
+  /** Dive button or C: holding swims downward. */
+  setDiveHeld(held: boolean): void { this.diveHeld = held; }
 
   enter(): void {
     if (this.active) return;
@@ -97,8 +125,14 @@ export class ExploreController {
     const x = saved?.x ?? this.o.spawn.x + 0.5;
     const z = saved?.z ?? this.o.spawn.z + 0.5;
     const y = findStandingY(this.o.world, x, z, saved ? saved.y + 2 : 110);
-    if (y === null) return;
+    if (y === null) { this.pendingSpawn = { x, z }; return; }
+    this.pendingSpawn = null;
     this.state = createCharacter(x, y, z, saved?.heading ?? Math.PI);
+    if (saved) {
+      if (Number.isFinite(saved.health)) this.state.health = Math.max(1, Math.min(MAX_HEALTH, saved.health!));
+      if (Number.isFinite(saved.stamina)) this.state.stamina = Math.max(0, Math.min(1, saved.stamina!));
+      if (saved.safe && [saved.safe.x, saved.safe.y, saved.safe.z].every(Number.isFinite)) this.state.safe = { ...saved.safe };
+    }
     this.prev = { ...this.state };
     this.figure.root.visible = this.active;
   }
@@ -108,21 +142,40 @@ export class ExploreController {
     if (!this.active) return;
     if (!this.state) {
       if (this.spawnAttempts++ % 15 === 0) this.trySpawn();
+      // Terrain streams around the camera target: aim it at the spawn point,
+      // otherwise a saved position far from the origin would never load.
+      if (this.pendingSpawn && !this.state) {
+        this.o.rig.target.set(this.pendingSpawn.x, this.o.rig.target.y, this.pendingSpawn.z);
+        this.o.rig.apply();
+      }
       const spawned = this.state as CharacterState | null;
       if (!spawned) return;
       this.smoothTarget.set(spawned.x, spawned.y + 1.5, spawned.z);
     }
     const rig = this.o.rig;
-    this.accumulator = Math.min(this.accumulator + frameDt, FIXED_STEP * 6);
+    this.accumulator = Math.min(Math.max(0, this.accumulator) + Math.max(0, frameDt), FIXED_STEP * 6);
     const intent = rig.moveIntent();
     while (this.accumulator >= FIXED_STEP) {
       this.prev = this.state;
+      const wasDead = this.state!.dead;
       this.state = stepCharacter(this.o.world, this.state!, {
         moveX: intent.x, moveZ: intent.z, run: intent.run, jump: this.jumpQueued,
+        rise: this.jumpHeld, dive: this.diveHeld,
       });
       this.jumpQueued = false;
       this.accumulator -= FIXED_STEP;
       this.steps++;
+      if (this.state.dead && !wasDead) { this.deaths++; this.deadFor = 0; this.onDeath?.(this.state.cause ?? 'died'); }
+    }
+    if (this.state!.dead) {
+      this.deadFor += frameDt;
+      if (this.deadFor >= RESPAWN_DELAY) {
+        this.state = respawnCharacter(this.o.world, this.state!);
+        this.prev = { ...this.state };
+        this.smoothTarget.set(this.state.x, this.state.y + 1.5, this.state.z);
+        this.persist();
+        this.onRespawn?.();
+      }
     }
     const s = this.state!, p = this.prev ?? s;
     const a = this.accumulator / FIXED_STEP;
@@ -180,13 +233,20 @@ export class ExploreController {
       mode: s.mode, grounded: s.grounded, speed: Math.round(s.speed * 10) / 10,
       steps: this.steps, cameraDistance: Math.round(this.o.rig.effectiveDistance * 10) / 10,
       reachable: this.reachable?.id ?? null,
+      health: Math.round(s.health * 10) / 10, breath: Math.round(s.breath * 1000) / 1000,
+      stamina: Math.round(s.stamina * 1000) / 1000, headUnderwater: s.headUnderwater,
+      vy: Math.round(s.vy * 100) / 100, dead: s.dead, deaths: this.deaths, waterSurface: Math.round(s.waterSurface * 100) / 100,
     };
   }
 
   private persist(): void {
     if (!this.state || !this.o.storage) return;
     try {
-      const v: SavedAvatar = { x: this.state.x, y: this.state.y, z: this.state.z, heading: this.state.heading };
+      // A dead or drowning character is saved at its safe spot, not under water.
+      const s = this.state;
+      const at = s.dead || s.headUnderwater ? s.safe : s;
+      const v: SavedAvatar = { x: at.x, y: at.y, z: at.z, heading: s.heading,
+        health: s.dead ? MAX_HEALTH : s.health, stamina: s.stamina, safe: s.safe };
       this.o.storage.setItem(this.key, JSON.stringify(v));
     } catch { /* presentation state: losing it is harmless */ }
   }

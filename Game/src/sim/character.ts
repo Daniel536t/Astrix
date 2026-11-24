@@ -14,7 +14,7 @@
 // same step function becomes the authoritative rule, driven by journaled input.
 import {
   World, MAT, isSolid, residentVoxelAt, chunkKey, worldToChunkX, worldToChunkZ,
-  isRetiredStoneKind, Y_MIN,
+  isRetiredStoneKind, Y_MIN, hydrologyFor,
 } from './world';
 import type { ActiveEntityKind } from './world';
 import { OBSTRUCTION_RADIUS } from './terrain';
@@ -24,14 +24,43 @@ export const CHARACTER_HEIGHT = 1.7;
 export const FIXED_STEP = 1 / 30;
 export const WALK_SPEED = 4.2;
 export const RUN_SPEED = 7.5;
-export const WADE_SPEED = 2.4;
-export const SWIM_SPEED = 2.0;
+/** Wading speed at knee depth; deeper water slows the walk further. */
+export const WADE_SPEED = 3.4;
+/** Swimming at the surface, underwater, and when exhausted (m/s). */
+export const SWIM_SPEED = 2.4;
+export const DIVE_SPEED = 1.9;
+export const EXHAUSTED_SWIM_SPEED = 1.0;
 export const JUMP_SPEED = 6.6;
 export const GRAVITY = 22;
 /** Highest ledge climbed without jumping (one voxel plus tolerance). */
 export const STEP_HEIGHT = 1.05;
-/** Water deeper than this at the feet makes the character swim. */
-export const SWIM_DEPTH = 1.25;
+/** Water deeper than this at the feet makes the character swim (chest deep). */
+export const SWIM_DEPTH = 1.35;
+/** Eye height above the feet; the head is underwater when the surface is above it. */
+export const EYE_HEIGHT = 1.5;
+/** Treading water keeps the eyes this far above the surface. */
+const FLOAT_EYE_CLEARANCE = 0.08;
+/** Highest bank a swimmer at the surface can haul out onto. */
+export const SWIM_CLIMB = 2.2;
+
+// ---- vitals (Minecraft-like timings, in seconds) ----
+export const MAX_HEALTH = 100;
+/** Breath lasts this long with the head underwater, then drowning starts. */
+export const BREATH_SECONDS = 15;
+/** Seconds to refill breath from empty once the head is above water. */
+export const BREATH_REFILL_SECONDS = 2.5;
+/** Health lost per second while drowning (10 s from full health to death). */
+export const DROWN_DAMAGE_PER_S = 10;
+/** Stamina: treading water lasts 60 s, active swimming 40 s; 8 s to recover on land. */
+export const TREAD_SECONDS = 60;
+export const SWIM_STAMINA_SECONDS = 40;
+export const STAMINA_RECOVER_SECONDS = 8;
+/** Health regenerates after this long without damage, at HEALTH_REGEN_PER_S. */
+export const HEALTH_REGEN_DELAY = 4;
+export const HEALTH_REGEN_PER_S = 3;
+/** River currents push swimmers at this fraction of the surface flow (waders less). */
+export const SWIM_CURRENT_FACTOR = 0.5;
+export const WADE_CURRENT_FACTOR = 0.2;
 
 export interface CharacterState {
   x: number;
@@ -47,6 +76,25 @@ export interface CharacterState {
   mode: 'ground' | 'wade' | 'swim' | 'air';
   /** Horizontal speed actually achieved this step (m/s), for animation. */
   speed: number;
+  /** 0..MAX_HEALTH. Reaching 0 sets `dead`. */
+  health: number;
+  /** 0..1 air left while the head is underwater. */
+  breath: number;
+  /** 0..1 strength for staying afloat; at 0 the swimmer sinks. */
+  stamina: number;
+  /** Eyes below the water surface this step. */
+  headUnderwater: boolean;
+  /** Water surface over the feet column (feet y when dry). */
+  waterSurface: number;
+  /** Seconds since the last damage (gates health regeneration). */
+  calm: number;
+  /** Damage taken this step, for presentation (flash, sound). */
+  hurt: number;
+  dead: boolean;
+  /** What killed the character, if dead. */
+  cause: 'drowned' | null;
+  /** Last dry standing position: where a dead character respawns. */
+  safe: { x: number; y: number; z: number };
 }
 
 export interface CharacterInput {
@@ -54,11 +102,27 @@ export interface CharacterInput {
   moveX: number;
   moveZ: number;
   run: boolean;
+  /** Jump pressed this step (one-shot). */
   jump: boolean;
+  /** Jump held: swim upward. */
+  rise?: boolean;
+  /** Dive held: swim downward. */
+  dive?: boolean;
 }
 
 export function createCharacter(x: number, y: number, z: number, heading = 0): CharacterState {
-  return { x, y, z, vx: 0, vy: 0, vz: 0, heading, grounded: false, mode: 'air', speed: 0 };
+  return {
+    x, y, z, vx: 0, vy: 0, vz: 0, heading, grounded: false, mode: 'air', speed: 0,
+    health: MAX_HEALTH, breath: 1, stamina: 1, headUnderwater: false, waterSurface: y,
+    calm: HEALTH_REGEN_DELAY, hurt: 0, dead: false, cause: null, safe: { x, y, z },
+  };
+}
+
+/** A fresh character at its last safe spot with full vitals. */
+export function respawnCharacter(world: World, dead: CharacterState): CharacterState {
+  const { x, z } = dead.safe;
+  const y = findStandingY(world, x, z, dead.safe.y + 2) ?? dead.safe.y;
+  return createCharacter(x, y, z, dead.heading);
 }
 
 /** Solid for movement: voxels, missing (unloaded) terrain, or the world floor. */
@@ -158,13 +222,25 @@ function resolveEntities(world: World, s: CharacterState): void {
   }
 }
 
-/** Depth of water standing at the character's feet column. */
+/**
+ * Depth of water over the feet: the water surface (top of the water cells in
+ * the feet column) minus the feet height. 0 when the feet are dry. Searches a
+ * few cells up so a fully submerged diver still finds the surface.
+ */
 function feetWaterDepth(world: World, x: number, y: number, z: number): number {
   const fx = Math.floor(x), fz = Math.floor(z);
   let top = Math.floor(y + 0.05);
   if (!water(world, fx, top, fz)) return 0;
-  while (water(world, fx, top + 1, fz) && top < y + 4) top++;
+  while (water(world, fx, top + 1, fz) && top < y + 48) top++;
   return top + 1 - y;
+}
+
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+/** Surface current at a water column (m/s), from the deterministic hydrology. */
+function currentAt(world: World, x: number, z: number, surface: number): { dx: number; dz: number; speed: number } {
+  const f = hydrologyFor(world.seed, world.params.generatorVersion).flowAt(x, z, surface);
+  return { dx: f.dx, dz: f.dz, speed: f.speed };
 }
 
 /**
@@ -172,25 +248,47 @@ function feetWaterDepth(world: World, x: number, y: number, z: number): number {
  * the same result on every machine.
  */
 export function stepCharacter(world: World, prev: CharacterState, input: CharacterInput, dt = FIXED_STEP): CharacterState {
-  const s: CharacterState = { ...prev };
+  const s: CharacterState = { ...prev, hurt: 0 };
+  if (s.dead) {
+    // A dead character drifts to rest; the controller decides when to respawn.
+    s.vx = 0; s.vz = 0; s.speed = 0;
+    return s;
+  }
   const depth = feetWaterDepth(world, s.x, s.y, s.z);
-  const swimming = depth >= SWIM_DEPTH;
+  const surface = s.y + depth;
+  // Swim when the water is chest deep, or when already afloat in deep-ish water.
+  const swimming = depth >= SWIM_DEPTH || (depth > 0.9 && !s.grounded && prev.mode === 'swim');
   const wading = !swimming && depth > 0.2;
+  const exhausted = s.stamina <= 0;
+  const floatY = surface - EYE_HEIGHT + FLOAT_EYE_CLEARANCE;
+  const atSurface = swimming && s.y >= floatY - 0.35;
 
   let mx = input.moveX, mz = input.moveZ;
   const len = Math.hypot(mx, mz);
   if (len > 1) { mx /= len; mz /= len; }
-  const target = swimming ? SWIM_SPEED : wading ? WADE_SPEED : input.run ? RUN_SPEED : WALK_SPEED;
-  const accel = s.grounded || swimming ? 14 : 4;
-  s.vx += (mx * target - s.vx) * Math.min(1, accel * dt);
-  s.vz += (mz * target - s.vz) * Math.min(1, accel * dt);
+  const target = swimming ? (exhausted ? EXHAUSTED_SWIM_SPEED : atSurface ? SWIM_SPEED : DIVE_SPEED)
+    : wading ? WADE_SPEED * (1 - 0.45 * clamp01((depth - 0.2) / (SWIM_DEPTH - 0.2)))
+      : input.run ? RUN_SPEED : WALK_SPEED;
+  let driftX = 0, driftZ = 0;
+  if (swimming || wading) {
+    // Rivers carry swimmers downstream; waders feel it in proportion to depth.
+    const c = currentAt(world, s.x, s.z, surface);
+    const k = swimming ? SWIM_CURRENT_FACTOR : WADE_CURRENT_FACTOR * clamp01(depth / SWIM_DEPTH);
+    driftX = c.dx * c.speed * k; driftZ = c.dz * c.speed * k;
+  }
+  const accel = s.grounded || swimming ? (swimming ? 5 : 14) : 4;
+  s.vx += (mx * target + driftX - s.vx) * Math.min(1, accel * dt);
+  s.vz += (mz * target + driftZ - s.vz) * Math.min(1, accel * dt);
 
   if (swimming) {
-    // Float with the head above the surface; a jump press strokes upward.
-    const surface = s.y + depth;
-    const goal = surface - 1.25;
-    s.vy += ((goal - s.y) * 6 - s.vy) * Math.min(1, 5 * dt);
-    if (input.jump) s.vy = Math.max(s.vy, 2.5);
+    // Buoyancy and strokes: tread water at the surface while stamina lasts,
+    // rise while jump is held, dive while dive is held, sink when exhausted.
+    let wantVy: number;
+    if (input.dive) wantVy = -2.2;
+    else if (input.rise || input.jump) wantVy = exhausted ? 0.35 : s.y < floatY ? 2.4 : (floatY + 0.15 - s.y) * 4;
+    else if (!exhausted) wantVy = Math.max(-1.6, Math.min(1.6, (floatY - s.y) * 3));
+    else wantVy = -0.8;
+    s.vy += (wantVy - s.vy) * Math.min(1, 4 * dt);
   } else {
     if (input.jump && s.grounded) { s.vy = wading ? JUMP_SPEED * 0.7 : JUMP_SPEED; s.grounded = false; }
     s.vy -= GRAVITY * dt;
@@ -209,6 +307,16 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
       const stepY = Math.floor(s.y + 1e-3) + 1;
       if (stepY - s.y <= STEP_HEIGHT && !overlaps(world, nx, stepY, nz)) {
         s.x = nx; s.z = nz; s.y = stepY; continue;
+      }
+      // A swimmer at the surface hauls out onto a bank up to SWIM_CLIMB above the feet.
+      if (atSurface && !exhausted) {
+        let climbed = false;
+        for (let cy = stepY + 1; cy - s.y <= SWIM_CLIMB; cy++) {
+          if (!overlaps(world, nx, cy, nz) && overlaps(world, nx, cy - 1, nz)) {
+            s.x = nx; s.z = nz; s.y = cy; s.vy = 0; climbed = true; break;
+          }
+        }
+        if (climbed) continue;
       }
       // Structure tops (slabs, terraces) are not on the voxel grid.
       const top = structureFloor(world, nx, s.y + STEP_HEIGHT, nz);
@@ -254,9 +362,35 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
     s.heading += d * Math.min(1, 12 * dt);
   }
   const depthAfter = feetWaterDepth(world, s.x, s.y, s.z);
-  s.mode = depthAfter >= SWIM_DEPTH ? 'swim' : !s.grounded ? 'air' : depthAfter > 0.2 ? 'wade' : 'ground';
+  const afloat = depthAfter >= SWIM_DEPTH || (swimming && depthAfter > 0.9 && !s.grounded);
+  s.mode = afloat ? 'swim' : !s.grounded ? 'air' : depthAfter > 0.2 ? 'wade' : 'ground';
   if (s.mode === 'swim') s.grounded = false;
+  s.waterSurface = s.y + depthAfter;
+  updateVitals(s, depthAfter, Math.hypot(mx, mz) > 0.1, dt);
   return s;
+}
+
+/** Breath, stamina and health for one step. Pure and deterministic. */
+function updateVitals(s: CharacterState, depth: number, moving: boolean, dt: number): void {
+  s.headUnderwater = depth > 0 && s.y + depth > s.y + EYE_HEIGHT;
+  s.breath = s.headUnderwater ? Math.max(0, s.breath - dt / BREATH_SECONDS)
+    : Math.min(1, s.breath + dt / BREATH_REFILL_SECONDS);
+  if (s.mode === 'swim') s.stamina = Math.max(0, s.stamina - dt / (moving ? SWIM_STAMINA_SECONDS : TREAD_SECONDS));
+  else if (s.mode === 'ground') s.stamina = Math.min(1, s.stamina + dt / STAMINA_RECOVER_SECONDS);
+
+  let damage = 0;
+  if (s.headUnderwater && s.breath <= 0) damage += DROWN_DAMAGE_PER_S * dt;
+  if (damage > 0) {
+    s.health = Math.max(0, s.health - damage);
+    s.hurt = damage;
+    s.calm = 0;
+    if (s.health <= 0) { s.dead = true; s.cause = 'drowned'; s.vx = 0; s.vz = 0; }
+  } else {
+    s.calm += dt;
+    if (s.calm >= HEALTH_REGEN_DELAY && !s.headUnderwater) s.health = Math.min(MAX_HEALTH, s.health + HEALTH_REGEN_PER_S * dt);
+  }
+  // Remember dry footing as the respawn point.
+  if (s.mode === 'ground' && s.grounded && depth === 0) s.safe = { x: s.x, y: s.y, z: s.z };
 }
 
 /** Highest standable feet position in a column near `yHint`, or null if not resident. */

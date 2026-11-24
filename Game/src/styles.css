@@ -32,52 +32,71 @@ html, body {
 .drawer-state { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .drawer-toggle { display: none; }
 
-/* ---- touch controls (only on coarse pointers) ---- */
-#controls { display: none; }
+/* ---- touch controls (only on coarse pointers) ----
+   Minecraft-style: floating joystick on the left half, drag on the right
+   half to look, hold-buttons bottom-right. */
+#controls, #move-zone { display: none; }
 
 @media (pointer: coarse) {
-  #controls {
-    display: flex;
-    position: fixed;
-    right: max(14px, env(safe-area-inset-right));
-    bottom: max(14px, env(safe-area-inset-bottom));
-    gap: 14px;
-    align-items: flex-end;
-    z-index: 5;
-    touch-action: none;
-  }
+  #controls { display: block; }
   #hud { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 128px); max-width: 66vw; font-size: 12px; }
-
-  .pad {
-    position: relative;
-    width: 132px; height: 132px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-  }
   .pb {
     appearance: none;
-    border: 1px solid rgba(244, 240, 228, 0.28);
-    background: rgba(22, 26, 38, 0.5);
+    border: 1px solid rgba(244, 240, 228, 0.32);
+    background: rgba(22, 26, 38, 0.55);
     color: #F4F0E4;
-    font: 600 18px/1 ui-sans-serif, system-ui, sans-serif;
-    border-radius: 12px;
-    width: 42px; height: 42px;
+    font: 600 13px/1 ui-sans-serif, system-ui, sans-serif;
+    border-radius: 50%;
     display: grid; place-items: center;
     padding: 0;
     backdrop-filter: blur(4px);
     touch-action: none;
-    user-select: none;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
   }
-  .pb:active { background: rgba(240, 236, 220, 0.28); }
-  .up    { grid-area: 1 / 2; }
-  .left  { grid-area: 2 / 1; }
-  .center{ grid-area: 2 / 2; opacity: 0.55; }
-  .right { grid-area: 2 / 3; }
-  .down  { grid-area: 3 / 2; }
+  .pb:active, .pb.held { background: rgba(240, 236, 220, 0.34); transform: scale(0.96); }
+  .zoomers {
+    position: fixed; z-index: 7; display: flex; flex-direction: column; gap: 10px;
+    right: max(30px, calc(env(safe-area-inset-right) + 22px));
+    bottom: max(196px, calc(env(safe-area-inset-bottom) + 188px));
+  }
+  .zoomers .pb { width: 40px; height: 40px; font-size: 20px; border-radius: 10px; }
 
-  .zoomers { display: flex; flex-direction: column; gap: 10px; }
-  .zoomers .pb { width: 46px; height: 46px; font-size: 22px; }
+  body.explore #move-zone {
+    display: block; position: fixed; z-index: 4;
+    left: 0; bottom: 0; width: 50vw; top: 34vh;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  /* Resting hint where the thumb usually lands. */
+  body.explore #move-zone::after {
+    content: ''; position: absolute; width: 112px; height: 112px; border-radius: 50%;
+    left: max(34px, calc(env(safe-area-inset-left) + 24px)); bottom: max(34px, calc(env(safe-area-inset-bottom) + 24px));
+    border: 2px dashed rgba(244, 240, 228, 0.22); pointer-events: none; transition: opacity 0.2s;
+  }
+  body.explore #move-zone.active::after { opacity: 0; }
+  .stick-base {
+    position: absolute; left: 0; top: 0; width: 124px; height: 124px; margin: -62px 0 0 -62px;
+    border-radius: 50%; border: 2px solid rgba(244, 240, 228, 0.45); background: rgba(22, 26, 38, 0.35);
+    opacity: 0; pointer-events: none; transition: opacity 0.12s, border-color 0.12s;
+  }
+  .stick-base.active { opacity: 1; }
+  .stick-base.run { border-color: #F4E8A4; }
+  .stick-knob {
+    position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px;
+    border-radius: 50%; background: rgba(244, 240, 228, 0.82); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  }
+  .stick-base.run .stick-knob { background: #F4E8A4; }
+}
+
+/* Walking on touch: the HUD moves to the top-left so the joystick area is clear. */
+@media (pointer: coarse) {
+  body.explore #hud {
+    top: max(124px, calc(env(safe-area-inset-top) + 116px)); bottom: auto !important;
+    max-width: min(46vw, 380px); font-size: 11px; padding: 7px 10px; opacity: 0.9;
+  }
+  body.explore #hud .dim { display: none; }
+  /* Inspect stays top-left, never under the left thumb. */
+  body.explore .inspector { top: max(78px, calc(env(safe-area-inset-top) + 70px)) !important; bottom: auto !important; }
 }
 
 @media (pointer: coarse) and (orientation: landscape) {
@@ -404,23 +423,15 @@ body.clean .drawer-toggle, body.kit .drawer-toggle, body.map .drawer-toggle { di
   font: 11px/1.4 ui-sans-serif, system-ui, sans-serif;
   scrollbar-width: thin;
 }
-.harvest-touch { display: none; }
+.harvest-touch, .jump-touch, .dive-touch { display: none; }
 
 @media (pointer: coarse) {
   .harvest-touch {
-    display: block;
-    position: fixed;
-    right: max(20px, env(safe-area-inset-right));
-    bottom: max(172px, calc(env(safe-area-inset-bottom) + 164px));
-    z-index: 7;
-    width: 64px;
-    height: 44px;
-    color: #1B202B;
-    background: #D7C778;
-    border: 1px solid #F4E8A4;
-    border-radius: 8px;
-    font: 600 12px/1 ui-sans-serif, system-ui, sans-serif;
-    touch-action: manipulation;
+    display: grid; position: fixed; z-index: 7;
+    right: max(34px, calc(env(safe-area-inset-right) + 26px));
+    bottom: max(118px, calc(env(safe-area-inset-bottom) + 110px));
+    width: 62px; height: 62px;
+    color: #1B202B; background: #D7C778; border-color: #F4E8A4;
   }
 }
 
@@ -662,24 +673,59 @@ body.clean #mode-button, body.kit #mode-button, body.map #mode-button { display:
   body.explore:not(.show-life) #life-panel { display: none !important; }
 }
 
-.jump-touch { display: none; }
 @media (pointer: coarse) {
   body.explore .jump-touch {
-    display: block;
-    position: fixed;
-    right: max(92px, calc(env(safe-area-inset-right) + 78px));
-    bottom: max(172px, calc(env(safe-area-inset-bottom) + 164px));
-    z-index: 7;
-    width: 64px;
-    height: 44px;
-    color: #F4EFE3;
-    background: #2E8C86;
-    border: 1px solid #7FD0C6;
-    border-radius: 8px;
-    font: 600 12px/1 ui-sans-serif, system-ui, sans-serif;
-    touch-action: manipulation;
+    display: grid; position: fixed; z-index: 7;
+    right: max(24px, calc(env(safe-area-inset-right) + 16px));
+    bottom: max(24px, calc(env(safe-area-inset-bottom) + 16px));
+    width: 80px; height: 80px; font-size: 14px;
+    background: rgba(46, 140, 134, 0.82); border-color: #7FD0C6;
+  }
+  body.explore.swimming .dive-touch {
+    display: grid; position: fixed; z-index: 7;
+    right: max(118px, calc(env(safe-area-inset-right) + 110px));
+    bottom: max(30px, calc(env(safe-area-inset-bottom) + 22px));
+    width: 66px; height: 66px;
+    background: rgba(31, 84, 120, 0.85); border-color: #8CC8EE;
   }
 }
+
+/* ---- vitals: health, stamina, breath ---- */
+#vitals {
+  position: fixed; z-index: 8; left: 50%; transform: translateX(-50%);
+  top: max(58px, calc(env(safe-area-inset-top) + 52px));
+  display: none; flex-direction: column; align-items: center; gap: 4px; pointer-events: none;
+  font: 600 11px/1 ui-sans-serif, system-ui, sans-serif; color: #F4EFE3;
+}
+#vitals.visible { display: flex; }
+#vitals .vital { display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; background: rgba(20, 23, 34, 0.62); }
+#vitals .icon { width: 12px; height: 12px; flex: none; }
+#vitals .bar { width: 132px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+#vitals .bar i { display: block; height: 100%; width: 100%; transition: width 0.15s linear; }
+#vitals .health .icon { color: #F06A5E; }
+#vitals .health .bar i { background: linear-gradient(90deg, #C9382E, #F06A5E); }
+#vitals .health.low { animation: vital-pulse 0.8s ease-in-out infinite; }
+#vitals .stamina, #vitals .breath { display: none; }
+#vitals .stamina.visible, #vitals .breath.visible { display: flex; }
+#vitals .stamina .icon { color: #F4E8A4; }
+#vitals .stamina .bar i { background: linear-gradient(90deg, #C9A23A, #F4E8A4); }
+#vitals .stamina.empty .bar { outline: 1px solid #F06A5E; }
+#vitals .breath .icon { color: #8CD3F5; }
+#vitals .bubbles { display: flex; gap: 3px; width: 132px; }
+#vitals .bubble { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #BDE8FB; background: rgba(140, 211, 245, 0.55); transition: transform 0.2s, opacity 0.2s; }
+#vitals .bubble.gone { opacity: 0; transform: scale(0.3); }
+@keyframes vital-pulse { 50% { background: rgba(120, 28, 24, 0.72); } }
+#hurt-vignette, #underwater-tint { position: fixed; inset: 0; pointer-events: none; opacity: 0; }
+#hurt-vignette { z-index: 3; box-shadow: inset 0 0 120px 40px rgba(190, 20, 10, 0.85); transition: opacity 0.1s; }
+#underwater-tint { z-index: 2; background: radial-gradient(ellipse at center, rgba(20, 90, 120, 0.18) 40%, rgba(8, 44, 70, 0.62)); transition: opacity 0.25s; }
+#death-screen {
+  position: fixed; inset: 0; z-index: 30; display: none; place-content: center; gap: 10px; text-align: center;
+  background: rgba(60, 6, 4, 0.55); color: #FFF3EC; font: 15px/1.4 ui-sans-serif, system-ui, sans-serif; pointer-events: none;
+}
+#death-screen.visible { display: grid; }
+#death-screen strong { font-size: 30px; letter-spacing: 0.03em; }
+body.clean #vitals, body.clean #hurt-vignette, body.clean #underwater-tint { display: none; }
+
 #hud b { color: #F4E8A4; font-weight: 600; }
 
 /* ---- MagicBlock settlement panel ---- */

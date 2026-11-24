@@ -77,7 +77,13 @@ test('character swims in the deep mountain river instead of sinking', () => {
   residentAround(world, p.x, p.z);
   const level = Math.round(p.level);
   let s = createCharacter(Math.floor(p.x) + 0.5, level + 0.5, Math.floor(p.z) + 0.5);
-  s = run(world, s, 90, {});
-  assert.ok(s.y >= surfaceAt(world, Math.floor(s.x), Math.floor(s.z)) - 1e-6, 'never below the bed');
-  assert.ok(['swim', 'wade', 'ground'].includes(s.mode));
+  let swam = false;
+  for (let i = 0; i < 90; i++) {
+    s = run(world, s, 1, {});
+    assert.ok(s.y >= surfaceAt(world, Math.floor(s.x), Math.floor(s.z)) - 1e-6, 'never below the bed');
+    if (s.mode === 'swim') swam = true;
+  }
+  // The current carries the swimmer down the stepped cascade, so it can be
+  // briefly airborne between pools; it must have floated, not walked the bed.
+  assert.ok(swam, 'swam in the river');
 });

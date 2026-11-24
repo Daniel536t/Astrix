@@ -13,16 +13,11 @@
   <input class="drawer-state build-drawer-state" type="radio" name="game-panel" id="build-drawer" aria-label="Show build panel" />
   <input class="drawer-state world-drawer-state" type="radio" name="game-panel" id="world-drawer" aria-label="Show world instead of settlement or build panel" />
 
-  <div id="controls" role="group" aria-label="World movement and zoom controls">
-    <div class="pad" role="group" aria-label="Movement">
-      <button class="pb up"    data-pad="0,1"  aria-label="Move forward">▲</button>
-      <button class="pb left"  data-pad="-1,0" aria-label="Move left">◀</button>
-      <button class="pb down"  data-pad="0,-1" aria-label="Move back">▼</button>
-      <button class="pb right" data-pad="1,0"  aria-label="Move right">▶</button>
-      <button class="pb center" data-pad="0,0" aria-label="Stop">•</button>
-    </div>
+  <div id="move-zone" aria-label="Movement joystick: touch and drag on the left half of the screen"></div>
+  <div id="controls" role="group" aria-label="Touch actions and zoom">
     <button class="pb harvest-touch" id="gather-nearest" aria-label="Gather nearest natural resource">Gather</button>
-    <button class="pb jump-touch" id="jump-button" aria-label="Jump">Jump</button>
+    <button class="pb jump-touch" id="jump-button" aria-label="Jump; hold to swim up">Jump</button>
+    <button class="pb dive-touch" id="dive-button" aria-label="Hold to dive">Dive</button>
     <div class="zoomers" role="group" aria-label="Zoom">
       <button class="pb" data-zoom="in"  aria-label="Zoom in">+</button>
       <button class="pb" data-zoom="out" aria-label="Zoom out">−</button>

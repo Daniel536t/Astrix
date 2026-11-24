@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import './styles.css';
 import {
   TimeState, advanceTime, surfaceAt, setVoxel, MAT,
-  nearestHarvestable, residentSurfaceAt, WORLD_SIZE, CHUNK_SIZE, SEA_LEVEL, Entity, LATEST_GENERATOR_VERSION,
+  nearestHarvestable, residentSurfaceAt, residentVoxelAt, WORLD_SIZE, CHUNK_SIZE, SEA_LEVEL, Entity, LATEST_GENERATOR_VERSION,
 } from './sim/world';
 import { VoxelTerrainView, ViewMode } from './render/terrain';
 import { buildNoxelNature } from './render/nature';
@@ -23,6 +23,8 @@ import { LifeGame } from './app/life';
 import { GameSession } from './app/session';
 import { BrowserSaveStore } from './app/persistence';
 import { SceneInspector } from './app/inspector';
+import { TouchControls } from './app/touch-controls';
+import { VitalsHud } from './app/vitals-hud';
 
 // A startup failure would otherwise leave a blank canvas with no explanation.
 window.addEventListener('error', (e) => {
@@ -190,6 +192,7 @@ let chainError = '';
 function toggleMode(force?: 'explore' | 'builder'): void {
   if (!explore) return;
   const next = force ?? (explore.active ? 'builder' : 'explore');
+  touch?.releaseAll();
   if (next === 'explore') explore.enter(); else explore.exit();
   document.body.classList.toggle('explore', explore.active);
   document.body.classList.remove('show-build', 'show-life');
@@ -371,21 +374,18 @@ function applyScriptedAction(): void {
   rebuildNature();
 }
 
-// ---- on-screen movement (touch) ----
-const padButtons = controls.querySelectorAll<HTMLButtonElement>('[data-pad]');
-for (const b of padButtons) {
-  const [x, z] = (b.dataset.pad ?? '0,0').split(',').map(Number);
-  const press = (e: PointerEvent) => {
-    e.preventDefault();
-    b.setPointerCapture(e.pointerId);
-    rig.setPad(x, z);
-  };
-  const release = () => rig.clearPad();
-  b.addEventListener('pointerdown', press);
-  b.addEventListener('pointerup', release);
-  b.addEventListener('pointercancel', release);
-  b.addEventListener('lostpointercapture', release);
-}
+// ---- touch controls: joystick on the left half, look on the right, hold-buttons ----
+const moveZone = document.getElementById('move-zone');
+const touch = moveZone ? new TouchControls({
+  zone: moveZone,
+  setMove: (x, z, run) => rig.setPad(x, z, run),
+  clearMove: () => rig.clearPad(),
+  jumpButton: document.getElementById('jump-button'),
+  diveButton: document.getElementById('dive-button'),
+  onJump: (held) => explore?.setJumpHeld(held),
+  onDive: (held) => explore?.setDiveHeld(held),
+}) : null;
+const vitals = noUi || isMap || isKit ? null : new VitalsHud();
 function gather(): void {
   if (!harvestNearest() && !lastAction.startsWith('harvest rejected')
     && !lastAction.startsWith('natural gathering is unavailable')) {
@@ -394,7 +394,6 @@ function gather(): void {
   }
 }
 document.getElementById('gather-nearest')?.addEventListener('click', gather);
-document.getElementById('jump-button')?.addEventListener('pointerdown', (e) => { e.preventDefault(); explore?.jump(); });
 document.getElementById('mode-button')?.addEventListener('click', () => toggleMode());
 
 for (const b of controls.querySelectorAll<HTMLButtonElement>('[data-zoom]')) {
@@ -497,6 +496,7 @@ function metrics() {
     realtime: { tickSeconds: TICK_SECONDS, issued: simClock.ticksIssued, leader: lease.isLeader, savePending: saveScheduler.pending },
     fauna: fauna?.metrics() ?? null,
     chain: chainView?.metrics() ?? (chainError ? { error: chainError } : null),
+    touch: touch ? { stick: touch.stickActive, x: Math.round(touch.vector.x * 100) / 100, z: Math.round(touch.vector.z * 100) / 100, run: touch.vector.run } : null,
   };
 }
 window.__metrics = metrics();
@@ -511,7 +511,9 @@ function frame(timestamp?: number) {
   if (lastFrameAt > 0) frameInterval.record(workStart - lastFrameAt);
   lastFrameAt = workStart;
   timer.update(timestamp);
-  const dt = Math.min(timer.getDelta(), 0.1);
+  // The first rAF timestamp can precede the direct first call, giving a
+  // negative delta; never let time run backwards.
+  const dt = Math.max(0, Math.min(timer.getDelta(), 0.1));
   advanceTime(time, dt * speed);
   rig.update(dt);
   explore?.update(dt);
@@ -545,6 +547,11 @@ function frame(timestamp?: number) {
   sky.setFocus(rig.target);
   sky.update(time.t);
   if (isMap) scene.fog = null;
+  // Underwater: when the lens is inside water, visibility drops to a few metres.
+  const cam = rig.camera.position;
+  const camUnder = !isMap && residentVoxelAt(world, Math.floor(cam.x), Math.floor(cam.y), Math.floor(cam.z)) === MAT.WATER;
+  if (camUnder) { sky.fog.color.set('#1E5F78'); sky.fog.density = 0.11; }
+  vitals?.update(explore?.active ? explore.character : null, dt);
 
   const mode: ViewMode = isMap ? 'map' : isKit ? 'kit' : 'world';
   terrainView.setWaterTime(freeze ? 0 : timer.getElapsed());
@@ -565,8 +572,8 @@ function frame(timestamp?: number) {
       const reach = walking && explore?.reachable
         ? `<b>E: gather ${explore.reachable.resource ?? ''} from ${explore.reachable.kind.replace('styl_', '').replace(/_/g, ' ')}</b> · ` : '';
       const hint = walking
-        ? (coarse ? 'pad: walk · drag: look · Jump · Gather · Builder view'
-          : 'WASD: walk · Shift: run · Space: jump · E: gather · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
+        ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · hold Jump to swim up · Dive'
+          : 'WASD: walk · Shift: run · Space: jump (hold to swim up) · C: dive · E: gather · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
         : coarse
           ? 'tap to inspect · drag: orbit · two fingers: move + zoom'
           : debugMutations

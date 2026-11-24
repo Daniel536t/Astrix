@@ -29,7 +29,7 @@ export class OrbitRig {
   private keys = new Set<string>();
   private padX = 0;
   private padZ = 0;
-  private padActive = false;
+  private padRun = false;
   mode: RigMode = 'builder';
   /** Optional terrain collision for the camera arm (explore mode). */
   collider: ArmCollider | null = null;
@@ -106,7 +106,7 @@ export class OrbitRig {
       }
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
-    window.addEventListener('blur', () => this.keys.clear());
+    window.addEventListener('blur', () => { this.keys.clear(); this.clearPad(); });
 
   }
 
@@ -134,7 +134,7 @@ export class OrbitRig {
     return {
       x: (right.x * ix + forward.x * iz) / len,
       z: (right.z * ix + forward.z * iz) / len,
-      run: this.keys.has('shift'),
+      run: this.keys.has('shift') || this.padRun,
     };
   }
 
@@ -167,12 +167,11 @@ export class OrbitRig {
     this.apply();
   }
 
-  /** On-screen pad, −1..1 per axis. z>0 walks forward. */
-  setPad(x: number, z: number) {
-    this.padActive = x !== 0 || z !== 0;
-    this.padX = x; this.padZ = z;
+  /** On-screen joystick, analog −1..1 per axis (length <= 1). z>0 walks forward. */
+  setPad(x: number, z: number, run = false) {
+    this.padX = x; this.padZ = z; this.padRun = run;
   }
-  clearPad() { this.setPad(0, 0); this.padActive = false; }
+  clearPad() { this.setPad(0, 0, false); }
 
   private clampTarget() {
     this.target.x = THREE.MathUtils.clamp(this.target.x, -1000, 1000);
