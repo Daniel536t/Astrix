@@ -94,3 +94,44 @@ Stretch: Ephemeral SPL resource token and trade; SOAR; Private ER prospecting cl
 - Crank timing and cost are unverified: check on devnet before relying on 2 s.
 - Duplicating rules in Rust and TypeScript risks drift. An equivalence test is required.
 - Devnet availability on judging day: record a video fallback.
+
+## 8. Owner decisions (2026-11-24)
+
+- **ASTrix stays a complete game without MagicBlock.** The local simulation, journal, replay and
+  persistence remain. MagicBlock is the persistent, verifiable economic layer, and the renderer must
+  never depend on it. If the chain is unreachable, the game keeps running locally.
+- **MVP scope:** an Anchor program, ER delegation, a real crank that progresses the settlement with no
+  browser open, scoped session keys, VRF prospecting, commit to Solana and restore in a fresh browser,
+  and the 3D world showing the on-chain settlement.
+- Free placement and villagers follow after the hackathon.
+
+## 9. Schedule (deadline 2026-11-27 14:00 UTC)
+
+| Window (UTC) | Work |
+|---|---|
+| Nov 24 | Program built ✔, devnet deploy, delegation, crank verified with no browser |
+| Nov 25 | VRF prospecting, session keys, commit/undelegate, TypeScript client |
+| Nov 26 morning | Browser integration: chain panel in the game, settlement rendered from chain |
+| Nov 26 afternoon | Integration testing, fresh-browser restore, deploy to the live site |
+| Nov 26 evening | **Feature freeze.** Demo video, submission text, evidence |
+| Nov 27 before 08:00 | Submit (6 h safety margin before the 14:00 deadline) |
+
+## 10. Implementation status
+
+| Item | Status |
+|---|---|
+| `chain/programs/astrix-settlement` (Anchor 1.0.2, ephemeral-rollups-sdk 0.18.0 with anchor/crank/vrf) | **Builds** (363 KB `.so`). Not deployed. |
+| Program id | `Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy` (keypair kept outside the repo) |
+| Throwaway devnet wallet | `GVbuuocW6hzMcsCAsvX6AAJnGDo3VZHwTmSLGhkZSw32`, created for testing only; key kept outside the repo, never committed. **Unfunded:** the devnet airdrop is rate-limited. |
+| Devnet ERs (checked 2026-11-24) | devnet-eu, devnet-as and devnet-us all report validator **core 2.0.4**, so cranks run through **Hydra**. Whether MagicBlock runs a public cranker for devnet is unconfirmed. This is the main technical risk. If no public cranker runs, ASTrix runs `hydra-cranker` on its existing boxd server, which is still independent of any player's browser. |
+
+### Program design notes
+
+- **`tick`:**
+  - permissionless and gated by the rollup clock: it advances at most once per `tick_interval_s`, so early or duplicate calls change nothing;
+  - the crank calls it;
+  - one tick ripens crops into food and fiber and replants them, runs the sawmill (2 wood → 1 plank), feeds settlers, and adds a settler when food stays plentiful.
+- **Session keys:** program-enforced. The owner sets a key, an expiry and an action budget. Gameplay actions accept either the owner or a valid session. Owner-only instructions are scheduling, session changes, commit and undelegate. These are *not yet* MagicBlock's `session-keys` (gum) program; that decision stays open.
+- **VRF:** `prospect` costs 4 food and requests randomness. The VRF callback decides the result: nothing (55%), an ore vein worth +6 ore (35%), or a rare crystal (10%).
+- **Known MVP trust limit:** `harvest` is capped per action, but it is not verified against the
+  terrain entities on-chain. Terrain and entity placement stay client-side.

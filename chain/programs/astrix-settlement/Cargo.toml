@@ -1,0 +1,28 @@
+[package]
+name = "astrix-settlement"
+version = "0.1.0"
+description = "ASTrix settlement economy on MagicBlock Ephemeral Rollups"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "astrix_settlement"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+[dependencies]
+anchor-lang = "=1.0.2"
+# 0.18.x supports validator 1.x and 2.0 for delegation, crank and VRF (0.20 breaks #[vrf]).
+ephemeral-rollups-sdk = { version = "=0.18.0", features = ["anchor", "crank", "vrf"] }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
