@@ -177,6 +177,66 @@
       "hex": "#4E3626",
       "role": "trunk shade, stumps"
     },
+    "conifer_pine": {
+      "hex": "#4C8A4A",
+      "role": "pine needles, main mass"
+    },
+    "conifer_pine_b": {
+      "hex": "#5C9C53",
+      "role": "pine needles, highlight"
+    },
+    "conifer_spruce": {
+      "hex": "#2F6B48",
+      "role": "spruce needles, main mass"
+    },
+    "conifer_spruce_b": {
+      "hex": "#3E7F56",
+      "role": "spruce needles, highlight"
+    },
+    "birch_bark": {
+      "hex": "#E6E1D3",
+      "role": "pale birch trunk"
+    },
+    "birch_mark": {
+      "hex": "#3A3530",
+      "role": "dark birch bark band"
+    },
+    "birch_leaf": {
+      "hex": "#9CC95A",
+      "role": "birch canopy, main mass"
+    },
+    "birch_leaf_b": {
+      "hex": "#B3D76B",
+      "role": "birch canopy, highlight"
+    },
+    "beech_bark": {
+      "hex": "#8E897D",
+      "role": "smooth grey beech trunk"
+    },
+    "beech_leaf": {
+      "hex": "#558F3A",
+      "role": "beech canopy, shade mass"
+    },
+    "beech_leaf_b": {
+      "hex": "#67A445",
+      "role": "beech canopy, main mass"
+    },
+    "bush_dark": {
+      "hex": "#467F37",
+      "role": "berry bush leaves"
+    },
+    "berry_red": {
+      "hex": "#C8394A",
+      "role": "berries"
+    },
+    "fern_green": {
+      "hex": "#86BE55",
+      "role": "fern fronds, main"
+    },
+    "fern_green_b": {
+      "hex": "#6FA746",
+      "role": "fern fronds, shade"
+    },
     "ore_crystal": {
       "hex": "#7B5AD6",
       "role": "ore deposit accent (proposed, replaces teal)"

@@ -3,6 +3,7 @@
 import { ActiveEntityKind, isRetiredStoneKind, World } from '../sim/world';
 import { CROP_YIELD_LABEL, cropReady } from '../sim/economy';
 import { M2_PROJECTS } from './projects';
+import { SPECIES_INFO, growthStage, treeSpecies, vegetationLabel } from '../sim/vegetation';
 
 export type InspectionRef =
   | { entityId: string } | { structureId: string } | { siteId: string }
@@ -49,10 +50,19 @@ function entityInspection(world: World, ref: { entityId: string }): InspectionIn
   if (!e || e.harvested || world.entityRemovals.has(e.id) || isRetiredStoneKind(e.kind)) return null;
   const catalog = INSPECTION_CATALOG[e.kind as ActiveEntityKind];
   if (!catalog) return null;
+  // Trees and bushes are named by species and growth stage ("Young birch").
+  // Both are presentational: the yield below is the entity's own record.
+  const species = treeSpecies(e, world.seed);
+  const stage = growthStage(e);
+  const label = vegetationLabel(e, world.seed);
+  const harvest = e.resource === 'fiber' ? 'Gather its plant fiber for processing into crop seed.'
+    : 'Harvest its timber for carried wood.';
   return {
-    ref, key: inspectionKey(ref), name: catalog.name,
-    category: 'Natural resource', description: catalog.description,
+    ref, key: inspectionKey(ref), name: label ?? catalog.name,
+    category: 'Natural resource',
+    description: species ? `${SPECIES_INFO[species].blurb} ${harvest}` : catalog.description,
     facts: [
+      ...(stage ? [{ label: 'Growth', value: `${stage[0].toUpperCase()}${stage.slice(1)} · yield unchanged by stage` }] : []),
       { label: 'Resource', value: e.resource ?? 'None' },
       { label: 'Remaining', value: `${e.remaining} · ${Math.min(e.yieldPerHarvest, e.remaining)} per gather` },
       { label: 'Status', value: e.provisional ? 'Available · provisional art' : 'Available' },

@@ -5,7 +5,8 @@ import {
   nearestHarvestable, residentSurfaceAt, residentVoxelAt, WORLD_SIZE, CHUNK_SIZE, SEA_LEVEL, Entity, LATEST_GENERATOR_VERSION,
 } from './sim/world';
 import { VoxelTerrainView, ViewMode } from './render/terrain';
-import { buildNoxelNature } from './render/nature';
+import { buildNoxelNature, lodCounts } from './render/nature';
+import type { LodBatch } from './render/lod';
 import { buildNoxelSite, buildKit } from './render/noxel';
 import { Sky, timeLabel } from './render/sky';
 import { OrbitRig } from './render/camera';
@@ -166,6 +167,8 @@ const terrainView = new VoxelTerrainView(world, scene, {
 
 let natureDirty = true;
 let natureInstances = 0;
+// Distance LOD of trees, bushes and stone props (presentation only).
+let natureLod: LodBatch | null = null;
 // Stable root: inspector registration survives chunk and harvest rebuilds.
 const natureGroup = new THREE.Group();
 natureGroup.name = 'styl_nature';
@@ -259,12 +262,13 @@ function disposeObject(obj: THREE.Object3D): void {
 function rebuildNature(): void {
   for (const child of natureGroup.children) disposeObject(child);
   natureGroup.clear();
-  const result = buildNoxelNature(world, terrainView.loadedChunkKeys);
+  const result = buildNoxelNature(world, terrainView.loadedChunkKeys, { camera: rig.camera.position });
   // Map mode has no near chunks, so its hidden nature group is legitimately
   // empty. Avoid Three's variadic add() warning when handed an empty spread.
   if (result.group.children.length > 0) natureGroup.add(...result.group.children);
   natureGroup.visible = !isMap;
   natureInstances = result.instances;
+  natureLod = result.lod;
   sceneInspector?.refreshTargets();
   natureDirty = false;
 }
@@ -486,6 +490,8 @@ function metrics() {
     pinkTrees: world.stats.pinkTrees,
     pinkOverflow: world.stats.pinkOverflow,
     natureInstances,
+    vegetation: natureLod ? { ...lodCounts(natureLod), drawnTriangles: natureLod.drawnTriangles(),
+      evaluations: natureLod.stats().evaluations, switches: natureLod.stats().switches } : null,
     edits,
     harvested,
     inventory: { ...world.inventory },
@@ -590,6 +596,11 @@ function frame(timestamp?: number) {
   terrainView.update(rig.target, mode);
   sections.record('terrain', performance.now() - tTerrain);
   if (natureDirty && !isMap && frames % 2 === 0) rebuildNature();
+  const tVegetation = performance.now();
+  // Throttled inside LodBatch: bands are re-evaluated only after the camera
+  // moves 4 m, so a still camera costs one distance check per frame.
+  if (natureLod && !isMap) natureLod.update(rig.camera.position);
+  sections.record('vegetation', performance.now() - tVegetation);
   if (natureGroup) natureGroup.visible = !isMap;
   m2Game?.update(performance.now());
   sceneInspector?.update();

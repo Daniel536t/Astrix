@@ -1,0 +1,18 @@
+{
+  "feature": "FEAT-002 block-built vegetation + distance LOD",
+  "probe": "/projects/sandbox/.kiro/artifacts/screenshots/probe/m008-trees-a.js",
+  "environment": "Desktop Playwright Chromium 1000x600, software GL (~1.4 fps), WEBGL_multi_draw present. Not a mobile measurement.",
+  "lodBands": { "near": 60, "mid": 130, "hysteresis": 4, "moveThreshold": 4 },
+  "views": {
+    "farm": { "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=40", "rendererCalls": 106, "rendererTriangles": 239754,
+      "vegetation": { "instances": 42, "near": 10, "mid": 29, "far": 3, "drawCalls": { "main": 1, "shadow": 1 }, "triangles": { "main": 852, "shadow": 1992 } },
+      "baseline": { "rendererCalls": 106, "rendererTriangles": 248364 } },
+    "forest": { "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=50", "rendererCalls": 75, "rendererTriangles": 304354,
+      "vegetation": { "instances": 500, "near": 120, "mid": 252, "far": 128, "drawCalls": { "main": 2, "shadow": 1 }, "triangles": { "main": 6328, "shadow": 23700, "total": 30028 } },
+      "baseline": { "rendererCalls": 74, "rendererTriangles": 403068, "vegetationTriangles": 128742, "vegetationShadowTriangles": 107100 } },
+    "grove-close": { "url": "?chain=0&mode=builder&tx=-27&ty=19&tz=-30&yaw=0&pitch=16&dist=15", "rendererCalls": 66, "rendererTriangles": 220934,
+      "vegetation": { "instances": 42, "near": 16, "mid": 23, "far": 3, "drawCalls": { "main": 1, "shadow": 1 }, "triangles": { "main": 844, "shadow": 2496 } },
+      "baseline": { "rendererCalls": 66, "rendererTriangles": 228826, "vegetationTriangles": 10416 } }
+  },
+  "screenshots": ["trees-farm.png", "trees-forest.png", "trees-grove-close.png"]
+}
