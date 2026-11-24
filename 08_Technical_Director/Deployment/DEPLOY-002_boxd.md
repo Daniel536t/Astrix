@@ -52,5 +52,7 @@ are cached for a year, so a new deploy takes effect on the next page load.
 
 | 2026-11-24 01:54 | `20261124T015401Z-1c96398` | MagicBlock settlement rendered from devnet (read-only panel and outpost) | 154/154 tests; live: tick 653 → 657 in 10 s from the ER, 0 errors |
 
+| 2026-11-24 02:26 | `20261124T022629Z-196de7a` | Player-owned guest worlds on MagicBlock (Create my own world, no wallet or SOL) | 154/154 tests; live: fresh browser created world slot 6 (seed 2301796620), planted on chain, 0 errors |
+
 Rollback to the previous release: `deploy/boxd/deploy.sh --rollback`. Owner deployment authority (2026-11-23): normal,
 reversible development builds may be deployed at verified checkpoints.
