@@ -2,7 +2,8 @@
 // by accepted commands; wall-clock time and rendering never advance this state.
 import type { World } from './world';
 
-export const LIFE_RESOURCES = ['fiber', 'food', 'ore', 'rations', 'seed', 'stone', 'wood'] as const;
+/** Every resource a bag or store may hold. M006 adds animal products and carried water buckets. */
+export const LIFE_RESOURCES = ['eggs', 'fiber', 'food', 'milk', 'ore', 'rations', 'seed', 'stone', 'water', 'wood', 'wool'] as const;
 export type LifeResource = (typeof LIFE_RESOURCES)[number];
 export const CARRIED_CAPACITY = 120;
 export const STOCKPILE_CAPACITY = 200;
@@ -191,7 +192,8 @@ export interface TickOutcome {
   readyCrops: string[];
 }
 
-export function advanceTicks(world: World, count: number): LifeResult<TickOutcome> {
+/** `onStep` runs after production jobs on every tick (the homestead simulation). */
+export function advanceTicks(world: World, count: number, onStep?: (tick: number) => void): LifeResult<TickOutcome> {
   const life = lifeState(world);
   if (!Number.isSafeInteger(count) || count < 1 || count > MAX_TICKS_PER_COMMAND) {
     return rejectLife('invalid_tick_count', [`ticks must be an integer from 1 to ${MAX_TICKS_PER_COMMAND}`]);
@@ -213,6 +215,7 @@ export function advanceTicks(world: World, count: number): LifeResult<TickOutcom
       life.jobs.delete(job.id);
       completed.push({ id: job.id, recipe: job.recipe, output });
     }
+    onStep?.(life.tick);
   }
   const readyCrops = [...life.crops.values()].filter((crop) => cropReady(crop, life.tick)
     && crop.plantedTick + crop.growthTicks > fromTick).map((crop) => crop.id).sort();

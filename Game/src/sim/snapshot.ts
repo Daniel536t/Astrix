@@ -11,6 +11,7 @@ import { FOUNDER_DESIGN_VERSION, Structure } from './structures';
 import {
   enableStoneReplay, finishStoneReplay, isHistoricalStoneHash, isStoneReplay,
 } from './stone-compat';
+import { HomesteadState, homesteadSnapshot, validateHomestead, cloneHomestead } from './homestead';
 import {
   CARRIED_CAPACITY, CROP_GROWTH_TICKS, CROP_PLOT_IDS, FOUNDER_STOCKPILE,
   FOUNDER_STOCKPILE_ID, LIFE_RESOURCES, MAX_PRODUCTION_JOBS, MAX_TICKS_PER_COMMAND,
@@ -53,6 +54,8 @@ export type WorldSnapshot = BaseWorldSnapshot & ({
     recipe: 'seed' | 'rations'; remainingTicks: number;
   }>;
   crops: Array<{ id: string; plantedTick: number; growthTicks: typeof CROP_GROWTH_TICKS }>;
+  /** M006: absent until founded, so older saves keep their exact bytes and hashes. */
+  homestead?: HomesteadState;
 });
 type LifeSnapshot = Extract<WorldSnapshot, { schema: typeof CURRENT_SNAPSHOT_SCHEMA }>;
 
@@ -117,6 +120,7 @@ export function createWorldSnapshot(
     })),
     jobs: [...world.life.jobs.values()].sort((a, b) => a.id.localeCompare(b.id)).map((j) => ({ ...j })),
     crops: [...world.life.crops.values()].sort((a, b) => a.id.localeCompare(b.id)).map((c) => ({ ...c })),
+    ...(world.homestead ? { homestead: homesteadSnapshot(world.homestead) } : {}),
   };
 }
 
@@ -244,7 +248,7 @@ function stockTotal(value: Record<string, number>): number {
   return Object.values(value).reduce((sum, amount) => sum + amount, 0);
 }
 
-function validateLifeFields(value: Record<string, unknown>): Pick<LifeSnapshot, 'tick' | 'stockpiles' | 'jobs' | 'crops'> {
+function validateLifeFields(value: Record<string, unknown>): Pick<LifeSnapshot, 'tick' | 'stockpiles' | 'jobs' | 'crops' | 'homestead'> {
   if (!uint(value.tick, Number.MAX_SAFE_INTEGER)
     || !Array.isArray(value.stockpiles) || value.stockpiles.length !== 1
     || !Array.isArray(value.jobs) || value.jobs.length > MAX_PRODUCTION_JOBS
@@ -290,7 +294,8 @@ function validateLifeFields(value: Record<string, unknown>): Pick<LifeSnapshot, 
   stockpiles.sort((a, b) => a.id.localeCompare(b.id));
   jobs.sort((a, b) => a.id.localeCompare(b.id));
   crops.sort((a, b) => a.id.localeCompare(b.id));
-  return { tick: value.tick, stockpiles, jobs, crops };
+  const homestead = value.homestead === undefined ? undefined : validateHomestead(value.homestead, value.tick);
+  return { tick: value.tick, stockpiles, jobs, crops, ...(homestead ? { homestead } : {}) };
 }
 
 function validateCost(value: unknown): Partial<Record<ResourceType, number>> {
@@ -498,6 +503,7 @@ export function restoreWorldSnapshotExact(world: World, input: WorldSnapshot): v
     for (const j of snapshot.jobs) world.life.jobs.set(j.id, { ...j });
     for (const c of snapshot.crops) world.life.crops.set(c.id, { ...c });
   }
+  world.homestead = snapshot.schema === CURRENT_SNAPSHOT_SCHEMA && snapshot.homestead ? cloneHomestead(snapshot.homestead) : undefined;
   world.dirty.clear();
   world.sites = [];
   world.stats = {

@@ -18,13 +18,37 @@ import {
   CROP_GROWTH_TICKS, CROP_YIELD, FOUNDER_STOCKPILE_ID, LIFE_RESOURCES, MAX_TICKS_PER_COMMAND, LifeResource, LifeResourceBag, RECIPES, RecipeId,
   advanceTicks, createLifeState, harvestCrop, plantCrop, startProduction, transfer,
 } from '../sim/economy';
+import {
+  Actor, CROPS, CropKind, FIELD_MAX, FIELD_MIN, HOMESTEAD_ACTIONS, HomesteadAction, Policy, ROLES, Role, STEWARD_ACTIONS, StewardAction,
+  assignRole, expandField, foundHomestead, homesteadAct, markField, permitted, propose, removeField, resolveProposal, seedReserve,
+  setFieldCrop, setStewardPolicy, stepHomestead, FOUNDING_SUPPLIES,
+} from '../sim/homestead';
 
 export const JOURNAL_SCHEMA = 1 as const;
 export const DESIGN_JOURNAL_SCHEMA = 2 as const;
 export const CURRENT_JOURNAL_SCHEMA = 3 as const;
 export const MAX_JOURNAL_ENTRIES = 100_000;
 export type Command = LegacyBuildCommand | BuildCommand | HarvestCommand
-  | TransferCommand | ProduceCommand | TickCommand | PlantCommand | HarvestCropCommand;
+  | TransferCommand | ProduceCommand | TickCommand | PlantCommand | HarvestCropCommand | HomesteadCommand;
+/** M006 homestead commands (schema 3). `actor` attributes steward (AI agent) actions. */
+export type HomesteadCommand = FoundHomesteadCommand | HomesteadActCommand | AssignRoleCommand
+  | ExpandFieldCommand | StewardProposeCommand | ResolveProposalCommand | StewardPolicyCommand
+  | MarkFieldCommand | SetCropCommand | RemoveFieldCommand;
+/** The player lays out a field: where (metres, min corner), how big, and what to grow. */
+export interface MarkFieldCommand extends CommandEnvelope { type: 'mark_field'; x: number; z: number; w: number; d: number; crop: CropKind }
+export interface SetCropCommand extends CommandEnvelope { type: 'set_crop'; fieldId: string; crop: CropKind }
+export interface RemoveFieldCommand extends CommandEnvelope { type: 'remove_field'; fieldId: string }
+export interface FoundHomesteadCommand extends CommandEnvelope { type: 'found_homestead' }
+export interface HomesteadActCommand extends CommandEnvelope { type: 'homestead_act'; action: HomesteadAction; target: string }
+export interface AssignRoleCommand extends CommandEnvelope { type: 'assign_role'; villagerId: string; role: Role; actor: Actor }
+export interface ExpandFieldCommand extends CommandEnvelope { type: 'expand_field'; actor: Actor }
+export interface StewardProposeCommand extends CommandEnvelope {
+  type: 'steward_propose'; action: StewardAction; reason: string; villagerId?: string; role?: Role;
+}
+export interface ResolveProposalCommand extends CommandEnvelope { type: 'resolve_proposal'; proposalId: string; approve: boolean }
+export interface StewardPolicyCommand extends CommandEnvelope {
+  type: 'steward_policy'; enabled: boolean; assign_role: Policy; expand_field: Policy;
+}
 interface CommandEnvelope {
   schema: typeof CURRENT_JOURNAL_SCHEMA;
   id: string;
@@ -64,7 +88,19 @@ export interface HarvestCommand {
   expectedRevision: number;
 }
 
-export type CommandOutcome = BuildOutcome | HarvestOutcome | TransferOutcome | ProduceOutcome | TickOutcome | PlantOutcome | CropOutcome;
+export type CommandOutcome = BuildOutcome | HarvestOutcome | TransferOutcome | ProduceOutcome | TickOutcome | PlantOutcome | CropOutcome
+  | HomesteadOutcome;
+export type HomesteadOutcome =
+  | { type: 'found_homestead'; anchorX: number; anchorZ: number; supplies: Record<string, number> }
+  | { type: 'homestead_act'; action: HomesteadAction; target: string; spent: Record<string, number>; gained: Record<string, number> }
+  | { type: 'assign_role'; villagerId: string; role: Role; actor: Actor }
+  | { type: 'expand_field'; plotId: string; wood: number; actor: Actor }
+  | { type: 'steward_propose'; proposalId: string; action: StewardAction }
+  | { type: 'resolve_proposal'; proposalId: string; approved: boolean; result: string }
+  | { type: 'steward_policy'; enabled: boolean; assign_role: Policy; expand_field: Policy }
+  | { type: 'mark_field'; fieldId: string; units: number; wood: number }
+  | { type: 'set_crop'; fieldId: string; crop: CropKind }
+  | { type: 'remove_field'; fieldId: string };
 export interface TransferOutcome {
   type: 'deposit' | 'withdraw'; stockpileId: typeof FOUNDER_STOCKPILE_ID;
   resources: Partial<Record<LifeResource, number>>;
@@ -155,6 +191,92 @@ function sameFields(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+const HOMESTEAD_TARGET = /^(?:field:\d{1,6}|well|coop|pen|sty|paddock|animal:\d{3,6})$/;
+const FIELD_ID = /^field:\d{1,6}$/;
+const coord = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= -1000 && v <= 1000;
+const side = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= FIELD_MIN && v <= FIELD_MAX;
+const cropOf = (v: unknown): v is CropKind => CROPS.includes(v as CropKind);
+const VILLAGER_ID = /^villager:\d{1,3}$/;
+const PROPOSAL_ID = /^proposal:\d{1,6}$/;
+const POLICIES = ['auto', 'approve', 'off'];
+const reasonText = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 160 && /^[\x20-\x7e]+$/.test(v);
+const actorOf = (v: unknown): v is Actor => v === 'player' || v === 'steward';
+
+function validateHomesteadCommand(value: Record<string, unknown>, base: { schema: typeof CURRENT_JOURNAL_SCHEMA; id: string; expectedRevision: number }): Command | null {
+  switch (value.type) {
+    case 'found_homestead': return { ...base, type: 'found_homestead' };
+    case 'homestead_act':
+      if (!HOMESTEAD_ACTIONS.includes(value.action as HomesteadAction) || typeof value.target !== 'string' || !HOMESTEAD_TARGET.test(value.target)) return null;
+      return { ...base, type: 'homestead_act', action: value.action as HomesteadAction, target: value.target };
+    case 'assign_role':
+      if (typeof value.villagerId !== 'string' || !VILLAGER_ID.test(value.villagerId) || !ROLES.includes(value.role as Role) || !actorOf(value.actor)) return null;
+      return { ...base, type: 'assign_role', villagerId: value.villagerId, role: value.role as Role, actor: value.actor };
+    case 'expand_field':
+      if (!actorOf(value.actor)) return null;
+      return { ...base, type: 'expand_field', actor: value.actor };
+    case 'steward_propose':
+      if (!STEWARD_ACTIONS.includes(value.action as StewardAction) || !reasonText(value.reason)
+        || value.villagerId !== undefined && (typeof value.villagerId !== 'string' || !VILLAGER_ID.test(value.villagerId))
+        || value.role !== undefined && !ROLES.includes(value.role as Role)) return null;
+      return { ...base, type: 'steward_propose', action: value.action as StewardAction, reason: value.reason,
+        ...(value.villagerId !== undefined ? { villagerId: value.villagerId as string } : {}),
+        ...(value.role !== undefined ? { role: value.role as Role } : {}) };
+    case 'resolve_proposal':
+      if (typeof value.proposalId !== 'string' || !PROPOSAL_ID.test(value.proposalId) || typeof value.approve !== 'boolean') return null;
+      return { ...base, type: 'resolve_proposal', proposalId: value.proposalId, approve: value.approve };
+    case 'steward_policy':
+      if (typeof value.enabled !== 'boolean' || !POLICIES.includes(String(value.assign_role)) || !POLICIES.includes(String(value.expand_field))) return null;
+      return { ...base, type: 'steward_policy', enabled: value.enabled, assign_role: value.assign_role as Policy, expand_field: value.expand_field as Policy };
+    case 'mark_field':
+      if (!coord(value.x) || !coord(value.z) || !side(value.w) || !side(value.d) || !cropOf(value.crop)) return null;
+      return { ...base, type: 'mark_field', x: value.x, z: value.z, w: value.w, d: value.d, crop: value.crop };
+    case 'set_crop':
+      if (typeof value.fieldId !== 'string' || !FIELD_ID.test(value.fieldId) || !cropOf(value.crop)) return null;
+      return { ...base, type: 'set_crop', fieldId: value.fieldId, crop: value.crop };
+    case 'remove_field':
+      if (typeof value.fieldId !== 'string' || !FIELD_ID.test(value.fieldId)) return null;
+      return { ...base, type: 'remove_field', fieldId: value.fieldId };
+  }
+  return null;
+}
+
+function validateHomesteadOutcome(value: Record<string, unknown>): CommandOutcome | null {
+  const bag = (v: unknown) => v !== undefined && object(v) && Object.keys(v).length === 0 ? {} : inventory(v);
+  switch (value.type) {
+    case 'found_homestead':
+      if (!Number.isSafeInteger(value.anchorX) || !Number.isSafeInteger(value.anchorZ)) return null;
+      return { type: 'found_homestead', anchorX: value.anchorX as number, anchorZ: value.anchorZ as number, supplies: inventory(value.supplies) };
+    case 'homestead_act':
+      if (!HOMESTEAD_ACTIONS.includes(value.action as HomesteadAction) || typeof value.target !== 'string' || !HOMESTEAD_TARGET.test(value.target)) return null;
+      return { type: 'homestead_act', action: value.action as HomesteadAction, target: value.target, spent: bag(value.spent), gained: bag(value.gained) };
+    case 'assign_role':
+      if (typeof value.villagerId !== 'string' || !VILLAGER_ID.test(value.villagerId) || !ROLES.includes(value.role as Role) || !actorOf(value.actor)) return null;
+      return { type: 'assign_role', villagerId: value.villagerId, role: value.role as Role, actor: value.actor };
+    case 'expand_field':
+      if (typeof value.plotId !== 'string' || !FIELD_ID.test(value.plotId) || !uint(value.wood) || !actorOf(value.actor)) return null;
+      return { type: 'expand_field', plotId: value.plotId, wood: value.wood, actor: value.actor };
+    case 'steward_propose':
+      if (typeof value.proposalId !== 'string' || !PROPOSAL_ID.test(value.proposalId) || !STEWARD_ACTIONS.includes(value.action as StewardAction)) return null;
+      return { type: 'steward_propose', proposalId: value.proposalId, action: value.action as StewardAction };
+    case 'resolve_proposal':
+      if (typeof value.proposalId !== 'string' || !PROPOSAL_ID.test(value.proposalId) || typeof value.approved !== 'boolean' || !reasonText(value.result)) return null;
+      return { type: 'resolve_proposal', proposalId: value.proposalId, approved: value.approved, result: value.result };
+    case 'steward_policy':
+      if (typeof value.enabled !== 'boolean' || !POLICIES.includes(String(value.assign_role)) || !POLICIES.includes(String(value.expand_field))) return null;
+      return { type: 'steward_policy', enabled: value.enabled, assign_role: value.assign_role as Policy, expand_field: value.expand_field as Policy };
+    case 'mark_field':
+      if (typeof value.fieldId !== 'string' || !FIELD_ID.test(value.fieldId) || !uint(value.units) || !uint(value.wood)) return null;
+      return { type: 'mark_field', fieldId: value.fieldId, units: value.units, wood: value.wood };
+    case 'set_crop':
+      if (typeof value.fieldId !== 'string' || !FIELD_ID.test(value.fieldId) || !cropOf(value.crop)) return null;
+      return { type: 'set_crop', fieldId: value.fieldId, crop: value.crop };
+    case 'remove_field':
+      if (typeof value.fieldId !== 'string' || !FIELD_ID.test(value.fieldId)) return null;
+      return { type: 'remove_field', fieldId: value.fieldId };
+  }
+  return null;
+}
+
 function inventory(value: unknown): Record<string, number> {
   if (!object(value)) throw new Error('invalid resource record');
   const result: Record<string, number> = {};
@@ -212,6 +334,8 @@ export function validateCommand(value: unknown): Command {
       command = { ...base, type: value.type, plotId: value.plotId };
     } else if (value.type === 'harvest_crop' && typeof value.plotId === 'string' && /^crop:[0-8]$/.test(value.plotId)) {
       command = { ...base, type: value.type, plotId: value.plotId };
+    } else {
+      command = validateHomesteadCommand(value, base as { schema: typeof CURRENT_JOURNAL_SCHEMA; id: string; expectedRevision: number });
     }
     if (command) {
       if (!sameFields(command, value)) throw new Error('non-canonical life-loop command');
@@ -265,6 +389,8 @@ function validateOutcome(value: unknown): CommandOutcome {
     if (!value.readyCrops.every((plot) => typeof plot === 'string' && /^crop:[0-8]$/.test(plot))) throw new Error('invalid ready crops');
     outcome = { type: value.type, fromTick: value.fromTick, toTick: value.toTick,
       completedJobs, readyCrops: [...value.readyCrops] };
+  } else {
+    outcome = validateHomesteadOutcome(value);
   }
   if (outcome) {
     if (JSON.stringify(outcome) !== JSON.stringify(value)) throw new Error('non-canonical life-loop outcome');
@@ -335,7 +461,21 @@ export function validateJournal(value: unknown): CommandJournal {
       || entry.command.type === 'produce' && entry.outcome.type === 'produce'
       && (entry.command.stockpileId !== entry.outcome.stockpileId || entry.command.recipe !== entry.outcome.recipe)
       || entry.command.type === 'tick' && entry.outcome.type === 'tick'
-      && entry.outcome.toTick - entry.outcome.fromTick !== entry.command.ticks) {
+      && entry.outcome.toTick - entry.outcome.fromTick !== entry.command.ticks
+      || entry.command.type === 'homestead_act' && entry.outcome.type === 'homestead_act'
+      && (entry.command.action !== entry.outcome.action || entry.command.target !== entry.outcome.target)
+      || entry.command.type === 'assign_role' && entry.outcome.type === 'assign_role'
+      && (entry.command.villagerId !== entry.outcome.villagerId || entry.command.role !== entry.outcome.role || entry.command.actor !== entry.outcome.actor)
+      || entry.command.type === 'expand_field' && entry.outcome.type === 'expand_field' && entry.command.actor !== entry.outcome.actor
+      || entry.command.type === 'steward_propose' && entry.outcome.type === 'steward_propose' && entry.command.action !== entry.outcome.action
+      || entry.command.type === 'resolve_proposal' && entry.outcome.type === 'resolve_proposal'
+      && (entry.command.proposalId !== entry.outcome.proposalId || entry.command.approve !== entry.outcome.approved)
+      || (entry.command.type === 'set_crop' || entry.command.type === 'remove_field')
+      && (entry.outcome.type === 'set_crop' || entry.outcome.type === 'remove_field') && entry.command.fieldId !== entry.outcome.fieldId
+      || entry.command.type === 'set_crop' && entry.outcome.type === 'set_crop' && entry.command.crop !== entry.outcome.crop
+      || entry.command.type === 'steward_policy' && entry.outcome.type === 'steward_policy'
+      && (entry.command.enabled !== entry.outcome.enabled || entry.command.assign_role !== entry.outcome.assign_role
+        || entry.command.expand_field !== entry.outcome.expand_field)) {
       throw new Error('journal command and outcome disagree');
     }
     ids.add(entry.command.id);
@@ -592,6 +732,16 @@ export class GameSession {
         resource: result.resource, amount: result.amount,
       };
     } else if (command.type === 'deposit' || command.type === 'withdraw') {
+      // Seed set aside for the homestead's own plots cannot be withdrawn.
+      const h = this.world.homestead;
+      const wantSeed = command.type === 'withdraw' ? command.resources.seed ?? 0 : 0;
+      if (h && wantSeed > 0) {
+        const have = this.world.life?.stockpiles.get(FOUNDER_STOCKPILE_ID)?.inventory.seed ?? 0;
+        const reserve = seedReserve(h);
+        if (have - wantSeed < reserve) {
+          return this.reject(command.id, 'reserved', [`${reserve} seed is reserved for replanting; ${Math.max(0, have - reserve)} available`]);
+        }
+      }
       const result = transfer(this.world, command.type, command.resources);
       if (!result.ok) {
         if (this.stateHash !== before) throw new Error('rejected transfer changed authoritative state');
@@ -604,7 +754,8 @@ export class GameSession {
       outcome = { type: 'produce', jobId: result.value.id, stockpileId: result.value.stockpileId,
         recipe: result.value.recipe, remainingTicks: result.value.remainingTicks };
     } else if (command.type === 'tick') {
-      const result = advanceTicks(this.world, command.ticks);
+      const world = this.world;
+      const result = advanceTicks(world, command.ticks, (tick) => { stepHomestead(world, tick); });
       if (!result.ok) return this.reject(command.id, result.code, result.reasons);
       outcome = { type: 'tick', ...result.value };
     } else if (command.type === 'plant') {
@@ -617,7 +768,12 @@ export class GameSession {
       if (!result.ok) return this.reject(command.id, result.code, result.reasons);
       outcome = { type: 'harvest_crop', plotId: command.plotId, resources: result.value };
     } else {
-      throw new Error('unhandled command type');
+      const result = this.dispatchHomestead(command);
+      if (!result.ok) {
+        if (this.stateHash !== before) throw new Error('rejected homestead command changed authoritative state');
+        return this.reject(command.id, result.code, result.reasons);
+      }
+      outcome = result.value;
     }
     const entry: JournalEntry = {
       command, sequence: this.nextSequence, revision: this.world.revision,
@@ -627,6 +783,59 @@ export class GameSession {
     this.journal.entries.push(entry);
     this.ids.set(command.id, entry);
     return this.receipt(entry, false);
+  }
+
+  private dispatchHomestead(command: Command): { ok: true; value: CommandOutcome } | { ok: false; code: string; reasons: string[] } {
+    const world = this.world;
+    switch (command.type) {
+      case 'found_homestead': {
+        const r = foundHomestead(world);
+        return r.ok ? { ok: true, value: { type: 'found_homestead', anchorX: r.value.anchor.x, anchorZ: r.value.anchor.z,
+          supplies: inventory({ ...FOUNDING_SUPPLIES }) } } : r;
+      }
+      case 'homestead_act': {
+        const r = homesteadAct(world, command.action, command.target);
+        return r.ok ? { ok: true, value: { type: 'homestead_act', action: r.value.action, target: r.value.target,
+          spent: sortedBag(r.value.spent), gained: sortedBag(r.value.gained) } } : r;
+      }
+      case 'assign_role': {
+        const h = world.homestead;
+        if (h) { const gate = permitted(h, command.actor, 'assign_role'); if (!gate.ok) return gate; }
+        const r = assignRole(world, command.villagerId, command.role);
+        return r.ok ? { ok: true, value: { type: 'assign_role', villagerId: command.villagerId, role: command.role, actor: command.actor } } : r;
+      }
+      case 'expand_field': {
+        const h = world.homestead;
+        if (h) { const gate = permitted(h, command.actor, 'expand_field'); if (!gate.ok) return gate; }
+        const r = expandField(world);
+        return r.ok ? { ok: true, value: { type: 'expand_field', plotId: r.value.plotId, wood: r.value.wood, actor: command.actor } } : r;
+      }
+      case 'steward_propose': {
+        const r = propose(world, command.action, command.reason, command.villagerId, command.role);
+        return r.ok ? { ok: true, value: { type: 'steward_propose', proposalId: r.value.id, action: r.value.action } } : r;
+      }
+      case 'resolve_proposal': {
+        const r = resolveProposal(world, command.proposalId, command.approve);
+        return r.ok ? { ok: true, value: { type: 'resolve_proposal', proposalId: command.proposalId, approved: r.value.approved, result: r.value.result } } : r;
+      }
+      case 'mark_field': {
+        const r = markField(world, { x: command.x, z: command.z, w: command.w, d: command.d, crop: command.crop }, 'bag');
+        return r.ok ? { ok: true, value: { type: 'mark_field', fieldId: r.value.fieldId, units: r.value.units, wood: r.value.wood } } : r;
+      }
+      case 'set_crop': {
+        const r = setFieldCrop(world, command.fieldId, command.crop);
+        return r.ok ? { ok: true, value: { type: 'set_crop', fieldId: command.fieldId, crop: command.crop } } : r;
+      }
+      case 'remove_field': {
+        const r = removeField(world, command.fieldId);
+        return r.ok ? { ok: true, value: { type: 'remove_field', fieldId: command.fieldId } } : r;
+      }
+      case 'steward_policy': {
+        const r = setStewardPolicy(world, command.enabled, { assign_role: command.assign_role, expand_field: command.expand_field });
+        return r.ok ? { ok: true, value: { type: 'steward_policy', enabled: command.enabled, assign_role: command.assign_role, expand_field: command.expand_field } } : r;
+      }
+    }
+    throw new Error('unhandled command type');
   }
 
   private replayEntry(entry: JournalEntry): void {
@@ -678,6 +887,10 @@ function historicalGenesisWorld(seed: number, starter: Record<string, number>,
   world.inventory = { ...starter };
   if (schema === CURRENT_JOURNAL_SCHEMA) world.life = createLifeState();
   return world;
+}
+
+function sortedBag(bag: Record<string, number>): Record<string, number> {
+  return Object.fromEntries(Object.entries(bag).filter(([, n]) => n > 0).sort(([a], [b]) => a.localeCompare(b)));
 }
 
 function containsRetiredStone(entry: JournalEntry): boolean {

@@ -11,6 +11,7 @@
 // separately and re-applied when a chunk is regenerated.
 import type { Structure } from './structures';
 import type { LifeState } from './economy';
+import type { HomesteadState } from './homestead';
 import { isStoneReplay } from './stone-compat';
 import { Hydrology } from './hydrology';
 import { TerrainV2, V2Column } from './terrain-v2';
@@ -187,6 +188,8 @@ export interface World {
   inventory: Record<string, number>;
   /** Present only after schema-3 genesis/restoration. */
   life?: LifeState;
+  /** M006 living homestead; present once founded (schema 3 only). */
+  homestead?: HomesteadState;
   dirty: Set<string>;
   stats: WorldStats;
   authoredPlaced: boolean;
