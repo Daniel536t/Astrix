@@ -284,3 +284,7 @@ Still emulated only (section 4: SwiftShader, 4x CPU throttle, `WEBGL_multi_draw`
 ### 10.7 Visual vs simulated in review v1
 
 Everything changed in review v1 is presentation: macro draw runs, the drawn near ring radius, the LOD band threshold, fallback bake scheduling, shadow box and ground-cover anchors, and the new metrics (`macroTilesInView`, `viewAnchor`, `nearDisplayRadius`, `displayedChunks`, `nearDisplayedTriangles`, `natureRebuilds`, the `naturerebuild` section, fallback `tileBuilds` / `meshBakes` / `pendingBakes`). The loaded chunk set that fauna and vegetation read is unchanged. `tests/m008.persistence.test.ts` (identical sim state across no-render, near, 900 m and fallback runs) passes with these changes.
+
+## 11. Live deployment check
+
+Release `20261124T161654Z-7684630` (commit 7684630) was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd` but not merged to `main`. The served `index.html` references the same bundle as the local build (`assets/index-D9wgBUeZ.js`). A fresh headless Chromium context (software GL) loaded the live farm view with no page errors. After 45 s it reported 42 nature instances, all 15 homestead animals (cattle 2, chicken 4, goat 2, horse 2, pig 2, sheep 3), 2 villagers, and 60 wildlife (46 rabbits, 2 deer, 10 trout, 2 fox). Screenshot: `live-farm-7684630.png`. In it the horses and cattle stand in different spots from the local probe, which shows they move but is not a measured path. Draw calls were not read on the live site, and no real phone was used.
