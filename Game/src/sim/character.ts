@@ -33,6 +33,9 @@ export const EXHAUSTED_SWIM_SPEED = 1.0;
 export const JUMP_SPEED = 6.6;
 /** A second tap while airborne launches again at this speed (a higher total jump, enough to leave a two-voxel hole). */
 export const DOUBLE_JUMP_SPEED = 8.4;
+/** A tap this close to the ground (m) while falling is buffered as a ground jump. */
+const JUMP_BUFFER_REACH = 0.6;
+const JUMP_BUFFER_TIME = 0.15;
 export const GRAVITY = 22;
 /** Highest ledge climbed without jumping (one voxel plus tolerance). */
 export const STEP_HEIGHT = 1.05;
@@ -97,6 +100,10 @@ export interface CharacterState {
   cause: 'drowned' | null;
   /** True once the mid-air second jump has been spent; cleared on landing or in water. */
   airJumpUsed: boolean;
+  /** True while airborne after a real ground jump (the air jump needs this, so stepping off a ledge gives none). */
+  jumped: boolean;
+  /** Seconds left on a Jump tap made just before landing; it fires as a normal ground jump on touchdown. */
+  jumpBuffer: number;
   /** Last dry standing position: where a dead character respawns. */
   safe: { x: number; y: number; z: number };
 }
@@ -118,7 +125,7 @@ export function createCharacter(x: number, y: number, z: number, heading = 0): C
   return {
     x, y, z, vx: 0, vy: 0, vz: 0, heading, grounded: false, mode: 'air', speed: 0,
     health: MAX_HEALTH, breath: 1, stamina: 1, headUnderwater: false, waterSurface: y,
-    calm: HEALTH_REGEN_DELAY, hurt: 0, dead: false, cause: null, airJumpUsed: false, safe: { x, y, z },
+    calm: HEALTH_REGEN_DELAY, hurt: 0, dead: false, cause: null, airJumpUsed: false, jumped: false, jumpBuffer: 0, safe: { x, y, z },
   };
 }
 
@@ -294,10 +301,17 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
     else wantVy = -0.8;
     s.vy += (wantVy - s.vy) * Math.min(1, 4 * dt);
   } else {
-    if (input.jump && s.grounded) { s.vy = wading ? JUMP_SPEED * 0.7 : JUMP_SPEED; s.grounded = false; }
-    else if (input.jump && !s.airJumpUsed && !wading) {
-      // Second tap in the air: a stronger launch, once per jump.
-      s.vy = DOUBLE_JUMP_SPEED; s.airJumpUsed = true;
+    const wantJump = input.jump || s.jumpBuffer > 0;
+    if (wantJump && s.grounded) {
+      s.vy = wading ? JUMP_SPEED * 0.7 : JUMP_SPEED; s.grounded = false; s.jumped = true; s.jumpBuffer = 0;
+    } else if (input.jump) {
+      if (s.vy <= 0 && (overlaps(world, s.x, s.y - JUMP_BUFFER_REACH, s.z) || structureFloor(world, s.x, s.y + 0.02, s.z) > s.y - JUMP_BUFFER_REACH)) {
+        // About to land: remember the tap so it becomes a normal ground jump.
+        s.jumpBuffer = JUMP_BUFFER_TIME;
+      } else if (s.jumped && !s.airJumpUsed && !wading) {
+        // Second tap in the air after a real jump: a stronger launch, once per jump.
+        s.vy = DOUBLE_JUMP_SPEED; s.airJumpUsed = true;
+      }
     }
     s.vy -= GRAVITY * dt;
     if (s.vy < -40) s.vy = -40;
@@ -359,7 +373,8 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
   }
 
   resolveEntities(world, s);
-  if (s.grounded || swimming || wading) s.airJumpUsed = false;
+  if (s.grounded || swimming || wading) { s.airJumpUsed = false; s.jumped = false; }
+  if (s.jumpBuffer > 0) s.jumpBuffer = Math.max(0, s.jumpBuffer - dt);
 
   const moved = Math.hypot(s.x - prev.x, s.z - prev.z) / dt;
   s.speed = moved;

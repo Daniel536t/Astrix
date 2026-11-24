@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GENERATOR_V2, MAT, createWorld, ensureChunk, hydrologyFor, setVoxel, surfaceAt, worldToChunkX, worldToChunkZ } from '../src/sim/world';
 import {
-  CharacterState, FIXED_STEP, RUN_SPEED, WALK_SPEED, createCharacter, findStandingY, stepCharacter,
+  CharacterState, FIXED_STEP, JUMP_SPEED, RUN_SPEED, WALK_SPEED, createCharacter, findStandingY, stepCharacter,
 } from '../src/sim/character';
 
 function residentAround(world: ReturnType<typeof createWorld>, x: number, z: number, r = 1) {
@@ -113,4 +113,34 @@ test('a second jump tap in the air jumps higher, once, and a two-voxel hole can 
   assert.ok(escape([0]).x < 1.8, 'a single jump does not clear two voxels');
   const out = escape([0, 9]);
   assert.ok(out.x > 2.5, `double jump clears the shaft rim (x=${out.x.toFixed(2)})`);
+});
+
+test('a tap just before landing is a normal ground jump, not the higher air jump', () => {
+  const world = flatPad();
+  // Jump, then tap on the way down just above the floor.
+  let s = run(world, createCharacter(0.5, 31, 0.5), 10, {});
+  s = stepCharacter(world, s, { moveX: 0, moveZ: 0, run: false, jump: true });
+  while (!(s.vy < 0 && s.y - 31 < 0.4)) s = stepCharacter(world, s, { moveX: 0, moveZ: 0, run: false, jump: false });
+  s = stepCharacter(world, s, { moveX: 0, moveZ: 0, run: false, jump: true });
+  assert.equal(s.airJumpUsed, false, 'buffered tap does not spend the air jump');
+  let top = 0, launched = 0;
+  for (let i = 0; i < 90; i++) {
+    s = stepCharacter(world, s, { moveX: 0, moveZ: 0, run: false, jump: false });
+    launched = Math.max(launched, s.vy); top = Math.max(top, s.y - 31);
+  }
+  assert.ok(launched <= JUMP_SPEED + 1e-9, `launch ${launched} is a ground jump`);
+  assert.ok(top > 0.5, 'the buffered tap still jumped on landing');
+});
+
+test('walking off a ledge gives no air jump; a tap there never launches higher than a ground jump', () => {
+  const world = flatPad();
+  for (let z = -10; z <= 10; z++) for (let x = 3; x <= 10; x++) setVoxel(world, x, 30, z, MAT.AIR);
+  let s = run(world, createCharacter(0.5, 31, 0.5), 10, {});
+  for (let i = 0; i < 120 && (s.grounded || s.x < 3); i++) s = stepCharacter(world, s, { moveX: 1, moveZ: 0, run: false, jump: false });
+  assert.equal(s.grounded, false, 'walked off the ledge');
+  const y0 = s.y;
+  s = stepCharacter(world, s, { moveX: 1, moveZ: 0, run: false, jump: true });
+  assert.ok(s.vy < 0 && s.y < y0, 'tap while falling from a ledge does not launch');
+  assert.equal(s.airJumpUsed, false);
+  assert.equal(s.jumped, false);
 });

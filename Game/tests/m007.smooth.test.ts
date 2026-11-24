@@ -109,3 +109,20 @@ test('drawn animals move every frame, not once per 10 Hz sim step', () => {
   // Blended: a walking animal advances on nearly every frame (a raw 10 Hz step only on every 6th).
   assert.ok(moved[best] / FRAMES > 0.6, `moved on ${moved[best]} of ${FRAMES} frames`);
 });
+
+test('FaunaView spawns at most SPAWN_CHUNKS_PER_FRAME chunks per sync and finishes over later frames', () => {
+  const world = createWorld(1337, GENERATOR_V2);
+  const keys = new Set<string>();
+  for (let cx = 0; cx < 5; cx++) { ensureChunk(world, cx, 0); keys.add(`${cx},0`); }
+  const view = new FaunaView(world);
+  const priv = view as unknown as { creatures: Map<string, unknown> };
+  const frames: number[] = [];
+  for (let i = 0; i < 6 && (i === 0 || view.pendingSpawn); i++) {
+    view.sync(keys);
+    frames.push(priv.creatures.size);
+  }
+  assert.deepEqual(frames, [2, 4, 5]);
+  assert.equal(view.pendingSpawn, false);
+  view.sync(keys);
+  assert.equal(priv.creatures.size, 5, 'a settled sync spawns nothing more');
+});

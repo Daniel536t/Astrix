@@ -19,7 +19,7 @@
 ### Fix
 
 - The user asked for jumping instead of a return-to-spawn escape. With future weapons the player can cut voxels around themselves and still needs to climb out of the resulting hole. So no unstuck or respawn key was added.
-- Tapping Jump again while airborne now gives one extra launch at 8.4 m/s (`DOUBLE_JUMP_SPEED` in `Game/src/sim/character.ts`). The total rise is about 2.2 m, enough to clear a two-voxel rim. The air jump resets on landing and in water. Keyboard (Space) and the touch Jump button both use it through `ExploreController.setJumpHeld`, because each new press already queues a jump. The on-screen hints mention it.
+- Tapping Jump again while airborne now gives one extra launch at 8.4 m/s (`DOUBLE_JUMP_SPEED` in `Game/src/sim/character.ts`). The total rise is about 2.2 m, enough to clear a two-voxel rim. The air jump resets on landing and in water. It needs a real ground jump first: stepping off a ledge and tapping gives no air jump (`jumped` flag). A tap made while falling within 0.6 m of the floor is buffered for 0.15 s and fires as a normal 6.6 m/s ground jump on touchdown, so it no longer spends the air jump. Tests: "a tap just before landing..." and "walking off a ledge..." in `m004.character.test.ts`; the 2-chunks-per-frame spawn cap is tested in `m007.smooth.test.ts`. Journals only record world edits, not character jumps, so replay and saved hashes are unchanged. Keyboard (Space) and the touch Jump button both use it through `ExploreController.setJumpHeld`, because each new press already queues a jump. The on-screen hints mention it.
 - The character's state is presentation-tier and is not journaled or hashed. The new `airJumpUsed` field is not saved, so old saves and their hashes do not change.
 
 ### Verified by test
@@ -30,7 +30,7 @@
   - walking or a single jump does not leave a 2 x 2 shaft two voxels deep;
   - a double jump while pushing forward does leave it.
 - The test fails on the pre-fix code, which has no air jump.
-- Full suite: 191 pass. `tsc --noEmit` is clean and `npm run build` succeeds.
+- Full suite at the time of this change: 191 pass (later totals below are later runs, not discrepancies). `tsc --noEmit` is clean and `npm run build` succeeds.
 
 ### Not verified
 
@@ -54,13 +54,13 @@
 
 #### Verified by test
 - `Game/tests/m007.smooth.test.ts` (7 tests): alpha from the clock, continuity across a tick boundary at 60 fps, shortest-arc yaw over the +-PI seam, snap on a large jump, result independent of frame count, `FaunaView` simulation state identical whether or not extra draws happen, and drawn instances move on more than 60% of 60 fps frames. The last test fails on the old drawing (animal moved on 28 of 180 frames with blending disabled) and passes now.
-- `npm test` 198 pass, `tsc --noEmit` clean, `npm run build` succeeds.
+- `npm test` 198 pass at that point (suite total grows as features land), `tsc --noEmit` clean, `npm run build` succeeds.
 
 #### Live browser (software GL, about 1.2 frames per second, so frame-independent numbers only)
 Build served from a copy of `Game/dist`, farm view `?chain=0&mode=builder&tx=-28&ty=14&tz=4&dist=40`, 70 s, 36 settlement ticks, no page errors:
 - Draw calls 106 (budget 120) and triangles 248,364 (budget 250,000). The earlier figure was about 96 / 241k before the lean-to. The triangle margin is 1.6k, so any new geometry needs a matching cut.
 - Instance matrices of the first 6 animals per species, read from the scene each frame. Implied speed between consecutive frames for farm animals: frames straddling a tick boundary mean 0.09 m/s, max 0.81 m/s (210 samples); other frames mean 0.09 m/s, max 0.80 m/s (1005 samples). No position jump at tick boundaries.
-- CPU per frame (ms, mean / p95 / max): homestead update 0.92 / 0.6 / 60.3, wildlife 0.51 / 1.2 / 3.1, terrain streaming 0.07 / 0.1 / 0.4, settlement tick 1.99 / 3.8 / 7.0. Render max 26.9 s is the first frame (shader compile on software GL), and the homestead max 60 ms is the first frame that builds the buildings. Neither recurs.
+- CPU per frame (ms, mean / p95 / max): homestead update 0.92 / 0.6 / 60.3, wildlife 0.51 / 1.2 / 3.1, terrain streaming 0.07 / 0.1 / 0.4, settlement tick 1.99 / 3.8 / 7.0. Render max 26.9 ms is the first frame (shader compile on software GL), and the homestead max 60 ms is the first frame that builds the buildings. Neither recurs.
 - Probe scripts: `.kiro/artifacts/screenshots/probe/smooth-feat003-c.js`.
 
 #### Not verified
@@ -71,7 +71,7 @@ Build served from a copy of `Game/dist`, farm view `?chain=0&mode=builder&tx=-28
 ## FEAT-004: animal behaviour evidence
 
 ### Tests (`Game/tests/m007.behaviour.test.ts` new, `m007.predators.test.ts`, `m006.homestead.test.ts`)
-Full suite: 202 pass, `tsc --noEmit` clean, `npm run build` succeeds.
+Full suite at that point: 202 pass; final run after the jump fixes below: 205 pass, `tsc --noEmit` clean, `npm run build` succeeds.
 
 ### Live browser (this build, fresh context, software GL, 42 frames over 43 s, no page errors)
 - Local `Game/dist` copy served at a routed origin. Data: `probe-local-farm.json`, screenshot `probe-local-farm.png`. Script: `.kiro/artifacts/screenshots/probe/feat004-b.js`.
