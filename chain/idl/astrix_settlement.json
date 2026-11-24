@@ -1,0 +1,756 @@
+{
+  "address": "Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy",
+  "metadata": {
+    "name": "astrix_settlement",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "ASTrix settlement economy on MagicBlock Ephemeral Rollups"
+  },
+  "instructions": [
+    {
+      "name": "initialize",
+      "docs": [
+        "Base layer: found a settlement bound to a world seed and terrain generator."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "world_seed",
+          "type": "u32"
+        },
+        {
+          "name": "generator",
+          "type": "u8"
+        },
+        {
+          "name": "tick_interval_s",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "delegate",
+      "docs": [
+        "Base layer: hand the settlement to an Ephemeral Rollup validator."
+      ],
+      "discriminator": [
+        90,
+        147,
+        75,
+        178,
+        85,
+        88,
+        4,
+        137
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "buffer_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_record_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_metadata_pda",
+          "writable": true
+        },
+        {
+          "name": "pda",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "delegation_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_session",
+      "docs": [
+        "Owner only: authorise a session key with an expiry and an action budget."
+      ],
+      "discriminator": [
+        156,
+        135,
+        126,
+        111,
+        184,
+        206,
+        194,
+        141
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "session_key",
+          "type": "pubkey"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        },
+        {
+          "name": "budget",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "revoke_session",
+      "docs": [
+        "Owner only: end the current session immediately."
+      ],
+      "discriminator": [
+        86,
+        92,
+        198,
+        120,
+        144,
+        2,
+        7,
+        194
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "harvest",
+      "docs": [
+        "Gather a resource into the stockpile (owner or session key)."
+      ],
+      "discriminator": [
+        228,
+        241,
+        31,
+        182,
+        53,
+        169,
+        59,
+        199
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "resource",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "plant",
+      "docs": [
+        "Plant one seed in an empty plot (owner or session key)."
+      ],
+      "discriminator": [
+        200,
+        121,
+        224,
+        150,
+        235,
+        239,
+        156,
+        246
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "plot",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "build_sawmill",
+      "docs": [
+        "Build the sawmill: afterwards each tick turns 2 wood into 1 plank."
+      ],
+      "discriminator": [
+        115,
+        64,
+        162,
+        70,
+        78,
+        156,
+        132,
+        106
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "tick",
+      "docs": [
+        "Advance settlement time by one tick. Permissionless; clock-gated so that",
+        "early or repeated calls are no-ops. Executed by the MagicBlock crank."
+      ],
+      "discriminator": [
+        92,
+        79,
+        44,
+        8,
+        101,
+        80,
+        63,
+        15
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "schedule_ticks",
+      "docs": [
+        "Owner only, on the ER: schedule `tick` with a MagicBlock crank."
+      ],
+      "discriminator": [
+        243,
+        206,
+        0,
+        155,
+        207,
+        136,
+        85,
+        251
+      ],
+      "accounts": [
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "settlement"
+        },
+        {
+          "name": "settlement_info",
+          "writable": true
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "task_id",
+          "type": "i64"
+        },
+        {
+          "name": "interval_ms",
+          "type": "i64"
+        },
+        {
+          "name": "iterations",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "prospect",
+      "docs": [
+        "Prospect for minerals: spend food, ask MagicBlock VRF for the outcome."
+      ],
+      "discriminator": [
+        131,
+        86,
+        158,
+        130,
+        25,
+        239,
+        113,
+        87
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "oracle_queue",
+          "writable": true
+        },
+        {
+          "name": "program_identity"
+        },
+        {
+          "name": "vrf_program"
+        },
+        {
+          "name": "slot_hashes"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "client_seed",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "prospect_callback",
+      "docs": [
+        "VRF callback: decide what the prospect found. Only the VRF program identity can call it."
+      ],
+      "discriminator": [
+        174,
+        244,
+        89,
+        29,
+        10,
+        221,
+        200,
+        37
+      ],
+      "accounts": [
+        {
+          "name": "vrf_program_identity",
+          "docs": [
+            "Scoped VRF identity PDA, bound to this program. Its presence as a signer proves",
+            "the callback was issued by the VRF program for this program."
+          ],
+          "signer": true
+        },
+        {
+          "name": "settlement",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "randomness",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "cancel_prospect",
+      "docs": [
+        "Owner only: clear a prospect whose randomness never arrived (the oracle",
+        "gives up after its retries). The food spent is not refunded."
+      ],
+      "discriminator": [
+        203,
+        80,
+        148,
+        93,
+        236,
+        100,
+        31,
+        90
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "commit_settlement",
+      "docs": [
+        "Owner only, on the ER: commit the current settlement state to Solana."
+      ],
+      "discriminator": [
+        231,
+        94,
+        46,
+        142,
+        36,
+        100,
+        154,
+        183
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "undelegate",
+      "docs": [
+        "Owner only, on the ER: commit and return the settlement to Solana."
+      ],
+      "discriminator": [
+        131,
+        148,
+        180,
+        198,
+        91,
+        104,
+        42,
+        238
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "process_undelegation",
+      "discriminator": [
+        196,
+        28,
+        41,
+        206,
+        48,
+        37,
+        51,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "base_account",
+          "writable": true
+        },
+        {
+          "name": "buffer"
+        },
+        {
+          "name": "payer",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "account_seeds",
+          "type": {
+            "vec": "bytes"
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Settlement",
+      "discriminator": [
+        55,
+        11,
+        219,
+        33,
+        36,
+        136,
+        40,
+        182
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "Settlement",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "world_seed",
+            "type": "u32"
+          },
+          {
+            "name": "generator",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "tick",
+            "type": "u64"
+          },
+          {
+            "name": "last_tick_ts",
+            "type": "i64"
+          },
+          {
+            "name": "tick_interval_s",
+            "type": "i64"
+          },
+          {
+            "name": "stock",
+            "type": {
+              "array": [
+                "u32",
+                8
+              ]
+            }
+          },
+          {
+            "name": "plots",
+            "type": {
+              "array": [
+                "u64",
+                9
+              ]
+            }
+          },
+          {
+            "name": "population",
+            "type": "u16"
+          },
+          {
+            "name": "sawmill",
+            "type": "bool"
+          },
+          {
+            "name": "prospect_pending",
+            "type": "bool"
+          },
+          {
+            "name": "prospects",
+            "type": "u32"
+          },
+          {
+            "name": "last_find",
+            "type": "u8"
+          },
+          {
+            "name": "last_roll",
+            "type": "u8"
+          },
+          {
+            "name": "rare_finds",
+            "type": "u32"
+          },
+          {
+            "name": "session_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "session_expires",
+            "type": "i64"
+          },
+          {
+            "name": "session_budget",
+            "type": "u32"
+          },
+          {
+            "name": "actions",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "UnsupportedGenerator",
+      "msg": "unsupported terrain generator"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidInterval",
+      "msg": "tick interval too short"
+    },
+    {
+      "code": 6002,
+      "name": "Unauthorised",
+      "msg": "signer is neither the owner nor the active session key"
+    },
+    {
+      "code": 6003,
+      "name": "SessionExpired",
+      "msg": "session key expired"
+    },
+    {
+      "code": 6004,
+      "name": "SessionBudgetExhausted",
+      "msg": "session action budget exhausted"
+    },
+    {
+      "code": 6005,
+      "name": "NotOwner",
+      "msg": "only the owner may do this"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidResource",
+      "msg": "resource cannot be harvested"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidAmount",
+      "msg": "invalid amount"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidPlot",
+      "msg": "invalid plot"
+    },
+    {
+      "code": 6009,
+      "name": "PlotOccupied",
+      "msg": "plot already planted"
+    },
+    {
+      "code": 6010,
+      "name": "InsufficientResources",
+      "msg": "not enough resources"
+    },
+    {
+      "code": 6011,
+      "name": "AlreadyBuilt",
+      "msg": "already built"
+    },
+    {
+      "code": 6012,
+      "name": "ProspectPending",
+      "msg": "a prospect is already waiting for randomness"
+    },
+    {
+      "code": 6013,
+      "name": "NoProspect",
+      "msg": "no prospect is pending"
+    },
+    {
+      "code": 6014,
+      "name": "NotInitialised",
+      "msg": "settlement is not initialised"
+    }
+  ]
+}

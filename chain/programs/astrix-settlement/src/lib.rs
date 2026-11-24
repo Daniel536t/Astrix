@@ -15,7 +15,7 @@
 //! way to speed up time or apply an effect twice.
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
-use ephemeral_rollups_sdk::anchor::{commit, delegate, ephemeral, vrf, vrf_callback};
+use ephemeral_rollups_sdk::anchor::{commit, delegate, ephemeral, vrf};
 use ephemeral_rollups_sdk::cpi::DelegateConfig;
 #[allow(deprecated)]
 use ephemeral_rollups_sdk::crank::{ScheduleCrankCpi, ScheduleTaskArgs};
@@ -29,8 +29,14 @@ use ephemeral_rollups_sdk::vrf::{
 
 declare_id!("Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy");
 
-pub const SETTLEMENT_SEED: &[u8] = b"settlement";
+/// v2: the first devnet "settlement" PDA was delegated before initialisation (see docs).
+pub const SETTLEMENT_SEED: &[u8] = b"astrix-settlement";
 const PROGRAM_IDENTITY: Pubkey = program_identity_pubkey(&crate::ID);
+/// Scoped VRF identity that signs our callbacks, derived at compile time. The
+/// `#[vrf_callback]` macro derives it at runtime with find_program_address, which
+/// exhausted the callback's compute budget on devnet (see MagicBlock docs §10).
+const VRF_CALLBACK_IDENTITY: Pubkey =
+    Pubkey::new_from_array(mbvrf::consts::scoped_vrf_identity_const(&crate::ID).0);
 
 /// Resource slots in `Settlement::stock`.
 pub mod res {
@@ -56,7 +62,7 @@ pub const SAWMILL_COST_WOOD: u32 = 10;
 pub const SAWMILL_COST_STONE: u32 = 6;
 pub const PROSPECT_COST_FOOD: u32 = 4;
 /// Every `FOOD_PERIOD` ticks each settler eats one food.
-pub const FOOD_PERIOD: u64 = 5;
+pub const FOOD_PERIOD: u64 = 10;
 pub const MIN_TICK_INTERVAL_S: i64 = 1;
 
 #[ephemeral]
@@ -98,6 +104,9 @@ pub mod astrix_settlement {
 
     /// Base layer: hand the settlement to an Ephemeral Rollup validator.
     pub fn delegate(ctx: Context<DelegateInput>) -> Result<()> {
+        // Never delegate an account that is not an initialised settlement of this program.
+        require_keys_eq!(*ctx.accounts.pda.owner, crate::ID, AstrixError::NotInitialised);
+        require!(ctx.accounts.pda.data_len() == 8 + Settlement::INIT_SPACE, AstrixError::NotInitialised);
         let owner = ctx.accounts.payer.key();
         ctx.accounts.delegate_pda(
             &ctx.accounts.payer,
@@ -176,29 +185,34 @@ pub mod astrix_settlement {
         }
         s.last_tick_ts = now;
         s.tick += 1;
-        // Crops: ripe plots are harvested into the stockpile and replanted if a seed is left.
+        // Crops: ripe plots are harvested into the stockpile and replanted from their own seed.
         for p in 0..PLOTS {
             let planted = s.plots[p];
             if planted == EMPTY_PLOT || s.tick < planted + CROP_GROWTH_TICKS { continue; }
             s.stock[res::FOOD] = s.stock[res::FOOD].saturating_add(CROP_FOOD).min(STOCK_CAP);
             s.stock[res::FIBER] = s.stock[res::FIBER].saturating_add(CROP_FIBER).min(STOCK_CAP);
-            if s.stock[res::SEED] >= 1 { s.stock[res::SEED] -= 1; s.plots[p] = s.tick; } else { s.plots[p] = EMPTY_PLOT; }
-            // Fiber from the harvest is also seed stock: every 2 fiber become 1 seed.
-            if s.stock[res::FIBER] >= 2 && s.stock[res::SEED] < 20 {
-                s.stock[res::FIBER] -= 2;
-                s.stock[res::SEED] += 1;
-            }
+            // Each harvest also returns one seed, so the farm can expand into more plots.
+            s.stock[res::SEED] = s.stock[res::SEED].saturating_add(1).min(STOCK_CAP);
+            s.plots[p] = s.tick;
         }
         // Production: the sawmill converts wood into planks.
         if s.sawmill && s.stock[res::WOOD] >= 2 {
             s.stock[res::WOOD] -= 2;
             s.stock[res::PLANKS] = s.stock[res::PLANKS].saturating_add(1).min(STOCK_CAP);
         }
-        // Consumption: settlers eat; the population grows when food is plentiful.
+        // Consumption: every FOOD_PERIOD ticks each settler eats one food. A settler
+        // arrives only when there is a 20-tick food reserve for everyone, and one
+        // leaves when the stockpile cannot feed them.
         if s.tick % FOOD_PERIOD == 0 {
             let need = s.population as u32;
-            if s.stock[res::FOOD] >= need { s.stock[res::FOOD] -= need; } else { s.stock[res::FOOD] = 0; }
-            if s.stock[res::FOOD] >= 30 && s.population < 10 { s.population += 1; }
+            if s.stock[res::FOOD] >= need {
+                s.stock[res::FOOD] -= need;
+                let reserve = need.saturating_add(1) * 4 * 5;
+                if s.tick % (FOOD_PERIOD * 6) == 0 && s.stock[res::FOOD] >= reserve && s.population < 10 { s.population += 1; }
+            } else {
+                s.stock[res::FOOD] = 0;
+                if s.population > 1 { s.population -= 1; }
+            }
         }
         msg!("tick {} food {} planks {} pop {}", s.tick, s.stock[res::FOOD], s.stock[res::PLANKS], s.population);
         Ok(())
@@ -254,7 +268,10 @@ pub mod astrix_settlement {
         let s = &mut ctx.accounts.settlement;
         require!(s.prospect_pending, AstrixError::NoProspect);
         s.prospect_pending = false;
-        let roll = mbvrf::rnd::random_u8_with_range(&randomness, 1, 100);
+        // Uniform 1..=100 from the first 8 random bytes (bias < 2^-57). The SDK
+        // range helper exhausted the callback's compute budget on devnet.
+        let raw = u64::from_le_bytes(randomness[0..8].try_into().unwrap());
+        let roll = (raw % 100) as u8 + 1;
         // 1-55 nothing, 56-90 ore vein (+6 ore), 91-100 rare crystal (+1 crystal).
         if roll > 90 {
             s.last_find = 2;
@@ -268,6 +285,13 @@ pub mod astrix_settlement {
         }
         s.last_roll = roll;
         msg!("prospect roll {} find {}", roll, s.last_find);
+        Ok(())
+    }
+
+    /// Owner only: clear a prospect whose randomness never arrived (the oracle
+    /// gives up after its retries). The food spent is not refunded.
+    pub fn cancel_prospect(ctx: Context<OwnerOnly>) -> Result<()> {
+        ctx.accounts.settlement.prospect_pending = false;
         Ok(())
     }
 
@@ -406,9 +430,11 @@ pub struct Prospect<'info> {
     pub oracle_queue: UncheckedAccount<'info>,
 }
 
-#[vrf_callback]
 #[derive(Accounts)]
 pub struct ProspectCallback<'info> {
+    /// The VRF program's scoped identity for this program; only it can deliver randomness.
+    #[account(address = VRF_CALLBACK_IDENTITY)]
+    pub vrf_program_identity: Signer<'info>,
     #[account(mut)]
     pub settlement: Account<'info, Settlement>,
 }
@@ -438,4 +464,5 @@ pub enum AstrixError {
     #[msg("already built")] AlreadyBuilt,
     #[msg("a prospect is already waiting for randomness")] ProspectPending,
     #[msg("no prospect is pending")] NoProspect,
+    #[msg("settlement is not initialised")] NotInitialised,
 }
