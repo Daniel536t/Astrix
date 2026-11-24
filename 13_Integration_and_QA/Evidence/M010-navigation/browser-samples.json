@@ -1,0 +1,9195 @@
+{
+ "coop-e": {
+  "scenario": "coop (camera east, screenshots)",
+  "errors": [],
+  "shots": [
+   {
+    "name": "coop-0-loaded.png",
+    "why": "restored at tick 107",
+    "t": 31
+   },
+   {
+    "name": "coop-1-coop-gate-open.png",
+    "why": "Bram at the coop gate (opening or open) (tick 111)",
+    "t": 38
+   },
+   {
+    "name": "coop-2-eggs-in-hand.png",
+    "why": "Bram picked up the eggs at the nest (tick 118)",
+    "t": 53
+   },
+   {
+    "name": "coop-3-leaving.png",
+    "why": "Bram leaving the coop with the eggs (tick 123)",
+    "t": 62
+   },
+   {
+    "name": "coop-9-panel.png",
+    "why": "Farm panel",
+    "t": 75
+   }
+  ],
+  "browserVsNodeSamePositions": "35/35",
+  "renderTotals": {
+   "main": {
+    "draws": 50,
+    "triangles": 111276
+   },
+   "shadow": {
+    "draws": 24,
+    "triangles": 33204
+   },
+   "all": {
+    "draws": 74,
+    "triangles": 144480
+   }
+  },
+  "samples": [
+   {
+    "wall_s": 30,
+    "tick": 107,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -43.5,
+      -20.3,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.5,
+      -12.7,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -42.5,
+      -18.7,
+      true
+     ],
+     [
+      -38.5,
+      -14.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145066,
+    "navStats": {
+     "ticks": 13,
+     "tickMs": 37.3,
+     "maxTickMs": 12.6,
+     "lastTickMs": 2,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 10,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 32,
+    "tick": 108,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.5,
+      -22.5,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.2,
+      -10.2,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -43.8,
+      -21,
+      true
+     ],
+     [
+      -37.4,
+      -11.9,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145022,
+    "navStats": {
+     "ticks": 14,
+     "tickMs": 38.8,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 11,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 33,
+    "tick": 109,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.9,
+      -24.9,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.5,
+      -7.9,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -44.4,
+      -22.2,
+      true
+     ],
+     [
+      -37.2,
+      -10.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145066,
+    "navStats": {
+     "ticks": 15,
+     "tickMs": 40.3,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 12,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 34,
+    "tick": 109,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.9,
+      -24.9,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.5,
+      -7.9,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -44.6,
+      -23.4,
+      true
+     ],
+     [
+      -36.9,
+      -9.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145066,
+    "navStats": {
+     "ticks": 15,
+     "tickMs": 40.3,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 12,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 35,
+    "tick": 110,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -46,
+      -27,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.9,
+      -5.9,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -44.9,
+      -24.8,
+      true
+     ],
+     [
+      -36.5,
+      -8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145066,
+    "navStats": {
+     "ticks": 16,
+     "tickMs": 41.8,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 13,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 36,
+    "tick": 110,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -46,
+      -27,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.9,
+      -5.9,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -45.4,
+      -25.8,
+      true
+     ],
+     [
+      -35.8,
+      -7.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145066,
+    "navStats": {
+     "ticks": 16,
+     "tickMs": 41.8,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 13,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 37,
+    "tick": 111,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -47.8,
+      -28.8,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -4.5,
+      "collect",
+      "walk",
+      null,
+      "gate:coop",
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -45.9,
+      -26.7,
+      true
+     ],
+     [
+      -35.1,
+      -6.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145066,
+    "navStats": {
+     "ticks": 17,
+     "tickMs": 43.5,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.7,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 14,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 39,
+    "tick": 112,
+    "gatesNotClosed": [
+     "gate:coop:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -49.9,
+      -30.3,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -4.5,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -47.8,
+      -28.7,
+      true
+     ],
+     [
+      -33.7,
+      -4.7,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145022,
+    "navStats": {
+     "ticks": 18,
+     "tickMs": 45.1,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.6,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 15,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 40,
+    "tick": 112,
+    "gatesNotClosed": [
+     "gate:coop:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -49.9,
+      -30.3,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -4.5,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49,
+      -29.6,
+      true
+     ],
+     [
+      -33.6,
+      -4.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145022,
+    "navStats": {
+     "ticks": 18,
+     "tickMs": 45.1,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.6,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 15,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 41,
+    "tick": 113,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      -2.3,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.8,
+      -30.2,
+      true
+     ],
+     [
+      -33.4,
+      -4.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145022,
+    "navStats": {
+     "ticks": 19,
+     "tickMs": 46.6,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 16,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 42,
+    "tick": 113,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      -2.3,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.9,
+      -30.3,
+      true
+     ],
+     [
+      -32.9,
+      -3.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145022,
+    "navStats": {
+     "ticks": 19,
+     "tickMs": 46.6,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 16,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 43,
+    "tick": 114,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      0.3,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -32.6,
+      -2.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 145022,
+    "navStats": {
+     "ticks": 20,
+     "tickMs": 48.1,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 17,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 44,
+    "tick": 114,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      0.3,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -32.5,
+      -0.7,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144906,
+    "navStats": {
+     "ticks": 20,
+     "tickMs": 48.1,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 17,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 45,
+    "tick": 115,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.8,
+      0.2,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -32.9,
+      0,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144906,
+    "navStats": {
+     "ticks": 21,
+     "tickMs": 50.1,
+     "maxTickMs": 12.6,
+     "lastTickMs": 2,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 18,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 46,
+    "tick": 115,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.8,
+      0.2,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -34.1,
+      0.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144906,
+    "navStats": {
+     "ticks": 21,
+     "tickMs": 50.1,
+     "maxTickMs": 12.6,
+     "lastTickMs": 2,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 18,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 47,
+    "tick": 116,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.4,
+      -0.6,
+      "collect",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -35,
+      0.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144906,
+    "navStats": {
+     "ticks": 22,
+     "tickMs": 51.5,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.4,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 19,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 48,
+    "tick": 116,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.4,
+      -0.6,
+      "collect",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -35.9,
+      -0.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144790,
+    "navStats": {
+     "ticks": 22,
+     "tickMs": 51.5,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.4,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 19,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 49,
+    "tick": 117,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -48,
+      -29,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.4,
+      -0.6,
+      "collect",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -30,
+      true
+     ],
+     [
+      -36.2,
+      -0.5,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144790,
+    "navStats": {
+     "ticks": 23,
+     "tickMs": 54.5,
+     "maxTickMs": 12.6,
+     "lastTickMs": 3,
+     "searches": 3,
+     "expanded": 1032,
+     "gridBuilds": 20,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 50,
+    "tick": 117,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -48,
+      -29,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.4,
+      -0.6,
+      "collect",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -48.4,
+      -29.3,
+      true
+     ],
+     [
+      -36.3,
+      -0.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144790,
+    "navStats": {
+     "ticks": 23,
+     "tickMs": 54.5,
+     "maxTickMs": 12.6,
+     "lastTickMs": 3,
+     "searches": 3,
+     "expanded": 1032,
+     "gridBuilds": 20,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 52,
+    "tick": 118,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -46.2,
+      -27.2,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.4,
+      -0.6,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -47.6,
+      -28.6,
+      true
+     ],
+     [
+      -36.4,
+      -0.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144718,
+    "navStats": {
+     "ticks": 24,
+     "tickMs": 55.9,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.4,
+     "searches": 3,
+     "expanded": 1032,
+     "gridBuilds": 21,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 54,
+    "tick": 119,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.4,
+      -25.4,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.5,
+      0.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -45.8,
+      -26.8,
+      true
+     ],
+     [
+      -35.9,
+      -0.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144762,
+    "navStats": {
+     "ticks": 25,
+     "tickMs": 57.7,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.8,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 22,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 55,
+    "tick": 119,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.4,
+      -25.4,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.5,
+      0.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -44.8,
+      -25.8,
+      true
+     ],
+     [
+      -34.9,
+      0.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144694,
+    "navStats": {
+     "ticks": 25,
+     "tickMs": 57.7,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.8,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 22,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 56,
+    "tick": 120,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -42.6,
+      -23.6,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      -0.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -43.9,
+      -24.9,
+      true
+     ],
+     [
+      -34,
+      0.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144694,
+    "navStats": {
+     "ticks": 26,
+     "tickMs": 59.2,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 23,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 57,
+    "tick": 120,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -42.6,
+      -23.6,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      -0.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -42.9,
+      -23.9,
+      true
+     ],
+     [
+      -32.8,
+      0,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144650,
+    "navStats": {
+     "ticks": 26,
+     "tickMs": 59.2,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 23,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 58,
+    "tick": 121,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.8,
+      -21.8,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.6,
+      -2.6,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -42.1,
+      -23.1,
+      true
+     ],
+     [
+      -32.6,
+      -0.9,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144650,
+    "navStats": {
+     "ticks": 27,
+     "tickMs": 60.9,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.7,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 24,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 59,
+    "tick": 122,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -39,
+      -20,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -3.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      "gate:coop",
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41.1,
+      -22.1,
+      true
+     ],
+     [
+      -32.6,
+      -2.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144650,
+    "navStats": {
+     "ticks": 28,
+     "tickMs": 62.3,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.4,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 25,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 60,
+    "tick": 122,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -39,
+      -20,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -3.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      "gate:coop",
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -40.2,
+      -21.2,
+      true
+     ],
+     [
+      -33,
+      -2.8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144536,
+    "navStats": {
+     "ticks": 28,
+     "tickMs": 62.3,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.4,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 25,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 61,
+    "tick": 123,
+    "gatesNotClosed": [
+     "gate:coop:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -36.6,
+      -19.5,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -3.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -39.1,
+      -20.1,
+      true
+     ],
+     [
+      -33.5,
+      -3.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144536,
+    "navStats": {
+     "ticks": 29,
+     "tickMs": 63.8,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 26,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 63,
+    "tick": 124,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -34,
+      -19.5,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -6.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -36.9,
+      -19.6,
+      true
+     ],
+     [
+      -33.5,
+      -3.5,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144536,
+    "navStats": {
+     "ticks": 30,
+     "tickMs": 65.1,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.3,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 27,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 64,
+    "tick": 124,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -34,
+      -19.5,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -6.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -35.4,
+      -19.5,
+      true
+     ],
+     [
+      -33.5,
+      -4.8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 74,
+    "triangles": 144536,
+    "navStats": {
+     "ticks": 30,
+     "tickMs": 65.1,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.3,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 27,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 65,
+    "tick": 125,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -31.4,
+      -19.4,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -35.1,
+      -8.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -34.1,
+      -19.5,
+      true
+     ],
+     [
+      -33.5,
+      -6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 75,
+    "triangles": 144800,
+    "navStats": {
+     "ticks": 31,
+     "tickMs": 66.6,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 28,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 66,
+    "tick": 125,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -31.4,
+      -19.4,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -35.1,
+      -8.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -32.7,
+      -19.4,
+      true
+     ],
+     [
+      -34.3,
+      -7.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 75,
+    "triangles": 144800,
+    "navStats": {
+     "ticks": 31,
+     "tickMs": 66.6,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 28,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 67,
+    "tick": 126,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -29.6,
+      -17.6,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.9,
+      -9.9,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -31.6,
+      -19.3,
+      true
+     ],
+     [
+      -35.1,
+      -8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 75,
+    "triangles": 144800,
+    "navStats": {
+     "ticks": 32,
+     "tickMs": 68.1,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 29,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 68,
+    "tick": 126,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -29.6,
+      -17.6,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.9,
+      -9.9,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -30.5,
+      -18.3,
+      true
+     ],
+     [
+      -36.1,
+      -9.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 75,
+    "triangles": 144800,
+    "navStats": {
+     "ticks": 32,
+     "tickMs": 68.1,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 29,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 69,
+    "tick": 127,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -27.8,
+      -15.8,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.5,
+      -12.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -29.5,
+      -17.5,
+      true
+     ],
+     [
+      -36.9,
+      -10,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 75,
+    "triangles": 144800,
+    "navStats": {
+     "ticks": 33,
+     "tickMs": 69.4,
+     "maxTickMs": 12.6,
+     "lastTickMs": 1.3,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 30,
+     "terrainMs": 5
+    }
+   }
+  ]
+ },
+ "coop-d": {
+  "scenario": "coop (camera west, longer sample)",
+  "errors": [],
+  "shots": [
+   {
+    "name": "coop-0-loaded.png",
+    "why": "restored at tick 106",
+    "t": 30
+   },
+   {
+    "name": "coop-1-coop-gate-open.png",
+    "why": "Bram at the coop gate (opening or open) (tick 111)",
+    "t": 38
+   },
+   {
+    "name": "coop-2-eggs-in-hand.png",
+    "why": "Bram picked up the eggs at the nest (tick 118)",
+    "t": 52
+   },
+   {
+    "name": "coop-3-leaving.png",
+    "why": "Bram leaving the coop with the eggs (tick 124)",
+    "t": 65
+   },
+   {
+    "name": "coop-9-panel.png",
+    "why": "Farm panel",
+    "t": 101
+   }
+  ],
+  "browserVsNodeSamePositions": "68/68",
+  "renderTotals": {
+   "main": {
+    "draws": 60,
+    "triangles": 115678
+   },
+   "shadow": {
+    "draws": 24,
+    "triangles": 32236
+   },
+   "all": {
+    "draws": 84,
+    "triangles": 147914
+   }
+  },
+  "samples": [
+   {
+    "wall_s": 29,
+    "tick": 106,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -42.2,
+      -18.2,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -38.8,
+      -14.8,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41.6,
+      -17.6,
+      true
+     ],
+     [
+      -39.4,
+      -15.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147954,
+    "navStats": {
+     "ticks": 12,
+     "tickMs": 30.1,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 9,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 31,
+    "tick": 107,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -43.5,
+      -20.3,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.5,
+      -12.7,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -43,
+      -19.6,
+      true
+     ],
+     [
+      -38,
+      -13.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147954,
+    "navStats": {
+     "ticks": 13,
+     "tickMs": 31.6,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 10,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 32,
+    "tick": 108,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.5,
+      -22.5,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.2,
+      -10.2,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -43.6,
+      -20.5,
+      true
+     ],
+     [
+      -37.5,
+      -12.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147954,
+    "navStats": {
+     "ticks": 14,
+     "tickMs": 33.3,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.7,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 11,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 33,
+    "tick": 108,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.5,
+      -22.5,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.2,
+      -10.2,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -44.1,
+      -21.6,
+      true
+     ],
+     [
+      -37.3,
+      -11.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147954,
+    "navStats": {
+     "ticks": 14,
+     "tickMs": 33.3,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.7,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 11,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 34,
+    "tick": 109,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.9,
+      -24.9,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.5,
+      -7.9,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -44.5,
+      -22.6,
+      true
+     ],
+     [
+      -37.2,
+      -10.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147954,
+    "navStats": {
+     "ticks": 15,
+     "tickMs": 34.9,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.6,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 12,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 35,
+    "tick": 109,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.9,
+      -24.9,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.5,
+      -7.9,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -44.7,
+      -23.8,
+      true
+     ],
+     [
+      -36.8,
+      -9,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147954,
+    "navStats": {
+     "ticks": 15,
+     "tickMs": 34.9,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.6,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 12,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 35,
+    "tick": 110,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -46,
+      -27,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.9,
+      -5.9,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -44.9,
+      -24.8,
+      true
+     ],
+     [
+      -36.5,
+      -8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148022,
+    "navStats": {
+     "ticks": 16,
+     "tickMs": 36.3,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 13,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 36,
+    "tick": 110,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -46,
+      -27,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.9,
+      -5.9,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -45.4,
+      -25.8,
+      true
+     ],
+     [
+      -35.8,
+      -7,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148022,
+    "navStats": {
+     "ticks": 16,
+     "tickMs": 36.3,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 13,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 37,
+    "tick": 111,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -47.8,
+      -28.8,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -4.5,
+      "collect",
+      "walk",
+      null,
+      "gate:coop",
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -45.8,
+      -26.7,
+      true
+     ],
+     [
+      -35.1,
+      -6.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148022,
+    "navStats": {
+     "ticks": 17,
+     "tickMs": 37.8,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 14,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 39,
+    "tick": 112,
+    "gatesNotClosed": [
+     "gate:coop:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -49.9,
+      -30.3,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -4.5,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -47.7,
+      -28.7,
+      true
+     ],
+     [
+      -33.6,
+      -4.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148022,
+    "navStats": {
+     "ticks": 18,
+     "tickMs": 40.7,
+     "maxTickMs": 9.5,
+     "lastTickMs": 2.9,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 15,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 40,
+    "tick": 112,
+    "gatesNotClosed": [
+     "gate:coop:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -49.9,
+      -30.3,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -4.5,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -48.6,
+      -29.3,
+      true
+     ],
+     [
+      -33.6,
+      -4.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148022,
+    "navStats": {
+     "ticks": 18,
+     "tickMs": 40.7,
+     "maxTickMs": 9.5,
+     "lastTickMs": 2.9,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 15,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 41,
+    "tick": 112,
+    "gatesNotClosed": [
+     "gate:coop:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -49.9,
+      -30.3,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -4.5,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.6,
+      -30.1,
+      true
+     ],
+     [
+      -33.5,
+      -4.5,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 18,
+     "tickMs": 40.7,
+     "maxTickMs": 9.5,
+     "lastTickMs": 2.9,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 15,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 42,
+    "tick": 113,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      -2.3,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.8,
+      -30.3,
+      true
+     ],
+     [
+      -33.2,
+      -3.8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 19,
+     "tickMs": 42.2,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 16,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 43,
+    "tick": 113,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      -2.3,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -32.7,
+      -2.8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 19,
+     "tickMs": 42.2,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 16,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 44,
+    "tick": 114,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      0.3,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -32.6,
+      -1.7,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 20,
+     "tickMs": 43.6,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 17,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 45,
+    "tick": 114,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      0.3,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -32.5,
+      -0.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 20,
+     "tickMs": 43.6,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 17,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 46,
+    "tick": 115,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.8,
+      0.2,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -33,
+      0.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 21,
+     "tickMs": 46,
+     "maxTickMs": 9.5,
+     "lastTickMs": 2.4,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 18,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 47,
+    "tick": 115,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.8,
+      0.2,
+      "collect",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -34.1,
+      0.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 21,
+     "tickMs": 46,
+     "maxTickMs": 9.5,
+     "lastTickMs": 2.4,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 18,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 48,
+    "tick": 116,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.4,
+      -0.6,
+      "collect",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -34.9,
+      0.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 22,
+     "tickMs": 47.5,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 19,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 49,
+    "tick": 116,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.4,
+      -0.6,
+      "collect",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -35.7,
+      -0.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 22,
+     "tickMs": 47.5,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 825,
+     "gridBuilds": 19,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 50,
+    "tick": 117,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -48,
+      -29,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.4,
+      -0.6,
+      "collect",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.7,
+      -30.2,
+      true
+     ],
+     [
+      -36.2,
+      -0.5,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 23,
+     "tickMs": 52.6,
+     "maxTickMs": 9.5,
+     "lastTickMs": 5.1,
+     "searches": 3,
+     "expanded": 1032,
+     "gridBuilds": 20,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 51,
+    "tick": 117,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -48,
+      -29,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.4,
+      -0.6,
+      "collect",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -48.8,
+      -29.5,
+      true
+     ],
+     [
+      -36.3,
+      -0.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148066,
+    "navStats": {
+     "ticks": 23,
+     "tickMs": 52.6,
+     "maxTickMs": 9.5,
+     "lastTickMs": 5.1,
+     "searches": 3,
+     "expanded": 1032,
+     "gridBuilds": 20,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 51,
+    "tick": 118,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -46.2,
+      -27.2,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.4,
+      -0.6,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -48,
+      -29,
+      true
+     ],
+     [
+      -36.4,
+      -0.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 24,
+     "tickMs": 54.7,
+     "maxTickMs": 9.5,
+     "lastTickMs": 2.1,
+     "searches": 3,
+     "expanded": 1032,
+     "gridBuilds": 21,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 53,
+    "tick": 119,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.4,
+      -25.4,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.5,
+      0.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -46.3,
+      -27.3,
+      true
+     ],
+     [
+      -36.4,
+      -0.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 25,
+     "tickMs": 56.8,
+     "maxTickMs": 9.5,
+     "lastTickMs": 2.1,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 22,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 54,
+    "tick": 119,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.4,
+      -25.4,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -34.5,
+      0.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -45.4,
+      -26.4,
+      true
+     ],
+     [
+      -35.5,
+      -0.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 25,
+     "tickMs": 56.8,
+     "maxTickMs": 9.5,
+     "lastTickMs": 2.1,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 22,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 55,
+    "tick": 120,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -42.6,
+      -23.6,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      -0.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -44.5,
+      -25.5,
+      true
+     ],
+     [
+      -34.6,
+      0.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 26,
+     "tickMs": 58.3,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 23,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 56,
+    "tick": 120,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -42.6,
+      -23.6,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.5,
+      -0.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -43.8,
+      -24.8,
+      true
+     ],
+     [
+      -33.8,
+      0.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 26,
+     "tickMs": 58.3,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 23,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 57,
+    "tick": 121,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.8,
+      -21.8,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.6,
+      -2.6,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -42.9,
+      -23.9,
+      true
+     ],
+     [
+      -32.8,
+      0,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 27,
+     "tickMs": 59.9,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.6,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 24,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 58,
+    "tick": 121,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.8,
+      -21.8,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.6,
+      -2.6,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -42,
+      -23,
+      true
+     ],
+     [
+      -32.7,
+      -1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 27,
+     "tickMs": 59.9,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.6,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 24,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 59,
+    "tick": 121,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.8,
+      -21.8,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -32.6,
+      -2.6,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41.1,
+      -22.1,
+      true
+     ],
+     [
+      -32.6,
+      -2.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 27,
+     "tickMs": 59.9,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.6,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 24,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 60,
+    "tick": 122,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -39,
+      -20,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -3.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      "gate:coop",
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -40.3,
+      -21.3,
+      true
+     ],
+     [
+      -32.9,
+      -2.8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 28,
+     "tickMs": 61.5,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.6,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 25,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 61,
+    "tick": 122,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -39,
+      -20,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -3.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      "gate:coop",
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -39.4,
+      -20.4,
+      true
+     ],
+     [
+      -33.3,
+      -3.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 28,
+     "tickMs": 61.5,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.6,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 25,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 62,
+    "tick": 123,
+    "gatesNotClosed": [
+     "gate:coop:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -36.6,
+      -19.5,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -3.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -38.5,
+      -20,
+      true
+     ],
+     [
+      -33.5,
+      -3.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 29,
+     "tickMs": 62.8,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.3,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 26,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 63,
+    "tick": 123,
+    "gatesNotClosed": [
+     "gate:coop:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -36.6,
+      -19.5,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -3.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -37.3,
+      -19.7,
+      true
+     ],
+     [
+      -33.5,
+      -3.5,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 147994,
+    "navStats": {
+     "ticks": 29,
+     "tickMs": 62.8,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.3,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 26,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 64,
+    "tick": 124,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -34,
+      -19.5,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -33.5,
+      -6.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -36.3,
+      -19.5,
+      true
+     ],
+     [
+      -33.5,
+      -3.9,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148038,
+    "navStats": {
+     "ticks": 30,
+     "tickMs": 64.2,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 27,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 66,
+    "tick": 125,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -31.4,
+      -19.4,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -35.1,
+      -8.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -33.9,
+      -19.5,
+      true
+     ],
+     [
+      -33.8,
+      -6.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148082,
+    "navStats": {
+     "ticks": 31,
+     "tickMs": 65.7,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 28,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 67,
+    "tick": 125,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -31.4,
+      -19.4,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -35.1,
+      -8.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -32.5,
+      -19.4,
+      true
+     ],
+     [
+      -34.5,
+      -7.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148082,
+    "navStats": {
+     "ticks": 31,
+     "tickMs": 65.7,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 28,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 68,
+    "tick": 126,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -29.6,
+      -17.6,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.9,
+      -9.9,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -31.4,
+      -19.3,
+      true
+     ],
+     [
+      -35.2,
+      -8.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148082,
+    "navStats": {
+     "ticks": 32,
+     "tickMs": 67.1,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 29,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 68,
+    "tick": 126,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -29.6,
+      -17.6,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.9,
+      -9.9,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -30.5,
+      -18.4,
+      true
+     ],
+     [
+      -36,
+      -9,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 83,
+    "triangles": 147458,
+    "navStats": {
+     "ticks": 32,
+     "tickMs": 67.1,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 29,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 69,
+    "tick": 127,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -27.8,
+      -15.8,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.5,
+      -12.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -29.7,
+      -17.7,
+      true
+     ],
+     [
+      -36.8,
+      -9.8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 83,
+    "triangles": 147458,
+    "navStats": {
+     "ticks": 33,
+     "tickMs": 68.6,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 30,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 70,
+    "tick": 127,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -27.8,
+      -15.8,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.5,
+      -12.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -28.8,
+      -16.8,
+      true
+     ],
+     [
+      -37.1,
+      -11,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 83,
+    "triangles": 147458,
+    "navStats": {
+     "ticks": 33,
+     "tickMs": 68.6,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 30,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 71,
+    "tick": 128,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -26.5,
+      -13.7,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -38.5,
+      -14.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -27.9,
+      -15.9,
+      true
+     ],
+     [
+      -37.5,
+      -12.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 83,
+    "triangles": 147458,
+    "navStats": {
+     "ticks": 34,
+     "tickMs": 69.9,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.3,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 31,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 72,
+    "tick": 128,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -26.5,
+      -13.7,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -38.5,
+      -14.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -27.4,
+      -15.1,
+      true
+     ],
+     [
+      -37.9,
+      -13.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 83,
+    "triangles": 147458,
+    "navStats": {
+     "ticks": 34,
+     "tickMs": 69.9,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.3,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 31,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 73,
+    "tick": 129,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -26.5,
+      -11.1,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -40.3,
+      -16.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -26.7,
+      -14,
+      true
+     ],
+     [
+      -38.4,
+      -14.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 83,
+    "triangles": 147458,
+    "navStats": {
+     "ticks": 35,
+     "tickMs": 71.3,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 32,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 74,
+    "tick": 129,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -26.5,
+      -11.1,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -40.3,
+      -16.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -26.6,
+      -12.9,
+      true
+     ],
+     [
+      -39.1,
+      -15,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148082,
+    "navStats": {
+     "ticks": 35,
+     "tickMs": 71.3,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 32,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 75,
+    "tick": 129,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -26.5,
+      -11.1,
+      "water",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -40.3,
+      -16.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -26.5,
+      -11.5,
+      true
+     ],
+     [
+      -40,
+      -16,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148082,
+    "navStats": {
+     "ticks": 35,
+     "tickMs": 71.3,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 32,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 76,
+    "tick": 130,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -25.5,
+      -10.5,
+      "water",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -42.1,
+      -18.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -26.2,
+      -11,
+      true
+     ],
+     [
+      -40.8,
+      -16.8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148126,
+    "navStats": {
+     "ticks": 36,
+     "tickMs": 72.8,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 33,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 77,
+    "tick": 130,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -25.5,
+      -10.5,
+      "water",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -42.1,
+      -18.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.7,
+      -10.7,
+      true
+     ],
+     [
+      -41.7,
+      -17.7,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148170,
+    "navStats": {
+     "ticks": 36,
+     "tickMs": 72.8,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 33,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 78,
+    "tick": 131,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -25.5,
+      -10.5,
+      "water",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -43.5,
+      -20.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.5,
+      -10.5,
+      true
+     ],
+     [
+      -42.3,
+      -18.5,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148170,
+    "navStats": {
+     "ticks": 37,
+     "tickMs": 74.1,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.3,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 34,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 79,
+    "tick": 131,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -25.5,
+      -10.5,
+      "water",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -43.5,
+      -20.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.5,
+      -10.5,
+      true
+     ],
+     [
+      -43.1,
+      -19.5,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148170,
+    "navStats": {
+     "ticks": 37,
+     "tickMs": 74.1,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.3,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 34,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 80,
+    "tick": 132,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -25.5,
+      -10.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -44.3,
+      -22.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.5,
+      -10.5,
+      true
+     ],
+     [
+      -43.6,
+      -20.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148170,
+    "navStats": {
+     "ticks": 38,
+     "tickMs": 75.5,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 35,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 81,
+    "tick": 132,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -25.5,
+      -10.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -44.3,
+      -22.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.5,
+      -10.5,
+      true
+     ],
+     [
+      -44,
+      -21.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148170,
+    "navStats": {
+     "ticks": 38,
+     "tickMs": 75.5,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 4,
+     "expanded": 1208,
+     "gridBuilds": 35,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 82,
+    "tick": 133,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -27.7,
+      -9.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -44.7,
+      -24.7,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.8,
+      -10.3,
+      true
+     ],
+     [
+      -44.3,
+      -22.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148170,
+    "navStats": {
+     "ticks": 39,
+     "tickMs": 77.1,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.6,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 36,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 83,
+    "tick": 133,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -27.7,
+      -9.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -44.7,
+      -24.7,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -26.9,
+      -9.9,
+      true
+     ],
+     [
+      -44.5,
+      -23.7,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148170,
+    "navStats": {
+     "ticks": 39,
+     "tickMs": 77.1,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.6,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 36,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 83,
+    "tick": 134,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -30.3,
+      -9.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -45.8,
+      -26.8,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -27.8,
+      -9.6,
+      true
+     ],
+     [
+      -44.8,
+      -24.7,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148126,
+    "navStats": {
+     "ticks": 40,
+     "tickMs": 79,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.9,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 37,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 84,
+    "tick": 134,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -30.3,
+      -9.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -45.8,
+      -26.8,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -29.1,
+      -9.5,
+      true
+     ],
+     [
+      -45.3,
+      -25.8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148126,
+    "navStats": {
+     "ticks": 40,
+     "tickMs": 79,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.9,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 37,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 85,
+    "tick": 135,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -32.8,
+      -9.2,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -47.6,
+      -28.6,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -30.1,
+      -9.5,
+      true
+     ],
+     [
+      -45.7,
+      -26.7,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148126,
+    "navStats": {
+     "ticks": 41,
+     "tickMs": 80.4,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 38,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 86,
+    "tick": 135,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -32.8,
+      -9.2,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -47.6,
+      -28.6,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -31.4,
+      -9.4,
+      true
+     ],
+     [
+      -46.6,
+      -27.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148126,
+    "navStats": {
+     "ticks": 41,
+     "tickMs": 80.4,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 38,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 87,
+    "tick": 136,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -34.6,
+      -7.4,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -49.6,
+      -30.2,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -32.6,
+      -9.2,
+      true
+     ],
+     [
+      -47.5,
+      -28.5,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148126,
+    "navStats": {
+     "ticks": 42,
+     "tickMs": 81.8,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 39,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 88,
+    "tick": 136,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -34.6,
+      -7.4,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -49.6,
+      -30.2,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -33.4,
+      -8.5,
+      true
+     ],
+     [
+      -48.3,
+      -29.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148126,
+    "navStats": {
+     "ticks": 42,
+     "tickMs": 81.8,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 39,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 89,
+    "tick": 137,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -36.4,
+      -5.6,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -50,
+      -30.4,
+      "collect",
+      "work",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -34.3,
+      -7.6,
+      true
+     ],
+     [
+      -49.3,
+      -30,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148126,
+    "navStats": {
+     "ticks": 43,
+     "tickMs": 83.1,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.3,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 40,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 90,
+    "tick": 137,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -36.4,
+      -5.6,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -50,
+      -30.4,
+      "collect",
+      "work",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -35.1,
+      -6.9,
+      true
+     ],
+     [
+      -49.6,
+      -30.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148126,
+    "navStats": {
+     "ticks": 43,
+     "tickMs": 83.1,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.3,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 40,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 91,
+    "tick": 137,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -36.4,
+      -5.6,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -50,
+      -30.4,
+      "collect",
+      "work",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -36.1,
+      -5.9,
+      true
+     ],
+     [
+      -49.9,
+      -30.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 84,
+    "triangles": 148126,
+    "navStats": {
+     "ticks": 43,
+     "tickMs": 83.1,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.3,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 40,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 92,
+    "tick": 138,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -38.8,
+      -5.8,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -50,
+      -30.4,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -37,
+      -5.8,
+      true
+     ],
+     [
+      -50,
+      -30.4,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 84,
+    "triangles": 148142,
+    "navStats": {
+     "ticks": 44,
+     "tickMs": 86.4,
+     "maxTickMs": 9.5,
+     "lastTickMs": 3.3,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 41,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 93,
+    "tick": 138,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -38.8,
+      -5.8,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -50,
+      -30.4,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -38.2,
+      -5.8,
+      true
+     ],
+     [
+      -50,
+      -30.4,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 84,
+    "triangles": 148028,
+    "navStats": {
+     "ticks": 44,
+     "tickMs": 86.4,
+     "maxTickMs": 9.5,
+     "lastTickMs": 3.3,
+     "searches": 5,
+     "expanded": 1372,
+     "gridBuilds": 41,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 94,
+    "tick": 139,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.5,
+      -7.1,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -48,
+      -29,
+      "milk",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -39.1,
+      -6.1,
+      true
+     ],
+     [
+      -49.5,
+      -30.1,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 84,
+    "triangles": 148028,
+    "navStats": {
+     "ticks": 45,
+     "tickMs": 89.5,
+     "maxTickMs": 9.5,
+     "lastTickMs": 3.1,
+     "searches": 6,
+     "expanded": 1749,
+     "gridBuilds": 42,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 95,
+    "tick": 139,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.5,
+      -7.1,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -48,
+      -29,
+      "milk",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -40,
+      -6.7,
+      true
+     ],
+     [
+      -48.6,
+      -29.4,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 84,
+    "triangles": 148028,
+    "navStats": {
+     "ticks": 45,
+     "tickMs": 89.5,
+     "maxTickMs": 9.5,
+     "lastTickMs": 3.1,
+     "searches": 6,
+     "expanded": 1749,
+     "gridBuilds": 42,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 96,
+    "tick": 140,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.9,
+      -9.6,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -46.5,
+      -27,
+      "milk",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -40.5,
+      -7.4,
+      true
+     ],
+     [
+      -47.8,
+      -28.7,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 84,
+    "triangles": 147914,
+    "navStats": {
+     "ticks": 46,
+     "tickMs": 91,
+     "maxTickMs": 9.5,
+     "lastTickMs": 1.5,
+     "searches": 6,
+     "expanded": 1749,
+     "gridBuilds": 43,
+     "terrainMs": 5
+    }
+   }
+  ]
+ },
+ "store-f": {
+  "scenario": "store delivery",
+  "errors": [],
+  "shots": [
+   {
+    "name": "store-0-loaded.png",
+    "why": "restored at tick 131",
+    "t": 30
+   },
+   {
+    "name": "store-1-arriving.png",
+    "why": "Bram carrying eggs toward the store (tick 135)",
+    "t": 39
+   },
+   {
+    "name": "store-2-delivered.png",
+    "why": "eggs stored (tick 138)",
+    "t": 44
+   },
+   {
+    "name": "store-9-panel.png",
+    "why": "Farm panel",
+    "t": 55
+   }
+  ],
+  "browserVsNodeSamePositions": "18/18",
+  "renderTotals": {
+   "main": {
+    "draws": 52,
+    "triangles": 97668
+   },
+   "shadow": {
+    "draws": 24,
+    "triangles": 31308
+   },
+   "all": {
+    "draws": 76,
+    "triangles": 128976
+   }
+  },
+  "samples": [
+   {
+    "wall_s": 29,
+    "tick": 131,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -25.5,
+      -10.5,
+      "water",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -43.5,
+      -20.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.6,
+      -10.6,
+      true
+     ],
+     [
+      -41.9,
+      -17.9,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 76,
+    "triangles": 128916,
+    "navStats": {
+     "ticks": 13,
+     "tickMs": 35.1,
+     "maxTickMs": 11.6,
+     "lastTickMs": 2,
+     "searches": 1,
+     "expanded": 176,
+     "gridBuilds": 13,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 31,
+    "tick": 131,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -25.5,
+      -10.5,
+      "water",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -43.5,
+      -20.1,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.6,
+      -10.6,
+      true
+     ],
+     [
+      -42.6,
+      -18.9,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 76,
+    "triangles": 128916,
+    "navStats": {
+     "ticks": 13,
+     "tickMs": 35.1,
+     "maxTickMs": 11.6,
+     "lastTickMs": 2,
+     "searches": 1,
+     "expanded": 176,
+     "gridBuilds": 13,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 32,
+    "tick": 132,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -25.5,
+      -10.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -44.3,
+      -22.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.5,
+      -10.5,
+      true
+     ],
+     [
+      -43.3,
+      -19.9,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 76,
+    "triangles": 128916,
+    "navStats": {
+     "ticks": 14,
+     "tickMs": 36.9,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.8,
+     "searches": 1,
+     "expanded": 176,
+     "gridBuilds": 14,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 33,
+    "tick": 132,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -25.5,
+      -10.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -44.3,
+      -22.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.5,
+      -10.5,
+      true
+     ],
+     [
+      -43.9,
+      -21.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 76,
+    "triangles": 128916,
+    "navStats": {
+     "ticks": 14,
+     "tickMs": 36.9,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.8,
+     "searches": 1,
+     "expanded": 176,
+     "gridBuilds": 14,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 34,
+    "tick": 133,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -27.7,
+      -9.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -44.7,
+      -24.7,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -25.7,
+      -10.4,
+      true
+     ],
+     [
+      -44.2,
+      -22.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 76,
+    "triangles": 128916,
+    "navStats": {
+     "ticks": 15,
+     "tickMs": 39.1,
+     "maxTickMs": 11.6,
+     "lastTickMs": 2.2,
+     "searches": 2,
+     "expanded": 340,
+     "gridBuilds": 15,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 35,
+    "tick": 133,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -27.7,
+      -9.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -44.7,
+      -24.7,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -26.9,
+      -9.9,
+      true
+     ],
+     [
+      -44.5,
+      -23.7,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 76,
+    "triangles": 128916,
+    "navStats": {
+     "ticks": 15,
+     "tickMs": 39.1,
+     "maxTickMs": 11.6,
+     "lastTickMs": 2.2,
+     "searches": 2,
+     "expanded": 340,
+     "gridBuilds": 15,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 36,
+    "tick": 134,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -30.3,
+      -9.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -45.8,
+      -26.8,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -28,
+      -9.6,
+      true
+     ],
+     [
+      -44.8,
+      -24.8,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 76,
+    "triangles": 128916,
+    "navStats": {
+     "ticks": 16,
+     "tickMs": 40.6,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 340,
+     "gridBuilds": 16,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 37,
+    "tick": 134,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -30.3,
+      -9.5,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -45.8,
+      -26.8,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -29.5,
+      -9.5,
+      true
+     ],
+     [
+      -45.5,
+      -26.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 77,
+    "triangles": 129168,
+    "navStats": {
+     "ticks": 16,
+     "tickMs": 40.6,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 340,
+     "gridBuilds": 16,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 38,
+    "tick": 135,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -32.8,
+      -9.2,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -47.6,
+      -28.6,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -30.7,
+      -9.4,
+      true
+     ],
+     [
+      -46.1,
+      -27.1,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 77,
+    "triangles": 129168,
+    "navStats": {
+     "ticks": 17,
+     "tickMs": 42.6,
+     "maxTickMs": 11.6,
+     "lastTickMs": 2,
+     "searches": 2,
+     "expanded": 340,
+     "gridBuilds": 17,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 40,
+    "tick": 136,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -34.6,
+      -7.4,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -49.6,
+      -30.2,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -33.1,
+      -8.7,
+      true
+     ],
+     [
+      -48,
+      -28.9,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 77,
+    "triangles": 129168,
+    "navStats": {
+     "ticks": 18,
+     "tickMs": 44.2,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.6,
+     "searches": 2,
+     "expanded": 340,
+     "gridBuilds": 18,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 41,
+    "tick": 136,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -34.6,
+      -7.4,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -49.6,
+      -30.2,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -34.2,
+      -7.7,
+      true
+     ],
+     [
+      -49.2,
+      -29.9,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 77,
+    "triangles": 129168,
+    "navStats": {
+     "ticks": 18,
+     "tickMs": 44.2,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.6,
+     "searches": 2,
+     "expanded": 340,
+     "gridBuilds": 18,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 42,
+    "tick": 137,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -36.4,
+      -5.6,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -50,
+      -30.4,
+      "collect",
+      "work",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -35.1,
+      -6.9,
+      true
+     ],
+     [
+      -49.6,
+      -30.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 77,
+    "triangles": 129168,
+    "navStats": {
+     "ticks": 19,
+     "tickMs": 45.7,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.5,
+     "searches": 2,
+     "expanded": 340,
+     "gridBuilds": 19,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 43,
+    "tick": 138,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -38.8,
+      -5.8,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -50,
+      -30.4,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -36.2,
+      -5.8,
+      true
+     ],
+     [
+      -49.9,
+      -30.4,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 77,
+    "triangles": 129184,
+    "navStats": {
+     "ticks": 20,
+     "tickMs": 47.3,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.6,
+     "searches": 2,
+     "expanded": 340,
+     "gridBuilds": 20,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 45,
+    "tick": 139,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.5,
+      -7.1,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -48,
+      -29,
+      "milk",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -38.5,
+      -5.8,
+      true
+     ],
+     [
+      -50,
+      -30.4,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 77,
+    "triangles": 129184,
+    "navStats": {
+     "ticks": 21,
+     "tickMs": 53.2,
+     "maxTickMs": 11.6,
+     "lastTickMs": 5.9,
+     "searches": 3,
+     "expanded": 717,
+     "gridBuilds": 21,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 46,
+    "tick": 139,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.5,
+      -7.1,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -48,
+      -29,
+      "milk",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -39.6,
+      -6.5,
+      true
+     ],
+     [
+      -48.9,
+      -29.6,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 77,
+    "triangles": 129184,
+    "navStats": {
+     "ticks": 21,
+     "tickMs": 53.2,
+     "maxTickMs": 11.6,
+     "lastTickMs": 5.9,
+     "searches": 3,
+     "expanded": 717,
+     "gridBuilds": 21,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 47,
+    "tick": 140,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.9,
+      -9.6,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -46.5,
+      -27,
+      "milk",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -40.4,
+      -7.2,
+      true
+     ],
+     [
+      -48.1,
+      -29,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 77,
+    "triangles": 129184,
+    "navStats": {
+     "ticks": 22,
+     "tickMs": 54.6,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.4,
+     "searches": 3,
+     "expanded": 717,
+     "gridBuilds": 22,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 48,
+    "tick": 140,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.9,
+      -9.6,
+      "water",
+      "walk",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -46.5,
+      -27,
+      "milk",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -40.7,
+      -8.6,
+      true
+     ],
+     [
+      -47.1,
+      -27.8,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 77,
+    "triangles": 129184,
+    "navStats": {
+     "ticks": 22,
+     "tickMs": 54.6,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.4,
+     "searches": 3,
+     "expanded": 717,
+     "gridBuilds": 22,
+     "terrainMs": 5
+    }
+   },
+   {
+    "wall_s": 49,
+    "tick": 141,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "water",
+      "work",
+      "3 water",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -45.7,
+      -24.7,
+      "milk",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -40.9,
+      -9.4,
+      true
+     ],
+     [
+      -46.5,
+      -26.8,
+      true
+     ]
+    ],
+    "storeEggs": 3,
+    "drawCalls": 77,
+    "triangles": 129228,
+    "navStats": {
+     "ticks": 23,
+     "tickMs": 56.1,
+     "maxTickMs": 11.6,
+     "lastTickMs": 1.5,
+     "searches": 3,
+     "expanded": 717,
+     "gridBuilds": 23,
+     "terrainMs": 5
+    }
+   }
+  ]
+ },
+ "paddock-d": {
+  "scenario": "paddock trough",
+  "errors": [],
+  "shots": [
+   {
+    "name": "paddock-0-loaded.png",
+    "why": "restored at tick 650",
+    "t": 33
+   },
+   {
+    "name": "paddock-1-paddock-gate-open.png",
+    "why": "Bram at the paddock gate (opening or open) (tick 654)",
+    "t": 40
+   },
+   {
+    "name": "paddock-2-at-trough.png",
+    "why": "Bram at the paddock trough (tick 658)",
+    "t": 48
+   },
+   {
+    "name": "paddock-3-out.png",
+    "why": "Bram back out, gate closed (tick 664)",
+    "t": 61
+   },
+   {
+    "name": "paddock-9-panel.png",
+    "why": "Farm panel",
+    "t": 81
+   }
+  ],
+  "browserVsNodeSamePositions": "42/42",
+  "renderTotals": {
+   "main": {
+    "draws": 69,
+    "triangles": 129926
+   },
+   "shadow": {
+    "draws": 24,
+    "triangles": 32372
+   },
+   "all": {
+    "draws": 93,
+    "triangles": 162298
+   }
+  },
+  "samples": [
+   {
+    "wall_s": 31,
+    "tick": 650,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      -4.5,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -22.2,
+      -7.2,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 14,
+     "tickMs": 40.8,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.5,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 13,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 34,
+    "tick": 651,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      -1.9,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -21.5,
+      -4.6,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 15,
+     "tickMs": 42.2,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 14,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 35,
+    "tick": 651,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      -1.9,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -21.5,
+      -3.1,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 15,
+     "tickMs": 42.2,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 14,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 35,
+    "tick": 652,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      0.7,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -21.5,
+      -1.7,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 16,
+     "tickMs": 44,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.8,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 15,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 36,
+    "tick": 652,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      0.7,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -21.5,
+      0,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 16,
+     "tickMs": 44,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.8,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 15,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 37,
+    "tick": 653,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      3.3,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -21.5,
+      1.4,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 17,
+     "tickMs": 45.5,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.5,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 16,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 38,
+    "tick": 653,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      3.3,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -21.5,
+      1.4,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 17,
+     "tickMs": 45.5,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.5,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 16,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 39,
+    "tick": 654,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      4.5,
+      "water_trough",
+      "walk",
+      "1 water",
+      "gate:paddock",
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -21.5,
+      2.9,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 18,
+     "tickMs": 47.5,
+     "maxTickMs": 13.4,
+     "lastTickMs": 2,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 17,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 41,
+    "tick": 655,
+    "gatesNotClosed": [
+     "gate:paddock:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      4.5,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -21.5,
+      4.3,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 19,
+     "tickMs": 49,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.5,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 18,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 42,
+    "tick": 655,
+    "gatesNotClosed": [
+     "gate:paddock:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      4.5,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -21.5,
+      4.4,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 19,
+     "tickMs": 49,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.5,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 18,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 43,
+    "tick": 656,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -19.9,
+      5.5,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -21,
+      4.8,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 20,
+     "tickMs": 50.8,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.8,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 19,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 44,
+    "tick": 656,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -19.9,
+      5.5,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -20.1,
+      5.4,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 20,
+     "tickMs": 50.8,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.8,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 19,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 45,
+    "tick": 656,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -19.9,
+      5.5,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -20.1,
+      5.4,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 172642,
+    "navStats": {
+     "ticks": 20,
+     "tickMs": 50.8,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.8,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 19,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 46,
+    "tick": 657,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -41,
+      -10,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -17.3,
+      5.5,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -19,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162274,
+    "navStats": {
+     "ticks": 21,
+     "tickMs": 52.2,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 3,
+     "expanded": 335,
+     "gridBuilds": 20,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 47,
+    "tick": 658,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -40.5,
+      -7.6,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -16.5,
+      5.5,
+      "water_trough",
+      "work",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41,
+      -10,
+      true
+     ],
+     [
+      -17.5,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162274,
+    "navStats": {
+     "ticks": 22,
+     "tickMs": 54.6,
+     "maxTickMs": 13.4,
+     "lastTickMs": 2.4,
+     "searches": 4,
+     "expanded": 519,
+     "gridBuilds": 21,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 49,
+    "tick": 659,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -42,
+      -6.5,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -16.5,
+      5.5,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -40.7,
+      -7.8,
+      true
+     ],
+     [
+      -16.6,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162274,
+    "navStats": {
+     "ticks": 23,
+     "tickMs": 56.1,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 519,
+     "gridBuilds": 22,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 50,
+    "tick": 659,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -42,
+      -6.5,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -16.5,
+      5.5,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -41.5,
+      -7,
+      true
+     ],
+     [
+      -16.5,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162274,
+    "navStats": {
+     "ticks": 23,
+     "tickMs": 56.1,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.5,
+     "searches": 4,
+     "expanded": 519,
+     "gridBuilds": 22,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 51,
+    "tick": 660,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.6,
+      -6.6,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -19.1,
+      5.5,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -42.4,
+      -6.6,
+      true
+     ],
+     [
+      -17,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162274,
+    "navStats": {
+     "ticks": 24,
+     "tickMs": 57.9,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.8,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 23,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 52,
+    "tick": 660,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.6,
+      -6.6,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -19.1,
+      5.5,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -42.4,
+      -6.6,
+      true
+     ],
+     [
+      -17,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162274,
+    "navStats": {
+     "ticks": 24,
+     "tickMs": 57.9,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.8,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 23,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 53,
+    "tick": 660,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -44.6,
+      -6.6,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -19.1,
+      5.5,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -43.9,
+      -6.6,
+      true
+     ],
+     [
+      -18.5,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162274,
+    "navStats": {
+     "ticks": 24,
+     "tickMs": 57.9,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.8,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 23,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 54,
+    "tick": 661,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -46.4,
+      -8.4,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      5.5,
+      "water_trough",
+      "walk",
+      null,
+      "gate:paddock",
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -45,
+      -7.3,
+      true
+     ],
+     [
+      -19.7,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162274,
+    "navStats": {
+     "ticks": 25,
+     "tickMs": 59.3,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 24,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 55,
+    "tick": 662,
+    "gatesNotClosed": [
+     "gate:paddock:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -47.5,
+      -10.5,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      5.5,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -46.2,
+      -8.3,
+      true
+     ],
+     [
+      -21.3,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162274,
+    "navStats": {
+     "ticks": 26,
+     "tickMs": 60.7,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 25,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 56,
+    "tick": 662,
+    "gatesNotClosed": [
+     "gate:paddock:open"
+    ],
+    "sim": [
+     [
+      "Ada",
+      -47.5,
+      -10.5,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      5.5,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -46.8,
+      -9.3,
+      true
+     ],
+     [
+      -21.4,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 26,
+     "tickMs": 60.7,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 25,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 57,
+    "tick": 663,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -48.5,
+      -12.7,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      2.9,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -47.4,
+      -10.4,
+      true
+     ],
+     [
+      -21.5,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 27,
+     "tickMs": 62,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.3,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 26,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 58,
+    "tick": 663,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -48.5,
+      -12.7,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      2.9,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -47.4,
+      -10.4,
+      true
+     ],
+     [
+      -21.5,
+      5.5,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 27,
+     "tickMs": 62,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.3,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 26,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 59,
+    "tick": 663,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -48.5,
+      -12.7,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      2.9,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -48,
+      -11.7,
+      true
+     ],
+     [
+      -21.5,
+      4,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 27,
+     "tickMs": 62,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.3,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 26,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 60,
+    "tick": 664,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -14.9,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      0.3,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -48.5,
+      -12.8,
+      true
+     ],
+     [
+      -21.5,
+      2.8,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 28,
+     "tickMs": 63.4,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 27,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 62,
+    "tick": 665,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -17.5,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      -2.3,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.4,
+      -15.5,
+      true
+     ],
+     [
+      -21.5,
+      -0.3,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 29,
+     "tickMs": 64.8,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 28,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 63,
+    "tick": 665,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -17.5,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.5,
+      -2.3,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -17.1,
+      true
+     ],
+     [
+      -21.5,
+      -1.9,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 29,
+     "tickMs": 64.8,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 28,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 64,
+    "tick": 666,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -20.1,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.8,
+      -4.8,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -18.4,
+      true
+     ],
+     [
+      -21.6,
+      -3.2,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 30,
+     "tickMs": 66.7,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.9,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 29,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 65,
+    "tick": 666,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -20.1,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -21.8,
+      -4.8,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -18.4,
+      true
+     ],
+     [
+      -21.6,
+      -3.2,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 30,
+     "tickMs": 66.7,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.9,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 29,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 65,
+    "tick": 667,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -22.7,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -23.6,
+      -6.6,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -19.7,
+      true
+     ],
+     [
+      -21.8,
+      -4.4,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 31,
+     "tickMs": 68,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.3,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 30,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 66,
+    "tick": 667,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -22.7,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -23.6,
+      -6.6,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -21.4,
+      true
+     ],
+     [
+      -22.8,
+      -5.6,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 31,
+     "tickMs": 68,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.3,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 30,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 67,
+    "tick": 668,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -25.3,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -24.5,
+      -8.8,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -22.8,
+      true
+     ],
+     [
+      -23.6,
+      -6.7,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 32,
+     "tickMs": 69.3,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.3,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 31,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 68,
+    "tick": 668,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -25.3,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -24.5,
+      -8.8,
+      "water_trough",
+      "walk",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -24.3,
+      true
+     ],
+     [
+      -24.1,
+      -8,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 32,
+     "tickMs": 69.3,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.3,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 31,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 69,
+    "tick": 669,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -27.9,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -25,
+      -10.8,
+      "water_trough",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -25.7,
+      true
+     ],
+     [
+      -24.5,
+      -9.1,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 33,
+     "tickMs": 70.7,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 32,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 70,
+    "tick": 669,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -27.9,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -25,
+      -10.8,
+      "water_trough",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -25.7,
+      true
+     ],
+     [
+      -24.5,
+      -9.1,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 33,
+     "tickMs": 70.7,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 32,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 71,
+    "tick": 669,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.5,
+      -27.9,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -25,
+      -10.8,
+      "water_trough",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.5,
+      -27.4,
+      true
+     ],
+     [
+      -24.9,
+      -10.4,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 33,
+     "tickMs": 70.7,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 32,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 72,
+    "tick": 670,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "harvest",
+      "walk",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -25,
+      -10.8,
+      "water_trough",
+      "work",
+      null,
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.7,
+      -28.7,
+      true
+     ],
+     [
+      -25,
+      -10.7,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 34,
+     "tickMs": 72.1,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.4,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 33,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 73,
+    "tick": 671,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "harvest",
+      "work",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -25,
+      -10.8,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.3,
+      true
+     ],
+     [
+      -25,
+      -10.8,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 35,
+     "tickMs": 73.6,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.5,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 34,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 74,
+    "tick": 671,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "harvest",
+      "work",
+      "4 harvest:flax",
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -25,
+      -10.8,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.3,
+      true
+     ],
+     [
+      -25,
+      -10.8,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 35,
+     "tickMs": 73.6,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.5,
+     "searches": 5,
+     "expanded": 569,
+     "gridBuilds": 34,
+     "terrainMs": 9
+    }
+   },
+   {
+    "wall_s": 75,
+    "tick": 672,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -24.5,
+      -8.5,
+      "water_trough",
+      "walk",
+      "1 water",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -25,
+      -10.6,
+      true
+     ]
+    ],
+    "storeEggs": 4,
+    "drawCalls": 93,
+    "triangles": 162298,
+    "navStats": {
+     "ticks": 36,
+     "tickMs": 75.2,
+     "maxTickMs": 13.4,
+     "lastTickMs": 1.6,
+     "searches": 6,
+     "expanded": 605,
+     "gridBuilds": 35,
+     "terrainMs": 9
+    }
+   }
+  ]
+ },
+ "legacy-e": {
+  "scenario": "legacy save upgraded",
+  "errors": [],
+  "shots": [
+   {
+    "name": "legacy-0-loaded.png",
+    "why": "restored at tick 117",
+    "t": 33
+   },
+   {
+    "name": "legacy-1-upgraded.png",
+    "why": "legacy save after the upgrade command (tick 119)",
+    "t": 35
+   },
+   {
+    "name": "legacy-9-panel.png",
+    "why": "Farm panel",
+    "t": 48
+   }
+  ],
+  "browserVsNodeSamePositions": "0/9",
+  "renderTotals": {
+   "main": {
+    "draws": 69,
+    "triangles": 132586
+   },
+   "shadow": {
+    "draws": 24,
+    "triangles": 35200
+   },
+   "all": {
+    "draws": 93,
+    "triangles": 167786
+   }
+  },
+  "samples": [
+   {
+    "wall_s": 31,
+    "tick": 117,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -45.6,
+      -26.6,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -36.5,
+      -6.7,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -45.4,
+      -26.2,
+      true
+     ],
+     [
+      -36.3,
+      -6.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 93,
+    "triangles": 167742,
+    "navStats": {
+     "ticks": 13,
+     "tickMs": 38.4,
+     "maxTickMs": 13.2,
+     "lastTickMs": 3.6,
+     "searches": 3,
+     "expanded": 379,
+     "gridBuilds": 13,
+     "terrainMs": 7
+    }
+   },
+   {
+    "wall_s": 34,
+    "tick": 119,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -49.4,
+      -30,
+      "eat",
+      "walk",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.5,
+      -11.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -47.1,
+      -28.1,
+      true
+     ],
+     [
+      -37.4,
+      -8.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 93,
+    "triangles": 167742,
+    "navStats": {
+     "ticks": 15,
+     "tickMs": 41.6,
+     "maxTickMs": 13.2,
+     "lastTickMs": 1.7,
+     "searches": 3,
+     "expanded": 379,
+     "gridBuilds": 15,
+     "terrainMs": 7
+    }
+   },
+   {
+    "wall_s": 36,
+    "tick": 120,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.9,
+      -13.9,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.3,
+      -29.9,
+      true
+     ],
+     [
+      -37.5,
+      -11.6,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 93,
+    "triangles": 167742,
+    "navStats": {
+     "ticks": 16,
+     "tickMs": 43.2,
+     "maxTickMs": 13.2,
+     "lastTickMs": 1.6,
+     "searches": 3,
+     "expanded": 379,
+     "gridBuilds": 16,
+     "terrainMs": 7
+    }
+   },
+   {
+    "wall_s": 37,
+    "tick": 120,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -37.9,
+      -13.9,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.8,
+      -30.2,
+      true
+     ],
+     [
+      -37.8,
+      -13,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 93,
+    "triangles": 167742,
+    "navStats": {
+     "ticks": 16,
+     "tickMs": 43.2,
+     "maxTickMs": 13.2,
+     "lastTickMs": 1.6,
+     "searches": 3,
+     "expanded": 379,
+     "gridBuilds": 16,
+     "terrainMs": 7
+    }
+   },
+   {
+    "wall_s": 38,
+    "tick": 121,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -39.7,
+      -15.7,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -49.9,
+      -30.3,
+      true
+     ],
+     [
+      -38.4,
+      -14.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 93,
+    "triangles": 167742,
+    "navStats": {
+     "ticks": 17,
+     "tickMs": 44.7,
+     "maxTickMs": 13.2,
+     "lastTickMs": 1.5,
+     "searches": 3,
+     "expanded": 379,
+     "gridBuilds": 17,
+     "terrainMs": 7
+    }
+   },
+   {
+    "wall_s": 39,
+    "tick": 121,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -39.7,
+      -15.7,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -39.4,
+      -15.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 93,
+    "triangles": 167742,
+    "navStats": {
+     "ticks": 17,
+     "tickMs": 44.7,
+     "maxTickMs": 13.2,
+     "lastTickMs": 1.5,
+     "searches": 3,
+     "expanded": 379,
+     "gridBuilds": 17,
+     "terrainMs": 7
+    }
+   },
+   {
+    "wall_s": 39,
+    "tick": 121,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -39.7,
+      -15.7,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -39.4,
+      -15.4,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 93,
+    "triangles": 167742,
+    "navStats": {
+     "ticks": 17,
+     "tickMs": 44.7,
+     "maxTickMs": 13.2,
+     "lastTickMs": 1.5,
+     "searches": 3,
+     "expanded": 379,
+     "gridBuilds": 17,
+     "terrainMs": 7
+    }
+   },
+   {
+    "wall_s": 40,
+    "tick": 122,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      "eat",
+      "work",
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -41.5,
+      -17.5,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -40.3,
+      -16.3,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 93,
+    "triangles": 167742,
+    "navStats": {
+     "ticks": 18,
+     "tickMs": 47.2,
+     "maxTickMs": 13.2,
+     "lastTickMs": 2.5,
+     "searches": 3,
+     "expanded": 379,
+     "gridBuilds": 18,
+     "terrainMs": 7
+    }
+   },
+   {
+    "wall_s": 41,
+    "tick": 123,
+    "gatesNotClosed": [],
+    "sim": [
+     [
+      "Ada",
+      -50,
+      -30.4,
+      null,
+      null,
+      null,
+      null,
+      null
+     ],
+     [
+      "Bram",
+      -43.3,
+      -19.3,
+      "collect",
+      "walk",
+      "3 eggs",
+      null,
+      null
+     ]
+    ],
+    "drawn": [
+     [
+      -50,
+      -30.4,
+      true
+     ],
+     [
+      -41.2,
+      -17.2,
+      true
+     ]
+    ],
+    "storeEggs": 0,
+    "drawCalls": 93,
+    "triangles": 167742,
+    "navStats": {
+     "ticks": 19,
+     "tickMs": 48.9,
+     "maxTickMs": 13.2,
+     "lastTickMs": 1.7,
+     "searches": 3,
+     "expanded": 379,
+     "gridBuilds": 19,
+     "terrainMs": 7
+    }
+   }
+  ]
+ }
+}

@@ -426,6 +426,7 @@ export class HomesteadGame {
       animals: Object.fromEntries(SPECIES.map((sp) => [sp, h.animals.filter((a) => a.species === sp).length])),
       enclosures: h.enclosures.map((e) => ({ ...e })),
       overflow: { ...h.overflow },
+      store: { ...life.stockpiles.get(FOUNDER_STOCKPILE_ID)!.inventory },
       steward: { enabled: h.steward.enabled, policy: { ...h.steward.policy }, proposals: h.steward.proposals.length },
       planning: this.planning ? { ...this.planning, spec: this.planSpec, reasons: this.planReasons } : null,
       nearest: this.nearest(),
