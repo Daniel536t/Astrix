@@ -10,6 +10,7 @@ import { World } from '../sim/world';
 import { Creature, FAUNA_STEP, FaunaContext, SPECIES, spawnChunkFauna, stepCreature } from '../sim/fauna';
 import { AnimalBatch } from './animal-kit';
 import { ANIMAL_MODELS } from './animal-models';
+import { Pose, blendPose, stepAlpha } from './smooth';
 
 type Id = Creature['species'];
 const CAP: Record<Id, number> = { deer: 48, rabbit: 48, trout: 160, fox: 24, wolf: 32 };
@@ -26,7 +27,14 @@ export class FaunaView {
   readonly group = new THREE.Group();
   private creatures = new Map<string, Creature[]>();
   private phases = new Map<string, number>();
+  /** Pose before the latest fixed step, so drawing can blend between steps (render only). */
+  private prev = new Map<string, Pose>();
+  private readonly shown: Pose = { x: 0, y: 0, z: 0, heading: 0 };
+  /** Chunks whose creatures are spawned per frame; the rest wait for the next frame. */
+  static readonly SPAWN_CHUNKS_PER_FRAME = 2;
   private accumulator = 0;
+  /** True while sync() left chunks unspawned; the caller should sync again next frame. */
+  pendingSpawn = false;
   private readonly batches = new Map<Id, AnimalBatch>();
 
   constructor(private readonly world: World) {
@@ -42,11 +50,14 @@ export class FaunaView {
   sync(loaded: ReadonlySet<string>): void {
     for (const [key, list] of [...this.creatures]) {
       if (loaded.has(key)) continue;
-      for (const c of list) this.phases.delete(c.id);
+      for (const c of list) { this.phases.delete(c.id); this.prev.delete(c.id); }
       this.creatures.delete(key);
     }
+    let spawned = 0;
+    this.pendingSpawn = false;
     for (const key of loaded) {
       if (this.creatures.has(key)) continue;
+      if (spawned++ >= FaunaView.SPAWN_CHUNKS_PER_FRAME) { this.pendingSpawn = true; break; }
       const [cx, cz] = key.split(',').map(Number);
       this.creatures.set(key, spawnChunkFauna(this.world, cx, cz));
     }
@@ -76,7 +87,14 @@ export class FaunaView {
       }
       const full: FaunaContext = { ...ctx, predators, prey, leaders };
       while (this.accumulator >= FAUNA_STEP) {
-        for (const list of this.creatures.values()) for (const c of list) stepCreature(this.world, c, full);
+        for (const list of this.creatures.values()) {
+          for (const c of list) {
+            const p = this.prev.get(c.id);
+            if (p) { p.x = c.x; p.y = c.y; p.z = c.z; p.heading = c.heading; }
+            else this.prev.set(c.id, { x: c.x, y: c.y, z: c.z, heading: c.heading });
+            stepCreature(this.world, c, full);
+          }
+        }
         this.accumulator -= FAUNA_STEP;
       }
     }
@@ -86,9 +104,13 @@ export class FaunaView {
   private draw(dt: number): void {
     for (const b of this.batches.values()) b.begin();
     const now = performance.now() / 1000;
+    const alpha = stepAlpha(this.accumulator, FAUNA_STEP), shown = this.shown;
     for (const list of this.creatures.values()) {
       for (const c of list) {
         const sp = c.species;
+        const before = this.prev.get(c.id);
+        if (before) blendPose(before, c, alpha, shown, 3);
+        else { shown.x = c.x; shown.y = c.y; shown.z = c.z; shown.heading = c.heading; }
         const batch = this.batches.get(sp)!;
         const moving = c.speed > 0.05;
         const ph = (this.phases.get(c.id) ?? 0) + dt * (moving ? 3 + c.speed * (sp === 'rabbit' ? 4 : sp === 'trout' ? 8 : 2.4) : 1);
@@ -105,7 +127,7 @@ export class FaunaView {
         if (sp === 'deer' && c.speed > 3) lift = Math.abs(Math.sin(ph)) * 0.15;
         if (sp === 'trout') { roll = Math.sin(ph * 1.5) * 0.05; swing = 0; }
         batch.push({
-          x: c.x, y: c.y + lift, z: c.z, heading: c.heading, scale: 1,
+          x: shown.x, y: shown.y + lift, z: shown.z, heading: shown.heading, scale: 1,
           phase: ph, legSwing: swing, headPitch: head,
           tailWag: sp === 'trout' ? (moving && c.speed > 1 ? 0.55 : 0.3) : sp === 'fox' || sp === 'wolf' ? (lying ? 0.05 : 0.3) : 0.15,
           male: isMale(c.id), young: false, lying, extra: 1, pitch, roll,

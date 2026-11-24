@@ -5,6 +5,10 @@
 - Nothing in this change is deployed. It is committed locally on `deploy/boxd` and is not pushed or merged to `main`.
 - The live game the user played (latest release `9b16f0b`) does not have the double jump.
 
+### FEAT-003 (animal and world lag)
+
+- Committed locally on `deploy/boxd`. Not pushed, not deployed, not merged to `main`. The live game does not have the smoothing.
+
 ## Tests vs live-browser
 
 ### Cause of the stuck player
@@ -33,6 +37,39 @@
 - Not checked in a live browser or on real phones.
 - The exact spot where the user got stuck is unknown, and no reproduction from the live game is recorded.
 
+### FEAT-003: animal and world lag
+
+#### Cause
+- The ambient wildlife (`render/fauna.ts`) steps at 10 Hz (`FAUNA_STEP` 0.1 s) and drew each creature at its last stepped position with no blending. On a 60 fps display an animal moved on one frame in six, which reads as stutter.
+- Farm animals and villagers (`render/homestead.ts`) already blended between the previous and the current 2 s tick, but each tick restarted the blend from the previous tick's end point, not from where the animal was drawn. A late tick (slow frame, background tab) made the animal pop back. There was also no snap rule for teleports.
+- Per-frame uploads copied the full instance buffers (capacity, not count) for every species. Wildlife spawn for all newly loaded chunks ran in one frame.
+
+#### Changes
+- `Game/src/render/smooth.ts` (new): `blendPose` (position, y, shortest-arc heading, snap above 6 m), `tickAlpha`, `stepAlpha`, `shortestArc`. Presentation only, no simulation reads or writes.
+- `FaunaView`: keeps the pose before the latest 10 Hz step per creature and draws the blend by `accumulator / FAUNA_STEP`. Sim stepping is unchanged. Chunk spawn is capped at 2 chunks per frame (`pendingSpawn` makes `main.ts` call `sync` again next frame).
+- `Herd` and villagers: each tick blends from the pose currently drawn; heading and speed still come from the logical step; a jump over 6 m snaps.
+- `AnimalBatch.end()` uploads only the used instance range.
+- `app/perf.ts` `SectionStats` plus `main.ts` timing of homestead, fauna, terrain, render and the settlement tick, exposed as `window.__metrics.sections`.
+- Deliberately not changed: `SimClock` and every sim module, so tick numbers, journals and save hashes are untouched.
+
+#### Verified by test
+- `Game/tests/m007.smooth.test.ts` (7 tests): alpha from the clock, continuity across a tick boundary at 60 fps, shortest-arc yaw over the +-PI seam, snap on a large jump, result independent of frame count, `FaunaView` simulation state identical whether or not extra draws happen, and drawn instances move on more than 60% of 60 fps frames. The last test fails on the old drawing (animal moved on 28 of 180 frames with blending disabled) and passes now.
+- `npm test` 198 pass, `tsc --noEmit` clean, `npm run build` succeeds.
+
+#### Live browser (software GL, about 1.2 frames per second, so frame-independent numbers only)
+Build served from a copy of `Game/dist`, farm view `?chain=0&mode=builder&tx=-28&ty=14&tz=4&dist=40`, 70 s, 36 settlement ticks, no page errors:
+- Draw calls 106 (budget 120) and triangles 248,364 (budget 250,000). The earlier figure was about 96 / 241k before the lean-to. The triangle margin is 1.6k, so any new geometry needs a matching cut.
+- Instance matrices of the first 6 animals per species, read from the scene each frame. Implied speed between consecutive frames for farm animals: frames straddling a tick boundary mean 0.09 m/s, max 0.81 m/s (210 samples); other frames mean 0.09 m/s, max 0.80 m/s (1005 samples). No position jump at tick boundaries.
+- CPU per frame (ms, mean / p95 / max): homestead update 0.92 / 0.6 / 60.3, wildlife 0.51 / 1.2 / 3.1, terrain streaming 0.07 / 0.1 / 0.4, settlement tick 1.99 / 3.8 / 7.0. Render max 26.9 s is the first frame (shader compile on software GL), and the homestead max 60 ms is the first frame that builds the buildings. Neither recurs.
+- Probe scripts: `.kiro/artifacts/screenshots/probe/smooth-feat003-c.js`.
+
+#### Not verified
+- Smoothness as seen at 60 fps on a real device. The sandbox renders about 1.2 fps, so the blend was verified by unit test and by tick-boundary sampling, not by eye.
+- No before/after live measurement of the old build, so the improvement in the live game is inferred from the cause analysis and the failing-without-fix test.
+- Chunk-mesh uploads were not found to spike (terrain section max 0.4 ms in this scene), but walking across many new chunks was not measured live in this run.
+
 ## Visual model vs simulation behaviour
 
 - The figure has no distinct second-jump animation. It uses the existing airborne pose, and only the simulated height changes.
+
+- FEAT-003 changes how smoothly existing poses are drawn only. Animal and villager models are unchanged.

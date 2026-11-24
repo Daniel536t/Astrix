@@ -55,3 +55,26 @@ export class FrameStats {
     };
   }
 }
+
+/** Per-section CPU cost of the frame loop (presentation only). Reports mean and worst milliseconds. */
+export class SectionStats {
+  private readonly sections = new Map<string, { sum: number; n: number; max: number; samples: Float32Array; i: number }>();
+  constructor(private readonly windowSize = 300) {}
+  record(name: string, ms: number): void {
+    let s = this.sections.get(name);
+    if (!s) { s = { sum: 0, n: 0, max: 0, samples: new Float32Array(this.windowSize), i: 0 }; this.sections.set(name, s); }
+    s.sum += ms; s.n++;
+    s.samples[s.i++ % this.windowSize] = ms;
+    if (ms > s.max) s.max = ms;
+  }
+  report(): Record<string, { meanMs: number; p95Ms: number; maxMs: number; n: number }> {
+    const r = (v: number) => Math.round(v * 100) / 100;
+    const out: Record<string, { meanMs: number; p95Ms: number; maxMs: number; n: number }> = {};
+    for (const [name, s] of this.sections) {
+      const w = Array.from(s.samples.subarray(0, Math.min(s.n, this.windowSize))).sort((a, b) => a - b);
+      out[name] = { meanMs: r(s.sum / s.n), p95Ms: r(w[Math.floor(0.95 * (w.length - 1))] ?? 0), maxMs: r(s.max), n: s.n };
+    }
+    return out;
+  }
+  reset(): void { this.sections.clear(); }
+}

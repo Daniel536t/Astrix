@@ -13,7 +13,7 @@ import { M2Game } from './app/m2';
 import { M2_PROJECTS } from './app/projects';
 import { M002_LAYOUT } from './sim/m002';
 import { FOUNDER_STOCKPILE } from './sim/economy';
-import { FrameStats } from './app/perf';
+import { FrameStats, SectionStats } from './app/perf';
 import { ExploreController, INTERACT_REACH } from './app/explore';
 import { FaunaView } from './render/fauna';
 import { ChunkWorkerPool } from './render/chunk-pool';
@@ -453,6 +453,7 @@ let m2Game: M2Game | null = null;
 
 const frameWork = new FrameStats();
 const frameInterval = new FrameStats();
+const sections = new SectionStats();
 let lastFrameAt = 0;
 
 function metrics() {
@@ -474,6 +475,7 @@ function metrics() {
     chunkWorkers: terrainView.workerMetrics,
     frameWork: frameWork.report(),
     frameInterval: frameInterval.report(),
+    sections: sections.report(),
     cachedChunks: world.chunks.size,
     chunksGenerated: world.stats.chunksGenerated,
     generationMs: Math.round(world.stats.generationMs * 10) / 10,
@@ -531,7 +533,9 @@ function frame(timestamp?: number) {
   advanceTime(time, dt * speed);
   rig.update(dt);
   explore?.update(dt);
+  const tHome = performance.now();
   homesteadGame?.update(dt);
+  sections.record('homestead', performance.now() - tHome);
   // Real-time simulation. Freeze (evidence captures), pause, hidden tabs and
   // non-leader tabs do not advance settlement time.
   const nowMs = Date.now();
@@ -543,7 +547,9 @@ function frame(timestamp?: number) {
   const simDt = lastSimAt ? (nowMs - lastSimAt) / 1000 : 0;
   lastSimAt = nowMs;
   if (simClock.advance(simDt, simActive)) {
+    const tTick = performance.now();
     const r = lifeGame!.realtimeTick();
+    sections.record('tick', performance.now() - tTick);
     if (r.ok) saveScheduler.markDirty(nowMs);
     else realtimeNote = `settlement time stopped: ${r.reasons.join('; ')}`;
   }
@@ -553,12 +559,14 @@ function frame(timestamp?: number) {
       : time.paused ? 'settlement paused (P)' : realtimeNote.startsWith('settlement time stopped') ? realtimeNote
         : `settlement tick ${session.world.life?.tick ?? 0} · next in ${simClock.secondsToNext.toFixed(0)} s`;
   showcase?.update(dt);
+  const tFauna = performance.now();
   if (fauna) {
-    if (faunaDirty) { fauna.sync(terrainView.loadedChunkKeys); faunaDirty = false; }
+    if (faunaDirty) { fauna.sync(terrainView.loadedChunkKeys); faunaDirty = fauna.pendingSpawn; }
     const ch = explore?.active ? explore.character : null;
     if (!freeze) fauna.update(dt, { threats: ch ? [{ x: ch.x, z: ch.z }] : [], night: time.t < 0.2 || time.t > 0.82 });
     else fauna.update(0, { threats: [], night: false });
   }
+  sections.record('fauna', performance.now() - tFauna);
 
   // With a homestead, the sky follows settlement time so villagers sleep when it is dark.
   const lifeTick = session.world.homestead ? session.world.life?.tick : undefined;
@@ -577,13 +585,17 @@ function frame(timestamp?: number) {
 
   const mode: ViewMode = isMap ? 'map' : isKit ? 'kit' : 'world';
   terrainView.setWaterTime(freeze ? 0 : timer.getElapsed());
+  const tTerrain = performance.now();
   terrainView.update(rig.target, mode);
+  sections.record('terrain', performance.now() - tTerrain);
   if (natureDirty && !isMap && frames % 2 === 0) rebuildNature();
   if (natureGroup) natureGroup.visible = !isMap;
   m2Game?.update(performance.now());
   sceneInspector?.update();
 
+  const tRender = performance.now();
   renderer.render(scene, rig.camera);
+  sections.record('render', performance.now() - tRender);
   frameWork.record(performance.now() - workStart);
 
   if (frames % 6 === 0) {

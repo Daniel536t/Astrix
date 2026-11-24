@@ -12,6 +12,7 @@ import {
   dayTime, homesteadLayout, SPECIES_RULES, unitsOf,
 } from '../sim/homestead';
 import { AnimalBatch } from './animal-kit';
+import { SNAP_DISTANCE } from './smooth';
 import { ANIMAL_MODELS } from './animal-models';
 import { FOUNDER_STOCKPILE } from '../sim/economy';
 import { buildCottage, buildWell } from './village-kit';
@@ -145,7 +146,7 @@ function fieldMesh(world: World, p: Plot, ground: (x: number, z: number) => numb
 
 const HERD_CAP = 64;
 const shortest = (from: number, to: number) => { let d = to - from; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
-interface Seen { shown?: number; x: number; z: number; heading: number; phase: number; swing: number; hunger: number; eatUntil: number; speed: number; px: number; pz: number }
+interface Seen { shown?: number; x: number; z: number; heading: number; phase: number; swing: number; hunger: number; eatUntil: number; speed: number; px: number; pz: number; sx: number; sz: number }
 
 /**
  * Every farm animal, one animated instanced mesh per species. Poses come from
@@ -169,11 +170,14 @@ class Herd {
     for (const a of h.animals) {
       alive.add(a.id);
       const x = a.x / DM, z = a.z / DM, s = this.seen.get(a.id);
-      if (!s) { this.seen.set(a.id, { x, z, px: x, pz: z, heading: hash(a.x, a.z) * Math.PI * 2, phase: hash(a.z, a.x) * 6, swing: 0, hunger: a.hunger, eatUntil: 0, speed: 0 }); continue; }
-      s.px = s.x; s.pz = s.z; s.x = x; s.z = z;
-      const d = Math.hypot(s.x - s.px, s.z - s.pz);
+      if (!s) { this.seen.set(a.id, { x, z, px: x, pz: z, sx: x, sz: z, heading: hash(a.x, a.z) * Math.PI * 2, phase: hash(a.z, a.x) * 6, swing: 0, hunger: a.hunger, eatUntil: 0, speed: 0 }); continue; }
+      // Distance and heading come from the logical step; the blend starts from
+      // where the animal is drawn now, so a late or early tick never pops it.
+      const d = Math.hypot(x - s.x, z - s.z);
+      if (d > 0.04) s.heading = Math.atan2(x - s.x, z - s.z);
       s.speed = d / tickSeconds;
-      if (d > 0.04) s.heading = Math.atan2(s.x - s.px, s.z - s.pz);
+      s.px = s.sx; s.pz = s.sz; s.x = x; s.z = z;
+      if (Math.hypot(x - s.px, z - s.pz) > SNAP_DISTANCE) { s.px = x; s.pz = z; s.speed = 0; }
       if (a.hunger < s.hunger - 20) s.eatUntil = now + 1.8;
       s.hunger = a.hunger;
     }
@@ -186,6 +190,7 @@ class Herd {
       const s = this.seen.get(a.id); if (!s) continue;
       const rule = SPECIES_RULES[a.species], walking = s.speed > 0.15;
       const x = s.px + (s.x - s.px) * alpha, z = s.pz + (s.z - s.pz) * alpha;
+      s.sx = x; s.sz = z;
       // Turn toward the direction of travel; walk cycle advances with distance covered.
       if (walking) s.shown = (s.shown ?? s.heading) + shortest(s.shown ?? s.heading, s.heading) * (1 - Math.exp(-dt * 7));
       const heading = s.shown ?? s.heading;
@@ -219,7 +224,7 @@ export class HomesteadView {
   private readonly dynamic = new THREE.Group();
   private readonly fields = new THREE.Group();
   private readonly herd: Herd;
-  private readonly people = new Map<string, { fig: Figure; role: string; prev: { x: number; z: number }; cur: { x: number; z: number }; heading: number }>();
+  private readonly people = new Map<string, { fig: Figure; role: string; prev: { x: number; z: number }; cur: { x: number; z: number }; shown: { x: number; z: number }; heading: number; step: number }>();
   private fieldKey = '';
   private troughKey = '';
   private lastTick = -1;
@@ -314,7 +319,14 @@ export class HomesteadView {
       this.herd.advance(h, this.tickSeconds);
       for (const v of h.villagers) {
         const p = this.people.get(v.id);
-        if (p) { p.prev = p.cur; p.cur = { x: v.x / DM, z: v.z / DM }; }
+        if (p) {
+          // Blend from where the villager is drawn now (no pop on late ticks); heading/speed use the logical step.
+          const nx = v.x / DM, nz = v.z / DM;
+          p.step = Math.hypot(nx - p.cur.x, nz - p.cur.z);
+          if (p.step > 0.05) p.heading = Math.atan2(nx - p.cur.x, nz - p.cur.z);
+          p.prev = Math.hypot(nx - p.shown.x, nz - p.shown.z) > SNAP_DISTANCE ? { x: nx, z: nz } : { x: p.shown.x, z: p.shown.z };
+          p.cur = { x: nx, z: nz };
+        }
       }
       this.refreshFields(h);
       this.refreshTroughs(h);
@@ -375,12 +387,12 @@ export class HomesteadView {
         fig.root.userData = { villagerId: v.id, name: v.name, role: v.role };
         this.group.add(fig.root);
         const at = { x: v.x / DM, z: v.z / DM };
-        p = { fig, role: v.role, prev: at, cur: at, heading: 0 };
+        p = { fig, role: v.role, prev: at, cur: at, shown: { ...at }, heading: 0, step: 0 };
         this.people.set(v.id, p);
       }
       const x = p.prev.x + (p.cur.x - p.prev.x) * alpha, z = p.prev.z + (p.cur.z - p.prev.z) * alpha;
-      const dist = Math.hypot(p.cur.x - p.prev.x, p.cur.z - p.prev.z);
-      if (dist > 0.05) p.heading = Math.atan2(p.cur.x - p.prev.x, p.cur.z - p.prev.z);
+      p.shown.x = x; p.shown.z = z;
+      const dist = p.step;
       const working = v.task?.legs[v.task.leg]?.op === 'work' && v.task.kind !== 'rest' && v.task.kind !== 'idle';
       const resting = v.task?.kind === 'rest' && dist < 0.05;
       p.fig.root.visible = !resting; // indoors at night

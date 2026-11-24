@@ -183,9 +183,12 @@ export class AnimalBatch {
   end(): void {
     this.mesh.count = this.n;
     this.mesh.visible = this.n > 0;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    this.anim.needsUpdate = true;
-    this.state.needsUpdate = true;
+    // Upload only the instances in use, not the whole capacity.
+    for (const [a, stride] of [[this.mesh.instanceMatrix, 16], [this.anim, 4], [this.state, 4]] as const) {
+      a.clearUpdateRanges();
+      if (this.n > 0) a.addUpdateRange(0, this.n * stride);
+      a.needsUpdate = this.n > 0;
+    }
   }
 
   get count(): number { return this.n; }
