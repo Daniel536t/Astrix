@@ -1,0 +1,554 @@
+{
+ "probe": "/projects/sandbox/.kiro/artifacts/screenshots/probe/m008-mobile-a.js",
+ "emulation": "NOT a real phone. Playwright headless Chromium 151, viewport 390x844, deviceScaleFactor 3 (game caps pixel ratio at 2: drawing buffer 780x1688), isMobile, hasTouch, software GL (ANGLE over SwiftShader). Loaded unthrottled until stable, then CDP Emulation.setCPUThrottlingRate rate 4 for a 60 s measured span. Throttling slows the page's main thread only; SwiftShader rasterises in the GPU process, which is not throttled. fps from this setup is not representative of any phone.",
+ "before": "build of commit 99c6b11 (live release 20261124T121804Z-99c6b11) from a separate git worktree into probe/dist-base",
+ "after": "build of the deploy/boxd working tree after FEAT-003 (abd9010) plus FEAT-004 test only",
+ "runs": [
+  {
+   "run": "after",
+   "build": "dist",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=40",
+   "warmupMs": 80948,
+   "stableSamples": 3,
+   "spanMs": 60643,
+   "throttle": 4,
+   "env": {
+    "multiDrawExt": true,
+    "multiDrawUsed": true,
+    "devicePixelRatio": 3,
+    "rendererPixelRatio": 2,
+    "drawingBuffer": [
+     780,
+     1688
+    ],
+    "innerSize": [
+     390,
+     844
+    ],
+    "coarsePointer": true,
+    "maxTouchPoints": 1,
+    "glRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+   },
+   "rendererCalls": 53,
+   "rendererTriangles": 87900,
+   "natureInstances": 42,
+   "vegetation": {
+    "near": {
+     "instances": 10,
+     "triangles": 736
+    },
+    "mid": {
+     "instances": 29,
+     "triangles": 1256
+    },
+    "far": {
+     "instances": 3,
+     "triangles": 96
+    },
+    "drawnTriangles": 2088,
+    "evaluations": 1,
+    "switches": 32
+   },
+   "groundCover": {
+    "pieces": 422,
+    "triangles": 10334
+   },
+   "fauna": {
+    "total": 60,
+    "rabbit": 46,
+    "deer": 2,
+    "trout": 10,
+    "fox": 2
+   },
+   "homesteadAnimals": {
+    "cattle": 2,
+    "chicken": 4,
+    "goat": 2,
+    "horse": 2,
+    "pig": 2,
+    "sheep": 3
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 1.47,
+     "p95Ms": 2.1,
+     "maxMs": 47.6,
+     "n": 67
+    },
+    "fauna": {
+     "meanMs": 1.59,
+     "p95Ms": 3.6,
+     "maxMs": 7.9,
+     "n": 67
+    },
+    "terrain": {
+     "meanMs": 0.38,
+     "p95Ms": 1,
+     "maxMs": 5.3,
+     "n": 67
+    },
+    "vegetation": {
+     "meanMs": 0.01,
+     "p95Ms": 0.1,
+     "maxMs": 0.5,
+     "n": 67
+    },
+    "groundcover": {
+     "meanMs": 0.55,
+     "p95Ms": 0.8,
+     "maxMs": 29.1,
+     "n": 67
+    },
+    "render": {
+     "meanMs": 501.27,
+     "p95Ms": 16.6,
+     "maxMs": 30486,
+     "n": 67
+    },
+    "tick": {
+     "meanMs": 6.7,
+     "p95Ms": 12.5,
+     "maxMs": 16.8,
+     "n": 40
+    }
+   },
+   "frameWork": {
+    "frames": 67,
+    "p50Ms": 20,
+    "p95Ms": 49.3,
+    "p99Ms": 2573.6,
+    "maxMs": 30574.1,
+    "longFrames": 24,
+    "hitches": 2,
+    "windowFrames": 67,
+    "heapMB": 38
+   },
+   "frameInterval": {
+    "frames": 66,
+    "p50Ms": 1182.4,
+    "p95Ms": 1828.7,
+    "p99Ms": 3618,
+    "maxMs": 31013.6,
+    "longFrames": 66,
+    "hitches": 66,
+    "windowFrames": 66,
+    "heapMB": 38
+   },
+   "heapMB": 38.5,
+   "measured": {
+    "frames": 47,
+    "frameCpuMs": {
+     "mean": 30.8,
+     "p50": 32.9,
+     "p95": 49.4,
+     "max": 63.2
+    },
+    "frameIntervalMs": {
+     "mean": 1292.5,
+     "p50": 1193.5,
+     "p95": 1866.8,
+     "max": 1950.4
+    }
+   },
+   "breakdown": {
+    "main": {
+     "draws": 32,
+     "triangles": 63236
+    },
+    "shadow": {
+     "draws": 21,
+     "triangles": 24708
+    },
+    "all": {
+     "draws": 53,
+     "triangles": 87944
+    }
+   },
+   "spanSections": {
+    "homestead": {
+     "n": 42,
+     "meanMs": 1.02,
+     "p95MsWindow": 2.1
+    },
+    "fauna": {
+     "n": 42,
+     "meanMs": 1.88,
+     "p95MsWindow": 3.6
+    },
+    "terrain": {
+     "n": 42,
+     "meanMs": 0.52,
+     "p95MsWindow": 1
+    },
+    "vegetation": {
+     "n": 42,
+     "meanMs": 0.02,
+     "p95MsWindow": 0.1
+    },
+    "groundcover": {
+     "n": 42,
+     "meanMs": 0.18,
+     "p95MsWindow": 0.8
+    },
+    "render": {
+     "n": 42,
+     "meanMs": 10.63,
+     "p95MsWindow": 16.6
+    },
+    "tick": {
+     "n": 26,
+     "meanMs": 8.76,
+     "p95MsWindow": 12.5
+    }
+   },
+   "errs": []
+  },
+  {
+   "run": "after-multidraw0",
+   "build": "dist",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=40&multidraw=0",
+   "warmupMs": 77872,
+   "stableSamples": 3,
+   "spanMs": 60491,
+   "throttle": 4,
+   "env": {
+    "multiDrawExt": true,
+    "multiDrawUsed": false,
+    "devicePixelRatio": 3,
+    "rendererPixelRatio": 2,
+    "drawingBuffer": [
+     780,
+     1688
+    ],
+    "innerSize": [
+     390,
+     844
+    ],
+    "coarsePointer": true,
+    "maxTouchPoints": 1,
+    "glRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+   },
+   "rendererCalls": 60,
+   "rendererTriangles": 88772,
+   "natureInstances": 42,
+   "vegetation": {
+    "near": {
+     "instances": 10,
+     "triangles": 736
+    },
+    "mid": {
+     "instances": 29,
+     "triangles": 1256
+    },
+    "far": {
+     "instances": 3,
+     "triangles": 96
+    },
+    "drawnTriangles": 2088,
+    "evaluations": 1,
+    "switches": 32
+   },
+   "groundCover": {
+    "pieces": 422,
+    "triangles": 10334
+   },
+   "fauna": {
+    "total": 60,
+    "rabbit": 46,
+    "deer": 2,
+    "trout": 10,
+    "fox": 2
+   },
+   "homesteadAnimals": {
+    "cattle": 2,
+    "chicken": 4,
+    "goat": 2,
+    "horse": 2,
+    "pig": 2,
+    "sheep": 3
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 1.47,
+     "p95Ms": 2.4,
+     "maxMs": 36.7,
+     "n": 61
+    },
+    "fauna": {
+     "meanMs": 2.13,
+     "p95Ms": 6,
+     "maxMs": 10.2,
+     "n": 61
+    },
+    "terrain": {
+     "meanMs": 0.5,
+     "p95Ms": 1,
+     "maxMs": 6.6,
+     "n": 61
+    },
+    "vegetation": {
+     "meanMs": 0,
+     "p95Ms": 0,
+     "maxMs": 0.1,
+     "n": 61
+    },
+    "groundcover": {
+     "meanMs": 0.67,
+     "p95Ms": 0.7,
+     "maxMs": 35,
+     "n": 61
+    },
+    "render": {
+     "meanMs": 576.22,
+     "p95Ms": 15.8,
+     "maxMs": 26800.9,
+     "n": 61
+    },
+    "tick": {
+     "meanMs": 7.45,
+     "p95Ms": 13.8,
+     "maxMs": 15.7,
+     "n": 39
+    }
+   },
+   "frameWork": {
+    "frames": 61,
+    "p50Ms": 26.4,
+    "p95Ms": 52.5,
+    "p99Ms": 7861.2,
+    "maxMs": 26886.1,
+    "longFrames": 24,
+    "hitches": 2,
+    "windowFrames": 61,
+    "heapMB": 38
+   },
+   "frameInterval": {
+    "frames": 60,
+    "p50Ms": 1190.4,
+    "p95Ms": 1958.2,
+    "p99Ms": 8322.2,
+    "maxMs": 27904.2,
+    "longFrames": 60,
+    "hitches": 60,
+    "windowFrames": 60,
+    "heapMB": 38
+   },
+   "heapMB": 38,
+   "measured": {
+    "frames": 45,
+    "frameCpuMs": {
+     "mean": 31.6,
+     "p50": 33.8,
+     "p95": 52.6,
+     "max": 60
+    },
+    "frameIntervalMs": {
+     "mean": 1348.1,
+     "p50": 1206.6,
+     "p95": 1808.2,
+     "max": 1958.2
+    }
+   },
+   "breakdown": {
+    "main": {
+     "draws": 33,
+     "triangles": 63700
+    },
+    "shadow": {
+     "draws": 27,
+     "triangles": 25072
+    },
+    "all": {
+     "draws": 60,
+     "triangles": 88772
+    }
+   },
+   "spanSections": {
+    "homestead": {
+     "n": 48,
+     "meanMs": 1.01,
+     "p95MsWindow": 2.4
+    },
+    "fauna": {
+     "n": 48,
+     "meanMs": 2.48,
+     "p95MsWindow": 6
+    },
+    "terrain": {
+     "n": 48,
+     "meanMs": 0.58,
+     "p95MsWindow": 1
+    },
+    "vegetation": {
+     "n": 48,
+     "meanMs": 0,
+     "p95MsWindow": 0
+    },
+    "groundcover": {
+     "n": 48,
+     "meanMs": 0.12,
+     "p95MsWindow": 0.7
+    },
+    "render": {
+     "n": 48,
+     "meanMs": 9.57,
+     "p95MsWindow": 15.8
+    },
+    "tick": {
+     "n": 32,
+     "meanMs": 8.43,
+     "p95MsWindow": 13.8
+    }
+   },
+   "errs": []
+  },
+  {
+   "run": "before",
+   "build": "dist-base",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=40",
+   "warmupMs": 70294,
+   "stableSamples": 3,
+   "spanMs": 60857,
+   "throttle": 4,
+   "env": {
+    "multiDrawExt": true,
+    "multiDrawUsed": null,
+    "devicePixelRatio": 3,
+    "rendererPixelRatio": 2,
+    "drawingBuffer": [
+     780,
+     1688
+    ],
+    "innerSize": [
+     390,
+     844
+    ],
+    "coarsePointer": true,
+    "maxTouchPoints": 1,
+    "glRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36"
+   },
+   "rendererCalls": 80,
+   "rendererTriangles": 222626,
+   "natureInstances": 42,
+   "vegetation": null,
+   "groundCover": null,
+   "fauna": {
+    "total": 60,
+    "rabbit": 46,
+    "deer": 2,
+    "trout": 10,
+    "fox": 2
+   },
+   "homesteadAnimals": {
+    "cattle": 2,
+    "chicken": 4,
+    "goat": 2,
+    "horse": 2,
+    "pig": 2,
+    "sheep": 3
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 1.39,
+     "p95Ms": 2.2,
+     "maxMs": 46.6,
+     "n": 67
+    },
+    "fauna": {
+     "meanMs": 1.91,
+     "p95Ms": 3.8,
+     "maxMs": 36.2,
+     "n": 67
+    },
+    "terrain": {
+     "meanMs": 0.26,
+     "p95Ms": 0.8,
+     "maxMs": 5.5,
+     "n": 67
+    },
+    "render": {
+     "meanMs": 422.16,
+     "p95Ms": 20.9,
+     "maxMs": 26935,
+     "n": 67
+    },
+    "tick": {
+     "meanMs": 7.15,
+     "p95Ms": 15.5,
+     "maxMs": 20.4,
+     "n": 41
+    }
+   },
+   "frameWork": {
+    "frames": 67,
+    "p50Ms": 16.4,
+    "p95Ms": 50,
+    "p99Ms": 799.1,
+    "maxMs": 26999.7,
+    "longFrames": 20,
+    "hitches": 2,
+    "windowFrames": 67,
+    "heapMB": 41
+   },
+   "frameInterval": {
+    "frames": 66,
+    "p50Ms": 1206.9,
+    "p95Ms": 1795.5,
+    "p99Ms": 2053.5,
+    "maxMs": 27356.9,
+    "longFrames": 66,
+    "hitches": 66,
+    "windowFrames": 66,
+    "heapMB": 41
+   },
+   "heapMB": 41.7,
+   "measured": {
+    "frames": 44,
+    "frameCpuMs": {
+     "mean": 31.2,
+     "p50": 32.9,
+     "p95": 55.7,
+     "max": 72.6
+    },
+    "frameIntervalMs": {
+     "mean": 1387.8,
+     "p50": 1306.4,
+     "p95": 1795.5,
+     "max": 1827.1
+    }
+   },
+   "breakdown": null,
+   "spanSections": {
+    "homestead": {
+     "n": 42,
+     "meanMs": 0.96,
+     "p95MsWindow": 2.2
+    },
+    "fauna": {
+     "n": 42,
+     "meanMs": 2.48,
+     "p95MsWindow": 3.8
+    },
+    "terrain": {
+     "n": 42,
+     "meanMs": 0.36,
+     "p95MsWindow": 0.8
+    },
+    "render": {
+     "n": 42,
+     "meanMs": 11.49,
+     "p95MsWindow": 20.9
+    },
+    "tick": {
+     "n": 28,
+     "meanMs": 9.18,
+     "p95MsWindow": 15.5
+    }
+   },
+   "errs": []
+  }
+ ]
+}

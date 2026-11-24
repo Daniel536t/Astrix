@@ -1,0 +1,2829 @@
+{
+ "probe": "/projects/sandbox/.kiro/artifacts/screenshots/probe/m008-final-a.js",
+ "build": "Game/dist from deploy/boxd at abd9010 (FEAT-003) plus no source change; desktop 1000x600, Playwright Chromium, software GL (SwiftShader)",
+ "results": [
+  {
+   "view": "farm",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=40",
+   "screenshot": "final-farm.png",
+   "warmupMs": 115195,
+   "stableSamples": 3,
+   "errs": [],
+   "metrics": {
+    "rendererCalls": 80,
+    "rendererTriangles": 116486,
+    "natureInstances": 42,
+    "vegetation": {
+     "near": {
+      "instances": 10,
+      "triangles": 736
+     },
+     "mid": {
+      "instances": 29,
+      "triangles": 1256
+     },
+     "far": {
+      "instances": 3,
+      "triangles": 96
+     },
+     "drawnTriangles": 2088,
+     "evaluations": 1,
+     "switches": 32
+    },
+    "nearTriangles": 101402,
+    "macroTriangles": 72660,
+    "macroVisibleTriangles": 13274,
+    "groundCover": {
+     "pieces": 422,
+     "triangles": 10334,
+     "chunks": 16,
+     "rebuilds": 1,
+     "pending": 0,
+     "byKind": {
+      "grass": 233,
+      "flower": 128,
+      "stone": 35,
+      "fern": 26
+     }
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 1.14,
+      "p95Ms": 0.7,
+      "maxMs": 36.2,
+      "n": 43
+     },
+     "fauna": {
+      "meanMs": 0.63,
+      "p95Ms": 1.4,
+      "maxMs": 1.8,
+      "n": 43
+     },
+     "terrain": {
+      "meanMs": 0.15,
+      "p95Ms": 0.2,
+      "maxMs": 0.9,
+      "n": 43
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 43
+     },
+     "groundcover": {
+      "meanMs": 0.72,
+      "p95Ms": 0.1,
+      "maxMs": 30.2,
+      "n": 43
+     },
+     "render": {
+      "meanMs": 1026.6,
+      "p95Ms": 10.7,
+      "maxMs": 38635.2,
+      "n": 43
+     },
+     "tick": {
+      "meanMs": 2.32,
+      "p95Ms": 2.6,
+      "maxMs": 12.6,
+      "n": 22
+     }
+    },
+    "frameWork": {
+     "frames": 43,
+     "p50Ms": 7.7,
+     "p95Ms": 16.8,
+     "p99Ms": 5368.3,
+     "maxMs": 38712.5,
+     "longFrames": 2,
+     "hitches": 2,
+     "windowFrames": 43,
+     "heapMB": 39
+    },
+    "frameInterval": {
+     "frames": 42,
+     "p50Ms": 1002.8,
+     "p95Ms": 1555.2,
+     "p99Ms": 7005.2,
+     "maxMs": 39695.2,
+     "longFrames": 42,
+     "hitches": 42,
+     "windowFrames": 42,
+     "heapMB": 39
+    },
+    "fauna": {
+     "total": 60,
+     "rabbit": 46,
+     "deer": 2,
+     "trout": 10,
+     "fox": 2
+    },
+    "homestead": {
+     "animals": {
+      "cattle": 2,
+      "chicken": 4,
+      "goat": 2,
+      "horse": 2,
+      "pig": 2,
+      "sheep": 3
+     },
+     "villagers": [
+      {
+       "id": "villager:0",
+       "name": "Ada",
+       "role": "farmer",
+       "task": "idle",
+       "target": "idle:villager:0",
+       "x": -32.6,
+       "z": -5.7,
+       "carry": null,
+       "energy": 95,
+       "hunger": 31
+      },
+      {
+       "id": "villager:1",
+       "name": "Bram",
+       "role": "herder",
+       "task": "idle",
+       "target": "idle:villager:1",
+       "x": -34.9,
+       "z": -8.4,
+       "carry": null,
+       "energy": 95,
+       "hunger": 41
+      }
+     ]
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0,
+    "entities": 88,
+    "trees": 84,
+    "harvested": 0,
+    "harvestable": "hero:styl_cairn:-20:-6",
+    "stateHash": "7696cf749e96c50b",
+    "lastAction": "Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.",
+    "inventory": {
+     "stone": 48,
+     "wood": 24
+    }
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 59,
+     "triangles": 91822
+    },
+    "shadow": {
+     "draws": 21,
+     "triangles": 24664
+    },
+    "all": {
+     "draws": 80,
+     "triangles": 116486
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     19,
+     36310,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_chunk_#_#",
+     12,
+     5772,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     4,
+     13274,
+     0,
+     0
+    ],
+    [
+     "homestead/character_body",
+     2,
+     516,
+     2,
+     516
+    ],
+    [
+     "fauna/fauna_rabbit",
+     1,
+     9384,
+     1,
+     9384
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     1,
+     4548
+    ],
+    [
+     "homestead/herd_sheep",
+     1,
+     2448,
+     1,
+     2448
+    ],
+    [
+     "styl_nature/styl_nature_batch",
+     1,
+     852,
+     1,
+     1496
+    ],
+    [
+     "homestead/herd_chicken",
+     1,
+     960,
+     1,
+     960
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     816,
+     1,
+     816
+    ],
+    [
+     "homestead/herd_goat",
+     1,
+     696,
+     1,
+     696
+    ],
+    [
+     "homestead/herd_cattle",
+     1,
+     672,
+     1,
+     672
+    ],
+    [
+     "homestead/herd_horse",
+     1,
+     624,
+     1,
+     624
+    ],
+    [
+     "fauna/fauna_trout",
+     1,
+     600,
+     1,
+     600
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     528,
+     1,
+     528
+    ],
+    [
+     "homestead/herd_pig",
+     1,
+     504,
+     1,
+     504
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     1,
+     468
+    ],
+    [
+     "life_state/stockpile_frame",
+     1,
+     100,
+     1,
+     100
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     1,
+     96,
+     1,
+     96
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     1,
+     84,
+     1,
+     84
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     1,
+     60,
+     1,
+     60
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     1,
+     36,
+     1,
+     36
+    ],
+    [
+     "life_state/stockpile_resources",
+     1,
+     28,
+     1,
+     28
+    ],
+    [
+     "ground_cover/ground_cover_batch",
+     1,
+     10334,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ]
+   ],
+   "animals": {
+    "spanMs": 23056,
+    "frames": 23,
+    "perMesh": {
+     "fauna_deer": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 0,
+      "animPhaseChanged": 2
+     },
+     "fauna_rabbit": {
+      "countStart": 46,
+      "countEnd": 46,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 4,
+      "animPhaseChanged": 8
+     },
+     "fauna_trout": {
+      "countStart": 10,
+      "countEnd": 10,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 5,
+      "animPhaseChanged": 8
+     },
+     "fauna_fox": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 0,
+      "animPhaseChanged": 2
+     },
+     "fauna_wolf": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "herd_cattle": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 2,
+      "animPhaseChanged": 2
+     },
+     "herd_chicken": {
+      "countStart": 4,
+      "countEnd": 4,
+      "drawnEnd": true,
+      "compared": 4,
+      "moved": 3,
+      "animPhaseChanged": 2
+     },
+     "herd_goat": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_horse": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 2,
+      "animPhaseChanged": 2
+     },
+     "herd_pig": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 0
+     },
+     "herd_sheep": {
+      "countStart": 3,
+      "countEnd": 3,
+      "drawnEnd": true,
+      "compared": 3,
+      "moved": 3,
+      "animPhaseChanged": 3
+     }
+    }
+   },
+   "fell": null
+  },
+  {
+   "view": "forest",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=50",
+   "screenshot": "final-forest.png",
+   "warmupMs": 101487,
+   "stableSamples": 3,
+   "errs": [],
+   "metrics": {
+    "rendererCalls": 40,
+    "rendererTriangles": 162690,
+    "natureInstances": 500,
+    "vegetation": {
+     "near": {
+      "instances": 120,
+      "triangles": 12972
+     },
+     "mid": {
+      "instances": 252,
+      "triangles": 10728
+     },
+     "far": {
+      "instances": 128,
+      "triangles": 3916
+     },
+     "drawnTriangles": 27616,
+     "evaluations": 1,
+     "switches": 380
+    },
+    "nearTriangles": 90020,
+    "macroTriangles": 74116,
+    "macroVisibleTriangles": 13656,
+    "groundCover": {
+     "pieces": 509,
+     "triangles": 13676,
+     "chunks": 20,
+     "rebuilds": 1,
+     "pending": 0,
+     "byKind": {
+      "fern": 178,
+      "bush": 29,
+      "grass": 110,
+      "stone": 44,
+      "mushroom": 62,
+      "log": 28,
+      "flower": 44,
+      "sapling": 14
+     }
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 1.39,
+      "p95Ms": 0.5,
+      "maxMs": 49,
+      "n": 43
+     },
+     "fauna": {
+      "meanMs": 1.11,
+      "p95Ms": 1.9,
+      "maxMs": 4.2,
+      "n": 43
+     },
+     "terrain": {
+      "meanMs": 0.16,
+      "p95Ms": 0.4,
+      "maxMs": 0.6,
+      "n": 43
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0,
+      "n": 43
+     },
+     "groundcover": {
+      "meanMs": 1.31,
+      "p95Ms": 0.1,
+      "maxMs": 53.6,
+      "n": 43
+     },
+     "render": {
+      "meanMs": 666.71,
+      "p95Ms": 11.2,
+      "maxMs": 22918.4,
+      "n": 43
+     },
+     "tick": {
+      "meanMs": 2.05,
+      "p95Ms": 2.8,
+      "maxMs": 5.8,
+      "n": 24
+     }
+    },
+    "frameWork": {
+     "frames": 43,
+     "p50Ms": 7.3,
+     "p95Ms": 15.7,
+     "p99Ms": 5650.5,
+     "maxMs": 23031.5,
+     "longFrames": 2,
+     "hitches": 2,
+     "windowFrames": 43,
+     "heapMB": 42
+    },
+    "frameInterval": {
+     "frames": 42,
+     "p50Ms": 1045.3,
+     "p95Ms": 1673.3,
+     "p99Ms": 6501.3,
+     "maxMs": 24003.2,
+     "longFrames": 42,
+     "hitches": 42,
+     "windowFrames": 42,
+     "heapMB": 42
+    },
+    "fauna": {
+     "total": 102,
+     "deer": 64,
+     "wolf": 37,
+     "fox": 1
+    },
+    "homestead": {
+     "animals": {
+      "cattle": 2,
+      "chicken": 4,
+      "goat": 2,
+      "horse": 2,
+      "pig": 2,
+      "sheep": 3
+     },
+     "villagers": [
+      {
+       "id": "villager:0",
+       "name": "Ada",
+       "role": "farmer",
+       "task": "idle",
+       "target": "idle:villager:0",
+       "x": -32.6,
+       "z": -5.7,
+       "carry": null,
+       "energy": 94,
+       "hunger": 32
+      },
+      {
+       "id": "villager:1",
+       "name": "Bram",
+       "role": "herder",
+       "task": "idle",
+       "target": "idle:villager:1",
+       "x": -34.9,
+       "z": -8.4,
+       "carry": null,
+       "energy": 94,
+       "hunger": 42
+      }
+     ]
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0,
+    "entities": 732,
+    "trees": 729,
+    "harvested": 0,
+    "harvestable": "e:38,28:8",
+    "stateHash": "9cb94f1bc3ab76dd",
+    "lastAction": "Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.",
+    "inventory": {
+     "stone": 48,
+     "wood": 24
+    }
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 37,
+     "triangles": 113650
+    },
+    "shadow": {
+     "draws": 3,
+     "triangles": 49372
+    },
+    "all": {
+     "draws": 40,
+     "triangles": 163022
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     26,
+     48694,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     4,
+     13656,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     19584,
+     1,
+     19584
+    ],
+    [
+     "styl_nature/styl_nature_batch",
+     1,
+     6264,
+     1,
+     20188
+    ],
+    [
+     "fauna/fauna_wolf",
+     1,
+     9600,
+     1,
+     9600
+    ],
+    [
+     "ground_cover/ground_cover_batch",
+     1,
+     13676,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_batch_far",
+     1,
+     64,
+     0,
+     0
+    ]
+   ],
+   "animals": {
+    "spanMs": 23168,
+    "frames": 21,
+    "perMesh": {
+     "fauna_deer": {
+      "countStart": 48,
+      "countEnd": 48,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 2,
+      "animPhaseChanged": 8
+     },
+     "fauna_rabbit": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "fauna_trout": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "fauna_fox": {
+      "countStart": 1,
+      "countEnd": 1,
+      "drawnEnd": true,
+      "compared": 1,
+      "moved": 0,
+      "animPhaseChanged": 1
+     },
+     "fauna_wolf": {
+      "countStart": 32,
+      "countEnd": 32,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 1,
+      "animPhaseChanged": 8
+     },
+     "herd_cattle": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 2,
+      "animPhaseChanged": 2
+     },
+     "herd_chicken": {
+      "countStart": 4,
+      "countEnd": 4,
+      "drawnEnd": true,
+      "compared": 4,
+      "moved": 3,
+      "animPhaseChanged": 2
+     },
+     "herd_goat": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_horse": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 2,
+      "animPhaseChanged": 2
+     },
+     "herd_pig": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 0
+     },
+     "herd_sheep": {
+      "countStart": 3,
+      "countEnd": 3,
+      "drawnEnd": true,
+      "compared": 3,
+      "moved": 3,
+      "animPhaseChanged": 3
+     }
+    }
+   },
+   "fell": null
+  },
+  {
+   "view": "grove-close",
+   "url": "?chain=0&mode=builder&tx=-27&ty=19&tz=-30&yaw=0&pitch=16&dist=15",
+   "screenshot": "final-grove-close.png",
+   "warmupMs": 125143,
+   "stableSamples": 3,
+   "errs": [],
+   "metrics": {
+    "rendererCalls": 59,
+    "rendererTriangles": 109010,
+    "natureInstances": 42,
+    "vegetation": {
+     "near": {
+      "instances": 16,
+      "triangles": 1528
+     },
+     "mid": {
+      "instances": 23,
+      "triangles": 968
+     },
+     "far": {
+      "instances": 3,
+      "triangles": 96
+     },
+     "drawnTriangles": 2592,
+     "evaluations": 1,
+     "switches": 26
+    },
+    "nearTriangles": 102506,
+    "macroTriangles": 73012,
+    "macroVisibleTriangles": 24750,
+    "groundCover": {
+     "pieces": 450,
+     "triangles": 10804,
+     "chunks": 16,
+     "rebuilds": 1,
+     "pending": 0,
+     "byKind": {
+      "stone": 65,
+      "flower": 143,
+      "grass": 220,
+      "fern": 22
+     }
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 1.78,
+      "p95Ms": 0.5,
+      "maxMs": 47.5,
+      "n": 31
+     },
+     "fauna": {
+      "meanMs": 0.97,
+      "p95Ms": 2.5,
+      "maxMs": 4.3,
+      "n": 31
+     },
+     "terrain": {
+      "meanMs": 0.2,
+      "p95Ms": 0.3,
+      "maxMs": 1.9,
+      "n": 31
+     },
+     "vegetation": {
+      "meanMs": 0.01,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 31
+     },
+     "groundcover": {
+      "meanMs": 1.05,
+      "p95Ms": 0.1,
+      "maxMs": 32.1,
+      "n": 31
+     },
+     "render": {
+      "meanMs": 1156.17,
+      "p95Ms": 7.8,
+      "maxMs": 26251.9,
+      "n": 31
+     },
+     "tick": {
+      "meanMs": 2.62,
+      "p95Ms": 5.7,
+      "maxMs": 7.9,
+      "n": 16
+     }
+    },
+    "frameWork": {
+     "frames": 31,
+     "p50Ms": 7.4,
+     "p95Ms": 20,
+     "p99Ms": 9520.5,
+     "maxMs": 26343,
+     "longFrames": 2,
+     "hitches": 2,
+     "windowFrames": 31,
+     "heapMB": 39
+    },
+    "frameInterval": {
+     "frames": 30,
+     "p50Ms": 1007.7,
+     "p95Ms": 1716.8,
+     "p99Ms": 11196.8,
+     "maxMs": 27287.6,
+     "longFrames": 30,
+     "hitches": 30,
+     "windowFrames": 30,
+     "heapMB": 39
+    },
+    "fauna": {
+     "total": 64,
+     "deer": 2,
+     "rabbit": 44,
+     "trout": 17,
+     "fox": 1
+    },
+    "homestead": {
+     "animals": {
+      "cattle": 2,
+      "chicken": 4,
+      "goat": 2,
+      "horse": 2,
+      "pig": 2,
+      "sheep": 3
+     },
+     "villagers": [
+      {
+       "id": "villager:0",
+       "name": "Ada",
+       "role": "farmer",
+       "task": "idle",
+       "target": "idle:villager:0",
+       "x": -35,
+       "z": -6.4,
+       "carry": null,
+       "energy": 96,
+       "hunger": 28
+      },
+      {
+       "id": "villager:1",
+       "name": "Bram",
+       "role": "herder",
+       "task": "idle",
+       "target": "idle:villager:1",
+       "x": -31.7,
+       "z": -9.1,
+       "carry": null,
+       "energy": 96,
+       "hunger": 38
+      }
+     ]
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0,
+    "entities": 105,
+    "trees": 101,
+    "harvested": 0,
+    "harvestable": "hero:styl_tree_spire:-22:-26",
+    "stateHash": "777382d06cbdd2f6",
+    "lastAction": "Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.",
+    "inventory": {
+     "stone": 48,
+     "wood": 24
+    }
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 38,
+     "triangles": 83862
+    },
+    "shadow": {
+     "draws": 21,
+     "triangles": 25148
+    },
+    "all": {
+     "draws": 59,
+     "triangles": 109010
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     15,
+     29524,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     14,
+     24750,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_rabbit",
+     1,
+     8976,
+     1,
+     8976
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     1,
+     4548
+    ],
+    [
+     "styl_nature/styl_nature_batch",
+     1,
+     844,
+     1,
+     2232
+    ],
+    [
+     "fauna/fauna_trout",
+     1,
+     1020,
+     1,
+     1020
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     816,
+     1,
+     816
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     1,
+     468
+    ],
+    [
+     "homestead/character_body",
+     0,
+     0,
+     2,
+     516
+    ],
+    [
+     "ground_cover/ground_cover_batch",
+     1,
+     10804,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_sheep",
+     0,
+     0,
+     1,
+     2448
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_chicken",
+     0,
+     0,
+     1,
+     960
+    ],
+    [
+     "homestead/herd_goat",
+     0,
+     0,
+     1,
+     696
+    ],
+    [
+     "homestead/herd_cattle",
+     0,
+     0,
+     1,
+     672
+    ],
+    [
+     "homestead/herd_horse",
+     0,
+     0,
+     1,
+     624
+    ],
+    [
+     "homestead/herd_pig",
+     0,
+     0,
+     1,
+     504
+    ],
+    [
+     "fauna/fauna_fox",
+     0,
+     0,
+     1,
+     264
+    ],
+    [
+     "life_state/stockpile_frame",
+     0,
+     0,
+     1,
+     100
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     0,
+     0,
+     1,
+     96
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     0,
+     0,
+     1,
+     84
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     0,
+     0,
+     1,
+     60
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     0,
+     0,
+     1,
+     36
+    ],
+    [
+     "life_state/stockpile_resources",
+     0,
+     0,
+     1,
+     28
+    ]
+   ],
+   "animals": {
+    "spanMs": 9392,
+    "frames": 10,
+    "perMesh": {
+     "fauna_deer": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 0,
+      "animPhaseChanged": 2
+     },
+     "fauna_rabbit": {
+      "countStart": 42,
+      "countEnd": 44,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 0,
+      "animPhaseChanged": 8
+     },
+     "fauna_trout": {
+      "countStart": 17,
+      "countEnd": 17,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 2,
+      "animPhaseChanged": 8
+     },
+     "fauna_fox": {
+      "countStart": 1,
+      "countEnd": 1,
+      "drawnEnd": true,
+      "compared": 1,
+      "moved": 0,
+      "animPhaseChanged": 1
+     },
+     "fauna_wolf": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "herd_cattle": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 2,
+      "animPhaseChanged": 2
+     },
+     "herd_chicken": {
+      "countStart": 4,
+      "countEnd": 4,
+      "drawnEnd": true,
+      "compared": 4,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_goat": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_horse": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_pig": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_sheep": {
+      "countStart": 3,
+      "countEnd": 3,
+      "drawnEnd": true,
+      "compared": 3,
+      "moved": 3,
+      "animPhaseChanged": 1
+     }
+    }
+   },
+   "fell": {
+    "target": "hero:styl_tree_spire:-22:-26",
+    "clicks": [
+     "Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.",
+     "harvested 4 wood from tree spire",
+     "harvested 4 wood from tree spire",
+     "harvested 4 wood from tree blossom",
+     "harvested 4 wood from tree blossom",
+     "harvested 4 wood from tree blossom",
+     "harvested 4 wood from tree cluster",
+     "harvested 4 wood from tree cluster",
+     "harvested 4 wood from tree cluster (depleted)"
+    ],
+    "before": {
+     "natureInstances": 42,
+     "trees": 101,
+     "harvested": 0,
+     "stateHash": "777382d06cbdd2f6",
+     "inventory": {
+      "stone": 48,
+      "wood": 24
+     }
+    },
+    "after": {
+     "natureInstances": 39,
+     "trees": 101,
+     "harvested": 3,
+     "harvestable": "hero:styl_tree_table:-40:-30",
+     "stateHash": "acf9994f015e9e85",
+     "inventory": {
+      "stone": 48,
+      "wood": 60
+     },
+     "vegetation": {
+      "near": {
+       "instances": 13,
+       "triangles": 1150
+      },
+      "mid": {
+       "instances": 23,
+       "triangles": 968
+      },
+      "far": {
+       "instances": 3,
+       "triangles": 96
+      },
+      "drawnTriangles": 2214,
+      "evaluations": 1,
+      "switches": 26
+     },
+     "rendererCalls": 58,
+     "rendererTriangles": 107990
+    }
+   }
+  },
+  {
+   "view": "lod-near",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=30",
+   "screenshot": "final-lod-near.png",
+   "warmupMs": 77267,
+   "stableSamples": 3,
+   "errs": [],
+   "metrics": {
+    "rendererCalls": 35,
+    "rendererTriangles": 146492,
+    "natureInstances": 500,
+    "vegetation": {
+     "near": {
+      "instances": 128,
+      "triangles": 13896
+     },
+     "mid": {
+      "instances": 295,
+      "triangles": 12476
+     },
+     "far": {
+      "instances": 77,
+      "triangles": 2384
+     },
+     "drawnTriangles": 28756,
+     "evaluations": 1,
+     "switches": 372
+    },
+    "nearTriangles": 90020,
+    "macroTriangles": 74116,
+    "macroVisibleTriangles": 6118,
+    "groundCover": {
+     "pieces": 509,
+     "triangles": 13676,
+     "chunks": 20,
+     "rebuilds": 1,
+     "pending": 0,
+     "byKind": {
+      "fern": 178,
+      "bush": 29,
+      "grass": 110,
+      "stone": 44,
+      "mushroom": 62,
+      "log": 28,
+      "flower": 44,
+      "sapling": 14
+     }
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 3.27,
+      "p95Ms": 1.4,
+      "maxMs": 65.2,
+      "n": 25
+     },
+     "fauna": {
+      "meanMs": 1.39,
+      "p95Ms": 3,
+      "maxMs": 4.7,
+      "n": 25
+     },
+     "terrain": {
+      "meanMs": 0.23,
+      "p95Ms": 0.4,
+      "maxMs": 1.7,
+      "n": 25
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0,
+      "n": 25
+     },
+     "groundcover": {
+      "meanMs": 2.64,
+      "p95Ms": 0.1,
+      "maxMs": 65.3,
+      "n": 25
+     },
+     "render": {
+      "meanMs": 1102.39,
+      "p95Ms": 9.7,
+      "maxMs": 24377,
+      "n": 25
+     },
+     "tick": {
+      "meanMs": 2.59,
+      "p95Ms": 3.8,
+      "maxMs": 6.5,
+      "n": 13
+     }
+    },
+    "frameWork": {
+     "frames": 25,
+     "p50Ms": 7.5,
+     "p95Ms": 18.1,
+     "p99Ms": 3133.5,
+     "maxMs": 24520.1,
+     "longFrames": 2,
+     "hitches": 2,
+     "windowFrames": 25,
+     "heapMB": 41
+    },
+    "frameInterval": {
+     "frames": 24,
+     "p50Ms": 1043,
+     "p95Ms": 1625.2,
+     "p99Ms": 3827.3,
+     "maxMs": 25475.5,
+     "longFrames": 24,
+     "hitches": 24,
+     "windowFrames": 24,
+     "heapMB": 41
+    },
+    "fauna": {
+     "total": 102,
+     "deer": 64,
+     "wolf": 37,
+     "fox": 1
+    },
+    "homestead": {
+     "animals": {
+      "cattle": 2,
+      "chicken": 4,
+      "goat": 2,
+      "horse": 2,
+      "pig": 2,
+      "sheep": 3
+     },
+     "villagers": [
+      {
+       "id": "villager:0",
+       "name": "Ada",
+       "role": "farmer",
+       "task": "idle",
+       "target": "idle:villager:0",
+       "x": -35,
+       "z": -6.4,
+       "carry": null,
+       "energy": 97,
+       "hunger": 26
+      },
+      {
+       "id": "villager:1",
+       "name": "Bram",
+       "role": "herder",
+       "task": "idle",
+       "target": "idle:villager:1",
+       "x": -31.7,
+       "z": -9.1,
+       "carry": null,
+       "energy": 97,
+       "hunger": 36
+      }
+     ]
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0,
+    "entities": 732,
+    "trees": 729,
+    "harvested": 0,
+    "harvestable": "e:38,28:8",
+    "stateHash": "326289e43b090561",
+    "lastAction": "Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.",
+    "inventory": {
+     "stone": 48,
+     "wood": 24
+    }
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 29,
+     "triangles": 94052
+    },
+    "shadow": {
+     "draws": 4,
+     "triangles": 52554
+    },
+    "all": {
+     "draws": 33,
+     "triangles": 146606
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     21,
+     38698,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     19584,
+     1,
+     19584
+    ],
+    [
+     "styl_nature/styl_nature_batch",
+     1,
+     4264,
+     1,
+     22902
+    ],
+    [
+     "fauna/fauna_wolf",
+     1,
+     9600,
+     1,
+     9600
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     2,
+     6118,
+     0,
+     0
+    ],
+    [
+     "ground_cover/ground_cover_batch",
+     1,
+     13676,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_troughs",
+     0,
+     0,
+     1,
+     468
+    ]
+   ],
+   "animals": {
+    "spanMs": 4413,
+    "frames": 5,
+    "perMesh": {
+     "fauna_deer": {
+      "countStart": 48,
+      "countEnd": 48,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 0,
+      "animPhaseChanged": 8
+     },
+     "fauna_rabbit": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "fauna_trout": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "fauna_fox": {
+      "countStart": 1,
+      "countEnd": 1,
+      "drawnEnd": true,
+      "compared": 1,
+      "moved": 0,
+      "animPhaseChanged": 1
+     },
+     "fauna_wolf": {
+      "countStart": 32,
+      "countEnd": 32,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 0,
+      "animPhaseChanged": 8
+     },
+     "herd_cattle": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 2,
+      "animPhaseChanged": 1
+     },
+     "herd_chicken": {
+      "countStart": 4,
+      "countEnd": 4,
+      "drawnEnd": true,
+      "compared": 4,
+      "moved": 1,
+      "animPhaseChanged": 0
+     },
+     "herd_goat": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_horse": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_pig": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 0
+     },
+     "herd_sheep": {
+      "countStart": 3,
+      "countEnd": 3,
+      "drawnEnd": true,
+      "compared": 3,
+      "moved": 3,
+      "animPhaseChanged": 1
+     }
+    }
+   },
+   "fell": null
+  },
+  {
+   "view": "lod-far",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=140",
+   "screenshot": "final-lod-far.png",
+   "warmupMs": 86272,
+   "stableSamples": 3,
+   "errs": [],
+   "metrics": {
+    "rendererCalls": 62,
+    "rendererTriangles": 201236,
+    "natureInstances": 500,
+    "vegetation": {
+     "near": {
+      "instances": 9,
+      "triangles": 1028
+     },
+     "mid": {
+      "instances": 145,
+      "triangles": 6140
+     },
+     "far": {
+      "instances": 346,
+      "triangles": 10632
+     },
+     "drawnTriangles": 17800,
+     "evaluations": 1,
+     "switches": 491
+    },
+    "nearTriangles": 90020,
+    "macroTriangles": 74116,
+    "macroVisibleTriangles": 33058,
+    "groundCover": {
+     "pieces": 509,
+     "triangles": 13676,
+     "chunks": 20,
+     "rebuilds": 1,
+     "pending": 0,
+     "byKind": {
+      "fern": 178,
+      "bush": 29,
+      "grass": 110,
+      "stone": 44,
+      "mushroom": 62,
+      "log": 28,
+      "flower": 44,
+      "sapling": 14
+     }
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 2.48,
+      "p95Ms": 0.5,
+      "maxMs": 53.4,
+      "n": 31
+     },
+     "fauna": {
+      "meanMs": 1.05,
+      "p95Ms": 1.8,
+      "maxMs": 2.6,
+      "n": 31
+     },
+     "terrain": {
+      "meanMs": 0.17,
+      "p95Ms": 0.3,
+      "maxMs": 1,
+      "n": 31
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0,
+      "n": 31
+     },
+     "groundcover": {
+      "meanMs": 1.49,
+      "p95Ms": 0.1,
+      "maxMs": 45.4,
+      "n": 31
+     },
+     "render": {
+      "meanMs": 911.67,
+      "p95Ms": 22.1,
+      "maxMs": 22611.9,
+      "n": 31
+     },
+     "tick": {
+      "meanMs": 2.31,
+      "p95Ms": 4.3,
+      "maxMs": 4.4,
+      "n": 17
+     }
+    },
+    "frameWork": {
+     "frames": 31,
+     "p50Ms": 9.3,
+     "p95Ms": 24,
+     "p99Ms": 5544,
+     "maxMs": 22722,
+     "longFrames": 2,
+     "hitches": 2,
+     "windowFrames": 31,
+     "heapMB": 40
+    },
+    "frameInterval": {
+     "frames": 30,
+     "p50Ms": 1070.6,
+     "p95Ms": 1791.4,
+     "p99Ms": 6508.3,
+     "maxMs": 23457.3,
+     "longFrames": 30,
+     "hitches": 30,
+     "windowFrames": 30,
+     "heapMB": 40
+    },
+    "fauna": {
+     "total": 102,
+     "deer": 64,
+     "wolf": 37,
+     "fox": 1
+    },
+    "homestead": {
+     "animals": {
+      "cattle": 2,
+      "chicken": 4,
+      "goat": 2,
+      "horse": 2,
+      "pig": 2,
+      "sheep": 3
+     },
+     "villagers": [
+      {
+       "id": "villager:0",
+       "name": "Ada",
+       "role": "farmer",
+       "task": "idle",
+       "target": "idle:villager:0",
+       "x": -35,
+       "z": -6.4,
+       "carry": null,
+       "energy": 96,
+       "hunger": 28
+      },
+      {
+       "id": "villager:1",
+       "name": "Bram",
+       "role": "herder",
+       "task": "idle",
+       "target": "idle:villager:1",
+       "x": -31.7,
+       "z": -9.1,
+       "carry": null,
+       "energy": 96,
+       "hunger": 38
+      }
+     ]
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0,
+    "entities": 732,
+    "trees": 729,
+    "harvested": 0,
+    "harvestable": "e:38,28:8",
+    "stateHash": "1eef8c148b3c0255",
+    "lastAction": "Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.",
+    "inventory": {
+     "stone": 48,
+     "wood": 24
+    }
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 59,
+     "triangles": 168016
+    },
+    "shadow": {
+     "draws": 3,
+     "triangles": 33220
+    },
+    "all": {
+     "draws": 62,
+     "triangles": 201236
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     42,
+     77814,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     10,
+     33058,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     19584,
+     1,
+     19584
+    ],
+    [
+     "fauna/fauna_wolf",
+     1,
+     9600,
+     1,
+     9600
+    ],
+    [
+     "styl_nature/styl_nature_batch",
+     1,
+     3048,
+     1,
+     4036
+    ],
+    [
+     "ground_cover/ground_cover_batch",
+     1,
+     13676,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_batch_far",
+     1,
+     9124,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ]
+   ],
+   "animals": {
+    "spanMs": 9185,
+    "frames": 9,
+    "perMesh": {
+     "fauna_deer": {
+      "countStart": 48,
+      "countEnd": 48,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 1,
+      "animPhaseChanged": 8
+     },
+     "fauna_rabbit": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "fauna_trout": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "fauna_fox": {
+      "countStart": 1,
+      "countEnd": 1,
+      "drawnEnd": true,
+      "compared": 1,
+      "moved": 0,
+      "animPhaseChanged": 1
+     },
+     "fauna_wolf": {
+      "countStart": 32,
+      "countEnd": 32,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 0,
+      "animPhaseChanged": 8
+     },
+     "herd_cattle": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 2,
+      "animPhaseChanged": 1
+     },
+     "herd_chicken": {
+      "countStart": 4,
+      "countEnd": 4,
+      "drawnEnd": true,
+      "compared": 4,
+      "moved": 2,
+      "animPhaseChanged": 0
+     },
+     "herd_goat": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_horse": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_pig": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 0
+     },
+     "herd_sheep": {
+      "countStart": 3,
+      "countEnd": 3,
+      "drawnEnd": true,
+      "compared": 3,
+      "moved": 3,
+      "animPhaseChanged": 1
+     }
+    }
+   },
+   "fell": null
+  },
+  {
+   "view": "farm-multidraw0",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=40&multidraw=0",
+   "screenshot": "final-farm-multidraw0.png",
+   "warmupMs": 90317,
+   "stableSamples": 3,
+   "errs": [],
+   "metrics": {
+    "rendererCalls": 87,
+    "rendererTriangles": 117110,
+    "natureInstances": 42,
+    "vegetation": {
+     "near": {
+      "instances": 10,
+      "triangles": 736
+     },
+     "mid": {
+      "instances": 29,
+      "triangles": 1256
+     },
+     "far": {
+      "instances": 3,
+      "triangles": 96
+     },
+     "drawnTriangles": 2088,
+     "evaluations": 1,
+     "switches": 32
+    },
+    "nearTriangles": 101402,
+    "macroTriangles": 72660,
+    "macroVisibleTriangles": 13274,
+    "groundCover": {
+     "pieces": 422,
+     "triangles": 10334,
+     "chunks": 16,
+     "rebuilds": 1,
+     "pending": 0,
+     "byKind": {
+      "grass": 233,
+      "flower": 128,
+      "stone": 35,
+      "fern": 26
+     }
+    },
+    "multiDraw": false,
+    "sections": {
+     "homestead": {
+      "meanMs": 1.62,
+      "p95Ms": 0.4,
+      "maxMs": 34.2,
+      "n": 25
+     },
+     "fauna": {
+      "meanMs": 0.92,
+      "p95Ms": 1.4,
+      "maxMs": 2.7,
+      "n": 25
+     },
+     "terrain": {
+      "meanMs": 0.15,
+      "p95Ms": 0.2,
+      "maxMs": 0.7,
+      "n": 25
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 25
+     },
+     "groundcover": {
+      "meanMs": 1.41,
+      "p95Ms": 0.1,
+      "maxMs": 31.9,
+      "n": 25
+     },
+     "render": {
+      "meanMs": 1530.36,
+      "p95Ms": 9.9,
+      "maxMs": 30820.6,
+      "n": 25
+     },
+     "tick": {
+      "meanMs": 2.27,
+      "p95Ms": 3.4,
+      "maxMs": 6.1,
+      "n": 15
+     }
+    },
+    "frameWork": {
+     "frames": 25,
+     "p50Ms": 10.1,
+     "p95Ms": 19.9,
+     "p99Ms": 7353,
+     "maxMs": 30899,
+     "longFrames": 2,
+     "hitches": 2,
+     "windowFrames": 25,
+     "heapMB": 39
+    },
+    "frameInterval": {
+     "frames": 24,
+     "p50Ms": 1126.1,
+     "p95Ms": 1620,
+     "p99Ms": 8416.2,
+     "maxMs": 32011.9,
+     "longFrames": 24,
+     "hitches": 24,
+     "windowFrames": 24,
+     "heapMB": 39
+    },
+    "fauna": {
+     "total": 60,
+     "rabbit": 46,
+     "deer": 2,
+     "trout": 10,
+     "fox": 2
+    },
+    "homestead": {
+     "animals": {
+      "cattle": 2,
+      "chicken": 4,
+      "goat": 2,
+      "horse": 2,
+      "pig": 2,
+      "sheep": 3
+     },
+     "villagers": [
+      {
+       "id": "villager:0",
+       "name": "Ada",
+       "role": "farmer",
+       "task": "idle",
+       "target": "idle:villager:0",
+       "x": -35,
+       "z": -6.4,
+       "carry": null,
+       "energy": 96,
+       "hunger": 27
+      },
+      {
+       "id": "villager:1",
+       "name": "Bram",
+       "role": "herder",
+       "task": "idle",
+       "target": "idle:villager:1",
+       "x": -31.7,
+       "z": -9.1,
+       "carry": null,
+       "energy": 96,
+       "hunger": 37
+      }
+     ]
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0,
+    "entities": 88,
+    "trees": 84,
+    "harvested": 0,
+    "harvestable": "hero:styl_cairn:-20:-6",
+    "stateHash": "d28a6bc42db14fa1",
+    "lastAction": "Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.",
+    "inventory": {
+     "stone": 48,
+     "wood": 24
+    }
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 61,
+     "triangles": 92258
+    },
+    "shadow": {
+     "draws": 26,
+     "triangles": 24852
+    },
+    "all": {
+     "draws": 87,
+     "triangles": 117110
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     19,
+     36310,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_chunk_#_#",
+     12,
+     5772,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_tile",
+     3,
+     1288,
+     6,
+     1684
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     4,
+     13274,
+     0,
+     0
+    ],
+    [
+     "homestead/character_body",
+     2,
+     516,
+     2,
+     516
+    ],
+    [
+     "fauna/fauna_rabbit",
+     1,
+     9384,
+     1,
+     9384
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     1,
+     4548
+    ],
+    [
+     "homestead/herd_sheep",
+     1,
+     2448,
+     1,
+     2448
+    ],
+    [
+     "homestead/herd_chicken",
+     1,
+     960,
+     1,
+     960
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     816,
+     1,
+     816
+    ],
+    [
+     "homestead/herd_goat",
+     1,
+     696,
+     1,
+     696
+    ],
+    [
+     "homestead/herd_cattle",
+     1,
+     672,
+     1,
+     672
+    ],
+    [
+     "homestead/herd_horse",
+     1,
+     624,
+     1,
+     624
+    ],
+    [
+     "fauna/fauna_trout",
+     1,
+     600,
+     1,
+     600
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     528,
+     1,
+     528
+    ],
+    [
+     "homestead/herd_pig",
+     1,
+     504,
+     1,
+     504
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     1,
+     468
+    ],
+    [
+     "life_state/stockpile_frame",
+     1,
+     100,
+     1,
+     100
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     1,
+     96,
+     1,
+     96
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     1,
+     84,
+     1,
+     84
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     1,
+     60,
+     1,
+     60
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     1,
+     36,
+     1,
+     36
+    ],
+    [
+     "life_state/stockpile_resources",
+     1,
+     28,
+     1,
+     28
+    ],
+    [
+     "ground_cover/ground_cover_batch",
+     1,
+     10334,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ]
+   ],
+   "animals": {
+    "spanMs": 9618,
+    "frames": 9,
+    "perMesh": {
+     "fauna_deer": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 0,
+      "animPhaseChanged": 2
+     },
+     "fauna_rabbit": {
+      "countStart": 35,
+      "countEnd": 46,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 0,
+      "animPhaseChanged": 8
+     },
+     "fauna_trout": {
+      "countStart": 10,
+      "countEnd": 10,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 0,
+      "animPhaseChanged": 8
+     },
+     "fauna_fox": {
+      "countStart": 1,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 1,
+      "moved": 0,
+      "animPhaseChanged": 1
+     },
+     "fauna_wolf": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "herd_cattle": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 2,
+      "animPhaseChanged": 2
+     },
+     "herd_chicken": {
+      "countStart": 4,
+      "countEnd": 4,
+      "drawnEnd": true,
+      "compared": 4,
+      "moved": 2,
+      "animPhaseChanged": 1
+     },
+     "herd_goat": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_horse": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_pig": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_sheep": {
+      "countStart": 3,
+      "countEnd": 3,
+      "drawnEnd": true,
+      "compared": 3,
+      "moved": 3,
+      "animPhaseChanged": 3
+     }
+    }
+   },
+   "fell": null
+  },
+  {
+   "view": "forest-multidraw0",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=50&multidraw=0",
+   "screenshot": "final-forest-multidraw0.png",
+   "warmupMs": 73752,
+   "stableSamples": 3,
+   "errs": [],
+   "metrics": {
+    "rendererCalls": 52,
+    "rendererTriangles": 182160,
+    "natureInstances": 500,
+    "vegetation": {
+     "near": {
+      "instances": 120,
+      "triangles": 12972
+     },
+     "mid": {
+      "instances": 252,
+      "triangles": 10728
+     },
+     "far": {
+      "instances": 128,
+      "triangles": 3916
+     },
+     "drawnTriangles": 27616,
+     "evaluations": 1,
+     "switches": 380
+    },
+    "nearTriangles": 90020,
+    "macroTriangles": 74116,
+    "macroVisibleTriangles": 13656,
+    "groundCover": {
+     "pieces": 509,
+     "triangles": 13676,
+     "chunks": 20,
+     "rebuilds": 1,
+     "pending": 0,
+     "byKind": {
+      "fern": 178,
+      "bush": 29,
+      "grass": 110,
+      "stone": 44,
+      "mushroom": 62,
+      "log": 28,
+      "flower": 44,
+      "sapling": 14
+     }
+    },
+    "multiDraw": false,
+    "sections": {
+     "homestead": {
+      "meanMs": 1.95,
+      "p95Ms": 2.8,
+      "maxMs": 44.1,
+      "n": 31
+     },
+     "fauna": {
+      "meanMs": 1.66,
+      "p95Ms": 2.7,
+      "maxMs": 11,
+      "n": 31
+     },
+     "terrain": {
+      "meanMs": 0.16,
+      "p95Ms": 0.3,
+      "maxMs": 0.9,
+      "n": 31
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 31
+     },
+     "groundcover": {
+      "meanMs": 2.58,
+      "p95Ms": 0.1,
+      "maxMs": 78.6,
+      "n": 31
+     },
+     "render": {
+      "meanMs": 740.3,
+      "p95Ms": 23.1,
+      "maxMs": 19772.7,
+      "n": 31
+     },
+     "tick": {
+      "meanMs": 2.79,
+      "p95Ms": 4.1,
+      "maxMs": 10.6,
+      "n": 16
+     }
+    },
+    "frameWork": {
+     "frames": 31,
+     "p50Ms": 8.1,
+     "p95Ms": 28.9,
+     "p99Ms": 3114.1,
+     "maxMs": 19908.1,
+     "longFrames": 2,
+     "hitches": 2,
+     "windowFrames": 31,
+     "heapMB": 43
+    },
+    "frameInterval": {
+     "frames": 30,
+     "p50Ms": 1036.9,
+     "p95Ms": 1611.8,
+     "p99Ms": 3686.8,
+     "maxMs": 20870.6,
+     "longFrames": 30,
+     "hitches": 30,
+     "windowFrames": 30,
+     "heapMB": 43
+    },
+    "fauna": {
+     "total": 102,
+     "deer": 64,
+     "wolf": 37,
+     "fox": 1
+    },
+    "homestead": {
+     "animals": {
+      "cattle": 2,
+      "chicken": 4,
+      "goat": 2,
+      "horse": 2,
+      "pig": 2,
+      "sheep": 3
+     },
+     "villagers": [
+      {
+       "id": "villager:0",
+       "name": "Ada",
+       "role": "farmer",
+       "task": "idle",
+       "target": "idle:villager:0",
+       "x": -35,
+       "z": -6.4,
+       "carry": null,
+       "energy": 96,
+       "hunger": 28
+      },
+      {
+       "id": "villager:1",
+       "name": "Bram",
+       "role": "herder",
+       "task": "idle",
+       "target": "idle:villager:1",
+       "x": -31.7,
+       "z": -9.1,
+       "carry": null,
+       "energy": 96,
+       "hunger": 38
+      }
+     ]
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0,
+    "entities": 732,
+    "trees": 729,
+    "harvested": 0,
+    "harvestable": "e:38,28:8",
+    "stateHash": "777382d06cbdd2f6",
+    "lastAction": "Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.",
+    "inventory": {
+     "stone": 48,
+     "wood": 24
+    }
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 42,
+     "triangles": 128808
+    },
+    "shadow": {
+     "draws": 10,
+     "triangles": 53352
+    },
+    "all": {
+     "draws": 52,
+     "triangles": 182160
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     26,
+     48694,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_tile",
+     4,
+     18242,
+     7,
+     23700
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     4,
+     13656,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_tile_far",
+     3,
+     3244,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     19584,
+     1,
+     19584
+    ],
+    [
+     "fauna/fauna_wolf",
+     1,
+     9600,
+     1,
+     9600
+    ],
+    [
+     "ground_cover/ground_cover_batch",
+     1,
+     13676,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_troughs",
+     0,
+     0,
+     1,
+     468
+    ]
+   ],
+   "animals": {
+    "spanMs": 7321,
+    "frames": 9,
+    "perMesh": {
+     "fauna_deer": {
+      "countStart": 48,
+      "countEnd": 48,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 0,
+      "animPhaseChanged": 8
+     },
+     "fauna_rabbit": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "fauna_trout": {
+      "countStart": 0,
+      "countEnd": 0,
+      "drawnEnd": false,
+      "compared": 0,
+      "moved": 0,
+      "animPhaseChanged": 0
+     },
+     "fauna_fox": {
+      "countStart": 1,
+      "countEnd": 1,
+      "drawnEnd": true,
+      "compared": 1,
+      "moved": 0,
+      "animPhaseChanged": 1
+     },
+     "fauna_wolf": {
+      "countStart": 32,
+      "countEnd": 32,
+      "drawnEnd": true,
+      "compared": 8,
+      "moved": 0,
+      "animPhaseChanged": 8
+     },
+     "herd_cattle": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 2,
+      "animPhaseChanged": 1
+     },
+     "herd_chicken": {
+      "countStart": 4,
+      "countEnd": 4,
+      "drawnEnd": true,
+      "compared": 4,
+      "moved": 1,
+      "animPhaseChanged": 0
+     },
+     "herd_goat": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_horse": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 1
+     },
+     "herd_pig": {
+      "countStart": 2,
+      "countEnd": 2,
+      "drawnEnd": true,
+      "compared": 2,
+      "moved": 1,
+      "animPhaseChanged": 0
+     },
+     "herd_sheep": {
+      "countStart": 3,
+      "countEnd": 3,
+      "drawnEnd": true,
+      "compared": 3,
+      "moved": 3,
+      "animPhaseChanged": 1
+     }
+    }
+   },
+   "fell": null
+  }
+ ]
+}
