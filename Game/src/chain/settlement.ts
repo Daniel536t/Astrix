@@ -82,7 +82,8 @@ export class SettlementWatcher {
   view: ChainView = { live: null, committed: null, delegated: false, error: null, updatedAt: 0 };
   private er = new Connection(CHAIN.erRpc, { commitment: 'confirmed', wsEndpoint: CHAIN.erRpc.replace('https', 'wss') });
   private base = new Connection(CHAIN.baseRpc, 'confirmed');
-  private address = settlementAddress();
+  private address: PublicKey;
+  constructor(address: PublicKey = settlementAddress()) { this.address = address; }
   private timer: ReturnType<typeof setInterval> | null = null;
   onChange: ((v: ChainView) => void) | null = null;
 

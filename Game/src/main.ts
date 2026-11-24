@@ -53,7 +53,13 @@ const seedValid = Number.isSafeInteger(seed) && seed >= 0 && seed <= 0xffffffff;
 if (params.has('seed') && !seedValid) {
   paramWarnings.push('ignored ?seed= (must be an integer from 0 to 4294967295)');
 }
-const worldSeed = params.has('seed') && seedValid ? seed : 1337;
+// A player's own MagicBlock world chooses the terrain seed when no ?seed= is given.
+let guestSeed: number | null = null;
+try {
+  const g = JSON.parse(localStorage.getItem('astrix:guest:v1') ?? 'null');
+  if (g && Number.isSafeInteger(g.seed) && g.seed >= 0 && g.seed <= 0xffffffff) guestSeed = g.seed;
+} catch { guestSeed = null; }
+const worldSeed = params.has('seed') && seedValid ? seed : guestSeed ?? 1337;
 const startT = num('t', 0.42, 0, 1);
 const freeze = params.get('freeze') === '1';
 const sceneMode = params.get('scene') ?? 'world';

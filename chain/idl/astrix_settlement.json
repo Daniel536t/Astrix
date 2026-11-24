@@ -184,6 +184,10 @@
       "accounts": [
         {
           "name": "settlement",
+          "docs": [
+            "Any settlement or world slot of this program (owner + discriminator checked",
+            "by Anchor); who may act is decided by `authorise`."
+          ],
           "writable": true
         },
         {
@@ -220,6 +224,10 @@
       "accounts": [
         {
           "name": "settlement",
+          "docs": [
+            "Any settlement or world slot of this program (owner + discriminator checked",
+            "by Anchor); who may act is decided by `authorise`."
+          ],
           "writable": true
         },
         {
@@ -252,6 +260,10 @@
       "accounts": [
         {
           "name": "settlement",
+          "docs": [
+            "Any settlement or world slot of this program (owner + discriminator checked",
+            "by Anchor); who may act is decided by `authorise`."
+          ],
           "writable": true
         },
         {
@@ -403,8 +415,7 @@
         {
           "name": "vrf_program_identity",
           "docs": [
-            "Scoped VRF identity PDA, bound to this program. Its presence as a signer proves",
-            "the callback was issued by the VRF program for this program."
+            "The VRF program's scoped identity for this program; only it can deliver randomness."
           ],
           "signer": true
         },
@@ -449,6 +460,339 @@
         {
           "name": "owner",
           "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_registry",
+      "docs": [
+        "Base layer, admin: create the registry that governs world slots."
+      ],
+      "discriminator": [
+        131,
+        22,
+        4,
+        103,
+        24,
+        94,
+        163,
+        239
+      ],
+      "accounts": [
+        {
+          "name": "registry",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "slots",
+          "type": "u8"
+        },
+        {
+          "name": "claim_cooldown_s",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "init_slot",
+      "docs": [
+        "Base layer, admin: pre-fund one empty world slot (rent paid by the admin)."
+      ],
+      "discriminator": [
+        197,
+        55,
+        186,
+        36,
+        93,
+        96,
+        225,
+        37
+      ],
+      "accounts": [
+        {
+          "name": "slot",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "delegate_registry",
+      "docs": [
+        "Base layer, admin: delegate the registry to the ER."
+      ],
+      "discriminator": [
+        164,
+        96,
+        87,
+        155,
+        123,
+        127,
+        156,
+        111
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "buffer_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_record_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_metadata_pda",
+          "writable": true
+        },
+        {
+          "name": "pda",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "delegation_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "delegate_slot",
+      "docs": [
+        "Base layer, admin: delegate one world slot to the ER."
+      ],
+      "discriminator": [
+        156,
+        156,
+        126,
+        176,
+        152,
+        51,
+        15,
+        85
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "buffer_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_record_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_metadata_pda",
+          "writable": true
+        },
+        {
+          "name": "pda",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "delegation_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "claim_world",
+      "docs": [
+        "ER, permissionless: a guest key claims an empty slot and becomes the sole",
+        "owner of that world. Rate-limited globally by the registry cooldown. The",
+        "world seed is derived from the claimant's key, so every world differs."
+      ],
+      "discriminator": [
+        102,
+        48,
+        167,
+        118,
+        226,
+        152,
+        81,
+        50
+      ],
+      "accounts": [
+        {
+          "name": "registry",
+          "writable": true
+        },
+        {
+          "name": "slot",
+          "writable": true
+        },
+        {
+          "name": "guest",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "reset_world",
+      "docs": [
+        "ER, admin: return an abandoned slot to the pool (for example after a guest",
+        "lost their browser key). Guest worlds are explicitly not permanent."
+      ],
+      "discriminator": [
+        223,
+        206,
+        82,
+        225,
+        217,
+        88,
+        187,
+        33
+      ],
+      "accounts": [
+        {
+          "name": "registry"
+        },
+        {
+          "name": "slot",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "_index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "schedule_world_ticks",
+      "docs": [
+        "ER, admin: one crank ticks up to 16 independent worlds. Each scheduled",
+        "instruction is a separate `tick` on one world account; no state is shared."
+      ],
+      "discriminator": [
+        1,
+        175,
+        36,
+        162,
+        2,
+        81,
+        86,
+        212
+      ],
+      "accounts": [
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "registry"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "task_id",
+          "type": "i64"
+        },
+        {
+          "name": "interval_ms",
+          "type": "i64"
+        },
+        {
+          "name": "iterations",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "commit_worlds",
+      "docs": [
+        "ER, admin: commit a set of world slots (and the registry) to Solana."
+      ],
+      "discriminator": [
+        241,
+        254,
+        85,
+        165,
+        130,
+        154,
+        39,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "registry",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "magic_context",
+          "writable": true
         }
       ],
       "args": []
@@ -563,6 +907,19 @@
   ],
   "accounts": [
     {
+      "name": "Registry",
+      "discriminator": [
+        47,
+        174,
+        110,
+        246,
+        184,
+        182,
+        252,
+        218
+      ]
+    },
+    {
       "name": "Settlement",
       "discriminator": [
         55,
@@ -577,6 +934,38 @@
     }
   ],
   "types": [
+    {
+      "name": "Registry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "slots",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "claims",
+            "type": "u32"
+          },
+          {
+            "name": "last_claim_ts",
+            "type": "i64"
+          },
+          {
+            "name": "claim_cooldown_s",
+            "type": "i64"
+          }
+        ]
+      }
+    },
     {
       "name": "Settlement",
       "type": {
@@ -751,6 +1140,21 @@
       "code": 6014,
       "name": "NotInitialised",
       "msg": "settlement is not initialised"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidSlot",
+      "msg": "invalid world slot"
+    },
+    {
+      "code": 6016,
+      "name": "SlotTaken",
+      "msg": "world slot already has an owner"
+    },
+    {
+      "code": 6017,
+      "name": "ClaimCooldown",
+      "msg": "too many worlds created recently; try again shortly"
     }
   ]
 }

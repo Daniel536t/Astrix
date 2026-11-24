@@ -31,6 +31,11 @@ declare_id!("Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy");
 
 /// v2: the first devnet "settlement" PDA was delegated before initialisation (see docs).
 pub const SETTLEMENT_SEED: &[u8] = b"astrix-settlement";
+/// Player-owned world slots: pre-funded by the registry admin, claimed by guests on the ER.
+pub const WORLD_SLOT_SEED: &[u8] = b"world-slot";
+pub const REGISTRY_SEED: &[u8] = b"astrix-registry";
+pub const MAX_SLOTS_PER_CRANK: usize = 16;
+pub const MAX_SLOTS: u8 = 64;
 const PROGRAM_IDENTITY: Pubkey = program_identity_pubkey(&crate::ID);
 /// Scoped VRF identity that signs our callbacks, derived at compile time. The
 /// `#[vrf_callback]` macro derives it at runtime with find_program_address, which
@@ -179,6 +184,7 @@ pub mod astrix_settlement {
     /// early or repeated calls are no-ops. Executed by the MagicBlock crank.
     pub fn tick(ctx: Context<Tick>) -> Result<()> {
         let s = &mut ctx.accounts.settlement;
+        if s.owner == Pubkey::default() { return Ok(()); } // unclaimed world slot
         let now = Clock::get()?.unix_timestamp;
         if now < s.last_tick_ts + s.tick_interval_s {
             return Ok(());
@@ -295,6 +301,121 @@ pub mod astrix_settlement {
         Ok(())
     }
 
+    // ---------- player-owned world slots ----------
+
+    /// Base layer, admin: create the registry that governs world slots.
+    pub fn init_registry(ctx: Context<InitRegistry>, slots: u8, claim_cooldown_s: i64) -> Result<()> {
+        let r = &mut ctx.accounts.registry;
+        r.admin = ctx.accounts.admin.key();
+        r.slots = slots;
+        r.claims = 0;
+        r.last_claim_ts = 0;
+        r.claim_cooldown_s = claim_cooldown_s.max(0);
+        r.bump = ctx.bumps.registry;
+        Ok(())
+    }
+
+    /// Base layer, admin: pre-fund one empty world slot (rent paid by the admin).
+    pub fn init_slot(ctx: Context<InitSlot>, index: u8) -> Result<()> {
+        require!(index < MAX_SLOTS, AstrixError::InvalidSlot);
+        let s = &mut ctx.accounts.slot;
+        clear_world(s, Pubkey::default(), 0, Clock::get()?.unix_timestamp);
+        s.bump = ctx.bumps.slot;
+        Ok(())
+    }
+
+    /// Base layer, admin: delegate the registry to the ER.
+    pub fn delegate_registry(ctx: Context<DelegateRegistry>) -> Result<()> {
+        let admin = ctx.accounts.payer.key();
+        ctx.accounts.delegate_pda(&ctx.accounts.payer, &[REGISTRY_SEED, admin.as_ref()], DelegateConfig {
+            validator: ctx.remaining_accounts.first().map(|a| a.key()), ..Default::default()
+        })?;
+        Ok(())
+    }
+
+    /// Base layer, admin: delegate one world slot to the ER.
+    pub fn delegate_slot(ctx: Context<DelegateSlot>, index: u8) -> Result<()> {
+        require_keys_eq!(*ctx.accounts.pda.owner, crate::ID, AstrixError::NotInitialised);
+        let admin = ctx.accounts.payer.key();
+        ctx.accounts.delegate_pda(&ctx.accounts.payer, &[WORLD_SLOT_SEED, admin.as_ref(), &[index]], DelegateConfig {
+            validator: ctx.remaining_accounts.first().map(|a| a.key()), ..Default::default()
+        })?;
+        Ok(())
+    }
+
+    /// ER, permissionless: a guest key claims an empty slot and becomes the sole
+    /// owner of that world. Rate-limited globally by the registry cooldown. The
+    /// world seed is derived from the claimant's key, so every world differs.
+    pub fn claim_world(ctx: Context<ClaimWorld>, index: u8) -> Result<()> {
+        let now = Clock::get()?.unix_timestamp;
+        let r = &mut ctx.accounts.registry;
+        require!(now >= r.last_claim_ts + r.claim_cooldown_s, AstrixError::ClaimCooldown);
+        let s = &mut ctx.accounts.slot;
+        require_keys_eq!(s.owner, Pubkey::default(), AstrixError::SlotTaken);
+        let k = ctx.accounts.guest.key().to_bytes();
+        let seed = u32::from_le_bytes([k[0], k[1], k[2], k[3]]) ^ (r.claims.wrapping_mul(2_654_435_761)) ^ (index as u32);
+        clear_world(s, ctx.accounts.guest.key(), seed, now);
+        s.stock[res::WOOD] = 24;
+        s.stock[res::STONE] = 48;
+        s.stock[res::SEED] = 6;
+        s.population = 1;
+        r.claims = r.claims.saturating_add(1);
+        r.last_claim_ts = now;
+        msg!("world slot {} claimed by {} with seed {}", index, ctx.accounts.guest.key(), seed);
+        Ok(())
+    }
+
+    /// ER, admin: return an abandoned slot to the pool (for example after a guest
+    /// lost their browser key). Guest worlds are explicitly not permanent.
+    pub fn reset_world(ctx: Context<AdminSlot>, _index: u8) -> Result<()> {
+        clear_world(&mut ctx.accounts.slot, Pubkey::default(), 0, Clock::get()?.unix_timestamp);
+        Ok(())
+    }
+
+    /// ER, admin: one crank ticks up to 16 independent worlds. Each scheduled
+    /// instruction is a separate `tick` on one world account; no state is shared.
+    #[allow(deprecated)]
+    pub fn schedule_world_ticks<'info>(ctx: Context<'info, ScheduleWorldTicks<'info>>, task_id: i64, interval_ms: i64, iterations: i64) -> Result<()> {
+        require_keys_eq!(ctx.accounts.registry.admin, ctx.accounts.payer.key(), AstrixError::NotOwner);
+        let worlds = ctx.remaining_accounts;
+        require!(!worlds.is_empty() && worlds.len() <= MAX_SLOTS_PER_CRANK, AstrixError::InvalidSlot);
+        let mut ixs = Vec::with_capacity(worlds.len());
+        let mut accounts = vec![ctx.accounts.payer.to_account_info()];
+        for w in worlds.iter() {
+            require_keys_eq!(*w.owner, crate::ID, AstrixError::NotInitialised);
+            ixs.push(Instruction {
+                program_id: crate::ID,
+                accounts: vec![AccountMeta::new(w.key(), false)],
+                data: anchor_lang::InstructionData::data(&crate::instruction::Tick {}),
+            });
+            accounts.push(w.clone());
+        }
+        ScheduleCrankCpi {
+            payer: &ctx.accounts.payer,
+            magic_program: &&ctx.accounts.magic_program,
+            instruction_accounts: &accounts,
+            args: ScheduleTaskArgs { task_id, execution_interval_millis: interval_ms, iterations, instructions: ixs },
+        }.invoke()?;
+        Ok(())
+    }
+
+    /// ER, admin: commit a set of world slots (and the registry) to Solana.
+    pub fn commit_worlds<'info>(ctx: Context<'info, CommitWorlds<'info>>) -> Result<()> {
+        require_keys_eq!(ctx.accounts.registry.admin, ctx.accounts.payer.key(), AstrixError::NotOwner);
+        let mut list = vec![ctx.accounts.registry.to_account_info()];
+        for w in ctx.remaining_accounts.iter() {
+            require_keys_eq!(*w.owner, crate::ID, AstrixError::NotInitialised);
+            list.push(w.clone());
+        }
+        ctx.accounts.registry.exit(&crate::ID)?;
+        MagicIntentBundleBuilder::new(
+            ctx.accounts.payer.to_account_info(),
+            ctx.accounts.magic_context.to_account_info(),
+            ctx.accounts.magic_program.to_account_info(),
+        ).commit(&list).build_and_invoke()?;
+        Ok(())
+    }
+
     /// Owner only, on the ER: commit the current settlement state to Solana.
     pub fn commit_settlement(ctx: Context<CommitSettlement>) -> Result<()> {
         require_keys_eq!(ctx.accounts.settlement.owner, ctx.accounts.payer.key(), AstrixError::NotOwner);
@@ -322,6 +443,28 @@ pub mod astrix_settlement {
         .build_and_invoke()?;
         Ok(())
     }
+}
+
+fn clear_world(s: &mut Account<Settlement>, owner: Pubkey, seed: u32, now: i64) {
+    s.owner = owner;
+    s.world_seed = seed;
+    s.generator = 2;
+    s.tick = 0;
+    s.last_tick_ts = now;
+    s.tick_interval_s = 2;
+    s.stock = [0; res::COUNT];
+    s.plots = [EMPTY_PLOT; PLOTS];
+    s.population = 0;
+    s.sawmill = false;
+    s.prospect_pending = false;
+    s.prospects = 0;
+    s.last_find = 0;
+    s.last_roll = 0;
+    s.rare_finds = 0;
+    s.session_key = Pubkey::default();
+    s.session_expires = 0;
+    s.session_budget = 0;
+    s.actions = 0;
 }
 
 /// Owner always; session key only while unexpired and within its action budget.
@@ -360,6 +503,96 @@ pub struct Settlement {
     pub actions: u64,
 }
 
+#[account]
+#[derive(InitSpace)]
+pub struct Registry {
+    pub admin: Pubkey,
+    pub slots: u8,
+    pub bump: u8,
+    pub claims: u32,
+    pub last_claim_ts: i64,
+    pub claim_cooldown_s: i64,
+}
+
+#[derive(Accounts)]
+pub struct InitRegistry<'info> {
+    #[account(init, payer = admin, space = 8 + Registry::INIT_SPACE, seeds = [REGISTRY_SEED, admin.key().as_ref()], bump)]
+    pub registry: Account<'info, Registry>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(index: u8)]
+pub struct InitSlot<'info> {
+    #[account(init, payer = admin, space = 8 + Settlement::INIT_SPACE, seeds = [WORLD_SLOT_SEED, admin.key().as_ref(), &[index]], bump)]
+    pub slot: Account<'info, Settlement>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[delegate]
+#[derive(Accounts)]
+pub struct DelegateRegistry<'info> {
+    pub payer: Signer<'info>,
+    /// CHECK: the admin's registry PDA
+    #[account(mut, del, seeds = [REGISTRY_SEED, payer.key().as_ref()], bump)]
+    pub pda: UncheckedAccount<'info>,
+}
+
+#[delegate]
+#[derive(Accounts)]
+#[instruction(index: u8)]
+pub struct DelegateSlot<'info> {
+    pub payer: Signer<'info>,
+    /// CHECK: one of the admin's world slot PDAs
+    #[account(mut, del, seeds = [WORLD_SLOT_SEED, payer.key().as_ref(), &[index]], bump)]
+    pub pda: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(index: u8)]
+pub struct ClaimWorld<'info> {
+    #[account(mut, seeds = [REGISTRY_SEED, registry.admin.as_ref()], bump = registry.bump)]
+    pub registry: Account<'info, Registry>,
+    #[account(mut, seeds = [WORLD_SLOT_SEED, registry.admin.as_ref(), &[index]], bump = slot.bump)]
+    pub slot: Account<'info, Settlement>,
+    pub guest: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(index: u8)]
+pub struct AdminSlot<'info> {
+    #[account(seeds = [REGISTRY_SEED, admin.key().as_ref()], bump = registry.bump, has_one = admin)]
+    pub registry: Account<'info, Registry>,
+    #[account(mut, seeds = [WORLD_SLOT_SEED, admin.key().as_ref(), &[index]], bump = slot.bump)]
+    pub slot: Account<'info, Settlement>,
+    pub admin: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ScheduleWorldTicks<'info> {
+    /// CHECK: MagicBlock magic program
+    pub magic_program: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(seeds = [REGISTRY_SEED, payer.key().as_ref()], bump = registry.bump)]
+    pub registry: Account<'info, Registry>,
+    /// CHECK: this program
+    pub program: UncheckedAccount<'info>,
+}
+
+#[commit]
+#[derive(Accounts)]
+pub struct CommitWorlds<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(mut, seeds = [REGISTRY_SEED, payer.key().as_ref()], bump = registry.bump)]
+    pub registry: Account<'info, Registry>,
+}
+
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(init, payer = owner, space = 8 + Settlement::INIT_SPACE,
@@ -388,14 +621,16 @@ pub struct OwnerOnly<'info> {
 
 #[derive(Accounts)]
 pub struct PlayerAction<'info> {
-    #[account(mut, seeds = [SETTLEMENT_SEED, settlement.owner.as_ref()], bump = settlement.bump)]
+    /// Any settlement or world slot of this program (owner + discriminator checked
+    /// by Anchor); who may act is decided by `authorise`.
+    #[account(mut)]
     pub settlement: Account<'info, Settlement>,
     pub signer: Signer<'info>,
 }
 
 #[derive(Accounts)]
 pub struct Tick<'info> {
-    #[account(mut, seeds = [SETTLEMENT_SEED, settlement.owner.as_ref()], bump = settlement.bump)]
+    #[account(mut)]
     pub settlement: Account<'info, Settlement>,
 }
 
@@ -419,7 +654,7 @@ pub struct ScheduleTicks<'info> {
 pub struct Prospect<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    #[account(mut, seeds = [SETTLEMENT_SEED, settlement.owner.as_ref()], bump = settlement.bump)]
+    #[account(mut)]
     pub settlement: Account<'info, Settlement>,
     /// CHECK: MagicBlock oracle queue (base or ephemeral)
     #[account(mut, constraint =
@@ -465,4 +700,7 @@ pub enum AstrixError {
     #[msg("a prospect is already waiting for randomness")] ProspectPending,
     #[msg("no prospect is pending")] NoProspect,
     #[msg("settlement is not initialised")] NotInitialised,
+    #[msg("invalid world slot")] InvalidSlot,
+    #[msg("world slot already has an owner")] SlotTaken,
+    #[msg("too many worlds created recently; try again shortly")] ClaimCooldown,
 }

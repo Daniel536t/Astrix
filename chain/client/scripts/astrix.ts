@@ -78,12 +78,61 @@ async function erSend(ix: anchor.web3.TransactionInstruction, signers: Keypair[]
 }
 
 const settlement = settlementPda(owner.publicKey);
+const registryPda = PublicKey.findProgramAddressSync([Buffer.from('astrix-registry'), owner.publicKey.toBuffer()], PROGRAM_ID)[0];
+const slotPda = (i: number) => PublicKey.findProgramAddressSync([Buffer.from('world-slot'), owner.publicKey.toBuffer(), Buffer.from([i])], PROGRAM_ID)[0];
+const delegationAccounts = (pda: PublicKey) => ({
+  bufferPda: delegateBufferPdaFromDelegatedAccountAndOwnerProgram(pda, PROGRAM_ID),
+  delegationRecordPda: delegationRecordPdaFromDelegatedAccount(pda),
+  delegationMetadataPda: delegationMetadataPdaFromDelegatedAccount(pda),
+  ownerProgram: PROGRAM_ID, delegationProgram: DELEGATION_PROGRAM_ID, systemProgram: SystemProgram.programId,
+});
+const validatorMeta = [{ pubkey: ER_VALIDATOR, isSigner: false, isWritable: false }];
 const [cmd, a1, a2, a3] = process.argv.slice(2);
 const out = (o: unknown) => console.log(JSON.stringify(o, null, 2));
 const erTx = (sig: string) => ({ sig, explorer: `https://explorer.solana.com/tx/${sig}?cluster=custom&customUrl=${encodeURIComponent(ER_RPC)}` });
 const baseTx = (sig: string) => ({ sig, explorer: `https://explorer.solana.com/tx/${sig}?cluster=devnet` });
 
-if (cmd === 'status') {
+if (cmd === 'setup-worlds') {
+  // Base layer, admin: registry + N empty slots, all delegated to the ER.
+  const n = Number(a1 ?? 16), cooldown = Number(a2 ?? 10);
+  const log: string[] = [];
+  if (!(await base.getAccountInfo(registryPda))) {
+    log.push(await program(base).methods.initRegistry(n, new BN(cooldown)).accountsPartial({ registry: registryPda, admin: owner.publicKey, systemProgram: SystemProgram.programId }).rpc());
+    log.push(await program(base).methods.delegateRegistry().accountsPartial({ payer: owner.publicKey, pda: registryPda, ...delegationAccounts(registryPda) }).remainingAccounts(validatorMeta).rpc());
+  }
+  const pause = () => new Promise((r) => setTimeout(r, 1500));
+  for (let i = 0; i < n; i++) {
+    await pause();
+    const pda = slotPda(i);
+    const info = await base.getAccountInfo(pda);
+    if (!info) log.push(await program(base).methods.initSlot(i).accountsPartial({ slot: pda, admin: owner.publicKey, systemProgram: SystemProgram.programId }).rpc());
+    if (!info) await pause();
+    if (!info || info.owner.equals(PROGRAM_ID)) log.push(await program(base).methods.delegateSlot(i).accountsPartial({ payer: owner.publicKey, pda, ...delegationAccounts(pda) }).remainingAccounts(validatorMeta).rpc());
+  }
+  out({ registry: registryPda.toBase58(), slots: Array.from({ length: n }, (_, i) => slotPda(i).toBase58()), transactions: log.length });
+} else if (cmd === 'schedule-worlds') {
+  const n = Number(a3 ?? 16);
+  const ix = await program(er).methods.scheduleWorldTicks(new BN(a1 ?? 742101), new BN(a2 ?? 2000), new BN(200000))
+    .accountsPartial({ magicProgram: MAGIC_PROGRAM_ID, payer: owner.publicKey, registry: registryPda, program: PROGRAM_ID })
+    .remainingAccounts(Array.from({ length: n }, (_, i) => ({ pubkey: slotPda(i), isSigner: false, isWritable: true }))).instruction();
+  out(erTx(await erSend(ix)));
+} else if (cmd === 'commit-worlds') {
+  const n = Number(a1 ?? 16);
+  const ix = await program(er).methods.commitWorlds()
+    .accountsPartial({ payer: owner.publicKey, registry: registryPda, magicProgram: MAGIC_PROGRAM_ID, magicContext: MAGIC_CONTEXT_ID })
+    .remainingAccounts(Array.from({ length: n }, (_, i) => ({ pubkey: slotPda(i), isSigner: false, isWritable: true }))).instruction();
+  out(erTx(await erSend(ix)));
+} else if (cmd === 'worlds') {
+  const n = Number(a1 ?? 16);
+  const rows = [];
+  for (let i = 0; i < n; i++) {
+    const info = await er.getAccountInfo(slotPda(i));
+    if (!info) { rows.push({ i, missing: true }); continue; }
+    const w: any = program(er).coder.accounts.decode('settlement', info.data);
+    rows.push({ i, owner: w.owner.toBase58().slice(0, 8), seed: w.worldSeed, tick: Number(w.tick), pop: w.population, food: w.stock[3], wood: w.stock[0], planks: w.stock[6], sawmill: w.sawmill, plots: w.plots.filter((p: any) => p.toString() !== '18446744073709551615').length });
+  }
+  console.table(rows);
+} else if (cmd === 'status') {
   out({ owner: owner.publicKey.toBase58(), settlement: settlement.toBase58(), base: await read(base), er: await read(er) });
 } else if (cmd === 'init') {
   const sig = await program(base).methods.initialize(Number(a1 ?? 1337), Number(a2 ?? 2), new BN(2))

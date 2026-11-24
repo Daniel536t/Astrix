@@ -7,6 +7,7 @@
 // state and explorer links. Loaded lazily; any failure leaves the game intact.
 import * as THREE from 'three';
 import { SettlementWatcher, ChainView, CHAIN, RESOURCE_NAMES } from './settlement';
+import { GuestWorld } from './guest';
 import { buildCottage, buildCrate, buildWoodpile, buildFence } from '../render/village-kit';
 import { buildFigure, VILLAGER_STYLE } from '../render/characters';
 
@@ -17,7 +18,11 @@ export interface ChainViewOptions {
 }
 
 export function startChainView(o: ChainViewOptions): { metrics: () => Record<string, unknown> } {
-  const watcher = new SettlementWatcher();
+  const guest = new GuestWorld();
+  const watcher = new SettlementWatcher(guest.address ?? undefined);
+  let busy = '';
+  let lastResult = '';
+  const erTx = (sig: string) => `https://explorer.solana.com/tx/${sig}?cluster=custom&customUrl=${encodeURIComponent(CHAIN.erRpc)}`;
   const root = new THREE.Group();
   root.name = 'magicblock_settlement';
   o.scene.add(root);
@@ -26,6 +31,11 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   panel.setAttribute('role', 'region');
   panel.setAttribute('aria-label', 'MagicBlock settlement');
   document.body.appendChild(panel);
+  const info = document.createElement('div');
+  const controls = document.createElement('div');
+  const links = document.createElement('div');
+  panel.append(info, controls, links);
+  let controlsKey = '';
   let lastKey = '';
   let tickSamples: Array<{ t: number; tick: number }> = [];
 
@@ -76,19 +86,68 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
     const rate = first && last && last.t > first.t ? ((last.tick - first.tick) / ((last.t - first.t) / 1000)) : 0;
     const er = `https://explorer.solana.com/address/${watcher.addressBase58}?cluster=custom&customUrl=${encodeURIComponent(CHAIN.erRpc)}`;
     const base = `https://explorer.solana.com/address/${watcher.addressBase58}?cluster=devnet`;
-    panel.innerHTML = `<strong>MagicBlock settlement</strong> <span class="${v.error ? 'warn' : 'ok'}">${v.error ? 'offline — local game unaffected' : v.delegated ? 'live on Ephemeral Rollup' : 'on Solana'}</span>`
+    const mine = !!guest.record;
+    const title = mine ? `Your world <span class="dim">· slot ${guest.record!.slot} · seed ${guest.record!.seed}</span>` : 'Demo settlement <span class="dim">(owner-run)</span>';
+    let html = `<strong>MagicBlock · ${title}</strong><br><span class="${v.error ? 'warn' : 'ok'}">${v.error ? 'offline — local game unaffected' : 'live on Ephemeral Rollup'}</span>`
       + (s ? `<div>tick <b>${s.tick}</b> · crank ${rate > 0 ? rate.toFixed(2) + ' ticks/s' : 'measuring…'} · settlers ${s.population}${s.sawmill ? ' · sawmill' : ''}</div>`
         + `<div class="stock">${RESOURCE_NAMES.map((n) => `${n} ${s.stock[n]}`).join(' · ')}</div>`
-        + `<div>prospects ${s.prospects} · last VRF find: <b>${s.lastFind}</b> (roll ${s.lastRoll}) · rare ${s.rareFinds}</div>` : '<div>loading…</div>')
-      + (c ? `<div class="dim">committed to Solana at tick ${c.tick}</div>` : '')
-      + `<div class="dim"><a href="${er}" target="_blank" rel="noopener">ER account</a> · <a href="${base}" target="_blank" rel="noopener">Solana account</a> · M: hide</div>`;
+        + `<div>prospects ${s.prospects} · last VRF find: <b>${s.lastFind}</b>${s.prospectPending ? ' (waiting for randomness…)' : ` (roll ${s.lastRoll})`}</div>` : '<div>loading…</div>')
+      + (c && !mine ? `<div class="dim">committed to Solana at tick ${c.tick}</div>` : '');
+    let ctl = '';
+    if (mine) {
+      ctl += `<div class="chain-actions">`
+        + ['plant:Plant crop', 'wood:Gather wood', 'stone:Quarry stone', 'sawmill:Build sawmill', 'prospect:Prospect (VRF)']
+          .map((x) => { const [k, l] = x.split(':'); return `<button data-act="${k}" ${busy ? 'disabled' : ''}>${l}</button>`; }).join('')
+        + `</div><div class="dim result">${busy || lastResult}</div>`;
+      ctl += `<div class="dim">Guest key kept only in this browser (no wallet, no SOL). Clearing site data loses this world unless you <a href="#" data-key="export">export the key</a>. Not permanent ownership.</div>`;
+    } else {
+      ctl += `<div class="chain-actions"><button data-act="create" class="primary" ${busy ? 'disabled' : ''}>Create my own world</button></div>`
+        + `<div class="dim result">${busy || 'Free: a temporary key is created in this browser; no wallet or SOL needed.'} <a href="#" data-key="import">Import a saved key</a></div>`;
+    }
+    info.innerHTML = html;
+    if (ctl !== controlsKey) { controls.innerHTML = ctl; controlsKey = ctl; }
+    const l = `<div class="dim"><a href="${er}" target="_blank" rel="noopener">ER account</a> · <a href="${base}" target="_blank" rel="noopener">Solana account</a> · M: hide</div>`;
+    if (links.innerHTML !== l) links.innerHTML = l;
     rebuild(v);
   };
 
   watcher.onChange = render;
+  const run = async (act: string) => {
+    if (busy) return;
+    try {
+      if (act === 'create') {
+        busy = 'creating your world…'; render(watcher.view);
+        const rec = await guest.create((m) => { busy = m; render(watcher.view); });
+        busy = `world created (seed ${rec.seed}) — loading your terrain…`; render(watcher.view);
+        const q = new URLSearchParams(location.search); q.delete('seed');
+        setTimeout(() => { location.search = q.toString(); }, 900);
+        return;
+      }
+      busy = `${act}…`; render(watcher.view);
+      const s = watcher.view.live;
+      const plot = s ? Math.max(0, s.plots.findIndex((p) => p === null)) : 0;
+      const r = await guest.act(act as 'plant', plot);
+      lastResult = r.ok ? `done: ${act} <a href="${erTx(r.sig)}" target="_blank" rel="noopener">tx</a>` : `failed: ${act}: ${r.reason}`;
+    } catch (e) { lastResult = `failed: ${(e as Error).message}`; }
+    busy = ''; render(watcher.view);
+  };
+  panel.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const act = t.closest('button')?.getAttribute('data-act');
+    if (act) { void run(act); return; }
+    const key = t.getAttribute('data-key');
+    if (key === 'export') { e.preventDefault(); guest.exportKey(); }
+    if (key === 'import') {
+      e.preventDefault();
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'application/json';
+      input.onchange = async () => { const f = input.files?.[0]; if (f && guest.importKey(await f.text())) location.reload(); };
+      input.click();
+    }
+  });
   watcher.start();
   window.addEventListener('keydown', (e) => {
     if (e.key === 'm' || e.key === 'M') panel.classList.toggle('hidden');
   });
-  return { metrics: () => ({ ...watcher.view, address: watcher.addressBase58 }) };
+  return { metrics: () => ({ ...watcher.view, address: watcher.addressBase58, guest: guest.record ? { slot: guest.record.slot, seed: guest.record.seed, key: guest.publicKey } : null }) };
 }

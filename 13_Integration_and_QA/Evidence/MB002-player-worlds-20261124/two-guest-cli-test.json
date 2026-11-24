@@ -1,0 +1,95 @@
+{
+  "balances": {
+    "alice": 0,
+    "bob": 0
+  },
+  "aliceClaim": {
+    "slot": 0,
+    "ok": true,
+    "sig": "35wDxdWtpFfLHAfXrpveWKHcfUcN5b5BXCmTujdWFHdACGXKrMUBMYYUzQ5F4yeLmUkDiAgE5aofU9pXf4PKWc9e"
+  },
+  "bobTooSoon": {
+    "ok": false,
+    "err": "0x1781"
+  },
+  "bobClaim": {
+    "slot": 1,
+    "ok": true,
+    "sig": "CnhkneVJsA1ZJz5iPawtBJPrzYBMqCBtbfQYQsP6Jq6zCenSFCBErttnE7j5C8YvGU4VUixLxGmRYPuL1cnHGAu"
+  },
+  "bobStealsAlice": {
+    "ok": false,
+    "err": "0x1781"
+  },
+  "alicePlant": [
+    true,
+    true,
+    true
+  ],
+  "bobSawmill": true,
+  "bobHarvest": true,
+  "bobPlantsInAlice": {
+    "ok": false,
+    "err": "0x1772"
+  },
+  "bobResetsAlice": {
+    "ok": false,
+    "err": "0x7d6"
+  },
+  "balancesAfter": {
+    "alice": 0,
+    "bob": 0
+  },
+  "worldsNow": {
+    "alice": {
+      "owner": "FWh6peoH3Yi2hGG4j2mqhnQCJBXQBQ48wJyjHgxeSh8L",
+      "seed": 1422761687,
+      "tick": 7,
+      "wood": 24,
+      "stone": 48,
+      "food": 0,
+      "seedStock": 3,
+      "planks": 0,
+      "pop": 1,
+      "sawmill": false
+    },
+    "bob": {
+      "owner": "5EBnU2XKKb7tW9GHGNjqJZ5osPsWoMxwqVZYhf5bc6L9",
+      "seed": 1145747086,
+      "tick": 1,
+      "wood": 18,
+      "stone": 42,
+      "food": 0,
+      "seedStock": 6,
+      "planks": 0,
+      "pop": 1,
+      "sawmill": true
+    }
+  },
+  "worldsAfter20s": {
+    "alice": {
+      "owner": "FWh6peoH3Yi2hGG4j2mqhnQCJBXQBQ48wJyjHgxeSh8L",
+      "seed": 1422761687,
+      "tick": 17,
+      "wood": 24,
+      "stone": 48,
+      "food": 35,
+      "seedStock": 9,
+      "planks": 0,
+      "pop": 1,
+      "sawmill": false
+    },
+    "bob": {
+      "owner": "5EBnU2XKKb7tW9GHGNjqJZ5osPsWoMxwqVZYhf5bc6L9",
+      "seed": 1145747086,
+      "tick": 11,
+      "wood": 0,
+      "stone": 42,
+      "food": 0,
+      "seedStock": 6,
+      "planks": 9,
+      "pop": 1,
+      "sawmill": true
+    }
+  }
+}

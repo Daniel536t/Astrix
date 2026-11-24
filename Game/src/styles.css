@@ -698,3 +698,7 @@ body.clean #mode-button, body.kit #mode-button, body.map #mode-button { display:
 #chain-panel a { color: #C9B8FF; }
 body.clean #chain-panel { display: none; }
 @media (pointer: coarse) { #chain-panel { bottom: auto; top: 60px; } }
+#chain-panel .chain-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+#chain-panel button { padding: 5px 8px; color: #F4EFE3; background: #3a3550; border: 1px solid #7d6fc4; border-radius: 6px; font: 600 11px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+#chain-panel button.primary { background: #6a4fd6; padding: 8px 12px; font-size: 12px; }
+#chain-panel button:disabled { opacity: 0.5; cursor: wait; }
