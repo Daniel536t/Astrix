@@ -68,6 +68,36 @@ Build served from a copy of `Game/dist`, farm view `?chain=0&mode=builder&tx=-28
 - No before/after live measurement of the old build, so the improvement in the live game is inferred from the cause analysis and the failing-without-fix test.
 - Chunk-mesh uploads were not found to spike (terrain section max 0.4 ms in this scene), but walking across many new chunks was not measured live in this run.
 
+## FEAT-004: animal behaviour evidence
+
+### Tests (`Game/tests/m007.behaviour.test.ts` new, `m007.predators.test.ts`, `m006.homestead.test.ts`)
+Full suite: 202 pass, `tsc --noEmit` clean, `npm run build` succeeds.
+
+### Live browser (this build, fresh context, software GL, 42 frames over 43 s, no page errors)
+- Local `Game/dist` copy served at a routed origin. Data: `probe-local-farm.json`, screenshot `probe-local-farm.png`. Script: `.kiro/artifacts/screenshots/probe/feat004-b.js`.
+- Wildlife drawn: 46 rabbits, 2 deer, 2 foxes, 10 trout, 0 wolves (none spawn in view here). Farm animals drawn: cattle 2, chickens 4, goats 2, horses 2, pigs 2, sheep 3.
+- Positions changed over the run for farm animals (all species) and for 4 of the 4 rabbits present on the first frame. Deer, foxes and trout were not drawn yet on the first frame, so their movement was not compared.
+- https://astrix.nyc.boxd.sh answered HTTP 200, but it serves the older release, so it was not probed.
+
+### Per-behaviour status
+| Behaviour | Status |
+|---|---|
+| Wildlife and farm animals appear | verified-in-browser (software GL) |
+| Farm animals move | verified-in-browser; smooth blending also verified-by-test |
+| Rabbits move | verified-in-browser (4 rabbits) |
+| Deer, foxes, trout, wolves move | not verified in browser; fox and deer reactions verified-by-test |
+| Hare flees fox, deer flee wolves not foxes | verified-by-test (`m007.predators`) |
+| Fox stalks, pounces, gives up | verified-by-test; not seen in browser |
+| Predator kills prey | not implemented. The fox ends a missed or finished pounce in rest and the hare is not removed. Wildlife is presentation only. |
+| Wolf pack cohesion and group flee | verified-by-test (`m007.predators`) |
+| Feeding (pasture first, trough when bare, none without water) | verified-by-test (`m007.behaviour`) |
+| Starvation death | verified-by-test (`m006.homestead`) |
+| Reproduction (fed adult pair, litter, unique ids, capacity) | verified-by-test (`m007.behaviour`, `m006.homestead`) |
+| Wildlife excluded from save and hash; old journals replay to the same hash | verified-by-test (`m007.behaviour`) |
+| Persistence in a real browser reload | not verified |
+| Real phones, 60 fps feel | not verified |
+| Vegetation, villager navigation, new species | out of scope |
+
 ## Visual model vs simulation behaviour
 
 - The figure has no distinct second-jump animation. It uses the existing airborne pose, and only the simulated height changes.
