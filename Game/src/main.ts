@@ -27,6 +27,7 @@ import { TouchControls } from './app/touch-controls';
 import { VitalsHud } from './app/vitals-hud';
 import { HomesteadGame } from './app/homestead';
 import { DAY_TICKS } from './sim/homestead';
+import { buildAnimalShowcase } from './render/animal-showcase';
 
 // A startup failure would otherwise leave a blank canvas with no explanation.
 window.addEventListener('error', (e) => {
@@ -207,6 +208,7 @@ function toggleMode(force?: 'explore' | 'builder'): void {
   if (button) button.textContent = explore.active ? 'Builder view' : 'Walk';
 }
 let sceneInspector: SceneInspector | null = null;
+let showcase: { group: THREE.Group; update: (dt: number) => void } | null = null;
 let homesteadGame: HomesteadGame | null = null;
 /** The object inspector is a developer tool now: ?inspect=1 (also in the kit scene). */
 const devInspect = params.get('inspect') === '1' || isKit;
@@ -215,6 +217,10 @@ terrainView.onChunksChanged = () => { natureDirty = true; faunaDirty = true; };
 // Living creatures (ambient tier) for the resident near chunks.
 const fauna = isMap || isKit ? null : new FaunaView(world);
 if (fauna) scene.add(fauna.group);
+if (params.get('animals') === '1') {
+  showcase = buildAnimalShowcase(kitX, kitZ, (x, z) => residentSurfaceAt(world, Math.floor(x), Math.floor(z)) ?? surfaceAt(world, Math.floor(x), Math.floor(z)));
+  scene.add(showcase.group);
+}
 // Construction previews query the settlement envelope several times a second;
 // keep it resident so chunk lifetime sweeps never thrash it.
 for (const r of M002_LAYOUT.envelope) terrainView.pinRect(r.x0, r.z0, r.x1, r.z1);
@@ -546,6 +552,7 @@ function frame(timestamp?: number) {
     : !lease.isLeader ? 'another tab is running this world — time paused here'
       : time.paused ? 'settlement paused (P)' : realtimeNote.startsWith('settlement time stopped') ? realtimeNote
         : `settlement tick ${session.world.life?.tick ?? 0} · next in ${simClock.secondsToNext.toFixed(0)} s`;
+  showcase?.update(dt);
   if (fauna) {
     if (faunaDirty) { fauna.sync(terrainView.loadedChunkKeys); faunaDirty = false; }
     const ch = explore?.active ? explore.character : null;

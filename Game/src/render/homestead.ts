@@ -8,9 +8,11 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { World } from '../sim/world';
 import { residentSurfaceAt, surfaceAt } from '../sim/world';
 import {
-  CROP_RULES, DM, Facility, HomesteadState, MOISTURE_MAX, Plot, Species, TROUGH_MAX, cropStage, fieldRect,
-  homesteadLayout, SPECIES_RULES, unitsOf,
+  CROP_RULES, DM, Facility, HomesteadState, MOISTURE_MAX, Plot, SPECIES, Species, TROUGH_MAX, cropStage, fieldRect,
+  dayTime, homesteadLayout, SPECIES_RULES, unitsOf,
 } from '../sim/homestead';
+import { AnimalBatch } from './animal-kit';
+import { ANIMAL_MODELS } from './animal-models';
 import { FOUNDER_STOCKPILE } from '../sim/economy';
 import { buildCottage, buildWell } from './village-kit';
 import { Figure, FARMER_STYLE, HERDER_STYLE, buildFigure, animateFigure, placeFigure } from './characters';
@@ -141,96 +143,71 @@ function fieldMesh(world: World, p: Plot, ground: (x: number, z: number) => numb
 
 // ---------- animals ----------
 
-type Part = { w: number; h: number; d: number; x?: number; y: number; z?: number; c: string };
-const ANIMAL_PARTS: Record<Species, Part[]> = {
-  chicken: [
-    { w: 0.28, h: 0.24, d: 0.36, y: 0.14, c: '#F2EEE4' }, { w: 0.16, h: 0.16, d: 0.16, y: 0.34, z: 0.18, c: '#F2EEE4' },
-    { w: 0.06, h: 0.07, d: 0.1, y: 0.48, z: 0.18, c: '#C8322A' }, { w: 0.06, h: 0.05, d: 0.08, y: 0.36, z: 0.29, c: '#E0A030' },
-    { w: 0.04, h: 0.14, d: 0.04, x: -0.07, y: 0, c: '#E0A030' }, { w: 0.04, h: 0.14, d: 0.04, x: 0.07, y: 0, c: '#E0A030' },
-    { w: 0.2, h: 0.14, d: 0.1, y: 0.3, z: -0.2, c: '#E6E0D2' },
-  ],
-  sheep: [
-    { w: 0.7, h: 0.55, d: 1.0, y: 0.38, c: '#EDE6D6' }, { w: 0.3, h: 0.34, d: 0.32, y: 0.62, z: 0.58, c: '#3A3330' },
-    { w: 0.14, h: 0.1, d: 0.06, x: -0.2, y: 0.78, z: 0.55, c: '#3A3330' }, { w: 0.14, h: 0.1, d: 0.06, x: 0.2, y: 0.78, z: 0.55, c: '#3A3330' },
-    ...[[-0.22, 0.32], [0.22, 0.32], [-0.22, -0.32], [0.22, -0.32]].map(([x, z]) => ({ w: 0.13, h: 0.4, d: 0.13, x, y: 0, z, c: '#3A3330' })),
-  ],
-  goat: [
-    { w: 0.5, h: 0.45, d: 0.9, y: 0.48, c: '#9C8B76' }, { w: 0.24, h: 0.3, d: 0.3, y: 0.82, z: 0.52, c: '#8A7A66' },
-    { w: 0.05, h: 0.22, d: 0.05, x: -0.08, y: 1.08, z: 0.46, c: '#5A4E42' }, { w: 0.05, h: 0.22, d: 0.05, x: 0.08, y: 1.08, z: 0.46, c: '#5A4E42' },
-    { w: 0.08, h: 0.14, d: 0.06, y: 0.68, z: 0.64, c: '#6E6152' },
-    ...[[-0.16, 0.3], [0.16, 0.3], [-0.16, -0.3], [0.16, -0.3]].map(([x, z]) => ({ w: 0.1, h: 0.5, d: 0.1, x, y: 0, z, c: '#6E6152' })),
-  ],
-  pig: [
-    { w: 0.6, h: 0.5, d: 1.0, y: 0.24, c: '#E7A7A0' }, { w: 0.38, h: 0.34, d: 0.26, y: 0.34, z: 0.58, c: '#E29A93' },
-    { w: 0.2, h: 0.14, d: 0.08, y: 0.4, z: 0.74, c: '#D2847C' }, { w: 0.1, h: 0.1, d: 0.04, x: -0.13, y: 0.66, z: 0.56, c: '#D2847C' },
-    { w: 0.1, h: 0.1, d: 0.04, x: 0.13, y: 0.66, z: 0.56, c: '#D2847C' },
-    ...[[-0.18, 0.32], [0.18, 0.32], [-0.18, -0.32], [0.18, -0.32]].map(([x, z]) => ({ w: 0.13, h: 0.26, d: 0.13, x, y: 0, z, c: '#D2847C' })),
-  ],
-  cattle: [
-    { w: 0.85, h: 0.75, d: 1.7, y: 0.65, c: '#4A3A2E' }, { w: 0.86, h: 0.4, d: 0.5, y: 0.9, z: -0.2, c: '#EDE6D6' },
-    { w: 0.42, h: 0.42, d: 0.5, y: 1.05, z: 1.0, c: '#4A3A2E' }, { w: 0.3, h: 0.2, d: 0.14, y: 1.0, z: 1.28, c: '#D9B6A0' },
-    { w: 0.6, h: 0.08, d: 0.08, y: 1.48, z: 0.95, c: '#E8DEC6' },
-    ...[[-0.3, 0.6], [0.3, 0.6], [-0.3, -0.6], [0.3, -0.6]].map(([x, z]) => ({ w: 0.18, h: 0.65, d: 0.18, x, y: 0, z, c: '#3A2E24' })),
-  ],
-  horse: [
-    { w: 0.6, h: 0.65, d: 1.6, y: 0.95, c: '#7A4E2E' }, { w: 0.3, h: 0.7, d: 0.34, y: 1.3, z: 0.78, c: '#7A4E2E' },
-    { w: 0.28, h: 0.3, d: 0.62, y: 1.78, z: 1.0, c: '#6E4528' }, { w: 0.1, h: 0.6, d: 0.3, y: 1.4, z: 0.66, c: '#2E2018' },
-    { w: 0.12, h: 0.6, d: 0.12, y: 0.75, z: -0.86, c: '#2E2018' },
-    ...[[-0.2, 0.62], [0.2, 0.62], [-0.2, -0.62], [0.2, -0.62]].map(([x, z]) => ({ w: 0.15, h: 0.95, d: 0.15, x, y: 0, z, c: '#5A3820' })),
-  ],
-};
-const ANIMAL_CAP = 64;
+const HERD_CAP = 64;
+const shortest = (from: number, to: number) => { let d = to - from; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
+interface Seen { shown?: number; x: number; z: number; heading: number; phase: number; swing: number; hunger: number; eatUntil: number; speed: number; px: number; pz: number }
 
-/** One instanced mesh per species: up to 6 draw calls for every animal on the farm. */
+/**
+ * Every farm animal, one animated instanced mesh per species. Poses come from
+ * the simulation: legs swing at the speed the animal actually moved between
+ * ticks, the head goes down when its hunger just dropped (it ate or drank),
+ * sheep wool follows the real wool counter, animals lie down at night.
+ */
 class Herd {
-  readonly meshes = new Map<Species, THREE.InstancedMesh>();
-  private readonly prev = new Map<string, { x: number; z: number; heading: number }>();
-  private readonly cur = new Map<string, { x: number; z: number; heading: number }>();
+  readonly batches = new Map<Species, AnimalBatch>();
+  private readonly seen = new Map<string, Seen>();
   constructor(group: THREE.Group) {
-    for (const sp of Object.keys(ANIMAL_PARTS) as Species[]) {
-      const g = boxes(ANIMAL_PARTS[sp].map((p) => ({ x: 0, z: 0, ...p })));
-      const im = new THREE.InstancedMesh(g, MAT, ANIMAL_CAP);
-      im.name = `herd_${sp}`; im.castShadow = true; im.receiveShadow = true; im.count = 0; im.frustumCulled = false;
-      group.add(im);
-      this.meshes.set(sp, im);
+    for (const sp of SPECIES) {
+      const b = new AnimalBatch(ANIMAL_MODELS[sp], HERD_CAP, `herd_${sp}`);
+      this.batches.set(sp, b);
+      group.add(b.mesh);
     }
   }
-  /** Called when a new tick arrives: the old positions become the interpolation start. */
-  advance(h: HomesteadState): void {
-    this.prev.clear();
-    for (const [id, p] of this.cur) this.prev.set(id, p);
-    this.cur.clear();
+  /** A new tick arrived: measure how far each animal moved and whether it just ate. */
+  advance(h: HomesteadState, tickSeconds: number): void {
+    const now = performance.now() / 1000, alive = new Set<string>();
     for (const a of h.animals) {
-      const old = this.prev.get(a.id);
-      const x = a.x / DM, z = a.z / DM;
-      const moved = old ? Math.hypot(x - old.x, z - old.z) : 0;
-      const heading = old && moved > 0.05 ? Math.atan2(x - old.x, z - old.z) : old?.heading ?? hash(a.x, a.z) * Math.PI * 2;
-      this.cur.set(a.id, { x, z, heading });
+      alive.add(a.id);
+      const x = a.x / DM, z = a.z / DM, s = this.seen.get(a.id);
+      if (!s) { this.seen.set(a.id, { x, z, px: x, pz: z, heading: hash(a.x, a.z) * Math.PI * 2, phase: hash(a.z, a.x) * 6, swing: 0, hunger: a.hunger, eatUntil: 0, speed: 0 }); continue; }
+      s.px = s.x; s.pz = s.z; s.x = x; s.z = z;
+      const d = Math.hypot(s.x - s.px, s.z - s.pz);
+      s.speed = d / tickSeconds;
+      if (d > 0.04) s.heading = Math.atan2(s.x - s.px, s.z - s.pz);
+      if (a.hunger < s.hunger - 20) s.eatUntil = now + 1.8;
+      s.hunger = a.hunger;
     }
+    for (const id of [...this.seen.keys()]) if (!alive.has(id)) this.seen.delete(id);
   }
-  draw(world: World, h: HomesteadState, alpha: number, ground: (x: number, z: number) => number): void {
-    const counts = new Map<Species, number>();
-    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), pos = new THREE.Vector3(), scl = new THREE.Vector3();
-    const up = new THREE.Vector3(0, 1, 0), tick = world.life?.tick ?? 0;
+  draw(world: World, h: HomesteadState, alpha: number, dt: number, ground: (x: number, z: number) => number): void {
+    for (const b of this.batches.values()) b.begin();
+    const now = performance.now() / 1000, tick = world.life?.tick ?? 0, night = dayTime(tick).night;
     for (const a of h.animals) {
-      const c = this.cur.get(a.id); if (!c) continue;
-      const p = this.prev.get(a.id) ?? c;
-      const x = p.x + (c.x - p.x) * alpha, z = p.z + (c.z - p.z) * alpha;
-      const walking = Math.hypot(c.x - p.x, c.z - p.z) > 0.05;
-      const bob = walking ? Math.abs(Math.sin((performance.now() / 160) + hash(a.x, 0) * 6)) * 0.04 : 0;
-      const young = tick - a.born < SPECIES_RULES[a.species].adultAge;
-      const s = young ? 0.6 : 1;
-      pos.set(x, ground(x, z) + bob, z); q.setFromAxisAngle(up, c.heading); scl.set(s, s, s);
-      const im = this.meshes.get(a.species)!;
-      const i = counts.get(a.species) ?? 0;
-      if (i >= ANIMAL_CAP) continue;
-      im.setMatrixAt(i, m4.compose(pos, q, scl));
-      counts.set(a.species, i + 1);
+      const s = this.seen.get(a.id); if (!s) continue;
+      const rule = SPECIES_RULES[a.species], walking = s.speed > 0.15;
+      const x = s.px + (s.x - s.px) * alpha, z = s.pz + (s.z - s.pz) * alpha;
+      // Turn toward the direction of travel; walk cycle advances with distance covered.
+      if (walking) s.shown = (s.shown ?? s.heading) + shortest(s.shown ?? s.heading, s.heading) * (1 - Math.exp(-dt * 7));
+      const heading = s.shown ?? s.heading;
+      s.phase += dt * (walking ? 2.5 + s.speed * 3.2 : 0);
+      s.swing += ((walking ? Math.min(0.75, 0.3 + s.speed * 0.2) : 0) - s.swing) * (1 - Math.exp(-dt * 8));
+      const eating = now < s.eatUntil;
+      const young = tick - a.born < rule.adultAge;
+      const lying = night && !walking && !eating;
+      let head = 0;
+      if (eating) head = a.species === 'chicken' ? 0.35 + Math.max(0, Math.sin(now * 14)) * 0.6 : 0.85;
+      else if (lying) head = 0.3;
+      else if (!walking) head = Math.sin(now * 0.8 + a.x) * 0.08;
+      const wool = a.species === 'sheep' ? 0.35 + 0.65 * Math.min(1, a.product / rule.product!.every) : 1;
+      const flap = a.species === 'chicken' && s.speed > 1.2 ? 0.6 : 0;
+      const bob = walking ? Math.abs(Math.sin(s.phase)) * 0.03 : 0;
+      this.batches.get(a.species)!.push({
+        x, y: ground(x, z) + bob, z, heading, scale: young ? (a.species === 'chicken' ? 0.5 : 0.62) : 1,
+        phase: s.phase, legSwing: s.swing, headPitch: head, tailWag: eating || walking ? 0.3 : 0.1,
+        male: a.sex === 'm', young, lying, extra: a.species === 'sheep' ? wool : flap,
+      });
     }
-    for (const [sp, im] of this.meshes) {
-      im.count = counts.get(sp) ?? 0;
-      im.instanceMatrix.needsUpdate = true;
-    }
+    for (const b of this.batches.values()) b.end();
   }
 }
 
@@ -297,11 +274,16 @@ export class HomesteadView {
         list.push({ w: 3, h: 0.22, d: 2.4, x: r.x0 + 1.8, y: y + 1.1, z: r.z0 + 1.5, c: '#6E5238' });
         list.push({ w: 2.2, h: 0.06, d: 1.6, x: r.x0 + 4, y: this.ground(r.x0 + 4, r.z0 + 3.2), z: r.z0 + 3.2, c: MUD });
       } else if (f.kind === 'paddock') {
-        const y = this.lowest({ x0: r.x0 + 0.5, z0: r.z0 + 0.5, x1: r.x0 + 5.5, z1: r.z0 + 3.5 });
-        for (const [px, pz] of [[0.6, 0.6], [5.4, 0.6], [0.6, 3.4], [5.4, 3.4]]) list.push({ w: 0.25, h: 2.4, d: 0.25, x: r.x0 + px, y, z: r.z0 + pz, c: WOOD_DARK });
-        list.push({ w: 5.6, h: 0.22, d: 3.6, x: r.x0 + 3, y: y + 2.4, z: r.z0 + 2, c: '#9C7A4C' });
-        list.push({ w: 5.4, h: 0.4, d: 0.12, x: r.x0 + 3, y: y + 0.2, z: r.z0 + 0.5, c: WOOD });
-        list.push({ w: 1.8, h: 0.9, d: 1, x: r.x0 + 1.5, y, z: r.z0 + 1.5, c: STRAW });
+        // Small open-fronted lean-to in the back corner: back wall, two front posts, a roof stepped down toward the front.
+        const y = this.lowest({ x0: r.x0 + 0.5, z0: r.z0 + 0.5, x1: r.x0 + 3.5, z1: r.z0 + 2.5 });
+        const cx = r.x0 + 2, bz = r.z0 + 0.7;
+        list.push({ w: 3, h: 1.7, d: 0.15, x: cx, y, z: bz, c: '#B8875A' });
+        list.push({ w: 0.15, h: 1.7, d: 1.6, x: cx - 1.5, y, z: bz + 0.75, c: '#B8875A' });
+        list.push({ w: 0.15, h: 1.7, d: 1.6, x: cx + 1.5, y, z: bz + 0.75, c: '#B8875A' });
+        for (const px of [-1.5, 1.5]) list.push({ w: 0.2, h: 1.3, d: 0.2, x: cx + px, y, z: bz + 1.55, c: WOOD_DARK });
+        list.push({ w: 3.3, h: 0.14, d: 1, x: cx, y: y + 1.7, z: bz + 0.35, c: '#8E4A30' });
+        list.push({ w: 3.3, h: 0.14, d: 1, x: cx, y: y + 1.45, z: bz + 1.2, c: '#A2573A' });
+        list.push({ w: 1.6, h: 0.4, d: 0.8, x: cx, y, z: bz + 0.6, c: STRAW });
       } else if (f.kind === 'pen') {
         const y = this.lowest({ x0: r.x0 + 0.5, z0: r.z0 + 0.5, x1: r.x0 + 3.5, z1: r.z0 + 2.5 });
         for (const [px, pz] of [[0.6, 0.6], [3.4, 0.6], [0.6, 2.4], [3.4, 2.4]]) list.push({ w: 0.2, h: 1.8, d: 0.2, x: r.x0 + px, y, z: r.z0 + pz, c: WOOD_DARK });
@@ -329,7 +311,7 @@ export class HomesteadView {
     const tick = this.world.life?.tick ?? 0;
     if (tick !== this.lastTick) {
       this.lastTick = tick; this.tickAt = performance.now();
-      this.herd.advance(h);
+      this.herd.advance(h, this.tickSeconds);
       for (const v of h.villagers) {
         const p = this.people.get(v.id);
         if (p) { p.prev = p.cur; p.cur = { x: v.x / DM, z: v.z / DM }; }
@@ -338,7 +320,7 @@ export class HomesteadView {
       this.refreshTroughs(h);
     }
     const alpha = Math.min(1, (performance.now() - this.tickAt) / (this.tickSeconds * 1000));
-    this.herd.draw(this.world, h, alpha, this.ground);
+    this.herd.draw(this.world, h, alpha, frameDt, this.ground);
     this.drawPeople(h, alpha, frameDt);
   }
 
@@ -421,7 +403,7 @@ export class HomesteadView {
   metrics(): Record<string, unknown> {
     return {
       fields: this.fields.children.length,
-      herd: Object.fromEntries([...this.herd.meshes].map(([k, m]) => [k, m.count])),
+      herd: Object.fromEntries([...this.herd.batches].map(([k, b]) => [k, b.count])),
       villagers: [...this.people.values()].map((p) => ({ visible: p.fig.root.visible, task: p.fig.root.userData.task,
         x: Math.round(p.fig.root.position.x * 10) / 10, z: Math.round(p.fig.root.position.z * 10) / 10 })),
     };

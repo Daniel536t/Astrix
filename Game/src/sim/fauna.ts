@@ -20,10 +20,12 @@ import { hash2i, mulberry32 } from './noise';
 
 export type Habitat = 'meadow' | 'forest_edge' | 'water';
 export type CreatureTier = 'ambient' | 'authoritative';
-export type Behaviour = 'idle' | 'graze' | 'wander' | 'flee' | 'rest' | 'sleep' | 'swim' | 'scatter';
+export type Behaviour = 'idle' | 'graze' | 'wander' | 'flee' | 'rest' | 'sleep' | 'swim' | 'scatter' | 'stalk' | 'chase' | 'follow';
 
 export interface SpeciesDef {
-  id: 'deer' | 'rabbit' | 'trout';
+  id: 'deer' | 'rabbit' | 'trout' | 'fox' | 'wolf';
+  /** Species this one flees from when they come close. */
+  fearsSpecies?: ReadonlyArray<SpeciesDef['id']>;
   label: string;
   habitat: Habitat;
   /** Body length (m), used by rendering and collision. */
@@ -54,7 +56,22 @@ export const SPECIES: Record<SpeciesDef['id'], SpeciesDef> = {
     id: 'trout', label: 'Brown trout', habitat: 'water', length: 0.4, walkSpeed: 0.6, fleeSpeed: 3.5,
     wariness: 3.5, groupMin: 4, groupMax: 7, range: 10, yields: { food: 2 }, diurnal: false,
   },
+  fox: {
+    id: 'fox', label: 'Red fox', habitat: 'forest_edge', length: 0.95, walkSpeed: 1.5, fleeSpeed: 7,
+    wariness: 11, groupMin: 1, groupMax: 1, range: 30, yields: { food: 3, hide: 1 }, diurnal: false,
+    fearsSpecies: ['wolf'],
+  },
+  wolf: {
+    id: 'wolf', label: 'Grey wolf', habitat: 'forest_edge', length: 1.3, walkSpeed: 1.8, fleeSpeed: 8,
+    wariness: 20, groupMin: 2, groupMax: 4, range: 40, yields: { food: 8, hide: 2 }, diurnal: false,
+  },
 };
+/** Who flees whom (wildlife only; livestock enclosures are not part of this ambient tier). */
+const FEARS: Partial<Record<SpeciesDef['id'], ReadonlyArray<SpeciesDef['id']>>> = {
+  rabbit: ['fox', 'wolf'], deer: ['wolf'], fox: ['wolf'],
+};
+/** How close a predator must be before its prey bolts (metres). */
+const PREDATOR_ALARM = 9;
 
 export interface Creature {
   /** Stable, deterministic id: fauna:<species>:<chunk>:<index>. */
@@ -78,12 +95,20 @@ export interface Creature {
   speed: number;
   /** Deterministic per-creature random stream state. */
   rng: number;
+  /** Pack members follow this creature (wolves). */
+  leader?: string;
 }
 
 export interface FaunaContext {
   /** Positions of people (player character, later villagers). */
   threats: ReadonlyArray<{ x: number; z: number; inWater?: boolean }>;
   night: boolean;
+  /** Every predator in the loaded area, for prey to flee from. */
+  predators?: ReadonlyArray<{ species: SpeciesDef['id']; x: number; z: number }>;
+  /** Hares in the loaded area, for foxes to stalk. */
+  prey?: ReadonlyArray<{ x: number; z: number }>;
+  /** Pack leaders by id, for wolves to follow. */
+  leaders?: ReadonlyMap<string, Creature>;
 }
 
 export const FAUNA_STEP = 0.1;
@@ -185,14 +210,49 @@ export function spawnChunkFauna(world: World, cx: number, cz: number): Creature[
       }
     }
   }
+  // Predators use their own random stream, so adding them never moves the
+  // existing deer, hares and fish.
+  if (grass.length >= 4) {
+    const r2 = mulberry32((hash2i(cx, cz, seed + 7772) * 4294967296) >>> 0);
+    const kind: 'wolf' | 'fox' | null = trees >= 6 && r2() < 0.16 ? 'wolf' : trees >= 2 && trees <= 5 && r2() < 0.26 ? 'fox' : null;
+    if (kind) {
+      const def = SPECIES[kind];
+      const at = grass[Math.floor(r2() * grass.length)];
+      const n = def.groupMin + Math.floor(r2() * (def.groupMax - def.groupMin + 1));
+      let leader: string | undefined;
+      for (let i = 0; i < n; i++) {
+        const x = at.x + 0.5 + (r2() - 0.5) * 4, z = at.z + 0.5 + (r2() - 0.5) * 4;
+        const h = landOk(world, x, z);
+        if (h === null) continue;
+        const c: Creature = {
+          id: `fauna:${kind}:${key}:${index++}`, species: kind, tier: 'ambient', chunk: key,
+          x, y: h, z, heading: r2() * Math.PI * 2, homeX: x, homeZ: z, behaviour: 'rest', timer: 2 + r2() * 5,
+          goalX: x, goalZ: z, depthPref: 0, speed: 0, rng: (r2() * 4294967296) >>> 0,
+        };
+        if (kind === 'wolf') { if (leader) c.leader = leader; else leader = c.id; }
+        out.push(c);
+      }
+    }
+  }
   return out;
 }
 
-function nearestThreat(c: Creature, ctx: FaunaContext): { d: number; x: number; z: number } | null {
-  let best: { d: number; x: number; z: number } | null = null;
+function nearestThreat(c: Creature, ctx: FaunaContext): { d: number; x: number; z: number; predator?: boolean } | null {
+  let best: { d: number; x: number; z: number; predator?: boolean } | null = null;
   for (const t of ctx.threats) {
     const d = Math.hypot(t.x - c.x, t.z - c.z);
     if (!best || d < best.d) best = { d, x: t.x, z: t.z };
+  }
+  // Prey bolt from the predators that hunt them, at their own (shorter) alarm distance.
+  const fears = FEARS[c.species];
+  if (fears && ctx.predators) {
+    for (const p of ctx.predators) {
+      if (!fears.includes(p.species)) continue;
+      const d = Math.hypot(p.x - c.x, p.z - c.z);
+      // Scale so the caller's `d < wariness` test fires at PREDATOR_ALARM.
+      const scaled = d * (SPECIES[c.species].wariness / PREDATOR_ALARM);
+      if (d < PREDATOR_ALARM && (!best || scaled < best.d)) best = { d: scaled, x: p.x, z: p.z, predator: true };
+    }
   }
   return best;
 }
@@ -206,10 +266,17 @@ export function stepCreature(world: World, c: Creature, ctx: FaunaContext): void
 
   if (def.habitat === 'water') { stepFish(world, c, def, ctx, threat); return; }
 
+  // Foxes stalk hares and pounce; a miss ends in a rest.
+  if (c.species === 'fox') foxHunt(c, def, ctx, threat);
+
   // Decide.
   if (threat && threat.d < def.wariness && c.behaviour !== 'flee') {
     c.behaviour = 'flee';
     c.timer = 2.5 + rand(c) * 2;
+  } else if (c.behaviour === 'stalk' || c.behaviour === 'chase') {
+    // handled by foxHunt
+  } else if (c.leader && ctx.leaders?.has(c.leader)) {
+    packFollow(c, def, ctx.leaders.get(c.leader)!);
   } else if (c.timer <= 0) {
     const sleepy = def.diurnal && ctx.night;
     const r = rand(c);
@@ -231,6 +298,13 @@ export function stepCreature(world: World, c: Creature, ctx: FaunaContext): void
     const dx = c.x - threat.x, dz = c.z - threat.z, len = Math.hypot(dx, dz) || 1;
     tx = dx / len; tz = dz / len; speed = def.fleeSpeed;
     if (c.timer <= 0) { c.behaviour = 'idle'; c.timer = 1; c.homeX = c.x; c.homeZ = c.z; }
+  } else if (c.behaviour === 'stalk' || c.behaviour === 'chase') {
+    const dx = c.goalX - c.x, dz = c.goalZ - c.z, len = Math.hypot(dx, dz) || 1;
+    tx = dx / len; tz = dz / len;
+    speed = c.behaviour === 'chase' ? def.fleeSpeed * 0.8 : def.walkSpeed * 0.7;
+  } else if (c.behaviour === 'follow') {
+    const dx = c.goalX - c.x, dz = c.goalZ - c.z, len = Math.hypot(dx, dz) || 1;
+    tx = dx / len; tz = dz / len; speed = def.walkSpeed * 1.4;
   } else if (c.behaviour === 'wander') {
     const dx = c.goalX - c.x, dz = c.goalZ - c.z, len = Math.hypot(dx, dz);
     if (len < 0.5) { c.behaviour = 'graze'; c.timer = 2 + rand(c) * 3; }
@@ -260,6 +334,49 @@ export function stepCreature(world: World, c: Creature, ctx: FaunaContext): void
   } else {
     c.speed = 0;
   }
+}
+
+/** Fox: notice a hare, creep up, pounce; give up (rest) when it escapes or the timer ends. */
+function foxHunt(c: Creature, def: SpeciesDef, ctx: FaunaContext, threat: { d: number } | null): void {
+  if (ctx.night === false && c.behaviour === 'sleep') return;
+  if (c.behaviour === 'stalk' || c.behaviour === 'chase') {
+    let best: { d: number; x: number; z: number } | null = null;
+    for (const p of ctx.prey ?? []) {
+      const d = Math.hypot(p.x - c.x, p.z - c.z);
+      if (!best || d < best.d) best = { d, x: p.x, z: p.z };
+    }
+    if (!best || best.d > 20 || c.timer <= 0 || (threat && threat.d < def.wariness * 0.5)) {
+      c.behaviour = 'rest'; c.timer = 4 + rand(c) * 4; return;
+    }
+    c.goalX = best.x; c.goalZ = best.z;
+    if (c.behaviour === 'stalk' && best.d < 3.5) { c.behaviour = 'chase'; c.timer = 2; }
+    if (c.behaviour === 'chase' && best.d < 0.6) { c.behaviour = 'rest'; c.timer = 6; }   // a near miss: the hare is gone
+    return;
+  }
+  if (c.timer <= 0 && ctx.prey && !(threat && threat.d < def.wariness)) {
+    for (const p of ctx.prey) {
+      if (Math.hypot(p.x - c.x, p.z - c.z) < 13 && rand(c) < 0.6) {
+        c.behaviour = 'stalk'; c.timer = 12; c.goalX = p.x; c.goalZ = p.z; return;
+      }
+    }
+  }
+}
+
+/** Pack member: stay with the leader; when the leader rests or grazes, so do they. */
+function packFollow(c: Creature, def: SpeciesDef, leader: Creature): void {
+  const d = Math.hypot(leader.x - c.x, leader.z - c.z);
+  if (d > 5) {
+    c.behaviour = 'follow';
+    const a = rand(c) * Math.PI * 2;
+    c.goalX = leader.x + Math.cos(a) * 3; c.goalZ = leader.z + Math.sin(a) * 3;
+    c.timer = 1;
+  } else if (c.behaviour === 'follow' || c.timer <= 0) {
+    const calm = leader.behaviour === 'rest' || leader.behaviour === 'sleep' || leader.behaviour === 'graze' || leader.behaviour === 'idle';
+    c.behaviour = calm ? (leader.behaviour === 'sleep' ? 'sleep' : 'rest') : 'wander';
+    c.timer = 3 + rand(c) * 4;
+    c.goalX = leader.x + (rand(c) - 0.5) * 8; c.goalZ = leader.z + (rand(c) - 0.5) * 8;
+  }
+  void def;
 }
 
 function stepFish(world: World, c: Creature, def: SpeciesDef, ctx: FaunaContext,

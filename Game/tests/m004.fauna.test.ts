@@ -20,7 +20,7 @@ test('ambient fauna spawns deterministically with stable ids and valid habitat',
   assert.ok(species.has('trout'), 'fish in the river/lake');
   assert.ok(species.has('deer') || species.has('rabbit'), 'land animals');
   for (const c of a.creatures) {
-    assert.match(c.id, /^fauna:(deer|rabbit|trout):\d+,\d+:\d+$/);
+    assert.match(c.id, /^fauna:(deer|rabbit|trout|fox|wolf):\d+,\d+:\d+$/);
     assert.equal(c.tier, 'ambient');
     if (c.species === 'trout') {
       const w = residentWaterAt(a.world, Math.floor(c.x), Math.floor(c.z));
