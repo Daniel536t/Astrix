@@ -31,6 +31,8 @@ export const SWIM_SPEED = 2.4;
 export const DIVE_SPEED = 1.9;
 export const EXHAUSTED_SWIM_SPEED = 1.0;
 export const JUMP_SPEED = 6.6;
+/** A second tap while airborne launches again at this speed (a higher total jump, enough to leave a two-voxel hole). */
+export const DOUBLE_JUMP_SPEED = 8.4;
 export const GRAVITY = 22;
 /** Highest ledge climbed without jumping (one voxel plus tolerance). */
 export const STEP_HEIGHT = 1.05;
@@ -93,6 +95,8 @@ export interface CharacterState {
   dead: boolean;
   /** What killed the character, if dead. */
   cause: 'drowned' | null;
+  /** True once the mid-air second jump has been spent; cleared on landing or in water. */
+  airJumpUsed: boolean;
   /** Last dry standing position: where a dead character respawns. */
   safe: { x: number; y: number; z: number };
 }
@@ -114,7 +118,7 @@ export function createCharacter(x: number, y: number, z: number, heading = 0): C
   return {
     x, y, z, vx: 0, vy: 0, vz: 0, heading, grounded: false, mode: 'air', speed: 0,
     health: MAX_HEALTH, breath: 1, stamina: 1, headUnderwater: false, waterSurface: y,
-    calm: HEALTH_REGEN_DELAY, hurt: 0, dead: false, cause: null, safe: { x, y, z },
+    calm: HEALTH_REGEN_DELAY, hurt: 0, dead: false, cause: null, airJumpUsed: false, safe: { x, y, z },
   };
 }
 
@@ -291,6 +295,10 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
     s.vy += (wantVy - s.vy) * Math.min(1, 4 * dt);
   } else {
     if (input.jump && s.grounded) { s.vy = wading ? JUMP_SPEED * 0.7 : JUMP_SPEED; s.grounded = false; }
+    else if (input.jump && !s.airJumpUsed && !wading) {
+      // Second tap in the air: a stronger launch, once per jump.
+      s.vy = DOUBLE_JUMP_SPEED; s.airJumpUsed = true;
+    }
     s.vy -= GRAVITY * dt;
     if (s.vy < -40) s.vy = -40;
   }
@@ -351,6 +359,7 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
   }
 
   resolveEntities(world, s);
+  if (s.grounded || swimming || wading) s.airJumpUsed = false;
 
   const moved = Math.hypot(s.x - prev.x, s.z - prev.z) / dt;
   s.speed = moved;

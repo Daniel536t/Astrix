@@ -87,3 +87,30 @@ test('character swims in the deep mountain river instead of sinking', () => {
   // briefly airborne between pools; it must have floated, not walked the bed.
   assert.ok(swam, 'swam in the river');
 });
+
+test('a second jump tap in the air jumps higher, once, and a two-voxel hole can be left', () => {
+  const world = flatPad();
+  const peak = (taps: number[]) => {
+    let s = run(world, createCharacter(0.5, 31, 0.5), 10, {});
+    let top = s.y;
+    for (let i = 0; i < 60; i++) { s = stepCharacter(world, s, { moveX: 0, moveZ: 0, run: false, jump: taps.includes(i) }); top = Math.max(top, s.y); }
+    return top - 31;
+  };
+  const single = peak([0]), dbl = peak([0, 8]), triple = peak([0, 8, 16]);
+  assert.ok(dbl > single + 0.5, `double ${dbl} vs single ${single}`);
+  assert.ok(Math.abs(triple - dbl) < 1e-9, 'only one air jump per jump');
+  // Dig a 2-voxel-deep shaft: walking cannot leave it, double jump plus steering can.
+  for (let z = -2; z <= 2; z++) for (let x = -2; x <= 2; x++) { setVoxel(world, x, 31, z, MAT.STONE); setVoxel(world, x, 32, z, MAT.STONE); }
+  for (let z = 0; z <= 1; z++) for (let x = 0; x <= 1; x++) { setVoxel(world, x, 30, z, MAT.STONE); setVoxel(world, x, 31, z, MAT.AIR); setVoxel(world, x, 32, z, MAT.AIR); }
+  let s = run(world, createCharacter(0.5, 31, 0.5), 10, {});
+  const walk = run(world, s, 40, { moveX: 1 });
+  assert.ok(walk.x < 1.8 && walk.y === 31, 'walking alone stays in the shaft');
+  const escape = (taps: number[]) => {
+    let out = s;
+    for (let i = 0; i < 60; i++) out = stepCharacter(world, out, { moveX: 1, moveZ: 0, run: false, jump: taps.includes(i) });
+    return out;
+  };
+  assert.ok(escape([0]).x < 1.8, 'a single jump does not clear two voxels');
+  const out = escape([0, 9]);
+  assert.ok(out.x > 2.5, `double jump clears the shaft rim (x=${out.x.toFixed(2)})`);
+});
