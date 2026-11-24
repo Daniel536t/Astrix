@@ -681,3 +681,20 @@ body.clean #mode-button, body.kit #mode-button, body.map #mode-button { display:
   }
 }
 #hud b { color: #F4E8A4; font-weight: 600; }
+
+/* ---- MagicBlock settlement panel ---- */
+#chain-panel {
+  position: fixed; right: 14px; bottom: 14px; z-index: 6;
+  width: min(360px, calc(100vw - 28px)); padding: 10px 12px;
+  color: #F4EFE3; background: rgba(27, 32, 43, 0.86);
+  border: 1px solid rgba(167, 140, 255, 0.45); border-radius: 8px;
+  font: 12px/1.45 ui-sans-serif, system-ui, sans-serif;
+}
+#chain-panel.hidden { display: none; }
+#chain-panel .ok { color: #9EE2B8; }
+#chain-panel .warn { color: #F2C57C; }
+#chain-panel .dim { color: #B8B2A4; }
+#chain-panel .stock { color: #E8DDC6; }
+#chain-panel a { color: #C9B8FF; }
+body.clean #chain-panel { display: none; }
+@media (pointer: coarse) { #chain-panel { bottom: auto; top: 60px; } }

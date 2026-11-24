@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import './styles.css';
 import {
   TimeState, advanceTime, surfaceAt, setVoxel, MAT,
-  nearestHarvestable, WORLD_SIZE, CHUNK_SIZE, SEA_LEVEL, Entity, LATEST_GENERATOR_VERSION,
+  nearestHarvestable, residentSurfaceAt, WORLD_SIZE, CHUNK_SIZE, SEA_LEVEL, Entity, LATEST_GENERATOR_VERSION,
 } from './sim/world';
 import { VoxelTerrainView, ViewMode } from './render/terrain';
 import { buildNoxelNature } from './render/nature';
@@ -177,6 +177,8 @@ document.addEventListener('visibilitychange', () => {
 });
 window.addEventListener('pagehide', () => { saveScheduler.flush(); lease.release(); });
 let explore: ExploreController | null = null;
+let chainView: { metrics: () => Record<string, unknown> } | null = null;
+let chainError = '';
 
 /** Switch between walking the founder (explore) and the settlement overview (builder). */
 function toggleMode(force?: 'explore' | 'builder'): void {
@@ -488,6 +490,7 @@ function metrics() {
     explore: explore?.metrics() ?? null,
     realtime: { tickSeconds: TICK_SECONDS, issued: simClock.ticksIssued, leader: lease.isLeader, savePending: saveScheduler.pending },
     fauna: fauna?.metrics() ?? null,
+    chain: chainView?.metrics() ?? (chainError ? { error: chainError } : null),
   };
 }
 window.__metrics = metrics();
@@ -649,6 +652,15 @@ if (!isMap && !isKit) {
     sceneInspector?.setVisible(false);
   }
   if (action === 'build' || action === 'all') m2Game.buildAll();
+
+  // MagicBlock settlement (read-only presentation of on-chain state). Loaded
+  // lazily so the local game never depends on the chain; ?chain=0 disables it.
+  if (params.get('chain') !== '0' && !noUi) {
+    import('./chain/chain-view').then(({ startChainView }) => {
+      chainView = startChainView({ scene, origin: { x: 6, z: -60 },
+        groundY: (x, z) => residentSurfaceAt(world, x, z) ?? surfaceAt(world, x, z) });
+    }).catch((e) => { chainError = String(e).slice(0, 120); });
+  }
 
   // The founder character. Explore is the default way to play; scripted
   // evidence captures (action=, ui=0, explicit camera params) and ?mode=builder
