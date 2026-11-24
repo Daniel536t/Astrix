@@ -702,3 +702,31 @@ body.clean #chain-panel { display: none; }
 #chain-panel button { padding: 5px 8px; color: #F4EFE3; background: #3a3550; border: 1px solid #7d6fc4; border-radius: 6px; font: 600 11px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
 #chain-panel button.primary { background: #6a4fd6; padding: 8px 12px; font-size: 12px; }
 #chain-panel button:disabled { opacity: 0.5; cursor: wait; }
+
+/* ---- entry screen: Quick Play / Wallet Play ---- */
+#enter-screen {
+  position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px;
+  background: radial-gradient(ellipse at center, rgba(20, 24, 34, 0.55), rgba(12, 14, 20, 0.88));
+  font: 14px/1.45 ui-sans-serif, system-ui, sans-serif; color: #F4EFE3;
+}
+body.clean #enter-screen { display: none; }
+#enter-screen .enter-card { width: min(720px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 22px 24px;
+  background: rgba(27, 32, 43, 0.96); border: 1px solid #4b4470; border-radius: 12px; box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45); }
+#enter-screen h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: 0.04em; }
+#enter-screen .lead { margin: 0 0 16px; color: #D9D2C2; }
+#enter-screen .enter-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { #enter-screen .enter-options { grid-template-columns: 1fr; } }
+#enter-screen section { padding: 14px; background: rgba(58, 53, 80, 0.45); border: 1px solid #5d5394; border-radius: 10px; display: flex; flex-direction: column; gap: 8px; }
+#enter-screen h2 { margin: 0; font-size: 17px; }
+#enter-screen section p { margin: 0; flex: 1; color: #CFC8B8; font-size: 13px; }
+#enter-screen button { padding: 8px 12px; color: #F4EFE3; background: #3a3550; border: 1px solid #7d6fc4; border-radius: 7px; font: 600 13px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+#enter-screen button.primary { background: #6a4fd6; }
+#enter-screen button:disabled { opacity: 0.5; cursor: default; }
+#enter-screen .hint { font-size: 12px; color: #B8B2A4; }
+#enter-screen .enter-secondary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; color: #B8B2A4; font-size: 13px; }
+#enter-screen .enter-secondary button { font-size: 12px; padding: 6px 10px; }
+#enter-screen .enter-status { min-height: 1.4em; margin-top: 10px; color: #F2C57C; font-size: 13px; }
+#chain-panel .protection { display: inline-block; margin: 4px 0 2px; padding: 2px 8px; border-radius: 999px; font: 600 11px/1.5 ui-sans-serif, system-ui, sans-serif; }
+#chain-panel .protection.p-guest { background: #5a4a2a; color: #F2C57C; }
+#chain-panel .protection.p-passkey { background: #2d4a3c; color: #9EE2B8; }
+#chain-panel .protection.p-wallet { background: #3c3566; color: #C9B8FF; }

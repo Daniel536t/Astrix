@@ -8,6 +8,8 @@
 import * as THREE from 'three';
 import { SettlementWatcher, ChainView, CHAIN, RESOURCE_NAMES } from './settlement';
 import { GuestWorld } from './guest';
+import { detectWallets, passkeySupported, PROTECTION_LABEL, DetectedWallet } from './identity';
+import { showEnterScreen } from './enter';
 import { buildCottage, buildCrate, buildWoodpile, buildFence } from '../render/village-kit';
 import { buildFigure, VILLAGER_STYLE } from '../render/characters';
 
@@ -88,21 +90,40 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
     const base = `https://explorer.solana.com/address/${watcher.addressBase58}?cluster=devnet`;
     const mine = !!guest.record;
     const title = mine ? `Your world <span class="dim">· slot ${guest.record!.slot} · seed ${guest.record!.seed}</span>` : 'Demo settlement <span class="dim">(owner-run)</span>';
+    const wallets = detectWallets();
+    const short = (k: string | null) => (k ? `${k.slice(0, 4)}…${k.slice(-4)}` : '');
     let html = `<strong>MagicBlock · ${title}</strong><br><span class="${v.error ? 'warn' : 'ok'}">${v.error ? 'offline — local game unaffected' : 'live on Ephemeral Rollup'}</span>`
       + (s ? `<div>tick <b>${s.tick}</b> · crank ${rate > 0 ? rate.toFixed(2) + ' ticks/s' : 'measuring…'} · settlers ${s.population}${s.sawmill ? ' · sawmill' : ''}</div>`
         + `<div class="stock">${RESOURCE_NAMES.map((n) => `${n} ${s.stock[n]}`).join(' · ')}</div>`
         + `<div>prospects ${s.prospects} · last VRF find: <b>${s.lastFind}</b>${s.prospectPending ? ' (waiting for randomness…)' : ` (roll ${s.lastRoll})`}</div>` : '<div>loading…</div>')
       + (c && !mine ? `<div class="dim">committed to Solana at tick ${c.tick}</div>` : '');
     let ctl = '';
+    const dis = busy ? 'disabled' : '';
+    const btn = (act: string, label: string, cls = '') => `<button data-act="${act}" class="${cls}" ${dis}>${label}</button>`;
+    const walletButtons = (prefix: string, label: (n: string) => string) => wallets.length
+      ? wallets.map((w, i) => btn(`${prefix}:${i}`, label(w.name))).join('')
+      : `<button disabled title="Install Phantom or Backpack">${label('wallet')} (none found)</button>`;
     if (mine) {
+      const kind = guest.kind;
+      ctl += `<div class="protection p-${kind}">${PROTECTION_LABEL[kind]}</div>`;
+      if (guest.sessionExpired) ctl += `<div class="chain-actions">${btn('renew', 'Renew this browser’s session', 'primary')}</div>`;
       ctl += `<div class="chain-actions">`
         + ['plant:Plant crop', 'wood:Gather wood', 'stone:Quarry stone', 'sawmill:Build sawmill', 'prospect:Prospect (VRF)']
-          .map((x) => { const [k, l] = x.split(':'); return `<button data-act="${k}" ${busy ? 'disabled' : ''}>${l}</button>`; }).join('')
+          .map((x) => { const [k, l] = x.split(':'); return btn(k, l); }).join('')
         + `</div><div class="dim result">${busy || lastResult}</div>`;
-      ctl += `<div class="dim">Guest key kept only in this browser (no wallet, no SOL). Clearing site data loses this world unless you <a href="#" data-key="export">export the key</a>. Not permanent ownership.</div>`;
+      if (kind === 'guest') {
+        ctl += `<div class="chain-actions upgrade">${passkeySupported() ? btn('protect', 'Protect with passkey') : ''}${walletButtons('link', (n) => `Move to ${n}`)}</div>`
+          + `<div class="dim">This world's key exists only in this browser. Protect it with a passkey or a wallet to recover it on any device (<a href="#" data-key="export">export key</a>).</div>`;
+      } else if (kind === 'passkey') {
+        ctl += `<div class="chain-actions upgrade">${walletButtons('link', (n) => `Move to ${n}`)}</div>`
+          + `<div class="dim">Owned by your passkey (${short(guest.owner)}). Use “Recover with passkey” on any device. This browser plays with a session key.</div>`;
+      } else {
+        ctl += `<div class="dim">Owned by ${guest.record!.wallet ?? 'your wallet'} ${short(guest.owner)}. This browser plays with a session key until ${new Date((guest.record!.sessionExpires ?? 0) * 1000).toLocaleDateString()}.</div>`;
+      }
     } else {
-      ctl += `<div class="chain-actions"><button data-act="create" class="primary" ${busy ? 'disabled' : ''}>Create my own world</button></div>`
-        + `<div class="dim result">${busy || 'Free: a temporary key is created in this browser; no wallet or SOL needed.'} <a href="#" data-key="import">Import a saved key</a></div>`;
+      ctl += `<div class="chain-actions">${btn('create', 'Quick Play', 'primary')}${walletButtons('wallet', (n) => `Wallet Play (${n})`)}</div>`
+        + `<div class="chain-actions">${passkeySupported() ? btn('recover-passkey', 'Recover with passkey') : ''}${wallets.length ? wallets.map((w, i) => btn(`recover-wallet:${i}`, `Recover with ${w.name}`)).join('') : ''}</div>`
+        + `<div class="dim result">${busy || 'Quick Play needs no wallet and no SOL. Wallet Play makes your wallet the owner.'} <a href="#" data-key="import">Import a saved key</a></div>`;
     }
     info.innerHTML = html;
     if (ctl !== controlsKey) { controls.innerHTML = ctl; controlsKey = ctl; }
@@ -112,25 +133,43 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   };
 
   watcher.onChange = render;
-  const run = async (act: string) => {
+  const reloadIntoWorld = () => {
+    const q = new URLSearchParams(location.search); q.delete('seed');
+    setTimeout(() => { location.search = q.toString(); }, 900);
+  };
+  const status = (m: string) => { busy = m; render(watcher.view); enter?.status(m); };
+  const run = async (act: string): Promise<void> => {
     if (busy) return;
+    const [name, arg] = act.split(':');
+    const wallet: DetectedWallet | undefined = arg !== undefined ? detectWallets()[Number(arg)] : undefined;
     try {
-      if (act === 'create') {
-        busy = 'creating your world…'; render(watcher.view);
-        const rec = await guest.create((m) => { busy = m; render(watcher.view); });
-        busy = `world created (seed ${rec.seed}) — loading your terrain…`; render(watcher.view);
-        const q = new URLSearchParams(location.search); q.delete('seed');
-        setTimeout(() => { location.search = q.toString(); }, 900);
+      if (name === 'create' || name === 'wallet' || name === 'recover-passkey' || name === 'recover-wallet') {
+        status(name === 'create' ? 'creating your world…' : 'connecting…');
+        const rec = name === 'create' ? await guest.create(status)
+          : name === 'wallet' ? await guest.createWithWallet(wallet!, status)
+            : name === 'recover-passkey' ? await guest.recoverWithPasskey(status)
+              : await guest.recoverWithWallet(wallet!, status);
+        status(`world ${rec.slot} ready (seed ${rec.seed}); loading your terrain…`);
+        reloadIntoWorld();
         return;
       }
-      busy = `${act}…`; render(watcher.view);
-      const s = watcher.view.live;
-      const plot = s ? Math.max(0, s.plots.findIndex((p) => p === null)) : 0;
-      const r = await guest.act(act as 'plant', plot);
-      lastResult = r.ok ? `done: ${act} <a href="${erTx(r.sig)}" target="_blank" rel="noopener">tx</a>` : `failed: ${act}: ${r.reason}`;
-    } catch (e) { lastResult = `failed: ${(e as Error).message}`; }
+      if (name === 'protect') { status('protecting…'); await guest.protectWithPasskey(status); lastResult = 'protected: your passkey now owns this world'; }
+      else if (name === 'link') { status('linking…'); await guest.linkWallet(wallet!, status); lastResult = `your ${wallet!.name} wallet now owns this world`; }
+      else if (name === 'renew') { status('renewing…'); await guest.renewSession(detectWallets(), status); lastResult = 'session renewed'; }
+      else {
+        status(`${act}…`);
+        const s = watcher.view.live;
+        const plot = s ? Math.max(0, s.plots.findIndex((p) => p === null)) : 0;
+        const r = await guest.act(act as 'plant', plot);
+        lastResult = r.ok ? `done: ${act} <a href="${erTx(r.sig)}" target="_blank" rel="noopener">tx</a>` : `failed: ${act}: ${r.reason}`;
+      }
+    } catch (e) { lastResult = `failed: ${(e as Error).message}`; enter?.status(lastResult); }
     busy = ''; render(watcher.view);
   };
+  const enter = guest.record ? null : showEnterScreen({
+    wallets: detectWallets, passkey: passkeySupported(),
+    choose: (act) => run(act),
+  });
   panel.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     const act = t.closest('button')?.getAttribute('data-act');
@@ -149,5 +188,5 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   window.addEventListener('keydown', (e) => {
     if (e.key === 'm' || e.key === 'M') panel.classList.toggle('hidden');
   });
-  return { metrics: () => ({ ...watcher.view, address: watcher.addressBase58, guest: guest.record ? { slot: guest.record.slot, seed: guest.record.seed, key: guest.publicKey } : null }) };
+  return { metrics: () => ({ ...watcher.view, address: watcher.addressBase58, guest: guest.record ? { slot: guest.record.slot, seed: guest.record.seed, key: guest.publicKey, kind: guest.kind, owner: guest.owner } : null }) };
 }

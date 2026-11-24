@@ -11,6 +11,14 @@
 //   prospect                   request VRF prospecting (ER)
 //   commit                     commit settlement state to Solana (ER -> base)
 //   undelegate                 commit and return the settlement to Solana
+//   setup-worlds <n>           registry + n pre-funded world slots, delegated (idempotent)
+//   setup-passports <n>        one passport per slot, delegated (idempotent)
+//   link-passports <n>         copy owners of worlds claimed before passports existed
+//   setup-treasury <sol>       create, fund and delegate the checkpoint treasury
+//   schedule-worlds <task> <ms> <count> [from]   tick crank for up to 16 slots
+//   schedule-checkpoints <from> <task> <ms>      checkpoint crank for 8 slots
+//   checkpoint <slot>          run a checkpoint now (no-op unless due)
+//   worlds <n> / passports <n> tables of world and passport state
 // Keys are read from ASTRIX_WALLET (never printed, never written to the repo).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -80,6 +88,9 @@ async function erSend(ix: anchor.web3.TransactionInstruction, signers: Keypair[]
 const settlement = settlementPda(owner.publicKey);
 const registryPda = PublicKey.findProgramAddressSync([Buffer.from('astrix-registry'), owner.publicKey.toBuffer()], PROGRAM_ID)[0];
 const slotPda = (i: number) => PublicKey.findProgramAddressSync([Buffer.from('world-slot'), owner.publicKey.toBuffer(), Buffer.from([i])], PROGRAM_ID)[0];
+const passportPda = (world: PublicKey) => PublicKey.findProgramAddressSync([Buffer.from('passport'), world.toBuffer()], PROGRAM_ID)[0];
+const treasuryPda = PublicKey.findProgramAddressSync([Buffer.from('checkpoint-treasury'), owner.publicKey.toBuffer()], PROGRAM_ID)[0];
+const FEE_VAULT = new PublicKey(process.env.ASTRIX_FEE_VAULT ?? 'ByZyZ6322wnM48vn1kVdrsGRLjiLU15t2gJUBdXL4MQb');
 const delegationAccounts = (pda: PublicKey) => ({
   bufferPda: delegateBufferPdaFromDelegatedAccountAndOwnerProgram(pda, PROGRAM_ID),
   delegationRecordPda: delegationRecordPdaFromDelegatedAccount(pda),
@@ -111,10 +122,11 @@ if (cmd === 'setup-worlds') {
   }
   out({ registry: registryPda.toBase58(), slots: Array.from({ length: n }, (_, i) => slotPda(i).toBase58()), transactions: log.length });
 } else if (cmd === 'schedule-worlds') {
-  const n = Number(a3 ?? 16);
+  // schedule-worlds <taskId> <ms> <count> [from]: one crank ticks slots [from, from+count), count <= 16.
+  const n = Number(a3 ?? 16), from = Number(process.argv[6] ?? 0);
   const ix = await program(er).methods.scheduleWorldTicks(new BN(a1 ?? 742101), new BN(a2 ?? 2000), new BN(200000))
     .accountsPartial({ magicProgram: MAGIC_PROGRAM_ID, payer: owner.publicKey, registry: registryPda, program: PROGRAM_ID })
-    .remainingAccounts(Array.from({ length: n }, (_, i) => ({ pubkey: slotPda(i), isSigner: false, isWritable: true }))).instruction();
+    .remainingAccounts(Array.from({ length: n }, (_, i) => ({ pubkey: slotPda(from + i), isSigner: false, isWritable: true }))).instruction();
   out(erTx(await erSend(ix)));
 } else if (cmd === 'commit-worlds') {
   const n = Number(a1 ?? 16);
@@ -122,6 +134,67 @@ if (cmd === 'setup-worlds') {
     .accountsPartial({ payer: owner.publicKey, registry: registryPda, magicProgram: MAGIC_PROGRAM_ID, magicContext: MAGIC_CONTEXT_ID })
     .remainingAccounts(Array.from({ length: n }, (_, i) => ({ pubkey: slotPda(i), isSigner: false, isWritable: true }))).instruction();
   out(erTx(await erSend(ix)));
+} else if (cmd === 'setup-passports') {
+  // Base layer, admin: one passport per world slot, delegated next to its world.
+  const n = Number(a1 ?? 16);
+  const pause = () => new Promise((r) => setTimeout(r, 1500));
+  const log: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const pda = passportPda(slotPda(i));
+    const info = await base.getAccountInfo(pda);
+    if (!info) { log.push(await program(base).methods.initPassport(i).accountsPartial({ world: slotPda(i), passport: pda, admin: owner.publicKey, systemProgram: SystemProgram.programId }).rpc()); await pause(); }
+    if (!info || info.owner.equals(PROGRAM_ID)) log.push(await program(base).methods.delegatePassport(i).accountsPartial({ payer: owner.publicKey, world: slotPda(i), pda, ...delegationAccounts(pda) }).remainingAccounts(validatorMeta).rpc());
+    await pause();
+  }
+  out({ passports: Array.from({ length: n }, (_, i) => passportPda(slotPda(i)).toBase58()), transactions: log.length });
+} else if (cmd === 'link-passports') {
+  const n = Number(a1 ?? 16);
+  const sigs = [];
+  for (let i = 0; i < n; i++) {
+    const ix = await program(er).methods.linkPassport().accountsPartial({ world: slotPda(i), passport: passportPda(slotPda(i)) }).instruction();
+    sigs.push(await erSend(ix));
+  }
+  out({ linked: sigs.length });
+} else if (cmd === 'setup-treasury') {
+  // Base layer, admin: create the checkpoint treasury, fund it, delegate it.
+  const lamports = Math.round(Number(a1 ?? 0.2) * 1e9);
+  const log: string[] = [];
+  if (!(await base.getAccountInfo(treasuryPda))) log.push(await program(base).methods.initTreasury().accountsPartial({ treasury: treasuryPda, admin: owner.publicKey, systemProgram: SystemProgram.programId }).rpc());
+  const tx = new Transaction().add(SystemProgram.transfer({ fromPubkey: owner.publicKey, toPubkey: treasuryPda, lamports }));
+  log.push(await anchor.web3.sendAndConfirmTransaction(base, tx, [owner]));
+  log.push(await program(base).methods.delegateTreasury().accountsPartial({ payer: owner.publicKey, pda: treasuryPda, ...delegationAccounts(treasuryPda) }).remainingAccounts(validatorMeta).rpc());
+  out({ treasury: treasuryPda.toBase58(), lamports, log });
+} else if (cmd === 'checkpoint') {
+  const w = slotPda(Number(a1 ?? 0));
+  const ix = await program(er).methods.checkpoint().accountsPartial({
+    world: w, passport: passportPda(w), treasury: treasuryPda, magicFeeVault: FEE_VAULT,
+    magicContext: MAGIC_CONTEXT_ID, magicProgram: MAGIC_PROGRAM_ID,
+  }).instruction();
+  out(erTx(await erSend(ix)));
+} else if (cmd === 'schedule-checkpoints') {
+  // ER, admin: crank `checkpoint` for slots [from, from+8). Each run is a no-op unless a world is due.
+  const from = Number(a1 ?? 0), task = Number(a2 ?? 743000 + from), ms = Number(a3 ?? 60000);
+  const metas = [];
+  for (let i = from; i < from + 8; i++) {
+    metas.push({ pubkey: slotPda(i), isSigner: false, isWritable: true }, { pubkey: passportPda(slotPda(i)), isSigner: false, isWritable: true });
+  }
+  const ix = await program(er).methods.scheduleCheckpoints(new BN(task), new BN(ms), new BN(1_000_000))
+    .accountsPartial({ magicProgram: MAGIC_PROGRAM_ID, payer: owner.publicKey, registry: registryPda, treasury: treasuryPda,
+      magicFeeVault: FEE_VAULT, magicContext: MAGIC_CONTEXT_ID, program: PROGRAM_ID })
+    .remainingAccounts(metas).instruction();
+  out({ task, ...erTx(await erSend(ix)) });
+} else if (cmd === 'passports') {
+  const n = Number(a1 ?? 16);
+  const rows = [];
+  for (let i = 0; i < n; i++) {
+    const pp = passportPda(slotPda(i));
+    const [ei, bi] = [await er.getAccountInfo(pp), await base.getAccountInfo(pp)];
+    if (!ei) { rows.push({ i, missing: true }); continue; }
+    const p: any = program(er).coder.accounts.decode('passport', ei.data);
+    rows.push({ i, owner: p.owner.toBase58().slice(0, 8), kind: p.identityKind, checkpoints: p.checkpoints, lastTick: Number(p.lastCheckpointTick),
+      due: p.checkpointDue, hash: Buffer.from(p.stateHash).toString('hex').slice(0, 12), base: bi ? (bi.owner.equals(DELEGATION_PROGRAM_ID) ? 'delegated' : bi.owner.toBase58().slice(0, 6)) : 'none' });
+  }
+  console.table(rows);
 } else if (cmd === 'worlds') {
   const n = Number(a1 ?? 16);
   const rows = [];

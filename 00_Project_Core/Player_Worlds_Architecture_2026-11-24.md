@@ -1,3 +1,5 @@
+> **Superseded in part (2026-11-24):** the global claim cooldown and the admin `reset_world` were replaced by proof-of-work claims, per-world rate limits and owner-only `release_world`. See `Identity_and_Persistence_Architecture_2026-11-24.md`.
+
 # ASTrix — player-owned worlds on MagicBlock
 
 **Owner decision, 2026-11-24:** every player has their own independent world. Shared ownership and shared economic state are not the default. ASTrix never holds player private keys.

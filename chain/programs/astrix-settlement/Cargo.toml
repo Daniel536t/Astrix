@@ -23,6 +23,7 @@ custom-panic = []
 anchor-lang = "=1.0.2"
 # 0.18.x supports validator 1.x and 2.0 for delegation, crank and VRF (0.20 breaks #[vrf]).
 ephemeral-rollups-sdk = { version = "=0.18.0", features = ["anchor", "crank", "vrf"] }
+solana-sha256-hasher = "=3.1.0"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
