@@ -50,5 +50,7 @@ are cached for a year, so a new deploy takes effect on the next page load.
 
 | 2026-11-23 19:42 | `20261123T194224Z-c4b82cf` | Real-time settlement simulation (tick every 2 s), save throttling, single-writer tab lease | 154/154 tests; live tick-rate check |
 
+| 2026-11-24 01:54 | `20261124T015401Z-1c96398` | MagicBlock settlement rendered from devnet (read-only panel and outpost) | 154/154 tests; live: tick 653 → 657 in 10 s from the ER, 0 errors |
+
 Rollback to the previous release: `deploy/boxd/deploy.sh --rollback`. Owner deployment authority (2026-11-23): normal,
 reversible development builds may be deployed at verified checkpoints.
