@@ -666,6 +666,10 @@ body.clean .inspector, body.map .inspector { display: none !important; }
 }
 #mode-button:focus-visible { outline: 2px solid #D7C778; outline-offset: 2px; }
 body.clean #mode-button, body.kit #mode-button, body.map #mode-button { display: none; }
+/* Phone portrait: the drawer tabs fill the top row, so the mode button sits below them on the right (M012: it covered the Settlement tab). */
+@media (max-width: 760px) and (orientation: portrait) {
+  #mode-button { top: max(104px, calc(env(safe-area-inset-top) + 98px)); left: auto; right: max(8px, env(safe-area-inset-right)); transform: none; }
+}
 
 /* Desktop: in explore mode the panels stay out of the way until asked for (B / I). */
 @media (min-width: 761px) {

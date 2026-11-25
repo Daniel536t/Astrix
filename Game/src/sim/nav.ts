@@ -552,6 +552,56 @@ export function findPath(world: World, g: NavGrid, from: { x: number; z: number 
   return res;
 }
 
+/**
+ * M012 rules v4: which of several destinations is nearest by route cost (a
+ * Dijkstra search from the walker over the same moves `findPath` uses). Ties
+ * on cost go to the smallest id, so the choice never depends on input order.
+ */
+export function findNearest(world: World, g: NavGrid, from: { x: number; z: number }, goals: ReadonlyArray<NavGoal & { id: string }>, o: SearchOptions):
+  { ok: true; id: string; cost: number; expanded: number } | { ok: false; code: 'no_route' | 'budget' | 'outside'; expanded: number } {
+  const t0 = performance.now();
+  const s = navStats(world);
+  s.searches++;
+  const sx = cellOfDm(from.x), sz = cellOfDm(from.z);
+  const done = (r: { ok: true; id: string; cost: number; expanded: number } | { ok: false; code: 'no_route' | 'budget' | 'outside'; expanded: number }) => {
+    s.expanded += r.expanded; s.searchMs += performance.now() - t0; return r;
+  };
+  if (!g.inside(sx, sz)) return done({ ok: false, code: 'outside', expanded: 0 });
+  if (!goals.length) return done({ ok: false, code: 'no_route', expanded: 0 });
+  g.g.fill(-1); g.closed.fill(0);
+  const start = g.index(sx, sz);
+  const heap = new Heap();
+  g.g[start] = 0; g.parent[start] = -1;
+  heap.push(0, 0, start);
+  let expanded = 0, best = -1;
+  const found: string[] = [];
+  while (heap.size) {
+    const i = heap.pop();
+    if (g.closed[i]) continue;
+    if (best >= 0 && g.g[i] > best) break;
+    g.closed[i] = 1;
+    const x = g.cellX(i), z = g.cellZ(i);
+    if (i !== start || g.block[i] === BLOCK.none) {
+      for (const goal of goals) if (isGoal(x, z, goal)) { best = g.g[i]; found.push(goal.id); }
+    }
+    if (best >= 0) continue;
+    if (++expanded > o.maxExpansions) return done({ ok: false, code: 'budget', expanded });
+    for (const [dx, dz] of DIRS) {
+      const c = moveCost(g, x, z, dx, dz, o);
+      if (c < 0) continue;
+      const j = g.index(x + dx, z + dz);
+      if (g.closed[j]) continue;
+      const ng = g.g[i] + c;
+      if (g.g[j] >= 0 && g.g[j] <= ng) continue;
+      g.g[j] = ng; g.parent[j] = i;
+      heap.push(ng, 0, j);
+    }
+  }
+  if (best < 0) return done({ ok: false, code: 'no_route', expanded });
+  found.sort();
+  return done({ ok: true, id: found[0], cost: best, expanded });
+}
+
 function search(g: NavGrid, from: { x: number; z: number }, goal: NavGoal, o: SearchOptions): PathResult {
   const sx = cellOfDm(from.x), sz = cellOfDm(from.z);
   const tx = cellOfDm(goal.x), tz = cellOfDm(goal.z);

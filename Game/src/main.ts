@@ -27,7 +27,7 @@ import { SceneInspector } from './app/inspector';
 import { TouchControls } from './app/touch-controls';
 import { VitalsHud } from './app/vitals-hud';
 import { HomesteadGame } from './app/homestead';
-import { DAY_TICKS } from './sim/homestead';
+import { DAY_TICKS, felledTrees } from './sim/homestead';
 import { buildAnimalShowcase } from './render/animal-showcase';
 import { renderBreakdown } from './app/render-breakdown';
 import { GroundCoverView, groundCoverOffset } from './render/ground-cover';
@@ -194,6 +194,7 @@ try { lsForLease = window.localStorage; } catch { lsForLease = null; }
 const lease = new TabLease(lsForLease, `astrix:lease:seed:${worldSeed}`);
 let leaseCheckedAt = 0;
 let lastSimAt = 0;
+let felledSeen = 0;
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') saveScheduler.flush();
   else { simClock.reset(); lastSimAt = 0; }
@@ -610,6 +611,9 @@ function frame(timestamp?: number) {
     const tTick = performance.now();
     const r = lifeGame!.realtimeTick();
     sections.record('tick', performance.now() - tTick);
+    // A villager felled a tree (rules v4): redraw nature from the entities, as after the player's harvest.
+    const felled = felledTrees.get(world) ?? 0;
+    if (felled !== felledSeen) { felledSeen = felled; natureDirty = true; }
     if (r.ok) saveScheduler.markDirty(nowMs);
     else realtimeNote = `settlement time stopped: ${r.reasons.join('; ')}`;
   }

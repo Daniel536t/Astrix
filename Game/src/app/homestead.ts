@@ -12,8 +12,11 @@ import { BrowserSaveStore } from './persistence';
 import {
   CROPS, CROP_RULES, CropKind, DM, FIELD_MAX, FIELD_MIN, HomesteadAction, MOISTURE_MAX, Policy, Role, SPECIES, SPECIES_RULES,
   checkField, cropStage, fenceCost, fieldUnits, homesteadLayout, nearbyActions, recentHomesteadEvents, unitsOf, findFieldSpot,
-  dayTime, OVERFLOW_CAPACITY, HOMESTEAD_LIVING_VERSION, homesteadGates, isNavHomestead, isLivingHomestead, nearbyGate, straysOf,
+  dayTime, OVERFLOW_CAPACITY, homesteadGates, isNavHomestead, isLivingHomestead, nearbyGate, straysOf,
+  HOMESTEAD_WORK_VERSION, isWorkHomestead, ROLES, SITE_RULES, findSiteSpot, reservations, siteProgress, siteStatus, woodlot, MIN_STANDING_TREES,
+  treeEntityId,
 } from '../sim/homestead';
+import { growthStage } from '../sim/vegetation';
 import type { EnclosureId } from '../sim/homestead';
 import type { GateState } from '../sim/nav';
 import { expandPath, navCell, navStats, gateLabel } from '../sim/nav';
@@ -101,16 +104,18 @@ export class HomesteadGame {
   private ensureFounded(): void {
     if (!this.available) return;
     if (!this.world.homestead) {
-      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_LIVING_VERSION });
-      if (r.ok) this.o.toast('Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.', 'good');
+      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_WORK_VERSION });
+      if (r.ok) this.o.toast('Settlers arrived: Ada the farmer, Bram the herder and Cora, with animals and supplies. Open Farm to plan a field, give Cora work or plan a woodshed.', 'good');
       return;
     }
-    if (!isLivingHomestead(this.world.homestead)) {
-      // M012: one journaled upgrade to settlement rules v3 (from v1 or v2); the saved hash loads first, unchanged.
+    if (!isWorkHomestead(this.world.homestead)) {
+      // M012: one journaled upgrade to settlement rules v4 (from v1, v2 or v3); the saved hash loads first, unchanged.
       const was = this.world.homestead.version;
-      const r = this.send({ type: 'upgrade_homestead', rules: HOMESTEAD_LIVING_VERSION });
-      if (r.ok) this.o.toast(was < 2 ? 'The homestead now has gates and doors: villagers and animals walk real routes around fences, buildings and trees.'
-        : 'The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use.', 'good');
+      const r = this.send({ type: 'upgrade_homestead', rules: HOMESTEAD_WORK_VERSION });
+      const cora = ' Cora has joined the homestead: make her a woodcutter or a builder in Farm.';
+      if (r.ok) this.o.toast((was < 2 ? 'The homestead now has gates and doors: villagers and animals walk real routes around fences, buildings and trees.'
+        : was < 3 ? 'The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use.'
+          : 'Villagers can now fell trees and build.') + cora, 'good');
     }
   }
 
@@ -264,6 +269,13 @@ export class HomesteadGame {
     const farmers = h.villagers.filter((v) => v.role === 'farmer'), herders = h.villagers.filter((v) => v.role === 'herder');
     if (tick - this.lastAssignTick >= 300 && h.steward.policy.assign_role !== 'off') {
       let move: { v: string; role: Role; why: string } | null = null;
+      // v4: an approved site with nobody to build it, or short of wood with nobody felling, takes a spare farmer (never the last one).
+      const approved = (h.sites ?? []).filter((st) => st.state === 'approved');
+      const spare = farmers.length > 1 || (farmers.length === 1 && h.plots.length === 0) ? farmers[farmers.length - 1] : null;
+      if (spare && approved.length && !h.villagers.some((v) => v.role === 'builder')) move = { v: spare.id, role: 'builder', why: `the ${SITE_RULES[approved[0].kind].label.toLowerCase()} is approved and nobody is building it` };
+      else if (spare && approved.some((st) => (SITE_RULES[st.kind].cost.wood ?? 0) > (st.delivered.wood ?? 0) + (st.reserved.wood ?? 0)) && !h.villagers.some((v) => v.role === 'woodcutter')
+        && woodlot(this.world, h).trees.length) move = { v: spare.id, role: 'woodcutter', why: 'a building site is waiting for timber' };
+      if (move) { /* v4 move first */ } else
       if (farm >= 3 && herd === 0 && herders.length > 1) move = { v: herders[0].id, role: 'farmer', why: `${farm} fields need work and the animals are fine` };
       else if (herd >= 3 && farm === 0 && farmers.length > 1) move = { v: farmers[0].id, role: 'herder', why: `${herd} animal tasks waiting and the fields are fine` };
       else if (farmers.length === 0 && h.plots.length > 0) move = { v: herders[herders.length - 1].id, role: 'farmer', why: 'fields need a farmer' };
@@ -312,7 +324,8 @@ export class HomesteadGame {
     const pct = (n: number, d: number) => `${Math.round((n / d) * 100)}%`;
     const task = (k?: string) => ({ till: 'digging a field', sow: 'sowing', water: 'watering', harvest: 'harvesting', thresh: 'threshing seed',
       water_trough: 'filling a trough', feed: 'feeding animals', collect: 'collecting eggs', round_up: 'bringing strays back', shear: 'shearing', milk: 'milking',
-      store: 'carrying to the store', restock: 'tidying the store', eat: 'eating', rest: 'resting at home', idle: 'idle' } as Record<string, string>)[k ?? 'idle'] ?? k;
+      store: 'carrying to the store', restock: 'tidying the store', eat: 'eating', rest: 'resting at home', idle: 'idle',
+      chop: 'felling a tree', haul: 'carrying building materials', build: 'building' } as Record<string, string>)[k ?? 'idle'] ?? k;
     const fields = h.plots.map((p) => {
       const rule = CROP_RULES[p.crop];
       const state = p.state === 'wild' ? 'marked, not dug yet' : p.state === 'tilled' ? `dug, waiting for ${unitsOf(p)} seed`
@@ -334,7 +347,20 @@ export class HomesteadGame {
     const gaveUp = (v: (typeof h.villagers)[number]) => (v.avoid ?? []).map((a) => `<br><span class="warn">gave up ${a.target.replace(/:.*/, '')} (${a.reason}); retries in ${Math.max(0, a.until - life.tick)} ticks</span>`).join('');
     const people = h.villagers.map((v) => `<li><b>${v.name}</b> · ${v.role} · ${task(v.task?.kind)}${route(v)}${v.carry ? ` · carrying ${v.carry.item.startsWith('harvest') ? 'a harvest' : `${v.carry.amount} ${v.carry.item}`}` : ''}
       · energy ${v.energy}% · ${v.hunger >= 70 ? '<b class="warn">hungry</b>' : 'fed'}${gaveUp(v)}
-      <span class="row-actions"><button type="button" data-assign="${v.id}" data-role="${v.role === 'farmer' ? 'herder' : 'farmer'}">Make ${v.role === 'farmer' ? 'herder' : 'farmer'}</button></span></li>`).join('');
+      <span class="row-actions">${isWorkHomestead(h)
+        ? `<label>Job <select data-role-of="${v.id}" aria-label="Job for ${v.name}">${ROLES.map((r) => `<option value="${r}" ${r === v.role ? 'selected' : ''}>${r}</option>`).join('')}</select></label>`
+        : `<button type="button" data-assign="${v.id}" data-role="${v.role === 'farmer' ? 'herder' : 'farmer'}">Make ${v.role === 'farmer' ? 'herder' : 'farmer'}</button>`}</span></li>`).join('');
+    const held = reservations(h);
+    const heldText = Object.entries(held).map(([k, n]) => `${n} ${k}`).join(', ');
+    const sites = isWorkHomestead(h) ? (h.sites ?? []).map((st) => {
+      const rule = SITE_RULES[st.kind];
+      const cost = Object.entries(rule.cost).map(([k, n]) => `${st.delivered[k] ?? 0}/${n} ${k}`).join(', ');
+      const res = Object.entries(st.reserved).map(([k, n]) => `${n} ${k}`).join(', ');
+      return `<li data-site="${st.id}"><b>${rule.label}</b> at ${st.x}, ${st.z} · ${st.state === 'done' ? 'built' : `${st.state} · ${siteProgress(st)}% · on site ${cost}${res ? ` · reserved in store: ${res}` : ''}`}
+        <br><span class="dim">${siteStatus(this.world, st)}</span>
+        <span class="row-actions">${st.state === 'planned' ? `<button type="button" class="primary" data-approve-site="${st.id}">Approve (reserve ${Object.entries(rule.cost).map(([k, n]) => `${n} ${k}`).join(', ')})</button>` : ''}${st.state !== 'done' && !Object.keys(st.delivered).length && !st.work ? `<button type="button" data-cancel-site="${st.id}">Cancel</button>` : ''}</span></li>`;
+    }).join('') || '<li class="dim">No building sites. A woodshed needs 12 wood (a woodcutter brings it) and 4 fibre.</li>' : '';
+    const lot = isWorkHomestead(h) ? woodlot(this.world, h) : null;
     const animals = SPECIES.map((sp) => {
       const list = h.animals.filter((a) => a.species === sp);
       if (!list.length) return '';
@@ -365,9 +391,12 @@ export class HomesteadGame {
     this.panel.innerHTML = `
       <header><h2>Homestead</h2><span class="dim">day ${clock.day + 1} · ${clock.night ? 'night' : 'day'}</span><button type="button" data-close aria-label="Close">×</button></header>
       <p class="${full ? 'warn' : 'dim'}">Store ${stored} / 200 · barn ${barn} / ${OVERFLOW_CAPACITY}${full ? ' · <b>full: ripe crops and products wait until there is room (use or withdraw goods)</b>' : ''}</p>
+      ${isWorkHomestead(h) ? `<p class="dim" data-store>In store: ${Object.entries(stock).sort(([a], [b]) => a.localeCompare(b)).map(([k, n]) => `${n} ${k}${held[k] ? ` (${held[k]} reserved)` : ''}`).join(', ') || 'nothing'}</p>` : ''}
       <h3>Fields</h3><ul>${fields}</ul>
       <div class="row-actions"><button type="button" class="primary" data-plan-new>Plan a new field</button><span class="dim">seed in store ${stock.seed ?? 0} (${reserve} reserved for sowing)</span></div>
       <h3>People</h3><ul>${people}</ul>
+      ${lot ? `<p class="dim">Woodland: ${lot.trees.length} mature trees may be felled · ${lot.standing} mature or old trees standing (${MIN_STANDING_TREES} are always kept)</p>
+      <h3>Building</h3><ul>${sites}</ul><div class="row-actions"><button type="button" data-site-new>Plan a woodshed</button>${heldText ? `<span class="dim">reserved for building: ${heldText} (not usable for anything else)</span>` : ''}</div>` : ''}
       <h3>Animals</h3><ul>${animals}</ul><p class="dim">${troughs}</p>
       ${gates ? `<h3>Gates and doors</h3><ul>${gates}</ul>` : ''}
       <h3>Steward <span class="dim">(AI agent)</span></h3>
@@ -382,6 +411,17 @@ export class HomesteadGame {
     let r: Receipt | null = null;
     if (b.hasAttribute('data-close')) { this.togglePanel(false); return; }
     if (b.hasAttribute('data-plan-new')) { this.startPlanning(); return; }
+    if (b.hasAttribute('data-site-new')) {
+      const spot = findSiteSpot(this.world, 'woodshed');
+      if (!spot) { this.o.toast('There is no clear, level ground for a woodshed near the farmhouse.', 'bad'); return; }
+      r = this.send({ type: 'place_site', kind: 'woodshed', x: spot.x, z: spot.z }, `${spot.x},${spot.z}`);
+      if (r.ok) this.o.toast(`Woodshed marked out at ${spot.x}, ${spot.z}. Approve it to reserve its materials.`, 'good');
+    }
+    if (b.dataset.approveSite) {
+      r = this.send({ type: 'approve_site', siteId: b.dataset.approveSite }, b.dataset.approveSite);
+      if (r.ok && r.outcome.type === 'approve_site') this.o.toast(`Approved: ${Object.entries(r.outcome.reserved).map(([k, n]) => `${n} ${k}`).join(', ') || 'nothing'} reserved now; the rest as it comes in.`, 'good');
+    }
+    if (b.dataset.cancelSite) r = this.send({ type: 'cancel_site', siteId: b.dataset.cancelSite }, b.dataset.cancelSite);
     if (b.dataset.remove) {
       if (!confirm('Remove this field? Anything growing there is lost and the fence wood is not returned.')) return;
       r = this.send({ type: 'remove_field', fieldId: b.dataset.remove }, b.dataset.remove);
@@ -402,6 +442,7 @@ export class HomesteadGame {
     if (!h) return;
     let r: Receipt | null = null;
     if (el.dataset.field) r = this.send({ type: 'set_crop', fieldId: el.dataset.field, crop: el.value }, el.dataset.field);
+    if (el.dataset.roleOf) r = this.send({ type: 'assign_role', villagerId: el.dataset.roleOf, role: el.value, actor: 'player' }, el.dataset.roleOf);
     if (el.dataset.policy || el.hasAttribute('data-steward')) {
       const policy = { ...h.steward.policy };
       const sel = this.panel.querySelectorAll<HTMLSelectElement>('select[data-policy]');
@@ -448,6 +489,12 @@ export class HomesteadGame {
       strays: Object.fromEntries(h.enclosures.map((e) => [e.id, straysOf(h, e.id as EnclosureId).map((a) => a.id)])),
       enclosures: h.enclosures.map((e) => ({ ...e })),
       overflow: { ...h.overflow },
+      sites: (h.sites ?? []).map((st) => ({ ...st, reserved: { ...st.reserved }, delivered: { ...st.delivered }, progress: siteProgress(st), status: siteStatus(this.world, st) })),
+      reserved: reservations(h),
+      woodlot: isWorkHomestead(h) ? (() => { const l = woodlot(this.world, h); return { fellable: l.trees.length, standing: l.standing,
+        trees: l.trees.map((e) => ({ id: e.id, x: e.x, z: e.z, stage: growthStage(e), remaining: e.remaining, cut: !!e.harvestedOnce })) }; })() : null,
+      choppingTree: (() => { const v = h.villagers.find((x) => x.task?.kind === 'chop'); const id = v ? treeEntityId(v.task!.target) : null; const e = id ? this.world.entities.get(id) : null;
+        return e ? { id: e.id, x: e.x, z: e.z, stage: growthStage(e), remaining: e.remaining, harvested: e.harvested, by: v!.id } : null; })(),
       store: { ...life.stockpiles.get(FOUNDER_STOCKPILE_ID)!.inventory },
       steward: { enabled: h.steward.enabled, policy: { ...h.steward.policy }, proposals: h.steward.proposals.length },
       planning: this.planning ? { ...this.planning, spec: this.planSpec, reasons: this.planReasons } : null,

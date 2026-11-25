@@ -1242,24 +1242,38 @@ export function applyStageTimber(world: World, e: Entity): void {
   e.yieldPerHarvest = t.cut;
 }
 
-export function harvestEntity(world: World, id: string): HarvestResult | null {
+/**
+ * One cut from an entity: the single rule for depleting a tree, bush or
+ * deposit, shared by the player's harvest and (M012 rules v4) the woodcutter.
+ * `room` is how much the receiving bag or load can still take; nothing changes
+ * when the cut does not fit. The caller puts `amount` into that bag or load.
+ * A depleted entity is `harvested`: it stops being drawn and leaves the
+ * walking grid on its next rebuild (the revision changes).
+ */
+export function cutEntity(world: World, id: string, room: number): HarvestResult | null {
   const e = liveEntity(world, id);
   if (!e || e.harvested || !e.resource || e.remaining <= 0) return null;
   // Capacity is checked against the stage yield, then the record changes.
   if (stageRulesActive(world) && !e.harvestedOnce && treeTimber(e)) {
     const t = treeTimber(e)!;
-    if (world.life && Object.values(world.inventory).reduce((sum, n) => sum + n, 0) + Math.min(t.cut, t.total) > 120) return null;
+    if (Math.min(t.cut, t.total) > room) return null;
     applyStageTimber(world, e);
   }
   const amount = Math.min(e.yieldPerHarvest, e.remaining);
-  if (world.life && Object.values(world.inventory).reduce((sum, n) => sum + n, 0) + amount > 120) return null;
+  if (amount > room) return null;
   e.remaining -= amount;
   if (!e.authored) world.entityChanges.add(e.chunk);
   e.harvestedOnce = true;
   if (e.remaining <= 0) e.harvested = true;
-  world.inventory[e.resource] = (world.inventory[e.resource] ?? 0) + amount;
   world.revision++;
   return { entity: e, resource: e.resource, amount };
+}
+
+export function harvestEntity(world: World, id: string): HarvestResult | null {
+  const room = world.life ? 120 - Object.values(world.inventory).reduce((sum, n) => sum + n, 0) : Infinity;
+  const r = cutEntity(world, id, room);
+  if (r) world.inventory[r.resource] = (world.inventory[r.resource] ?? 0) + r.amount;
+  return r;
 }
 
 /** Remove every retired source after verified historical replay. This migration

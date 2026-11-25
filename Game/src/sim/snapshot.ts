@@ -295,6 +295,11 @@ function validateLifeFields(value: Record<string, unknown>): Pick<LifeSnapshot, 
   jobs.sort((a, b) => a.id.localeCompare(b.id));
   crops.sort((a, b) => a.id.localeCompare(b.id));
   const homestead = value.homestead === undefined ? undefined : validateHomestead(value.homestead, value.tick);
+  // Rules v4: site reservations are store stock set aside, so they can never exceed it.
+  for (const st of homestead?.sites ?? []) for (const k of Object.keys(st.reserved)) {
+    const held = homestead!.sites!.reduce((n, x) => n + (x.reserved[k] ?? 0), 0);
+    if (held > (stockpiles[0].inventory[k] ?? 0)) throw new Error('building-site reservations exceed the store');
+  }
   return { tick: value.tick, stockpiles, jobs, crops, ...(homestead ? { homestead } : {}) };
 }
 

@@ -9,7 +9,7 @@ import type { World } from '../sim/world';
 import { residentSurfaceAt, surfaceAt } from '../sim/world';
 import {
   CROP_RULES, DM, Facility, HomesteadState, MOISTURE_MAX, Plot, SPECIES, Species, TROUGH_MAX, cropStage, fieldRect,
-  dayTime, homesteadLayout, SPECIES_RULES, unitsOf, fieldOpening, homesteadGates,
+  dayTime, homesteadLayout, SPECIES_RULES, unitsOf, fieldOpening, homesteadGates, BuildSite, SITE_RULES, Role,
 } from '../sim/homestead';
 import type { GateState } from '../sim/nav';
 import { AnimalBatch } from './animal-kit';
@@ -17,7 +17,55 @@ import { SNAP_DISTANCE } from './smooth';
 import { ANIMAL_MODELS } from './animal-models';
 import { FOUNDER_STOCKPILE } from '../sim/economy';
 import { COTTAGE_DOOR, buildCottage, buildWell, kitMaterial } from './village-kit';
-import { Figure, FARMER_STYLE, HERDER_STYLE, buildFigure, animateFigure, placeFigure } from './characters';
+import { Figure, FARMER_STYLE, HERDER_STYLE, WOODCUTTER_STYLE, BUILDER_STYLE, FigureStyle, buildFigure, animateFigure, placeFigure } from './characters';
+
+const ROLE_STYLE: Record<Role, FigureStyle> = { farmer: FARMER_STYLE, herder: HERDER_STYLE, woodcutter: WOODCUTTER_STYLE, builder: BUILDER_STYLE };
+/** A carried load (logs, a bundle or a sack), shared by every villager and shown only while the sim says they carry something. */
+const LOAD_MAT = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+let loadGeos: Record<string, THREE.BufferGeometry> | null = null;
+function loadGeometry(kind: 'wood' | 'fiber' | 'other'): THREE.BufferGeometry {
+  loadGeos ??= {
+    wood: boxes([{ w: 0.7, h: 0.13, d: 0.13, x: 0, y: 0, z: -0.07, c: '#7A5530' }, { w: 0.7, h: 0.13, d: 0.13, x: 0, y: 0, z: 0.07, c: '#8A6238' },
+      { w: 0.7, h: 0.13, d: 0.13, x: 0, y: 0.12, z: 0, c: '#6E4A28' }]),
+    fiber: boxes([{ w: 0.5, h: 0.28, d: 0.28, x: 0, y: 0, z: 0, c: '#D9C27A' }, { w: 0.06, h: 0.3, d: 0.3, x: 0, y: -0.01, z: 0, c: '#8E6E3A' }]),
+    other: boxes([{ w: 0.34, h: 0.34, d: 0.3, x: 0, y: 0, z: 0, c: '#B89B6A' }]),
+  };
+  return loadGeos[kind];
+}
+
+/** Boxes for a building site (planned stakes, materials on site, a frame rising with the work, the finished woodshed). */
+export function siteBoxes(list: B[], st: BuildSite, ground: (x: number, z: number) => number): void {
+  const rule = SITE_RULES[st.kind];
+  const x0 = st.x, z0 = st.z, x1 = st.x + rule.w, z1 = st.z + rule.d, cx = (x0 + x1) / 2;
+  let y = Infinity;
+  for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) y = Math.min(y, ground(x + 0.5, z + 0.5));
+  const posts: Array<[number, number]> = [[x0 + 0.15, z0 + 0.15], [x1 - 0.15, z0 + 0.15], [x0 + 0.15, z1 - 0.15], [x1 - 0.15, z1 - 0.15]];
+  if (st.state === 'done') {
+    for (const [px, pz] of posts) list.push({ w: 0.22, h: 2.3, d: 0.22, x: px, y, z: pz, c: WOOD_DARK });
+    list.push({ w: rule.w, h: 1.7, d: 0.12, x: cx, y, z: z0 + 0.1, c: WOOD });
+    list.push({ w: 0.12, h: 1.7, d: rule.d, x: x0 + 0.1, y, z: (z0 + z1) / 2, c: WOOD }, { w: 0.12, h: 1.7, d: rule.d, x: x1 - 0.1, y, z: (z0 + z1) / 2, c: WOOD });
+    list.push({ w: rule.w + 0.4, h: 0.18, d: rule.d + 0.5, x: cx, y: y + 2.3, z: (z0 + z1) / 2 + 0.1, c: STRAW }, { w: rule.w - 0.2, h: 0.18, d: rule.d - 0.2, x: cx, y: y + 2.48, z: (z0 + z1) / 2, c: '#B8964E' });
+    // Stacked timber inside.
+    for (let i = 0; i < 6; i++) list.push({ w: rule.w - 0.6, h: 0.2, d: 0.2, x: cx, y: y + 0.05 + Math.floor(i / 3) * 0.2, z: z0 + 0.45 + (i % 3) * 0.24, c: i % 2 ? '#7A5530' : '#8A6238' });
+    return;
+  }
+  // Corner stakes and a string line (planned and approved).
+  for (const [px, pz] of posts) list.push({ w: 0.08, h: 0.6, d: 0.08, x: px, y, z: pz, c: st.state === 'planned' ? '#E8E0C8' : '#C8A040' });
+  list.push({ w: rule.w, h: 0.02, d: 0.02, x: cx, y: y + 0.5, z: z0 + 0.15, c: '#F0EBDD' }, { w: rule.w, h: 0.02, d: 0.02, x: cx, y: y + 0.5, z: z1 - 0.15, c: '#F0EBDD' });
+  if (st.state !== 'approved') return;
+  // Materials on site: one log per 2 wood, one bundle per 2 fibre, beside the front.
+  const wood = st.delivered.wood ?? 0, fiber = st.delivered.fiber ?? 0;
+  const used = Math.min(1, st.work / rule.work);
+  for (let i = 0; i < Math.ceil((wood * (1 - used)) / 2); i++) list.push({ w: 1.2, h: 0.16, d: 0.16, x: x1 + 0.7, y: ground(x1 + 0.7, z0 + 0.5) + Math.floor(i / 3) * 0.16, z: z0 + 0.3 + (i % 3) * 0.2, c: i % 2 ? '#7A5530' : '#8A6238' });
+  for (let i = 0; i < Math.ceil(fiber / 2); i++) list.push({ w: 0.4, h: 0.3, d: 0.3, x: x0 - 0.5, y: ground(x0 - 0.5, z0 + 0.5), z: z0 + 0.3 + i * 0.35, c: STRAW });
+  // The frame rises with the work done: posts, then the wall rails, then the roof beams.
+  if (st.work > 0) {
+    const hgt = 2.3 * Math.min(1, used * 2);
+    for (const [px, pz] of posts) list.push({ w: 0.2, h: Math.max(0.2, hgt), d: 0.2, x: px, y, z: pz, c: WOOD_DARK });
+    if (used > 0.5) list.push({ w: rule.w, h: 1.7 * Math.min(1, (used - 0.5) * 2.5), d: 0.12, x: cx, y, z: z0 + 0.1, c: WOOD });
+    if (used > 0.8) list.push({ w: rule.w + 0.2, h: 0.12, d: 0.12, x: cx, y: y + 2.3, z: z0 + 0.15, c: WOOD_DARK }, { w: rule.w + 0.2, h: 0.12, d: 0.12, x: cx, y: y + 2.3, z: z1 - 0.15, c: WOOD_DARK });
+  }
+}
 import type { CharacterState } from '../sim/character';
 
 const MAT = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
@@ -331,7 +379,7 @@ export class HomesteadView {
   private readonly dynamic = new THREE.Group();
   private readonly fields = new THREE.Group();
   private readonly herd: Herd;
-  private readonly people = new Map<string, { fig: Figure; role: string; prev: { x: number; z: number }; cur: { x: number; z: number }; shown: { x: number; z: number }; heading: number; step: number }>();
+  private readonly people = new Map<string, { fig: Figure; role: string; load: THREE.Mesh; loadKind: string; prev: { x: number; z: number }; cur: { x: number; z: number }; shown: { x: number; z: number }; heading: number; step: number }>();
   private fieldKey = '';
   private troughKey = '';
   private lastTick = -1;
@@ -459,7 +507,8 @@ export class HomesteadView {
 
   private refreshTroughs(h: HomesteadState): void {
     const key = h.enclosures.map((e) => `${e.id}:${Math.round(e.water / 3)}:${Math.round(e.feed / 3)}:${e.eggs > 0 ? 1 : 0}`).join('|')
-      + `|barn:${Math.ceil(Object.values(h.overflow).reduce((a, b) => a + b, 0) / 20)}|gates:${(h.gates ?? []).map((g) => g.state).join(',')}`;
+      + `|barn:${Math.ceil(Object.values(h.overflow).reduce((a, b) => a + b, 0) / 20)}|gates:${(h.gates ?? []).map((g) => g.state).join(',')}`
+      + `|sites:${(h.sites ?? []).map((st) => `${st.id}:${st.state}:${st.work}:${JSON.stringify(st.delivered)}`).join(';')}`;
     if (key === this.troughKey) return;
     this.troughKey = key;
     for (const c of this.dynamic.children) (c as THREE.Mesh).geometry.dispose();
@@ -494,6 +543,8 @@ export class HomesteadView {
       const r = { x0: house.rect.x0 / DM, z0: house.rect.z0 / DM, x1: house.rect.x1 / DM, z1: house.rect.z1 / DM };
       doorLeaf(list, g.x + 0.5, r.z1, this.lowest(r) + COTTAGE_DOOR.plinth, leaves[g.id]);
     }
+    // v4 building sites share this mesh (no extra draw call).
+    for (const st of h.sites ?? []) siteBoxes(list, st, this.ground);
     if (list.length) {
       const m = mesh(list, 'homestead_troughs');
       m.userData.leaves = leaves;
@@ -506,12 +557,19 @@ export class HomesteadView {
       let p = this.people.get(v.id);
       if (!p || p.role !== v.role) {
         if (p) this.group.remove(p.fig.root);
-        const fig = buildFigure(v.role === 'farmer' ? FARMER_STYLE : HERDER_STYLE);
+        const fig = buildFigure(ROLE_STYLE[v.role] ?? FARMER_STYLE);
         fig.root.name = `villager_${v.id}`;
         fig.root.userData = { villagerId: v.id, name: v.name, role: v.role };
+        // The load rides on the shoulder (on the torso joint, so it moves with the walk).
+        const load = new THREE.Mesh(loadGeometry('other'), LOAD_MAT);
+        load.name = 'villager_load';
+        load.position.set(0, 0.62, -0.18);
+        load.visible = false;
+        load.castShadow = true;
+        fig.torso.add(load);
         this.group.add(fig.root);
         const at = { x: v.x / DM, z: v.z / DM };
-        p = { fig, role: v.role, prev: at, cur: at, shown: { ...at }, heading: 0, step: 0 };
+        p = { fig, role: v.role, load, loadKind: 'other', prev: at, cur: at, shown: { ...at }, heading: 0, step: 0 };
         this.people.set(v.id, p);
       }
       const x = p.prev.x + (p.cur.x - p.prev.x) * alpha, z = p.prev.z + (p.cur.z - p.prev.z) * alpha;
@@ -533,6 +591,11 @@ export class HomesteadView {
         p.fig.torso.rotation.x = 0.25;
       }
       p.fig.root.userData.task = v.task?.kind ?? 'idle';
+      // What the sim says is in hand (water is a can, not drawn here).
+      const kind = !v.carry || v.carry.item === 'water' ? '' : v.carry.item === 'wood' ? 'wood' : v.carry.item === 'fiber' ? 'fiber' : 'other';
+      p.load.visible = !!kind && p.fig.root.visible;
+      if (kind && kind !== p.loadKind) { p.load.geometry = loadGeometry(kind as 'wood' | 'fiber' | 'other'); p.loadKind = kind; }
+      p.fig.root.userData.carry = v.carry ? `${v.carry.amount} ${v.carry.item}` : null;
     }
   }
 
@@ -542,7 +605,7 @@ export class HomesteadView {
       leaves: dyn?.userData.leaves ?? null,
       fields: this.fields.children.length,
       herd: Object.fromEntries([...this.herd.batches].map(([k, b]) => [k, b.count])),
-      villagers: [...this.people.values()].map((p) => ({ visible: p.fig.root.visible, task: p.fig.root.userData.task,
+      villagers: [...this.people.values()].map((p) => ({ visible: p.fig.root.visible, task: p.fig.root.userData.task, role: p.role, load: p.load.visible ? p.loadKind : null,
         x: Math.round(p.fig.root.position.x * 10) / 10, z: Math.round(p.fig.root.position.z * 10) / 10 })),
     };
   }

@@ -64,6 +64,9 @@ export const VILLAGER_STYLE: FigureStyle = { tunic: 'char_tunic_alt', trousers: 
 /** Role looks for homestead villagers (identity per role, small per-person variation via `hair`). */
 export const FARMER_STYLE: FigureStyle = { tunic: '#6E8F3A', trousers: '#5B4632', hair: '#3B2A1E', hat: { kind: 'straw', color: '#D9B65A' }, apron: '#B89B6A' };
 export const HERDER_STYLE: FigureStyle = { tunic: '#3F6E8C', trousers: '#4A4038', hair: '#7A4A2A', hat: { kind: 'cap', color: '#7A2E2E' } };
+/** M012 Stage B work roles: a red woodsman's shirt and cap; a builder's leather apron and a pale cap. */
+export const WOODCUTTER_STYLE: FigureStyle = { tunic: '#9C3B2E', trousers: '#3E3A33', hair: '#2E2118', hat: { kind: 'cap', color: '#2F4A2A' } };
+export const BUILDER_STYLE: FigureStyle = { tunic: '#C9A66B', trousers: '#4A4038', hair: '#5A3A22', hat: { kind: 'cap', color: '#D8CFB8' }, apron: '#6B4A2E' };
 
 export interface Figure {
   root: THREE.Group;
