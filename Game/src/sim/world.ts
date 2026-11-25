@@ -16,6 +16,8 @@ import { isStoneReplay } from './stone-compat';
 import { Hydrology } from './hydrology';
 import { TerrainV2, V2Column } from './terrain-v2';
 import { treeTimber } from './vegetation';
+import { lifeTimber, noteTreeChange, treeLife } from './woodland';
+import { woodlandCut } from './forestry';
 
 export const WORLD_SIZE = 2048;
 export const HALF = WORLD_SIZE / 2;
@@ -928,6 +930,36 @@ export function waterSurfaceAt(world: World, x: number, z: number): number {
 }
 
 // ---------- entities ----------
+
+// M013: derived-cache counters (never saved or hashed). `natureVersion` moves
+// whenever an entity's existence, depletion or lifecycle record changes, and
+// `structureVersion` when built structures change, so the walking grid can
+// tell "nothing changed" from "these trees changed" without a full rebuild.
+const natureVersions = new WeakMap<World, number>();
+const structureVersions = new WeakMap<World, number>();
+export function natureVersion(world: World): number { return natureVersions.get(world) ?? 0; }
+export function touchNature(world: World): void { natureVersions.set(world, natureVersion(world) + 1); }
+export function structureVersion(world: World): number { return structureVersions.get(world) ?? 0; }
+export function touchStructures(world: World): void { structureVersions.set(world, structureVersion(world) + 1); touchNature(world); }
+
+/**
+ * M013: a tree the simulation itself adds (a seedling, a planted sapling).
+ * Its chunk becomes a changed chunk, so the snapshot carries the record and a
+ * restore installs it exactly like any other changed natural entity.
+ */
+export function addSimEntity(world: World, e: Entity): void {
+  if (world.entities.has(e.id)) throw new Error(`entity ${e.id} already exists`);
+  ensureChunk(world, worldToChunkX(Math.floor(e.x)), worldToChunkZ(Math.floor(e.z)));
+  world.entities.set(e.id, e);
+  let list = world.entityChunks.get(e.chunk);
+  if (!list) { list = []; world.entityChunks.set(e.chunk, list); }
+  list.push(e.id);
+  world.entityChanges.add(e.chunk);
+  if (e.kind.startsWith('styl_tree')) world.stats.trees++;
+  world.stats.entities = world.entities.size;
+  touchNature(world);
+}
+
 function addEntity(world: World, e: Entity): void {
   if (world.entities.has(e.id) || (isRetiredStoneKind(e.kind) && !isStoneReplay(world))
     || world.entityRemovals.has(e.id)) return;
@@ -963,6 +995,7 @@ export function removeEntity(world: World, id: string): boolean {
   if (e.kind === 'styl_tree_blossom') world.stats.pinkTrees = Math.max(0, world.stats.pinkTrees - 1);
   world.stats.entities = world.entities.size;
   world.revision++;
+  touchNature(world);
   return true;
 }
 
@@ -1166,6 +1199,7 @@ function addAuthoredEntity(world: World, kind: EntityKind, x: number, z: number,
 export function placeAuthoredSites(world: World): void {
   if (world.authoredPlaced) return;
   world.authoredPlaced = true;
+  touchNature(world);
 
   const sites: Array<{ kind: 'waystone' | 'marker'; x: number; z: number; rot: number }> = [
     { kind: 'waystone', x: -10, z: -14, rot: 0 },
@@ -1213,6 +1247,8 @@ export function nearestHarvestable(
       || e.harvested || !e.resource || e.remaining <= 0) continue;
     if (resource && e.resource !== resource) continue;
     const d = (e.x - x) ** 2 + (e.z - z) ** 2;
+    // M013: a tree in an empty spot of its lifecycle has nothing to gather.
+    if (d < bestD && e.kind.startsWith('styl_tree_')) { const life = treeLife(world, e); if (life && (!life.present || !lifeTimber(life))) continue; }
     if (d < bestD) { bestD = d; best = e; }
   }
   return best;
@@ -1252,7 +1288,31 @@ export function applyStageTimber(world: World, e: Entity): void {
  */
 export function cutEntity(world: World, id: string, room: number): HarvestResult | null {
   const e = liveEntity(world, id);
-  if (!e || e.harvested || !e.resource || e.remaining <= 0) return null;
+  if (!e || !e.resource) return null;
+  // M013 rules v5: a tree's timber, and whether anything stands to cut, follow its lifecycle stage.
+  const life = e.kind.startsWith('styl_tree_') ? treeLife(world, e) : null;
+  if (life && !life.legacy) {
+    if (!life.present || e.harvested || e.remaining <= 0 && e.harvestedOnce) return null;
+    const first = !e.harvestedOnce;
+    if (first) {
+      const t = lifeTimber(life);
+      if (!t || Math.min(t.cut, t.total) > room) return null;
+      e.remaining = t.total;
+      e.yieldPerHarvest = t.cut;
+    }
+    const amount = Math.min(e.yieldPerHarvest, e.remaining);
+    if (amount <= 0 || amount > room) return null;
+    e.remaining -= amount;
+    if (!e.authored) world.entityChanges.add(e.chunk);
+    e.harvestedOnce = true;
+    if (e.remaining <= 0) e.harvested = true;
+    woodlandCut(world, e, life, first);
+    world.revision++;
+    touchNature(world);
+    noteTreeChange(world, e.id);
+    return { entity: e, resource: e.resource, amount };
+  }
+  if (e.harvested || e.remaining <= 0) return null;
   // Capacity is checked against the stage yield, then the record changes.
   if (stageRulesActive(world) && !e.harvestedOnce && treeTimber(e)) {
     const t = treeTimber(e)!;
@@ -1266,6 +1326,8 @@ export function cutEntity(world: World, id: string, room: number): HarvestResult
   e.harvestedOnce = true;
   if (e.remaining <= 0) e.harvested = true;
   world.revision++;
+  touchNature(world);
+  noteTreeChange(world, e.id);
   return { entity: e, resource: e.resource, amount };
 }
 
@@ -1292,6 +1354,7 @@ export function retireStoneEntities(world: World): void {
     else world.entityChunks.delete(key);
   }
   world.stats.entities = world.entities.size;
+  touchNature(world);
 }
 
 // ---------- persistence / authority boundary ----------

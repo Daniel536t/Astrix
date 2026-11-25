@@ -1,6 +1,8 @@
 // Read-only identity for selectable scene objects. Names and purposes are UI
 // metadata; quantities and existence always come from authoritative world state.
-import { ActiveEntityKind, isRetiredStoneKind, World } from '../sim/world';
+import { ActiveEntityKind, Entity, isRetiredStoneKind, World } from '../sim/world';
+import { CYCLE, TreeLife, WOOD_DAY, stageLabel, timberOf, treeLife } from '../sim/woodland';
+import { insideWindow, isWoodlandHomestead, managedWoodland } from '../sim/forestry';
 import { CROP_YIELD_LABEL, cropReady } from '../sim/economy';
 import { M2_PROJECTS } from './projects';
 import { SPECIES_INFO, growthStage, treeSpecies, treeTimber, vegetationLabel } from '../sim/vegetation';
@@ -48,9 +50,13 @@ export function inspectionKey(ref: InspectionRef): string {
 
 function entityInspection(world: World, ref: { entityId: string }): InspectionInfo | null {
   const e = world.entities.get(ref.entityId);
-  if (!e || e.harvested || world.entityRemovals.has(e.id) || isRetiredStoneKind(e.kind)) return null;
+  if (!e || world.entityRemovals.has(e.id) || isRetiredStoneKind(e.kind)) return null;
   const catalog = INSPECTION_CATALOG[e.kind as ActiveEntityKind];
   if (!catalog) return null;
+  const life = treeLife(world, e);
+  // M013 rules v5: a living tree is named and described from the simulation's lifecycle.
+  if (life && !life.legacy) return lifeInspection(world, ref, e, life);
+  if (e.harvested) return null;
   // Trees and bushes are named by species and growth stage ("Young birch").
   // Both are presentational: the yield below is the entity's own record.
   const species = treeSpecies(e, world.seed);
@@ -70,6 +76,32 @@ function entityInspection(world: World, ref: { entityId: string }): InspectionIn
       { label: 'Resource', value: e.resource ?? 'None' },
       { label: 'Remaining', value: `${left} · ${Math.min(cut, left)} per gather` },
       { label: 'Status', value: e.provisional ? 'Available · provisional art' : 'Available' },
+    ],
+  };
+}
+
+const ticksText = (n: number) => n >= WOOD_DAY ? `${(n / WOOD_DAY).toFixed(1)} days` : `${n} ticks`;
+
+/** Hover/E inspection of a tree under rules v5: species, stage, age, yield, protection and what happens next. */
+function lifeInspection(world: World, ref: { entityId: string }, e: Entity, life: TreeLife): InspectionInfo | null {
+  if (!life.present) return null;
+  const h = world.homestead!;
+  const label = `${life.stage === 'snag' ? 'Dead' : life.stage[0].toUpperCase() + life.stage.slice(1)} ${SPECIES_INFO[life.species].label}${life.stage === 'stump' ? ' stump' : life.stage === 'snag' ? ' snag' : ''}`;
+  const t = timberOf(life.species, life.stage);
+  const left = e.harvestedOnce ? e.remaining : t?.total ?? 0, cut = e.harvestedOnce ? e.yieldPerHarvest : t?.cut ?? 0;
+  const managed = isWoodlandHomestead(h) && insideWindow(h, e.x, e.z) ? managedWoodland(world, h).all.find((m) => m.e.id === e.id) : undefined;
+  const next = life.nextIn === null ? null : life.stage === 'stump' ? (life.record?.sprout ? `resprouts in ${ticksText(life.nextIn)}` : `rots away in ${ticksText(life.nextIn)}`)
+    : life.stage === 'snag' ? `falls in about ${ticksText(life.nextIn)}` : `${CYCLE[CYCLE.indexOf(life.stage) + 1] === 'dying' ? 'starts dying' : `becomes ${CYCLE[CYCLE.indexOf(life.stage) + 1] ?? 'gone'}`} in ${ticksText(life.nextIn)}`;
+  const origin = life.record ? { wild: 'wild', seed: 'seeded itself', plant: 'planted', sprout: 'resprouted from a stump', regrow: 'regrew in place' }[life.record.from] : 'wild';
+  return {
+    ref, key: inspectionKey(ref), name: label,
+    category: 'Natural resource · living woodland',
+    description: `${SPECIES_INFO[life.species].blurb} ${life.stage === 'stump' ? 'A felled tree\'s stump.' : life.stage === 'snag' ? 'Standing dead wood: a little poor timber.' : 'Harvest its timber for carried wood.'}`,
+    facts: [
+      { label: 'Stage', value: `${stageLabel(life.stage)}${life.age !== null ? ` · age ${ticksText(life.age)}` : ''} · ${origin}` },
+      { label: 'Timber', value: t ? `${left} wood left · ${Math.min(cut, left)} per cut (${t.total} at this stage)` : 'none' },
+      ...(next ? [{ label: 'Next', value: next }] : []),
+      ...(managed ? [{ label: 'Woodland', value: managed.eligible ? 'may be felled under the woodland policy' : managed.why ?? '' }] : []),
     ],
   };
 }

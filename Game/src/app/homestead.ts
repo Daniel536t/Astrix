@@ -14,8 +14,12 @@ import {
   checkField, cropStage, fenceCost, fieldUnits, homesteadLayout, nearbyActions, recentHomesteadEvents, unitsOf, findFieldSpot,
   dayTime, OVERFLOW_CAPACITY, homesteadGates, isNavHomestead, isLivingHomestead, nearbyGate, straysOf,
   HOMESTEAD_WORK_VERSION, isWorkHomestead, ROLES, SITE_RULES, findSiteSpot, reservations, siteProgress, siteStatus, woodlot, MIN_STANDING_TREES,
-  treeEntityId,
+  treeEntityId, HOMESTEAD_WOODLAND_VERSION,
 } from '../sim/homestead';
+import {
+  isWoodlandHomestead, managedWoodland, woodcutterStatus, woodlandStats, plantable, seedParent, insideWindow,
+} from '../sim/forestry';
+import { CYCLE, HARVEST_MODES, LifeStage, POLICY_LIMITS, QUOTA_TREE, WOOD_DAY, WoodPolicy, stageLabel, treeLife } from '../sim/woodland';
 import { growthStage } from '../sim/vegetation';
 import type { EnclosureId } from '../sim/homestead';
 import type { GateState } from '../sim/nav';
@@ -104,18 +108,19 @@ export class HomesteadGame {
   private ensureFounded(): void {
     if (!this.available) return;
     if (!this.world.homestead) {
-      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_WORK_VERSION });
+      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_WOODLAND_VERSION });
       if (r.ok) this.o.toast('Settlers arrived: Ada the farmer, Bram the herder and Cora, with animals and supplies. Open Farm to plan a field, give Cora work or plan a woodshed.', 'good');
       return;
     }
-    if (!isWorkHomestead(this.world.homestead)) {
-      // M012: one journaled upgrade to settlement rules v4 (from v1, v2 or v3); the saved hash loads first, unchanged.
+    if (this.world.homestead.version < HOMESTEAD_WOODLAND_VERSION) {
+      // M012/M013: one journaled upgrade to settlement rules v5 (from v1-v4); the saved hash loads first, unchanged.
       const was = this.world.homestead.version;
-      const r = this.send({ type: 'upgrade_homestead', rules: HOMESTEAD_WORK_VERSION });
-      const cora = ' Cora has joined the homestead: make her a woodcutter or a builder in Farm.';
+      const r = this.send({ type: 'upgrade_homestead', rules: HOMESTEAD_WOODLAND_VERSION });
+      const cora = was < 4 ? ' Cora has joined the homestead: make her a woodcutter or a builder in Farm.' : '';
+      const wood = ' The woodland is alive now: trees grow, age and regrow; set how it is harvested in Farm.';
       if (r.ok) this.o.toast((was < 2 ? 'The homestead now has gates and doors: villagers and animals walk real routes around fences, buildings and trees.'
         : was < 3 ? 'The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use.'
-          : 'Villagers can now fell trees and build.') + cora, 'good');
+          : was < 4 ? 'Villagers can now fell trees and build.' : '') + cora + wood, 'good');
     }
   }
 
@@ -346,7 +351,7 @@ export class HomesteadGame {
     };
     const gaveUp = (v: (typeof h.villagers)[number]) => (v.avoid ?? []).map((a) => `<br><span class="warn">gave up ${a.target.replace(/:.*/, '')} (${a.reason}); retries in ${Math.max(0, a.until - life.tick)} ticks</span>`).join('');
     const people = h.villagers.map((v) => `<li><b>${v.name}</b> · ${v.role} · ${task(v.task?.kind)}${route(v)}${v.carry ? ` · carrying ${v.carry.item.startsWith('harvest') ? 'a harvest' : `${v.carry.amount} ${v.carry.item}`}` : ''}
-      · energy ${v.energy}% · ${v.hunger >= 70 ? '<b class="warn">hungry</b>' : 'fed'}${gaveUp(v)}
+      · energy ${v.energy}% · ${v.hunger >= 70 ? '<b class="warn">hungry</b>' : 'fed'}${gaveUp(v)}${(() => { const why = woodcutterStatus(this.world, h, v); return why ? `<br><span class="warn" data-woodcutter-why>not felling: ${why}</span>` : ''; })()}
       <span class="row-actions">${isWorkHomestead(h)
         ? `<label>Job <select data-role-of="${v.id}" aria-label="Job for ${v.name}">${ROLES.map((r) => `<option value="${r}" ${r === v.role ? 'selected' : ''}>${r}</option>`).join('')}</select></label>`
         : `<button type="button" data-assign="${v.id}" data-role="${v.role === 'farmer' ? 'herder' : 'farmer'}">Make ${v.role === 'farmer' ? 'herder' : 'farmer'}</button>`}</span></li>`).join('');
@@ -395,14 +400,93 @@ export class HomesteadGame {
       <h3>Fields</h3><ul>${fields}</ul>
       <div class="row-actions"><button type="button" class="primary" data-plan-new>Plan a new field</button><span class="dim">seed in store ${stock.seed ?? 0} (${reserve} reserved for sowing)</span></div>
       <h3>People</h3><ul>${people}</ul>
-      ${lot ? `<p class="dim">Woodland: ${lot.trees.length} mature trees may be felled · ${lot.standing} mature or old trees standing (${MIN_STANDING_TREES} are always kept)</p>
-      <h3>Building</h3><ul>${sites}</ul><div class="row-actions"><button type="button" data-site-new>Plan a woodshed</button>${heldText ? `<span class="dim">reserved for building: ${heldText} (not usable for anything else)</span>` : ''}</div>` : ''}
+      ${lot && !isWoodlandHomestead(h) ? `<p class="dim">Woodland: ${lot.trees.length} mature trees may be felled · ${lot.standing} mature or old trees standing (${MIN_STANDING_TREES} are always kept)</p>` : ''}
+      ${lot && isWoodlandHomestead(h) ? this.woodlandPanel() : ''}
+      ${lot ? `<h3>Building</h3><ul>${sites}</ul><div class="row-actions"><button type="button" data-site-new>Plan a woodshed</button>${heldText ? `<span class="dim">reserved for building: ${heldText} (not usable for anything else)</span>` : ''}</div>` : ''}
       <h3>Animals</h3><ul>${animals}</ul><p class="dim">${troughs}</p>
       ${gates ? `<h3>Gates and doors</h3><ul>${gates}</ul>` : ''}
       <h3>Steward <span class="dim">(AI agent)</span></h3>
       <div class="steward"><label><input type="checkbox" data-steward ${st.enabled ? 'checked' : ''}> Steward on</label> ${pol('assign_role', 'Reassign jobs')} ${pol('expand_field', 'Fence new fields')}</div>
       ${proposals ? `<ul class="proposals">${proposals}</ul>` : '<p class="dim">No requests.</p>'}
       ${events ? `<h3>Recently</h3><ul class="events">${events}</ul>` : ''}`;
+  }
+
+  // ---------- M013 woodland ----------
+
+  /** The tree nearest the player (within 8 m) in the managed woodland, standing or a stump. */
+  private nearestTree(): { id: string; name: string; d: number } | null {
+    const p = this.o.player(), h = this.world.homestead;
+    if (!p || !h || !isWoodlandHomestead(h)) return null;
+    let best: { id: string; name: string; d: number } | null = null;
+    for (const m of managedWoodland(this.world, h).all) {
+      if (!m.life.present) continue;
+      const d = Math.hypot(m.e.x - p.x, m.e.z - p.z);
+      if (d <= 8 && (!best || d < best.d)) best = { id: m.e.id, name: `${stageLabel(m.life.stage)} ${m.life.species}`, d };
+    }
+    return best;
+  }
+
+  /** The cell in front of the player where a sapling would go. */
+  private plantCell(): { x: number; z: number } | null {
+    const p = this.o.player();
+    if (!p) return null;
+    return { x: Math.floor(p.x + Math.sin(p.heading) * 1.6), z: Math.floor(p.z + Math.cos(p.heading) * 1.6) };
+  }
+
+  private woodlandPanel(): string {
+    const h = this.world.homestead!, w = h.woodland!, life = this.world.life!;
+    const lot = managedWoodland(this.world, h);
+    const reg = { x: h.anchorX - 10, z: h.anchorZ - 10 };
+    const st = woodlandStats(this.world, { x: reg.x, z: reg.z, radius: 85 });
+    if (!st) return '';
+    const stages = (['sapling', 'young', 'mature', 'old', 'dying', 'snag', 'stump'] as LifeStage[]).filter((k) => st.byStage[k]).map((k) => `${st.byStage[k]} ${stageLabel(k)}`).join(', ');
+    const p = w.policy;
+    const sel = (k: string, opts: Array<[string, string]>, v: string) => `<select data-wpolicy="${k}" aria-label="${k}">${opts.map(([o, l]) => `<option value="${o}" ${o === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+    const num = (k: keyof typeof POLICY_LIMITS, label: string) => `<label>${label} <input type="number" data-wpolicy="${k}" min="${POLICY_LIMITS[k][0]}" max="${POLICY_LIMITS[k][1]}" value="${p[k]}" style="width:3.5em"></label>`;
+    const near = this.nearestTree();
+    const cell = this.plantCell();
+    const plantWhy = cell ? (() => { const parent = seedParent(this.world, h, cell.x + 0.5, cell.z + 0.5, null); if (!parent) return ['no mature tree within 20 m to lift a sapling from'];
+      return plantable(this.world, h, cell.x, cell.z, treeLife(this.world, parent)!.species); })() : ['walk (Tab) to plant where you stand'];
+    const zones = w.zones.map((z) => `<li>Protected area ${z.id.slice(5)} · ${z.r} m round ${z.x}, ${z.z} <span class="row-actions"><button type="button" data-remove-zone="${z.id}">Remove</button></span></li>`).join('');
+    const marked = w.protect.slice(0, 6).map((id) => { const e = this.world.entities.get(id); const l = e ? treeLife(this.world, e) : null;
+      return `<li>${l ? `${stageLabel(l.stage)} ${l.species}` : id} at ${e ? `${Math.round(e.x)}, ${Math.round(e.z)}` : '?'} <span class="row-actions"><button type="button" data-unprotect="${id}">Unprotect</button></span></li>`; }).join('');
+    const orders = w.orders.length ? `${w.orders.length} sapling${w.orders.length > 1 ? 's' : ''} to replant (${w.orders.map((o) => o.sp).join(', ')})` : 'nothing to replant';
+    return `<h3>Woodland <span class="dim">(living: trees grow, age and regrow)</span></h3>
+      <p class="dim" data-woodland-stats>${st.trees} trees in the managed woodland: ${stages || 'none'} · <b>${st.harvestable} may be felled</b> · ${st.protected} protected · ${st.regrowing} regrowing
+      <br>Sustainable: about ${st.sustainableTreesPerDay} trees (${st.sustainableWoodPerDay} wood) a day, ${st.rotationDays}-day rotation · felling allowance ${p.harvest === 'sustainable' ? `${(w.quota / QUOTA_TREE).toFixed(1)} trees (+${(w.rate * WOOD_DAY / QUOTA_TREE).toFixed(1)}/day)` : p.harvest === 'paused' ? 'paused' : 'by demand'}
+      · woodcutter walks ${st.meanPathToStore ?? '–'} m on average to the store
+      <br>So far: ${w.felled} felled · ${w.planted} planted · ${w.seeded} seeded themselves · ${w.sprouted} stumps resprouted · ${orders} · day ${Math.floor(life.tick / WOOD_DAY) + 1}</p>
+      <div class="steward" data-woodland-policy>
+        <label>Harvest ${sel('harvest', HARVEST_MODES.map((m) => [m, m === 'sustainable' ? 'only what regrows' : m === 'demand' ? 'what the store needs' : 'paused']), p.harvest)}</label>
+        <label>Fell from ${sel('minStage', [['mature', 'mature'], ['old', 'old']], p.minStage)}</label>
+        <label><input type="checkbox" data-wpolicy="keepVeterans" ${p.keepVeterans ? 'checked' : ''}> keep old trees</label>
+        <label>Dead snags ${sel('snags', [['fell', 'fell for poor wood'], ['keep', 'keep for wildlife']], p.snags)}</label>
+        ${num('buffer', 'Keep near buildings (m)')} ${num('waterBuffer', 'near water (m)')} ${num('minStanding', 'Always standing')}
+        <label>Replant ${sel('replant', [['0', 'none'], ['1', '1 per tree'], ['2', '2 per tree'], ['3', '3 per tree']], String(p.replant))}</label>
+      </div>
+      <div class="row-actions">
+        <button type="button" data-protect-near ${near ? '' : 'disabled'}>${near ? `Protect the ${near.name} (${near.d.toFixed(0)} m)` : 'Protect nearest tree'}</button>
+        ${near && w.protect.includes(near.id) ? `<button type="button" data-unprotect="${near.id}">Unprotect it</button>` : ''}
+        <button type="button" data-protect-zone ${this.o.player() ? '' : 'disabled'}>Protect 12 m around me</button>
+        <button type="button" class="primary" data-plant-here ${cell && !plantWhy.length ? '' : 'disabled'}>Plant a sapling here</button>
+      </div>
+      ${plantWhy.length ? `<p class="dim" data-plant-why>Planting here: ${plantWhy.join('; ')}</p>` : ''}
+      ${zones || marked ? `<ul>${zones}${marked}${w.protect.length > 6 ? `<li class="dim">and ${w.protect.length - 6} more marked trees</li>` : ''}</ul>` : ''}`;
+  }
+
+  private sendPolicy(): Receipt | null {
+    const h = this.world.homestead;
+    if (!h?.woodland) return null;
+    const p: WoodPolicy = { ...h.woodland.policy };
+    this.panel.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-wpolicy]').forEach((el) => {
+      const k = el.dataset.wpolicy as keyof WoodPolicy;
+      if (k === 'keepVeterans') p.keepVeterans = (el as HTMLInputElement).checked;
+      else if (k === 'buffer' || k === 'waterBuffer' || k === 'minStanding' || k === 'replant') {
+        const n = Math.round(Number(el.value));
+        p[k] = Math.max(POLICY_LIMITS[k][0], Math.min(POLICY_LIMITS[k][1], Number.isFinite(n) ? n : p[k]));
+      } else (p as unknown as Record<string, string>)[k] = el.value;
+    });
+    return this.send({ type: 'woodland_policy', ...p });
   }
 
   private onPanelClick(e: Event): void {
@@ -422,6 +506,24 @@ export class HomesteadGame {
       if (r.ok && r.outcome.type === 'approve_site') this.o.toast(`Approved: ${Object.entries(r.outcome.reserved).map(([k, n]) => `${n} ${k}`).join(', ') || 'nothing'} reserved now; the rest as it comes in.`, 'good');
     }
     if (b.dataset.cancelSite) r = this.send({ type: 'cancel_site', siteId: b.dataset.cancelSite }, b.dataset.cancelSite);
+    // M013 woodland: protect the nearest tree or an area round the player, unprotect, plant in front of the player.
+    if (b.hasAttribute('data-protect-near')) {
+      const t = this.nearestTree();
+      if (t) { r = this.send({ type: 'protect_tree', entityId: t.id, protect: true }, t.id); if (r.ok) this.o.toast(`The ${t.name} is protected: no one will fell it.`, 'good'); }
+    }
+    if (b.dataset.unprotect) r = this.send({ type: 'protect_tree', entityId: b.dataset.unprotect, protect: false }, b.dataset.unprotect);
+    if (b.hasAttribute('data-protect-zone')) {
+      const p = this.o.player();
+      if (p) { r = this.send({ type: 'protect_zone', x: Math.round(p.x), z: Math.round(p.z), r: 12 }, `${Math.round(p.x)},${Math.round(p.z)}`); if (r.ok) this.o.toast('Trees within 12 m of here are protected.', 'good'); }
+    }
+    if (b.dataset.removeZone) r = this.send({ type: 'remove_zone', zoneId: b.dataset.removeZone }, b.dataset.removeZone);
+    if (b.hasAttribute('data-plant-here')) {
+      const c = this.plantCell();
+      if (c) {
+        r = this.send({ type: 'plant_tree', x: c.x, z: c.z }, `${c.x},${c.z}`);
+        if (r.ok && r.outcome.type === 'plant_tree') this.o.toast(`Planted a ${r.outcome.species} sapling (lifted from a nearby tree).`, 'good');
+      }
+    }
     if (b.dataset.remove) {
       if (!confirm('Remove this field? Anything growing there is lost and the fence wood is not returned.')) return;
       r = this.send({ type: 'remove_field', fieldId: b.dataset.remove }, b.dataset.remove);
@@ -443,6 +545,7 @@ export class HomesteadGame {
     let r: Receipt | null = null;
     if (el.dataset.field) r = this.send({ type: 'set_crop', fieldId: el.dataset.field, crop: el.value }, el.dataset.field);
     if (el.dataset.roleOf) r = this.send({ type: 'assign_role', villagerId: el.dataset.roleOf, role: el.value, actor: 'player' }, el.dataset.roleOf);
+    if (el.dataset.wpolicy) { r = this.sendPolicy(); if (r?.ok) this.o.toast('Woodland policy updated.', 'good'); }
     if (el.dataset.policy || el.hasAttribute('data-steward')) {
       const policy = { ...h.steward.policy };
       const sel = this.panel.querySelectorAll<HTMLSelectElement>('select[data-policy]');
@@ -471,6 +574,24 @@ export class HomesteadGame {
     }
   }
 
+  /** M013 probe/metrics view of the living woodland (presentation only). */
+  woodlandMetrics(): Record<string, unknown> | null {
+    const h = this.world.homestead;
+    if (!h || !isWoodlandHomestead(h)) return null;
+    const w = h.woodland!;
+    const lot = managedWoodland(this.world, h);
+    const stats = woodlandStats(this.world, { x: h.anchorX - 10, z: h.anchorZ - 10, radius: 85 });
+    return {
+      epoch: w.epoch, policy: { ...w.policy }, quota: w.quota, rate: w.rate, felled: w.felled, planted: w.planted, seeded: w.seeded, sprouted: w.sprouted,
+      protect: [...w.protect], zones: w.zones.map((z) => ({ ...z })), orders: w.orders.map((o) => ({ ...o })), records: w.trees.length,
+      standing: lot.standing, eligible: lot.trees.map((e) => e.id),
+      trees: lot.all.map((m) => ({ id: m.e.id, x: m.e.x, z: m.e.z, sp: m.life.species, stage: m.life.stage, present: m.life.present, age: m.life.age,
+        remaining: m.e.harvestedOnce ? m.e.remaining : null, eligible: m.eligible, why: m.why, prot: m.protectedWhy, from: m.life.record?.from ?? 'wild' })),
+      woodcutters: h.villagers.filter((v) => v.role === 'woodcutter').map((v) => ({ id: v.id, why: woodcutterStatus(this.world, h, v) })),
+      stats: stats ? { ...stats, harvestableIds: undefined, protectedIds: undefined } : null,
+    };
+  }
+
   metrics(): Record<string, unknown> | null {
     const h = this.world.homestead, life = this.world.life;
     if (!h || !life) return null;
@@ -496,6 +617,7 @@ export class HomesteadGame {
       choppingTree: (() => { const v = h.villagers.find((x) => x.task?.kind === 'chop'); const id = v ? treeEntityId(v.task!.target) : null; const e = id ? this.world.entities.get(id) : null;
         return e ? { id: e.id, x: e.x, z: e.z, stage: growthStage(e), remaining: e.remaining, harvested: e.harvested, by: v!.id } : null; })(),
       store: { ...life.stockpiles.get(FOUNDER_STOCKPILE_ID)!.inventory },
+      woodland: isWoodlandHomestead(h) ? this.woodlandMetrics() : null,
       steward: { enabled: h.steward.enabled, policy: { ...h.steward.policy }, proposals: h.steward.proposals.length },
       planning: this.planning ? { ...this.planning, spec: this.planSpec, reasons: this.planReasons } : null,
       nearest: this.nearest(),

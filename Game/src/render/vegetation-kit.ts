@@ -19,6 +19,7 @@ import * as THREE from 'three';
 import palette from '../data/palette.json';
 import { mulberry32 } from '../sim/noise';
 import type { BushSpecies, GrowthStage, TreeSpecies, VegetationSpecies } from '../sim/vegetation';
+import type { TreeStage } from '../sim/woodland';
 import type { LodBand } from './lod';
 
 const M = palette.materials as Record<string, { hex: string }>;
@@ -150,7 +151,7 @@ export function planTriangles(plan: VegetationPlan, lod: LodBand): number {
 }
 
 // ---------- authoring helpers ----------
-const STAGE_SIZE: Record<GrowthStage, number> = { sapling: 0.4, young: 0.68, mature: 1, old: 1.12 };
+const STAGE_SIZE: Record<TreeStage, number> = { sapling: 0.4, young: 0.68, mature: 1, old: 1.12, dying: 1.12, snag: 1.08, stump: 1 };
 const Q = (v: number) => Math.round(v * 20) / 20;
 
 /** Plan authoring context: stage scale, detail switch and a variant RNG. */
@@ -159,10 +160,10 @@ class Author {
   readonly full: boolean;
   readonly old: boolean;
   readonly rnd: () => number;
-  constructor(readonly stage: GrowthStage, seed: number, size = STAGE_SIZE[stage]) {
+  constructor(readonly stage: TreeStage, seed: number, size = STAGE_SIZE[stage]) {
     this.s = size;
-    this.full = stage === 'mature' || stage === 'old';
-    this.old = stage === 'old';
+    this.full = stage === 'mature' || stage === 'old' || stage === 'dying';
+    this.old = stage === 'old' || stage === 'dying';
     this.rnd = mulberry32(seed);
   }
   /** Signed jitter in [-a, a]. */
@@ -232,20 +233,25 @@ function pine(a: Author): VegetationPlan {
 function spruce(a: Author): VegetationPlan {
   const [T, B, g, gB] = [H('bark_dark'), H('bark_dark'), H('conifer_spruce'), H('conifer_spruce_b')];
   if (a.stage === 'sapling') return sapling(a, T, g, gB, true);
+  // M013 (REF-006 image 2): flat, layered tiers with the dark trunk showing between them.
   const cross = (w: number, n: number, y: number, h: number, hexA: string, hexB: string): Block[] => {
     const out = [a.b(hexA, w, h, n, 0, y, 0, 0.1)];
     if (a.full) out.push(a.b(hexB, n, h * 0.9, w, 0, y + 0.05, 0, 0.1));
     return out;
   };
   const tiers = [
-    cross(4.4, 2.4, 1.9, 1.0, g, gB),
-    cross(3.6, 2.0, 2.9, 1.0, gB, g),
-    cross(2.8, 1.6, 3.9, 1.0, g, gB),
-    [a.b(gB, 2.0, 0.9, 2.0, 0, 4.85, 0, 0.1)],
-    [a.b(g, 1.2, 0.8, 1.2, 0, 5.7, 0, 0.1)],
-    [a.b(gB, 0.55, 0.7, 0.55, 0, 6.45, 0, 0.05)],
+    cross(4.4, 2.4, 1.75, 0.7, g, gB),
+    cross(3.7, 2.0, 2.75, 0.65, gB, g),
+    cross(2.9, 1.7, 3.7, 0.6, g, gB),
+    [a.b(gB, 2.1, 0.6, 2.1, 0, 4.6, 0, 0.1)],
+    [a.b(g, 1.3, 0.6, 1.3, 0, 5.4, 0, 0.1)],
+    [a.b(gB, 0.55, 0.75, 0.55, 0, 6.2, 0, 0.05)],
   ];
-  return { trunk: [a.trunk(T, 0.5, 2.0)], detail: [...a.flare(B, 0.8)], tiers, midBoxes: 3, farBoxes: 2 };
+  // Drooping tier tips at full detail: the layered spruce edge.
+  const detail = [...a.flare(B, 0.8)];
+  if (a.full) detail.push(a.b(g, 0.6, 0.35, 0.6, 2.25, 1.35, 0, 0.1), a.b(gB, 0.6, 0.35, 0.6, -2.2, 1.35, 0.1, 0.1),
+    a.b(gB, 0.5, 0.3, 0.5, 0, 2.4, 1.9, 0.1), a.b(g, 0.5, 0.3, 0.5, 0.1, 2.4, -1.85, 0.1));
+  return { trunk: [a.trunk(T, 0.5, 5.6)], detail, tiers, midBoxes: 3, farBoxes: 2 };
 }
 
 function birch(a: Author): VegetationPlan {
@@ -323,26 +329,132 @@ const SPECIES_SEED: Record<VegetationSpecies, number> = {
   pine: 11, spruce: 13, oak: 23, birch: 37, beech: 41, cherry: 53,
   leafy_bush: 97, berry_bush: 101, fern_clump: 103,
 };
-const STAGE_INDEX: Record<GrowthStage, number> = { sapling: 0, young: 1, mature: 2, old: 3 };
+const STAGE_INDEX: Record<TreeStage, number> = { sapling: 0, young: 1, mature: 2, old: 3, dying: 4, snag: 5, stump: 6 };
 const TREE_BUILDERS: Record<TreeSpecies, (a: Author) => VegetationPlan> = { oak, pine, spruce, birch, beech, cherry };
+const CONIFERS = new Set<TreeSpecies>(['pine', 'spruce']);
 
 export function isTreeSpecies(species: VegetationSpecies): species is TreeSpecies {
   return species in TREE_BUILDERS;
 }
 
+// ---------- M013: near-only character and the end of a tree's life ----------
+
+/**
+ * Near-LOD detail for mature and old trees (REF-006 images 1 and 3): root
+ * spurs spreading from the flare, and, on broadleaves, smaller blocks set
+ * into the crown so it reads lumpy rather than boxed. Detail blocks are drawn
+ * only in the near band; mid and far are built from the trunk and tiers, so
+ * they do not change.
+ */
+function addCharacter(species: TreeSpecies, a: Author, plan: VegetationPlan): VegetationPlan {
+  if (!a.full) return plan;
+  const rnd = mulberry32(SPECIES_SEED[species] * 31 + (a.old ? 7 : 3));
+  const root = species === 'birch' ? H('birch_bark') : species === 'beech' ? H('beech_bark') : H('bark_dark');
+  const tw = plan.trunk[0]?.w ?? 0.6;
+  const detail = [...plan.detail];
+  // Root spurs: low blocks reaching out from the trunk foot (four for oak, three otherwise).
+  const spurs = species === 'oak' ? 4 : 3;
+  for (let i = 0; i < spurs; i++) {
+    const ang = (i / spurs) * Math.PI * 2 + rnd() * 0.6;
+    const len = tw * (0.95 + rnd() * 0.5);
+    const along = Math.abs(Math.cos(ang)) > Math.abs(Math.sin(ang));
+    detail.push({ x: Q(Math.cos(ang) * (tw * 0.5 + len * 0.42)), y: Q(0.11 + rnd() * 0.05), z: Q(Math.sin(ang) * (tw * 0.5 + len * 0.42)),
+      w: Q(along ? len : Math.max(0.15, tw * 0.32)), h: 0.22, d: Q(along ? Math.max(0.15, tw * 0.32) : len), hex: root, omit: FACE_NY, k: 0.92 });
+  }
+  if (CONIFERS.has(species)) return { ...plan, detail };
+  // Lumps: small blocks set into the sides and tops of the bigger crown blocks.
+  const big = plan.tiers.flat().filter((b) => b.w >= 1.6 || b.d >= 1.6).slice(0, 3);
+  for (const b of big) {
+    for (let k = 0; k < 1; k++) {
+      const side = Math.floor(rnd() * 4);
+      const sx = side === 0 ? 1 : side === 1 ? -1 : 0, sz = side === 2 ? 1 : side === 3 ? -1 : 0;
+      const size = Q(Math.max(0.35, Math.min(b.w, b.d) * (0.3 + rnd() * 0.12)));
+      const off = (rnd() - 0.5) * 0.5;
+      detail.push({
+        x: Q(b.x + sx * (b.w / 2 + size * 0.2) + (sz ? off * b.w : 0)), y: Q(b.y + (rnd() - 0.3) * b.h * 0.5),
+        z: Q(b.z + sz * (b.d / 2 + size * 0.2) + (sx ? off * b.d : 0)), w: size, h: Q(size * 0.85), d: size, hex: b.hex, k: (b.k ?? 1) * (0.94 + rnd() * 0.1),
+      });
+    }
+    // One lump on top of the largest blocks breaks the flat crown line.
+    if (b === big[0]) {
+      const size = Q(Math.max(0.4, Math.min(b.w, b.d) * 0.32));
+      detail.push({ x: Q(b.x + (rnd() - 0.5) * b.w * 0.4), y: Q(b.y + b.h / 2 + size * 0.3), z: Q(b.z + (rnd() - 0.5) * b.d * 0.4), w: size, h: Q(size * 0.7), d: size, hex: b.hex, omit: FACE_NY, k: (b.k ?? 1) * 1.04 });
+    }
+  }
+  // Birch: a wide crown with drooping tips (REF-006 image 2).
+  if (species === 'birch') {
+    for (const [x, z] of [[1.6, 0.2], [-1.5, -0.3], [0.2, 1.4]] as const) detail.push(a.b(H('birch_leaf_b'), 0.45, 0.7, 0.45, x, 3.55, z, 0.1));
+  }
+  return { ...plan, detail };
+}
+
+/** Dying: the old tree's shape with a thinning, yellowing-brown crown (every third crown block gone). */
+function dyingPlan(species: TreeSpecies, base: VegetationPlan): VegetationPlan {
+  const conifer = CONIFERS.has(species);
+  const [dA, dB] = conifer ? [H('conifer_dying'), H('leaf_dying_a')] : [H('leaf_dying_a'), H('leaf_dying_b')];
+  let n = 0;
+  const tiers = base.tiers.map((tier) => tier.filter((_b, i) => i === 0 || (n++ % 3) !== 2)
+    .map((b, i) => ({ ...b, hex: (i + n) % 2 ? dA : dB, k: (b.k ?? 1) * 0.92, w: Q(b.w * 0.9), d: Q(b.d * 0.9) })));
+  const detail = base.detail.filter((b) => b.y < 1 || (b.h < 0.4 && b.y < 4)).map((b) => b.y < 1 ? b : { ...b, hex: H('snag_bark') });
+  return { ...base, tiers, detail };
+}
+
+/**
+ * A standing dead tree (REF-006 image 1): a bare, reddish-brown trunk with
+ * broken limbs; conifers keep short stubs up a tall pole. The limbs form the
+ * "tiers" so the mid and far LODs keep the silhouette.
+ */
+function snagPlan(species: TreeSpecies, a: Author): VegetationPlan {
+  const [S, SB] = [H('snag_bark'), H('snag_bark_b')];
+  const conifer = CONIFERS.has(species);
+  const top = conifer ? 6.2 : 4.4;
+  const trunk = [a.trunk(S, conifer ? 0.55 : 0.75, top)];
+  const tiers: Block[][] = conifer
+    ? [[a.b(SB, 1.6, 0.22, 0.22, 0.5, 2.2, 0, 0.1)], [a.b(S, 0.22, 0.22, 1.3, 0, 3.4, -0.4, 0.1)], [a.b(SB, 1.0, 0.2, 0.2, -0.3, 4.6, 0, 0.1)], [a.b(S, 0.3, 0.6, 0.3, 0.05, top + 0.25, 0, 0.05)]]
+    : [[a.b(SB, 1.9, 0.3, 0.3, 0.9, 3.4, 0, 0.1), a.b(S, 0.3, 1.2, 0.3, 1.75, 4.1, 0, 0.05)],
+      [a.b(S, 0.3, 0.3, 1.6, -0.1, 3.9, -0.75, 0.1), a.b(SB, 0.28, 1.0, 0.28, -0.1, 4.6, -1.45, 0.05)],
+      [a.b(SB, 0.4, 0.8, 0.4, 0, top + 0.35, 0.05, 0.05)]];
+  const detail = [...a.flare(SB, conifer ? 0.85 : 1.1), a.b(SB, 0.5, 0.18, 0.12, 0, 1.3, 0.34, 0.05)];
+  return { trunk, detail, tiers, midBoxes: conifer ? 2 : 3, farBoxes: 2 };
+}
+
+/** A felled stump: a short trunk with a pale cut face and a few roots (the last stage in REF-006 image 1's row). */
+function stumpPlan(species: TreeSpecies): VegetationPlan {
+  const bark = species === 'birch' ? H('birch_bark') : species === 'beech' ? H('beech_bark') : CONIFERS.has(species) ? H('bark_dark') : H('trunk');
+  const w = species === 'oak' ? 0.95 : species === 'birch' || CONIFERS.has(species) ? 0.62 : 0.78;
+  const trunk: Block[] = [{ x: 0, y: 0.25, z: 0, w, h: 0.5, d: w, hex: bark, omit: CAPS }];
+  const tiers: Block[][] = [[{ x: 0, y: 0.53, z: 0, w: Q(w * 0.92), h: 0.06, d: Q(w * 0.92), hex: H('stump_cut'), omit: FACE_NY }]];
+  const detail: Block[] = [
+    { x: Q(w * 0.62), y: 0.1, z: 0, w: Q(w * 0.5), h: 0.2, d: Q(w * 0.3), hex: bark, omit: FACE_NY, k: 0.9 },
+    { x: Q(-w * 0.55), y: 0.08, z: Q(w * 0.1), w: Q(w * 0.4), h: 0.16, d: Q(w * 0.3), hex: bark, omit: FACE_NY, k: 0.9 },
+    { x: 0, y: 0.09, z: Q(-w * 0.6), w: Q(w * 0.3), h: 0.18, d: Q(w * 0.45), hex: bark, omit: FACE_NY, k: 0.9 },
+  ];
+  return { trunk, detail, tiers, midBoxes: 1, farBoxes: 1 };
+}
+
 const planCache = new Map<string, VegetationPlan>();
 
-/** The authored plan of one species, stage and variant (0..2). Cached. */
-export function vegetationPlan(species: VegetationSpecies, stage: GrowthStage, variant: number): VegetationPlan {
+/** The authored plan of one species, stage and variant (0..2). Cached. Trees also have the M013 stages dying, snag and stump. */
+export function vegetationPlan(species: VegetationSpecies, stage: GrowthStage | TreeStage, variant: number): VegetationPlan {
   const key = `${species}:${stage}:${variant}`;
   const cached = planCache.get(key);
   if (cached) return cached;
   const seed = SPECIES_SEED[species] * 7919 + STAGE_INDEX[stage] * 613 + variant * 104729;
   let plan: VegetationPlan;
   if (isTreeSpecies(species)) {
-    plan = TREE_BUILDERS[species](new Author(stage, seed));
+    if (stage === 'stump') plan = stumpPlan(species);
+    else if (stage === 'snag') plan = snagPlan(species, new Author(stage, seed));
+    else if (stage === 'dying') {
+      // The same tree as its old stage (same seed), thinned and browning.
+      const old = new Author('old', SPECIES_SEED[species] * 7919 + STAGE_INDEX.old * 613 + variant * 104729);
+      plan = dyingPlan(species, TREE_BUILDERS[species](old));
+    } else {
+      const a = new Author(stage, seed);
+      plan = addCharacter(species, a, TREE_BUILDERS[species](a));
+    }
   } else {
-    plan = bush(species, new Author(stage, seed, BUSH_SIZE[stage]));
+    const s = stage as GrowthStage;
+    plan = bush(species, new Author(s, seed, BUSH_SIZE[s] ?? 1));
   }
   planCache.set(key, plan);
   return plan;

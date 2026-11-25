@@ -292,6 +292,30 @@
     "emissive_magic": {
       "hex": "#D24BFF",
       "role": "reserved: magic effects only, never materials"
+    },
+    "snag_bark": {
+      "hex": "#8A4F36",
+      "role": "M013 standing dead trees (snags), reddish-brown bare wood"
+    },
+    "snag_bark_b": {
+      "hex": "#6A3B2A",
+      "role": "M013 snag shade and broken limbs"
+    },
+    "stump_cut": {
+      "hex": "#C9A274",
+      "role": "M013 the cut face of a felled stump"
+    },
+    "leaf_dying_a": {
+      "hex": "#A69A45",
+      "role": "M013 thinning, browning crown of a dying broadleaf"
+    },
+    "leaf_dying_b": {
+      "hex": "#B8873E",
+      "role": "M013 dying crown, second tone"
+    },
+    "conifer_dying": {
+      "hex": "#7E7A3E",
+      "role": "M013 dying conifer needles"
     }
   },
   "lighting": {

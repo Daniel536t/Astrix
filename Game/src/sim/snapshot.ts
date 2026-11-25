@@ -5,7 +5,7 @@ import {
   CHUNK_SIZE, CHUNK_VOLUME, CHUNKS_PER_SIDE, Entity, EntityKind,
   GENERATOR_VERSION, HALF, MatId, ResourceType, World, WorldManifest,
   createWorld, placeAuthoredSites, worldManifest, ensureChunk, isRetiredStoneKind,
-  markEditsChanged, isSupportedGenerator, MAX_MAT_ID,
+  markEditsChanged, isSupportedGenerator, MAX_MAT_ID, touchStructures,
 } from './world';
 import { FOUNDER_DESIGN_VERSION, Structure } from './structures';
 import {
@@ -570,6 +570,7 @@ export function restoreWorldSnapshotExact(world: World, input: WorldSnapshot): v
     if (e.kind === 'styl_tree_blossom') world.stats.pinkTrees++;
   }
   for (const s of snapshot.structures) world.structures.set(s.id, cloneStructure(s));
+  touchStructures(world);
 }
 
 export function worldFromSnapshot(snapshot: WorldSnapshot): World {

@@ -27,10 +27,10 @@
 // a restored snapshot continues exactly as the live run did.
 import type { World } from './world';
 import {
-  CHUNK_SIZE, HALF, chunkKey, editVersion, isRetiredStoneKind, surfaceAt, waterDepthAt,
+  CHUNK_SIZE, HALF, chunkKey, editVersion, ensureChunk, isRetiredStoneKind, natureVersion, structureVersion, surfaceAt, waterDepthAt,
   worldToChunkX, worldToChunkZ,
 } from './world';
-import { STAGE_FOOTPRINT, growthStage } from './vegetation';
+import { LIFE_FOOTPRINT, TreeStage, treeLife } from './woodland';
 
 export type GateState = 'open' | 'closed' | 'locked';
 export const GATE_STATES: readonly GateState[] = ['closed', 'locked', 'open'];
@@ -150,12 +150,12 @@ function edge(g: NavGrid, ax: number, az: number, bx: number, bz: number): numbe
 
 // ---------- building the grid ----------
 
-interface NavCache { region: string; terrain?: TerrainLayer; worldKey?: string; featureKey?: string; grid?: NavGrid; builds: number; ms: number }
+interface NavCache { region: string; terrain?: TerrainLayer; memo?: string; staticKey?: string; claims?: Map<string, Claim>; featureKey?: string; grid?: NavGrid; builds: number; ms: number }
 const caches = new WeakMap<World, Map<string, NavCache>>();
 
 export interface NavStats {
   /** Obstacle-layer rebuilds, and how many of them changed the grid (new hash). */
-  gridBuilds: number; gridChanges: number; gridMs: number; terrainBuilds: number; terrainMs: number;
+  gridBuilds: number; gridPatches: number; gridChanges: number; gridMs: number; terrainBuilds: number; terrainMs: number;
   searches: number; expanded: number; searchMs: number; ticks: number; tickMs: number; maxTickMs: number; lastTickMs: number;
 }
 const stats = new WeakMap<World, NavStats>();
@@ -163,7 +163,7 @@ const stats = new WeakMap<World, NavStats>();
 export function navStats(world: World): NavStats {
   let s = stats.get(world);
   if (!s) {
-    s = { gridBuilds: 0, gridChanges: 0, gridMs: 0, terrainBuilds: 0, terrainMs: 0, searches: 0, expanded: 0, searchMs: 0, ticks: 0, tickMs: 0, maxTickMs: 0, lastTickMs: 0 };
+    s = { gridBuilds: 0, gridPatches: 0, gridChanges: 0, gridMs: 0, terrainBuilds: 0, terrainMs: 0, searches: 0, expanded: 0, searchMs: 0, ticks: 0, tickMs: 0, maxTickMs: 0, lastTickMs: 0 };
     stats.set(world, s);
   }
   return s;
@@ -229,17 +229,20 @@ function normEdge(x: number, z: number, side: Side): string {
   return sideOf(x, z, side);
 }
 
-function applyFeatures(g: NavGrid, f: NavFeatures): void {
-  for (const d of f.decks) forRect(g, d, (i) => { g.ground[i] = d.y; if (g.block[i] === BLOCK.deep_water) g.block[i] = BLOCK.none; });
-  for (const c of f.costs) forRect(g, c, (i) => { g.extra[i] += c.extra; });
+function applyFeatures(g: NavGrid, f: NavFeatures, only?: Set<number>): void {
+  // `only`: an incremental update re-stamps just these cells (costs, blocks, clears); edges are unchanged.
+  const each = (r: CellRect, fn: (i: number) => void) => forRect(g, r, only ? (i) => { if (only.has(i)) fn(i); } : fn);
+  if (!only) for (const d of f.decks) forRect(g, d, (i) => { g.ground[i] = d.y; if (g.block[i] === BLOCK.deep_water) g.block[i] = BLOCK.none; });
+  for (const c of f.costs) each(c, (i) => { g.extra[i] += c.extra; });
   for (const b of f.blocks) {
     const kind = b.reason === 'building' ? SOLID.building : b.reason === 'occupied' ? (b.id.startsWith('trough:') ? SOLID.low : SOLID.shelter) : SOLID.none;
-    forRect(g, b, (i) => { setBlock(g, i, b.reason, b.id); if (kind && (!g.solid[i] || kind < g.solid[i])) g.solid[i] = kind; });
+    each(b, (i) => { setBlock(g, i, b.reason, b.id); if (kind && (!g.solid[i] || kind < g.solid[i])) g.solid[i] = kind; });
   }
-  for (const c of f.clear) forRect(g, c, (i) => {
+  for (const c of f.clear) each(c, (i) => {
     if (!c.keepSolid) g.solid[i] = SOLID.none;
     if (g.block[i] !== BLOCK.deep_water && g.block[i] !== BLOCK.outside) { g.block[i] = BLOCK.none; g.blockId.delete(i); }
   });
+  if (only) return;
   const open = new Set<string>();
   for (const fe of f.fences) for (const gap of fe.gaps) open.add(normEdge(gap.x, gap.z, gap.side));
   for (const gt of f.gates) open.add(normEdge(gt.x, gt.z, gt.side));
@@ -265,40 +268,87 @@ function applyFeatures(g: NavGrid, f: NavFeatures): void {
   }
 }
 
-/** Trees by growth stage, bushes, ore, landmarks and built modules inside the window. */
-function applyWorld(world: World, g: NavGrid): void {
-  const cx0 = worldToChunkX(Math.max(-HALF, g.ox - 2)), cx1 = worldToChunkX(Math.min(HALF - 1, g.ox + g.w + 1));
-  const cz0 = worldToChunkZ(Math.max(-HALF, g.oz - 2)), cz1 = worldToChunkZ(Math.min(HALF - 1, g.oz + g.h + 1));
+/**
+ * What one natural entity contributes to the grid. Positions never change, so
+ * a claim is fully described by its code; a change of code (a tree grew,
+ * was felled, resprouted or fell; a bush was gathered) is what the
+ * incremental update below repairs.
+ */
+interface Claim { code: string; kind: 'tree' | 'bush' | 'cell'; x: number; z: number; r: number; reason: BlockReason }
+
+/** Chunk range the window's entities can come from (2 m margin, as before). */
+function claimChunks(g: { ox: number; oz: number; w: number; h: number }): [number, number, number, number] {
+  return [worldToChunkX(Math.max(-HALF, g.ox - 2)), worldToChunkX(Math.min(HALF - 1, g.ox + g.w + 1)),
+    worldToChunkZ(Math.max(-HALF, g.oz - 2)), worldToChunkZ(Math.min(HALF - 1, g.oz + g.h + 1))];
+}
+
+/**
+ * Trees by lifecycle stage (M013; the M008 visual stage under older rules),
+ * bushes, ore and landmarks near the window. Every chunk in range is
+ * generated first, so the claims never depend on which chunks a renderer
+ * happened to load.
+ */
+function worldClaims(world: World, g: { ox: number; oz: number; w: number; h: number }): Map<string, Claim> {
+  const out = new Map<string, Claim>();
+  const [cx0, cx1, cz0, cz1] = claimChunks(g);
   for (let cz = cz0; cz <= cz1; cz++) {
     for (let cx = cx0; cx <= cx1; cx++) {
+      ensureChunk(world, cx, cz);
       const ids = world.entityChunks.get(chunkKey(cx, cz));
       if (!ids) continue;
       for (const id of ids) {
         const e = world.entities.get(id);
-        if (!e || e.harvested || world.entityRemovals.has(id) || isRetiredStoneKind(e.kind)) continue;
-        const ex = Math.floor(e.x), ez = Math.floor(e.z);
-        if (e.kind === 'styl_shrub') {
-          if (g.inside(ex, ez)) g.extra[g.index(ex, ez)] += COST_BUSH;
-          continue;
-        }
+        if (!e || world.entityRemovals.has(id) || isRetiredStoneKind(e.kind)) continue;
         if (e.kind.startsWith('styl_tree_')) {
-          const r = STAGE_FOOTPRINT[growthStage(e) ?? 'mature'];
-          const reach = Math.ceil(r);
-          for (let z = ez - reach; z <= ez + reach; z++) {
-            for (let x = ex - reach; x <= ex + reach; x++) {
-              const dx = x + 0.5 - e.x, dz = z + 0.5 - e.z;
-              if (dx * dx + dz * dz <= r * r + 1e-9 && g.inside(x, z)) setBlock(g, g.index(x, z), 'tree', e.id);
-            }
-          }
+          // A stump is felled (harvested) but still stands; a gap is felled or fallen and gone.
+          const life = treeLife(world, e);
+          if (!life || !life.present) continue;
+          const r = LIFE_FOOTPRINT[life.stage as TreeStage];
+          out.set(id, { code: `t${r}`, kind: 'tree', x: e.x, z: e.z, r, reason: 'tree' });
           continue;
         }
-        if (g.inside(ex, ez)) setBlock(g, g.index(ex, ez), e.kind === 'styl_ore' || e.kind.startsWith('styl_rock') ? 'rock' : 'landmark', e.id);
+        if (e.harvested) continue;
+        if (e.kind === 'styl_shrub') { out.set(id, { code: 'b', kind: 'bush', x: e.x, z: e.z, r: 0, reason: 'tree' }); continue; }
+        const reason: BlockReason = e.kind === 'styl_ore' || e.kind.startsWith('styl_rock') ? 'rock' : 'landmark';
+        out.set(id, { code: reason, kind: 'cell', x: e.x, z: e.z, r: 0, reason });
       }
     }
   }
+  return out;
+}
+
+/** Cells a claim can touch (a bounding square; the stamp itself tests the disc). */
+function claimArea(g: NavGrid, c: Claim, add: (i: number) => void): void {
+  const ex = Math.floor(c.x), ez = Math.floor(c.z);
+  const reach = c.kind === 'tree' ? Math.ceil(c.r) : 0;
+  for (let z = ez - reach; z <= ez + reach; z++) for (let x = ex - reach; x <= ex + reach; x++) if (g.inside(x, z)) add(g.index(x, z));
+}
+
+function stampClaim(g: NavGrid, id: string, c: Claim, only?: Set<number>): void {
+  const ex = Math.floor(c.x), ez = Math.floor(c.z);
+  if (c.kind === 'bush') {
+    if (g.inside(ex, ez) && (!only || only.has(g.index(ex, ez)))) g.extra[g.index(ex, ez)] += COST_BUSH;
+    return;
+  }
+  if (c.kind === 'tree') {
+    const reach = Math.ceil(c.r);
+    for (let z = ez - reach; z <= ez + reach; z++) {
+      for (let x = ex - reach; x <= ex + reach; x++) {
+        const dx = x + 0.5 - c.x, dz = z + 0.5 - c.z;
+        if (dx * dx + dz * dz <= c.r * c.r + 1e-9 && g.inside(x, z) && (!only || only.has(g.index(x, z)))) setBlock(g, g.index(x, z), 'tree', id);
+      }
+    }
+    return;
+  }
+  if (g.inside(ex, ez) && (!only || only.has(g.index(ex, ez)))) setBlock(g, g.index(ex, ez), c.reason, id);
+}
+
+/** Landmark sites and built modules (not entities). */
+function applyStatic(world: World, g: NavGrid, only?: Set<number>): void {
+  const ok = (i: number) => !only || only.has(i);
   for (const s of world.sites) {
     const x = Math.floor(s.x), z = Math.floor(s.z);
-    if (g.inside(x, z)) setBlock(g, g.index(x, z), 'landmark', s.id);
+    if (g.inside(x, z) && ok(g.index(x, z))) setBlock(g, g.index(x, z), 'landmark', s.id);
   }
   for (const s of [...world.structures.values()].sort((a, b) => a.id.localeCompare(b.id))) {
     for (const m of s.modules) {
@@ -310,6 +360,7 @@ function applyWorld(world: World, g: NavGrid): void {
         for (let x = Math.floor(m.x - hw); x <= Math.floor(m.x + hw); x++) {
           if (!g.inside(x, z) || Math.abs(x + 0.5 - m.x) >= hw || Math.abs(z + 0.5 - m.z) >= hd) continue;
           const i = g.index(x, z), floor = g.ground[i];
+          if (!ok(i)) continue;
           // Taller than a step and low enough to walk into: a wall. Lower: a floor or a step.
           if (m.y + m.h > floor + 1.05 && m.y < floor + 1.7) setBlock(g, i, 'structure', s.id);
         }
@@ -331,10 +382,69 @@ function hashGrid(g: NavGrid): string {
   return (a >>> 0).toString(16).padStart(8, '0') + (b >>> 0).toString(16).padStart(8, '0');
 }
 
+function cloneGrid(src: NavGrid): NavGrid {
+  const g = new NavGrid(src.ox, src.oz, src.w, src.h);
+  g.ground.set(src.ground); g.block.set(src.block); g.extra.set(src.extra); g.walls.set(src.walls); g.solid.set(src.solid);
+  for (const [k, v] of src.blockId) g.blockId.set(k, v);
+  for (const [k, v] of src.gateAt) g.gateAt.set(k, v);
+  for (const [k, v] of src.gateCells) g.gateCells.set(k, v);
+  for (const [k, v] of src.gateState) g.gateState.set(k, v);
+  return g;
+}
+
+/** A full build from the terrain layer, the claims, the static layer and the caller's features. */
+function buildGrid(world: World, region: NavRegion, terrain: TerrainLayer, claims: Map<string, Claim>, features: NavFeatures): NavGrid {
+  const g = new NavGrid(region.ox, region.oz, region.w, region.h);
+  g.ground.set(terrain.ground);
+  g.block.set(terrain.block);
+  for (let i = 0; i < g.extra.length; i++) if (terrain.water[i] > 0 && g.block[i] === 0) g.extra[i] = COST_FORD;
+  for (const [id, c] of claims) stampClaim(g, id, c);
+  applyStatic(world, g);
+  applyFeatures(g, features);
+  g.hash = hashGrid(g);
+  return g;
+}
+
+/**
+ * M013 incremental update: only the cells the changed claims touch (before
+ * and after) are reset to the terrain layer and stamped again by every claim,
+ * static block and feature that covers them. Setting a block is
+ * order-independent (smallest id wins) and costs add, so the result equals a
+ * full build exactly (tests compare both on every change).
+ */
+function patchGrid(world: World, prev: NavGrid, terrain: TerrainLayer, before: Map<string, Claim>, claims: Map<string, Claim>, changed: string[], features: NavFeatures): NavGrid {
+  const g = cloneGrid(prev);
+  const cells = new Set<number>();
+  for (const id of changed) {
+    const a = before.get(id), b = claims.get(id);
+    if (a) claimArea(g, a, (i) => cells.add(i));
+    if (b) claimArea(g, b, (i) => cells.add(i));
+  }
+  for (const i of cells) {
+    g.block[i] = terrain.block[i];
+    g.blockId.delete(i);
+    g.extra[i] = terrain.water[i] > 0 && terrain.block[i] === 0 ? COST_FORD : 0;
+  }
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (const i of cells) { const x = g.cellX(i), z = g.cellZ(i); x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+  for (const [id, c] of claims) {
+    // Claims reach at most 2 cells from their trunk.
+    if (c.x < x0 - 3 || c.x > x1 + 4 || c.z < z0 - 3 || c.z > z1 + 4) continue;
+    stampClaim(g, id, c, cells);
+  }
+  applyStatic(world, g, cells);
+  applyFeatures(g, features, cells);
+  g.hash = hashGrid(g);
+  return g;
+}
+
 /**
  * The navigation grid of a window, current with the world and the caller's
- * features. Cheap when nothing changed (three string compares); a rebuild is
- * bounded by the window size.
+ * features. Within one tick and world state it is a memo lookup. Otherwise
+ * the window's entity claims are compared with the cached grid's: no change
+ * returns the cached grid, a few changed claims patch it (M013: growth,
+ * felling and resprouting update only their own cells), anything else
+ * (terrain edits, structures, new features) rebuilds it.
  */
 export function navGrid(world: World, region: NavRegion, features: NavFeatures): NavGrid {
   let byRegion = caches.get(world);
@@ -348,23 +458,41 @@ export function navGrid(world: World, region: NavRegion, features: NavFeatures):
     c.terrain.key = tKey;
     c.grid = undefined;
   }
-  const wKey = `${world.revision}:${world.entityRemovals.size}:${world.structures.size}`;
-  if (c.grid && c.worldKey === wKey && c.featureKey === features.key) return c.grid;
+  const memo = `${natureVersion(world)}:${world.revision}:${world.life?.tick ?? 0}:${world.entities.size}:${world.entityRemovals.size}`;
+  if (c.grid && c.memo === memo && c.featureKey === features.key) return c.grid;
   const t0 = performance.now();
-  const g = new NavGrid(region.ox, region.oz, region.w, region.h);
-  g.ground.set(c.terrain.ground);
-  g.block.set(c.terrain.block);
-  for (let i = 0; i < g.extra.length; i++) if (c.terrain.water[i] > 0 && g.block[i] === 0) g.extra[i] = COST_FORD;
-  applyWorld(world, g);
-  applyFeatures(g, features);
-  g.hash = hashGrid(g);
+  const sKey = `${world.structures.size}:${world.sites.length}:${structureVersion(world)}`;
+  const claims = worldClaims(world, region);
   const s = navStats(world);
+  if (c.grid && c.claims && c.featureKey === features.key && c.staticKey === sKey) {
+    const changed: string[] = [];
+    for (const [id, cl] of claims) if (c.claims.get(id)?.code !== cl.code) changed.push(id);
+    for (const id of c.claims.keys()) if (!claims.has(id)) changed.push(id);
+    if (!changed.length) { c.claims = claims; c.memo = memo; return c.grid; }
+    if (changed.length <= 64 && features.decks.length === 0) {
+      const g = patchGrid(world, c.grid, c.terrain, c.claims, claims, changed, features);
+      s.gridBuilds++; s.gridPatches++; s.gridMs += performance.now() - t0;
+      c.claims = claims; c.memo = memo;
+      if (g.hash === c.grid.hash && sameGates(c.grid, g)) { for (const [k, v] of g.gateState) c.grid.gateState.set(k, v); return c.grid; }
+      c.grid = g; s.gridChanges++;
+      return g;
+    }
+  }
+  const g = buildGrid(world, region, c.terrain, claims, features);
   s.gridBuilds++; s.gridMs += performance.now() - t0;
   // Keep the old object when nothing that matters changed (search buffers stay warm).
-  if (c.grid && c.grid.hash === g.hash && sameGates(c.grid, g)) { c.worldKey = wKey; c.featureKey = features.key; for (const [k, v] of g.gateState) c.grid.gateState.set(k, v); return c.grid; }
-  c.grid = g; c.worldKey = wKey; c.featureKey = features.key;
+  if (c.grid && c.grid.hash === g.hash && sameGates(c.grid, g)) {
+    c.claims = claims; c.memo = memo; c.featureKey = features.key; c.staticKey = sKey;
+    for (const [k, v] of g.gateState) c.grid.gateState.set(k, v); return c.grid;
+  }
+  c.grid = g; c.claims = claims; c.memo = memo; c.featureKey = features.key; c.staticKey = sKey;
   s.gridChanges++;
   return g;
+}
+
+/** Tests: the grid a full rebuild gives now (never cached). */
+export function navGridFull(world: World, region: NavRegion, features: NavFeatures): NavGrid {
+  return buildGrid(world, region, terrainLayer(world, region), worldClaims(world, region), features);
 }
 
 function sameGates(a: NavGrid, b: NavGrid): boolean {
@@ -600,6 +728,41 @@ export function findNearest(world: World, g: NavGrid, from: { x: number; z: numb
   if (best < 0) return done({ ok: false, code: 'no_route', expanded });
   found.sort();
   return done({ ok: true, id: found[0], cost: best, expanded });
+}
+
+/**
+ * M013: route cost (tenths of a metre) from a point to every reachable cell
+ * of the grid, by the same moves walkers use (-1: unreachable). Read-only
+ * planning queries (woodland statistics, M014 placement previews) use it;
+ * nothing in the hashed sim depends on it.
+ */
+export function distanceField(g: NavGrid, from: { x: number; z: number }, maxExpansions = 40_000): Int32Array {
+  const out = new Int32Array(g.w * g.h).fill(-1);
+  const sx = cellOfDm(from.x), sz = cellOfDm(from.z);
+  if (!g.inside(sx, sz)) return out;
+  const closed = new Uint8Array(g.w * g.h);
+  const heap = new Heap();
+  const start = g.index(sx, sz);
+  out[start] = 0;
+  heap.push(0, 0, start);
+  const o: SearchOptions = { maxExpansions };
+  let expanded = 0;
+  while (heap.size && expanded < maxExpansions) {
+    const i = heap.pop();
+    if (closed[i]) continue;
+    closed[i] = 1; expanded++;
+    const x = g.cellX(i), z = g.cellZ(i);
+    for (const [dx, dz] of DIRS) {
+      const c = moveCost(g, x, z, dx, dz, o);
+      if (c < 0) continue;
+      const j = g.index(x + dx, z + dz);
+      const ng = out[i] + c;
+      if (closed[j] || (out[j] >= 0 && out[j] <= ng)) continue;
+      out[j] = ng;
+      heap.push(ng, 0, j);
+    }
+  }
+  return out;
 }
 
 function search(g: NavGrid, from: { x: number; z: number }, goal: NavGoal, o: SearchOptions): PathResult {

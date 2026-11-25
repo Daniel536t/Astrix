@@ -116,6 +116,16 @@ export interface LodSet {
   stats(): LodStats;
   drawnTriangles(): number;
   finish(): void;
+  // ---- M013 incremental updates (a tree grows, is felled, a chunk loads) ----
+  /** Retire an instance; its id may be reused by a later addInstance. */
+  removeInstance(id: number): void;
+  /** Swap an instance's model (all three LOD geometries), keeping its band. */
+  setInstanceGeometry(id: number, geometry: LodGeometry): void;
+  /** Put a new instance straight into the band the camera calls for. */
+  placeBand(id: number, camera: Vec3Like): void;
+  /** Bounds and pending work after a batch of incremental changes. */
+  commit(): void;
+  readonly live: number;
 }
 
 export class LodBatch implements LodSet {
@@ -127,8 +137,10 @@ export class LodBatch implements LodSet {
   private readonly geometry: LodGeometry[] = [];
   private readonly band: LodBand[] = [];
   private readonly lastCamera = new THREE.Vector3(Infinity, Infinity, Infinity);
+  private readonly alive: boolean[] = [];
   private evaluations = 0;
   private switches = 0;
+  private boundsDirty = false;
 
   constructor(options: LodBatchOptions) {
     this.bands = options.bands ?? DEFAULT_LOD_BANDS;
@@ -146,9 +158,15 @@ export class LodBatch implements LodSet {
 
   get objects(): THREE.Object3D[] { return [this.main, this.far]; }
 
-  /** Adds a geometry to the mesh that draws `lod`; returns its geometry id. */
+  /** Adds a geometry to the mesh that draws `lod`; returns its geometry id. Grows the vertex buffer when needed (M013: new stages appear over time). */
   addGeometry(lod: LodBand, geometry: THREE.BufferGeometry): number {
-    return (lod === LOD_FAR ? this.far : this.main).addGeometry(geometry);
+    const mesh = lod === LOD_FAR ? this.far : this.main;
+    const need = geometry.attributes.position.count;
+    if (mesh.unusedVertexCount < need) {
+      const size = Math.ceil((mesh as unknown as { _maxVertexCount: number })._maxVertexCount * 1.5) + need * 4;
+      mesh.setGeometrySize(size, size * 2);
+    }
+    return mesh.addGeometry(geometry);
   }
 
   // BatchedMesh raycasts expose batchId. Both meshes share instance ids, so
@@ -159,19 +177,58 @@ export class LodBatch implements LodSet {
     this.far.userData.inspectableBatchIds = batchIds;
   }
 
-  /** Registers a logical instance, initially in the near band; returns its id in both meshes. */
+  /** Registers a logical instance, initially in the near band; returns its id in both meshes (a retired id is reused). */
   addInstance(geometry: LodGeometry, matrix: THREE.Matrix4, position: Vec3Like): number {
+    if (this.main.instanceCount >= this.main.maxInstanceCount) {
+      const grow = Math.ceil(this.main.maxInstanceCount * 1.5) + 16;
+      this.main.setInstanceCount(grow);
+      this.far.setInstanceCount(grow);
+    }
     const id = this.main.addInstance(geometry.near);
     const farId = this.far.addInstance(geometry.far);
     if (farId !== id) throw new Error('LodBatch instance ids diverged');
     this.main.setMatrixAt(id, matrix);
     this.far.setMatrixAt(id, matrix);
+    this.main.setVisibleAt(id, true);
     this.far.setVisibleAt(id, false);
-    this.positions.push(position.x, position.y, position.z);
-    this.geometry.push(geometry);
-    this.band.push(LOD_NEAR);
+    this.positions[id * 3] = position.x; this.positions[id * 3 + 1] = position.y; this.positions[id * 3 + 2] = position.z;
+    this.geometry[id] = geometry;
+    this.band[id] = LOD_NEAR;
+    this.alive[id] = true;
+    this.boundsDirty = true;
     return id;
   }
+
+  removeInstance(id: number): void {
+    if (!this.alive[id]) return;
+    this.main.deleteInstance(id);
+    this.far.deleteInstance(id);
+    this.alive[id] = false;
+    this.boundsDirty = true;
+  }
+
+  setInstanceGeometry(id: number, geometry: LodGeometry): void {
+    if (!this.alive[id]) return;
+    this.geometry[id] = geometry;
+    this.far.setGeometryIdAt(id, geometry.far);
+    const b = this.band[id];
+    if (b !== LOD_FAR) this.main.setGeometryIdAt(id, b === LOD_NEAR ? geometry.near : geometry.mid);
+    this.boundsDirty = true;
+  }
+
+  placeBand(id: number, camera: Vec3Like): void {
+    if (!this.alive[id] || !Number.isFinite(camera.x)) return;
+    const p = this.positions;
+    this.apply(id, selectLodBand(Math.hypot(p[id * 3] - camera.x, p[id * 3 + 1] - camera.y, p[id * 3 + 2] - camera.z), null, this.bands));
+  }
+
+  commit(): void {
+    if (!this.boundsDirty) return;
+    this.boundsDirty = false;
+    this.finish();
+  }
+
+  get live(): number { let n = 0; for (let i = 0; i < this.alive.length; i++) if (this.alive[i]) n++; return n; }
 
   get count(): number { return this.band.length; }
 
@@ -207,6 +264,7 @@ export class LodBatch implements LodSet {
     this.lastCamera.set(camera.x, camera.y, camera.z);
     const p = this.positions;
     for (let i = 0; i < this.band.length; i++) {
+      if (!this.alive[i]) continue;
       const d = Math.hypot(p[i * 3] - camera.x, p[i * 3 + 1] - camera.y, p[i * 3 + 2] - camera.z);
       this.apply(i, selectLodBand(d, this.band[i], this.bands));
     }
@@ -218,6 +276,7 @@ export class LodBatch implements LodSet {
     const instances: [number, number, number] = [0, 0, 0];
     const triangles: [number, number, number] = [0, 0, 0];
     for (let i = 0; i < this.band.length; i++) {
+      if (!this.alive[i]) continue;
       const b = this.band[i];
       instances[b]++;
       triangles[b] += this.geometry[i].triangles[b];
@@ -280,6 +339,21 @@ const _tn = new THREE.Matrix3();
 const _tv = new THREE.Vector3();
 const _hits: THREE.Intersection[] = [];
 
+/** Report the instance under the hit triangle as batchId, like BatchedMesh. */
+function installOwnerRaycast(mesh: THREE.Mesh): void {
+  mesh.raycast = function (raycaster: THREE.Raycaster, intersects: THREE.Intersection[]) {
+    _hits.length = 0;
+    THREE.Mesh.prototype.raycast.call(this, raycaster, _hits);
+    const owner = this.userData.triangleOwner as Uint32Array | undefined;
+    for (const hit of _hits) {
+      if (owner && hit.faceIndex !== undefined && hit.faceIndex !== null) {
+        (hit as THREE.Intersection & { batchId?: number }).batchId = owner[hit.faceIndex];
+      }
+      intersects.push(hit);
+    }
+  };
+}
+
 /**
  * Bounded-draw LOD renderer for GPUs without WEBGL_multi_draw, where a
  * BatchedMesh costs one draw call per visible instance. Instances are
@@ -307,6 +381,8 @@ export class TiledLodMesh implements LodSet {
   private readonly tileOf: LodTile[] = [];
   private readonly tiles = new Map<string, LodTile>();
   private readonly lastCamera = new THREE.Vector3(Infinity, Infinity, Infinity);
+  private readonly alive: boolean[] = [];
+  private readonly free: number[] = [];
   private batchIds: string[] = [];
   private evaluations = 0;
   private switches = 0;
@@ -344,11 +420,14 @@ export class TiledLodMesh implements LodSet {
   }
 
   addInstance(geometry: LodGeometry, matrix: THREE.Matrix4, position: Vec3Like): number {
-    const id = this.band.length;
-    this.positions.push(position.x, position.y, position.z);
-    this.matrices.push(matrix.clone());
-    this.geometry.push(geometry);
-    this.band.push(LOD_NEAR);
+    // M013: retired ids are reused (lowest first), as BatchedMesh does.
+    this.free.sort((a, b) => b - a);
+    const id = this.free.length ? this.free.pop()! : this.band.length;
+    this.positions[id * 3] = position.x; this.positions[id * 3 + 1] = position.y; this.positions[id * 3 + 2] = position.z;
+    this.matrices[id] = matrix.clone();
+    this.geometry[id] = geometry;
+    this.band[id] = LOD_NEAR;
+    this.alive[id] = true;
     const key = `${Math.floor(position.x / this.tileSize)},${Math.floor(position.z / this.tileSize)}`;
     let tile = this.tiles.get(key);
     if (!tile) {
@@ -366,14 +445,46 @@ export class TiledLodMesh implements LodSet {
         cx: (tx + 0.5) * this.tileSize, cz: (tz + 0.5) * this.tileSize,
       };
       this.tiles.set(key, tile);
+      for (const mesh of [tile.main, tile.far]) { mesh.userData.inspectableBatchIds = this.batchIds; installOwnerRaycast(mesh); }
       this.group.add(tile.main, tile.far);
     }
     tile.ids.push(id);
     tile.dirtyMain = true;
     tile.dirtyFar = true;
-    this.tileOf.push(tile);
+    this.tileOf[id] = tile;
     return id;
   }
+
+  removeInstance(id: number): void {
+    if (!this.alive[id]) return;
+    this.alive[id] = false;
+    const tile = this.tileOf[id];
+    tile.ids = tile.ids.filter((x) => x !== id);
+    if (this.band[id] === LOD_FAR) tile.dirtyFar = true; else tile.dirtyMain = true;
+    this.free.push(id);
+  }
+
+  setInstanceGeometry(id: number, geometry: LodGeometry): void {
+    if (!this.alive[id]) return;
+    this.geometry[id] = geometry;
+    const tile = this.tileOf[id];
+    if (this.band[id] === LOD_FAR) tile.dirtyFar = true; else tile.dirtyMain = true;
+  }
+
+  placeBand(id: number, camera: Vec3Like): void {
+    if (!this.alive[id] || !Number.isFinite(camera.x)) return;
+    const p = this.positions;
+    const band = selectLodBand(Math.hypot(p[id * 3] - camera.x, p[id * 3 + 1] - camera.y, p[id * 3 + 2] - camera.z), null, this.bands);
+    if (band === this.band[id]) return;
+    this.band[id] = band;
+    this.tileOf[id].dirtyMain = true;
+    this.tileOf[id].dirtyFar = true;
+  }
+
+  /** Dirty tiles are baked by later update() calls, nearest first and a few per frame. */
+  commit(): void { /* bakes are spread by update() */ }
+
+  get live(): number { let n = 0; for (let i = 0; i < this.alive.length; i++) if (this.alive[i]) n++; return n; }
 
   setInspection(batchIds: string[], targets: LodTarget[]): void {
     this.batchIds = batchIds;
@@ -451,6 +562,7 @@ export class TiledLodMesh implements LodSet {
       this.lastCamera.set(camera.x, camera.y, camera.z);
       const p = this.positions;
       for (let i = 0; i < this.band.length; i++) {
+        if (!this.alive[i]) continue;
         const d = Math.hypot(p[i * 3] - camera.x, p[i * 3 + 1] - camera.y, p[i * 3 + 2] - camera.z);
         const band = selectLodBand(d, this.band[i], this.bands);
         const previous = this.band[i];
@@ -488,6 +600,7 @@ export class TiledLodMesh implements LodSet {
     const instances: [number, number, number] = [0, 0, 0];
     const triangles: [number, number, number] = [0, 0, 0];
     for (let i = 0; i < this.band.length; i++) {
+      if (!this.alive[i]) continue;
       const b = this.band[i];
       instances[b]++;
       triangles[b] += this.geometry[i].triangles[b];
@@ -503,21 +616,7 @@ export class TiledLodMesh implements LodSet {
   finish(): void {
     const batchIds = this.batchIds;
     for (const tile of this.tiles.values()) {
-      for (const mesh of [tile.main, tile.far]) {
-        mesh.userData.inspectableBatchIds = batchIds;
-        // Report the instance under the hit triangle as batchId, like BatchedMesh.
-        mesh.raycast = function (raycaster: THREE.Raycaster, intersects: THREE.Intersection[]) {
-          _hits.length = 0;
-          THREE.Mesh.prototype.raycast.call(this, raycaster, _hits);
-          const owner = this.userData.triangleOwner as Uint32Array | undefined;
-          for (const hit of _hits) {
-            if (owner && hit.faceIndex !== undefined && hit.faceIndex !== null) {
-              (hit as THREE.Intersection & { batchId?: number }).batchId = owner[hit.faceIndex];
-            }
-            intersects.push(hit);
-          }
-        };
-      }
+      for (const mesh of [tile.main, tile.far]) mesh.userData.inspectableBatchIds = batchIds;
     }
     this.rebuildDirty();
   }

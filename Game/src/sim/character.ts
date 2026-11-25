@@ -19,7 +19,7 @@ import {
 import type { ActiveEntityKind } from './world';
 import { OBSTRUCTION_RADIUS } from './terrain';
 // M010: a sapling's trunk is thinner than a mature tree's (the stage the renderer draws).
-import { STAGE_TRUNK, growthStage } from './vegetation';
+import { LIFE_TRUNK, TreeStage, treeLife } from './woodland';
 // M012: the settlement's structure layer (fence and gate edges, buildings) is the one villagers and animals route on.
 import { settlementCollision } from './homestead';
 import { structureHits } from './nav';
@@ -274,9 +274,12 @@ function resolveEntities(world: World, s: CharacterState): void {
       if (!ids) continue;
       for (const id of ids) {
         const e = world.entities.get(id);
-        if (!e || e.harvested || isRetiredStoneKind(e.kind) || world.entityRemovals.has(id)) continue;
+        if (!e || isRetiredStoneKind(e.kind) || world.entityRemovals.has(id)) continue;
+        // M013: a stump still stands (felled, so `harvested`); a gap does not.
+        const life = e.kind.startsWith('styl_tree_') ? treeLife(world, e) : null;
+        if (life ? !life.present : e.harvested) continue;
         // Collide with the trunk or body, not the canopy footprint used for clearance.
-        const body = e.kind.startsWith('styl_tree_') ? STAGE_TRUNK[growthStage(e) ?? 'mature'] * e.scale
+        const body = life ? LIFE_TRUNK[life.stage as TreeStage] * e.scale
           : (OBSTRUCTION_RADIUS[e.kind as ActiveEntityKind] ?? 0.5) * 0.75 * e.scale;
         if (e.kind === 'styl_shrub') continue;
         if (s.y > e.y + 3 || s.y + CHARACTER_HEIGHT < e.y) continue;
@@ -512,9 +515,11 @@ export function canStandAt(world: World, x: number, y: number, z: number): boole
       if (!ids) continue;
       for (const id of ids) {
         const e = world.entities.get(id);
-        if (!e || e.harvested || isRetiredStoneKind(e.kind) || world.entityRemovals.has(id) || e.kind === 'styl_shrub') continue;
+        if (!e || isRetiredStoneKind(e.kind) || world.entityRemovals.has(id) || e.kind === 'styl_shrub') continue;
+        const life = e.kind.startsWith('styl_tree_') ? treeLife(world, e) : null;
+        if (life ? !life.present : e.harvested) continue;
         if (y > e.y + 3 || y + CHARACTER_HEIGHT < e.y) continue;
-        const body = e.kind.startsWith('styl_tree_') ? STAGE_TRUNK[growthStage(e) ?? 'mature'] * e.scale
+        const body = life ? LIFE_TRUNK[life.stage as TreeStage] * e.scale
           : (OBSTRUCTION_RADIUS[e.kind as ActiveEntityKind] ?? 0.5) * 0.75 * e.scale;
         if (Math.hypot(x - e.x, z - e.z) < body + CHARACTER_RADIUS + 0.1) return false;
       }

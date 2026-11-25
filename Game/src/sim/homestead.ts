@@ -14,7 +14,12 @@
 import type { World } from './world';
 import { MAT, chunkKey, cutEntity, editVersion, worldToChunkX, worldToChunkZ, getVoxel, removeEntity, surfaceAt, waterDepthAt } from './world';
 import type { Entity } from './world';
-import { STAGE_FOOTPRINT, growthStage, treeTimber } from './vegetation';
+import { STAGE_FOOTPRINT, growthStage, treeTimber, treeSpecies } from './vegetation';
+import type { TreeSpecies } from './vegetation';
+import { TIMBER, TREE_STAGES, WoodlandState, treeLife, validateWoodland, woodlandSnapshot } from './woodland';
+import {
+  clearGround, isWoodlandHomestead, liftSapling, lifeGoal, managedWoodland, planWoodcutter, plantSapling, startWoodland, stepWoodland,
+} from './forestry';
 import {
   GATE_STATES, GateState, NavFeatures, NavGate, NavGoal, NavGrid, NavRegion, NavState, emptyFeatures, gateLabel, navGrid, navStats, navStep,
   expandPath, findPath, findNearest,
@@ -49,8 +54,18 @@ export const HOMESTEAD_LIVING_VERSION = 3 as const;
  * { rules: 4 }` or switched by `upgrade_homestead { rules: 4 }`.
  */
 export const HOMESTEAD_WORK_VERSION = 4 as const;
-export type HomesteadVersion = typeof HOMESTEAD_VERSION | typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION;
-export const HOMESTEAD_VERSIONS: readonly HomesteadVersion[] = [HOMESTEAD_VERSION, HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION];
+/**
+ * Settlement rules v5 (M013, "living woodland"): trees grow, age, die and
+ * regenerate in the simulation (sim/woodland.ts); felling leaves stumps that
+ * resprout or rot; the owner sets woodland policies and protects trees and
+ * areas; the woodcutter fells sustainably and replants (sim/forestry.ts).
+ * Founded with `found_homestead { rules: 5 }` or switched by
+ * `upgrade_homestead { rules: 5 }`; at that tick every tree is in the stage
+ * it was already drawn in.
+ */
+export const HOMESTEAD_WOODLAND_VERSION = 5 as const;
+export type HomesteadVersion = typeof HOMESTEAD_VERSION | typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION;
+export const HOMESTEAD_VERSIONS: readonly HomesteadVersion[] = [HOMESTEAD_VERSION, HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION];
 /** Decimetres per metre: sim positions are integer decimetres. */
 export const DM = 10;
 /** One in-game day: 300 ticks of 2 s = 10 minutes, matching the sky's day length. */
@@ -152,7 +167,7 @@ export type Carry = { item: string; amount: number; site?: string } | null;
 export type Effect =
   | 'take' | 'store' | 'till' | 'sow' | 'reap' | 'water_plot' | 'draw' | 'water_trough' | 'fill_feed'
   | 'gather_eggs' | 'shear' | 'milk' | 'eat' | 'rest' | 'restock' | 'thresh' | 'herd' | 'hold_gate'
-  | 'chop' | 'fetch' | 'deliver' | 'build' | 'none';
+  | 'chop' | 'fetch' | 'deliver' | 'build' | 'lift' | 'plant' | 'none';
 export interface Leg { op: 'walk' | 'work'; x: number; z: number; ticks: number; effect: Effect; item?: string; amount?: number }
 export interface Task { kind: string; target: string; legs: Leg[]; leg: number; progress: number }
 export interface Villager {
@@ -207,6 +222,8 @@ export interface HomesteadState {
   gates?: GateRecord[];
   /** v4 only: building sites the owner planned, approved or finished (id order). */
   sites?: BuildSite[];
+  /** v5 only: the living woodland (lifecycle records, policy, protection, replanting orders, quota). */
+  woodland?: WoodlandState;
 }
 
 // ---- building sites (settlement rules v4) ----
@@ -293,6 +310,8 @@ export function facility(h: HomesteadState, id: string): Facility | undefined {
 }
 
 const STOCK = { x: m(FOUNDER_STOCKPILE.x), z: m(FOUNDER_STOCKPILE.z + 1.6) };
+/** Where villagers stand to use the founder store (dm). */
+export const STORE_SPOT: { readonly x: number; readonly z: number } = STOCK;
 
 // ---------- navigation (settlement rules v2) ----------
 
@@ -477,9 +496,9 @@ export function nestSpot(h: Pick<HomesteadState, 'anchorX' | 'anchorZ'>): { x: n
 // ---------- founding ----------
 
 /** Homestead yard and buildings relative to its anchor (metres); fields go wherever the player wants. */
-const FOOTPRINT = { x0: -14, z0: -13, x1: 12, z1: 17 };
+export const FOOTPRINT = { x0: -14, z0: -13, x1: 12, z1: 17 };
 /** The founder house and terraced farm sites (M002) that the homestead must not cover. */
-const RESERVED_SITES = [{ x0: -62, z0: -48, x1: -51, z1: -39 }, { x0: -54, z0: -44, x1: -44, z1: -42 }, { x0: -40, z0: -44, x1: -25, z1: -33 }];
+export const RESERVED_SITES = [{ x0: -62, z0: -48, x1: -51, z1: -39 }, { x0: -54, z0: -44, x1: -44, z1: -42 }, { x0: -40, z0: -44, x1: -25, z1: -33 }];
 
 /**
  * Deterministic site search: a dry, gentle area whose yard edge is next to
@@ -583,7 +602,10 @@ export function foundHomestead(world: World, version: HomesteadVersion = HOMESTE
       if (e.authored || e.harvested || world.entityRemovals.has(e.id)) continue;
       if (e.x * DM < r.x0 - 10 || e.x * DM > r.x1 + 10 || e.z * DM < r.z0 - 10 || e.z * DM > r.z1 + 10) continue;
       // Under v2 rules a felled tree yields what its growth stage holds.
-      const timber = version >= HOMESTEAD_NAV_VERSION && !e.harvestedOnce ? treeTimber(e) : null;
+      const stage = growthStage(e);
+      const timber = version >= HOMESTEAD_WOODLAND_VERSION && !e.harvestedOnce && stage && e.kind.startsWith('styl_tree_')
+        ? TIMBER[treeSpecies(e, world.seed) as TreeSpecies][stage]
+        : version >= HOMESTEAD_NAV_VERSION && !e.harvestedOnce ? treeTimber(e) : null;
       const left = timber ? timber.total : e.remaining;
       if (e.resource && left > 0) cleared[e.resource] = (cleared[e.resource] ?? 0) + left;
       removeEntity(world, e.id);
@@ -598,6 +620,7 @@ export function foundHomestead(world: World, version: HomesteadVersion = HOMESTE
   }
   world.homestead = h;
   if (version >= HOMESTEAD_WORK_VERSION) settlerArrives(world, h);
+  if (version >= HOMESTEAD_WOODLAND_VERSION) startWoodland(world, h);
   world.revision++;
   return { ok: true, value: { anchor } };
 }
@@ -631,13 +654,15 @@ function settlerArrives(world: World, h: HomesteadState): void {
  * `to: 3` switches a v1 or v2 homestead to v3 (gates keep their state; a
  * legacy one gets closed gates).
  */
-export function upgradeHomestead(world: World, to: typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION = HOMESTEAD_NAV_VERSION): LifeResult<{ version: HomesteadVersion }> {
+export function upgradeHomestead(world: World, to: typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION = HOMESTEAD_NAV_VERSION): LifeResult<{ version: HomesteadVersion }> {
   const h = world.homestead;
   if (!h) return fail('no_homestead', 'found the homestead first');
   if (h.version >= to) return fail('unchanged', `the homestead already uses settlement rules v${h.version}`);
   h.version = to;
   h.gates ??= GATE_IDS.map((id) => ({ id, state: 'closed' as GateState }));
   if (to >= HOMESTEAD_WORK_VERSION) { h.sites ??= []; settlerArrives(world, h); }
+  // v5: the woodland clock starts now; every tree keeps the stage it is drawn in.
+  if (to >= HOMESTEAD_WOODLAND_VERSION) startWoodland(world, h);
   world.revision++;
   return { ok: true, value: { version: to } };
 }
@@ -818,7 +843,7 @@ export function checkSite(world: World, kind: SiteKind, x: number, z: number, ig
   if (wet) reasons.push('there is water here');
   if (hi - lo > 1) reasons.push(`the ground is too steep (${hi - lo} m of slope; at most 1 m)`);
   for (const e of world.entities.values()) {
-    if (e.harvested || world.entityRemovals.has(e.id) || e.kind === 'marker') continue;
+    if (e.harvested || world.entityRemovals.has(e.id) || e.kind === 'marker' || !standing(world, h, e)) continue;
     if (e.x >= x - 1.5 && e.x < x + rule.w + 1.5 && e.z >= z - 1.5 && e.z < z + rule.d + 2.5) { reasons.push('trees, bushes or rocks are in the way'); break; }
   }
   return reasons;
@@ -849,6 +874,7 @@ export function placeSite(world: World, kind: SiteKind, x: number, z: number): L
   if (reasons.length) return { ok: false, code: 'invalid_site', reasons };
   const id = `site:${h.nextId++}`;
   h.sites = [...(h.sites ?? []), { id, kind, x, z, state: 'planned' as SiteState, reserved: {}, delivered: {}, work: 0 }].sort((a, b) => a.id.localeCompare(b.id));
+  if (isWoodlandHomestead(h)) clearGround(world, h, x - 1, z - 1, x + SITE_RULES[kind].w + 1, z + SITE_RULES[kind].d + 2);
   world.revision++;
   return { ok: true, value: { siteId: id, kind, x, z } };
 }
@@ -927,6 +953,8 @@ export const felledTrees = new WeakMap<World, number>();
  * old tree there (the grove included) for the minimum that must stay.
  */
 export function woodlot(world: World, h: HomesteadState): { trees: Entity[]; standing: number } {
+  // v5: the managed woodland under the owner's policy (sim/forestry.ts).
+  if (isWoodlandHomestead(h)) { const lot = managedWoodland(world, h); return { trees: lot.trees, standing: lot.standing }; }
   const reg = homesteadNavRegion(h);
   const keepOff: Rect[] = [...homesteadLayout(h).map((f) => f.rect), ...h.plots.map((p) => fieldRect(p)),
     ...(h.sites ?? []).map((st) => { const c = siteCells(st); return rect(c.x0, c.z0, c.x1 - c.x0, c.z1 - c.z0); }),
@@ -957,12 +985,12 @@ export function woodlot(world: World, h: HomesteadState): { trees: Entity[]; sta
 }
 
 /** Where a woodcutter stands to fell a tree: within reach of the trunk, outside its footprint. */
-function treeGoal(e: Entity): NavGoal {
+export function treeGoal(e: Entity): NavGoal {
   return { x: Math.round(e.x * DM), z: Math.round(e.z * DM), reach: Math.round((STAGE_FOOTPRINT[growthStage(e) ?? 'mature'] + 1.2) * DM) };
 }
 
 /** Does any approved site still need wood that is not already reserved? */
-function woodWanted(h: HomesteadState): boolean {
+export function woodWanted(h: HomesteadState): boolean {
   return (h.sites ?? []).some((st) => st.state === 'approved' && (siteShortfall(h, st).wood ?? 0) > 0);
 }
 
@@ -998,12 +1026,13 @@ function chop(world: World, h: HomesteadState, v: Villager, t: Task, ev: Events)
   if (v.carry && v.carry.item !== 'wood') return 'fail';
   const have = v.carry?.amount ?? 0;
   if (!id || !e || e.harvested) return have > 0 ? 'done' : 'fail';
+  const stageBefore = isWoodlandHomestead(h) ? treeLife(world, e)?.stage : growthStage(e);
   const r = cutEntity(world, id, WOOD_CARRY - have);
   if (!r) return have > 0 ? 'done' : 'fail';
   v.carry = { item: 'wood', amount: have + r.amount };
   if (e.harvested) {
     felledTrees.set(world, (felledTrees.get(world) ?? 0) + 1);
-    ev.log.push(`${v.name} felled a ${growthStage(e)} tree (${v.carry.amount} wood in hand)`);
+    ev.log.push(`${v.name} felled a ${stageBefore === 'snag' ? 'dead' : stageBefore} ${isWoodlandHomestead(h) ? treeLife(world, e)?.species ?? '' : ''}${isWoodlandHomestead(h) ? ' ' : ''}tree (${v.carry.amount} wood in hand)`);
     return 'done';
   }
   const next = Math.min(e.yieldPerHarvest, e.remaining);
@@ -1057,7 +1086,10 @@ function plan(world: World, h: HomesteadState, v: Villager, tick: number, budget
     const st = h.sites?.find((x) => x.id === v.carry!.site && x.state === 'approved');
     if (st && !taken.has(st.id)) { const at = siteSpot(st); return task('haul', st.id, [walk(at), work(at, 1, 'deliver')]); }
   }
-  if (v.carry && v.carry.item !== 'water' && !carryingSeed && !carryingFeed && !taken.has(`carry:${v.id}`)) {
+  // v5: a sapling in hand is planted by a woodcutter; anyone else (reassigned) sets it down: saplings are never stored.
+  const carryingSapling = !!v.carry?.item.startsWith('sapling:');
+  if (carryingSapling && v.role !== 'woodcutter') v.carry = null;
+  if (v.carry && v.carry.item !== 'water' && !carryingSeed && !carryingFeed && !carryingSapling && !taken.has(`carry:${v.id}`)) {
     return task('store', `carry:${v.id}`, [walk(STOCK), work(STOCK, 1, 'store')]);
   }
   // Seed in hand is sown before anything else, so it is never set aside or lost.
@@ -1110,6 +1142,11 @@ function plan(world: World, h: HomesteadState, v: Villager, tick: number, budget
     }
     const wild = plots.find((p) => p.state === 'wild' && free(p));
     if (wild) return task('till', wild.id, [walk(at(wild)), work(at(wild), TILL_PER_UNIT * unitsOf(wild) - wild.tilled, 'till')]);
+  } else if (v.role === 'woodcutter' && isWoodlandHomestead(h)) {
+    // v5: plant what felling left to replant, then fell what the woodland policy and its sustainable quota allow.
+    const r = planWoodcutter(world, h, v, taken, budget);
+    if (r === 'busy') return null;
+    if (typeof r !== 'string') return r;
   } else if (v.role === 'woodcutter') {
     // v4: fell a mature tree, carry the timber to the store (the store leg), repeat.
     const pick = chooseTree(world, h, v, taken, budget);
@@ -1197,7 +1234,7 @@ function plan(world: World, h: HomesteadState, v: Villager, tick: number, budget
 
 interface Events { log: string[] }
 /** Effects that put something into empty hands. */
-const PICKUP = new Set<Effect>(['take', 'draw', 'reap', 'gather_eggs', 'shear', 'milk', 'fetch']);
+const PICKUP = new Set<Effect>(['take', 'draw', 'reap', 'gather_eggs', 'shear', 'milk', 'fetch', 'lift']);
 
 function applyEffect(world: World, h: HomesteadState, v: Villager, leg: Leg, task: Task, ev: Events): boolean {
   const s = stock(world);
@@ -1361,6 +1398,8 @@ function applyEffect(world: World, h: HomesteadState, v: Villager, leg: Leg, tas
       world.revision++;
       return true;
     }
+    case 'lift': return isWoodlandHomestead(h) && liftSapling(world, h, v, leg, ev.log);
+    case 'plant': return isWoodlandHomestead(h) && plantSapling(world, h, v, task, ev.log);
     case 'shear': case 'milk': {
       const a = h.animals.find((x) => x.id === task.target);
       const p = a && SPECIES_RULES[a.species].product;
@@ -1417,6 +1456,9 @@ function goalFor(world: World, h: HomesteadState, t: Task, legIndex: number): Na
     const e = world.entities.get(treeEntityId(t.target) ?? '');
     if (e) return treeGoal(e);
   }
+  // v5: beside a seed parent's trunk to lift a wildling, and beside the planting cell.
+  if (next?.effect === 'lift') { const e = treeAt(world, h, leg.x, leg.z); return e ? lifeGoal(world, e) : { x: leg.x, z: leg.z, reach: 25 }; }
+  if (next?.effect === 'plant') return { x: leg.x, z: leg.z, reach: 15 };
   // A building site: any cell next to its front.
   if (next?.effect === 'deliver' || next?.effect === 'build') return { x: leg.x, z: leg.z, reach: 15 };
   if (next?.effect === 'water_trough' || next?.effect === 'fill_feed') return { x: leg.x, z: leg.z, reach: 15 };
@@ -1433,7 +1475,20 @@ function goalFor(world: World, h: HomesteadState, t: Task, legIndex: number): Na
   return { x: leg.x, z: leg.z, reach: 8 };
 }
 
+/** The window tree whose trunk stands nearest a leg point (dm), within 1 m. */
+function treeAt(world: World, h: HomesteadState, x: number, z: number): Entity | null {
+  const ids = world.entityChunks.get(chunkKey(worldToChunkX(Math.floor(x / DM)), worldToChunkZ(Math.floor(z / DM)))) ?? [];
+  let best: Entity | null = null, bd = 100;
+  for (const id of ids) {
+    const e = world.entities.get(id);
+    if (!e || !e.kind.startsWith('styl_tree_')) continue;
+    const d = (e.x * DM - x) ** 2 + (e.z * DM - z) ** 2;
+    if (d <= bd) { bd = d; best = e; }
+  }
+  return best;
+}
 const TASK_WORDS: Record<string, string> = {
+  plant: 'the planting spot',
   eat: 'the store to eat', rest: 'home', store: 'the store', restock: 'the store', thresh: 'the store', harvest: 'the field',
   sow: 'the field', water: 'the field', till: 'the field', water_trough: 'the trough', feed: 'the trough', collect: 'the nest box',
   shear: 'the sheep', milk: 'the animal', round_up: 'the stray', chop: 'the tree', haul: 'the building site', build: 'the building site',
@@ -1538,7 +1593,7 @@ function stepVillager(world: World, h: HomesteadState, v: Villager, tick: number
   const t = v.task;
   if (!t) return;
   // v4: a woodcutter still on the way to a tree at nightfall turns for home (nothing in hand is lost; the tree is free again).
-  if (isWorkHomestead(h) && t.kind === 'chop' && t.leg === 0 && isNight(tick)) { v.task = plan(world, h, v, tick, budget); if (!v.task) return; return stepVillager(world, h, v, tick, ev, budget, occupied, true); }
+  if (isWorkHomestead(h) && (t.kind === 'chop' || (t.kind === 'plant' && isWoodlandHomestead(h) && t.legs.length > 2)) && t.leg === 0 && isNight(tick)) { v.task = plan(world, h, v, tick, budget); if (!v.task) return; return stepVillager(world, h, v, tick, ev, budget, occupied, true); }
   const leg = t.legs[t.leg];
   if (leg.op !== 'walk' && v.nav?.wait) delete v.nav.wait;
   if (leg.op === 'walk' && isNavHomestead(h)) {
@@ -1825,6 +1880,8 @@ export function stepHomestead(world: World, tick: number): string[] {
   const h = world.homestead;
   if (!h) return [];
   const ev: Events = { log: [] };
+  // v5: the woodland's scheduled lifecycle events, quota and a slice of natural seeding, before anyone acts.
+  if (isWoodlandHomestead(h)) stepWoodland(world, h, tick, ev.log);
   // v4: approved sites take free stock that arrived since the last tick (oldest site first).
   if (isWorkHomestead(h)) reserveSites(world, h);
   spoil(world, h, tick);
@@ -1967,6 +2024,11 @@ export function homesteadAct(world: World, action: HomesteadAction, target: stri
 // ---------- fields the player designs ----------
 
 export interface FieldSpec { x: number; z: number; w: number; d: number; crop: CropKind }
+/** v5: a tree in an empty spot of its lifecycle (a natural gap) is not in the way; stumps are grubbed out by fields and sites. */
+function standing(world: World, h: HomesteadState, e: Entity): boolean {
+  if (!isWoodlandHomestead(h) || !e.kind.startsWith('styl_tree_')) return true;
+  return !!treeLife(world, e)?.present;
+}
 const overlaps = (a: Rect, b: Rect, gap = 0) => a.x0 < b.x1 + gap && a.x1 + gap > b.x0 && a.z0 < b.z1 + gap && a.z1 + gap > b.z0;
 
 /**
@@ -2006,7 +2068,7 @@ export function checkField(world: World, spec: FieldSpec, ignoreId?: string): st
   if (rock) reasons.push('crops need soil, not stone or sand');
   if (hi - lo > 1) reasons.push(`the ground is too steep (${hi - lo} m of slope; at most 1 m)`);
   for (const e of world.entities.values()) {
-    if (e.harvested || world.entityRemovals.has(e.id) || e.kind === 'marker') continue;
+    if (e.harvested || world.entityRemovals.has(e.id) || e.kind === 'marker' || !standing(world, h, e)) continue;
     if (e.x >= x - 0.4 && e.x < x + w + 0.4 && e.z >= z - 0.4 && e.z < z + d + 0.4) {
       reasons.push(e.kind.startsWith('styl_tree') ? 'clear the trees first (gather them for wood)' : 'clear the bushes and rocks first (gather them)');
       break;
@@ -2030,6 +2092,8 @@ export function markField(world: World, spec: FieldSpec, payFrom: 'bag' | 'store
   const id = `field:${h.nextId++}`;
   h.plots.push({ id, x: spec.x, z: spec.z, w: spec.w, d: spec.d, crop: spec.crop, state: 'wild', growth: 0, moisture: 0, dry: 0, tilled: 0 });
   h.plots.sort((a, b) => a.id.localeCompare(b.id));
+  // v5: the field's ground is cleared of stumps, and empty spots in it stay empty.
+  if (isWoodlandHomestead(h)) clearGround(world, h, spec.x - 1, spec.z - 1, spec.x + spec.w + 1, spec.z + spec.d + 1);
   world.revision++;
   return { ok: true, value: { fieldId: id, units: fieldUnits(spec.w, spec.d), wood } };
 }
@@ -2233,6 +2297,7 @@ export function homesteadSnapshot(h: HomesteadState): HomesteadState {
     ...(h.gates ? { gates: [...h.gates].sort((a, b) => a.id.localeCompare(b.id)).map((g) => ({ id: g.id, state: g.state })) } : {}),
     ...(h.sites ? { sites: [...h.sites].sort((a, b) => a.id.localeCompare(b.id)).map((st) => ({ id: st.id, kind: st.kind, x: st.x, z: st.z, state: st.state,
       reserved: sortedPositive(st.reserved), delivered: sortedPositive(st.delivered), work: st.work })) } : {}),
+    ...(h.woodland ? { woodland: woodlandSnapshot(h.woodland) } : {}),
   };
 }
 const sortedPositive = (b: Record<string, number>) => Object.fromEntries(Object.entries(b).filter(([, n]) => n > 0).sort(([a], [c]) => a.localeCompare(c)));
@@ -2253,7 +2318,8 @@ const int = (v: unknown, lo: number, hi: number): v is number => typeof v === 'n
 const str = (v: unknown, re: RegExp): v is string => typeof v === 'string' && v.length <= 64 && re.test(v);
 const POS = 20_000; // |dm| bound (±2 km)
 // 'thresh' was missing here before M010, so a save taken while a farmer threshed seed was rejected on load.
-const EFFECTS = new Set<Effect>(['take', 'store', 'till', 'sow', 'reap', 'water_plot', 'draw', 'water_trough', 'fill_feed', 'gather_eggs', 'shear', 'milk', 'eat', 'rest', 'restock', 'thresh', 'herd', 'hold_gate', 'chop', 'fetch', 'deliver', 'build', 'none']);
+const EFFECTS = new Set<Effect>(['take', 'store', 'till', 'sow', 'reap', 'water_plot', 'draw', 'water_trough', 'fill_feed', 'gather_eggs', 'shear', 'milk', 'eat', 'rest', 'restock', 'thresh', 'herd', 'hold_gate', 'chop', 'fetch', 'deliver', 'build', 'lift', 'plant', 'none']);
+const V5_EFFECTS = new Set<Effect>(['lift', 'plant']);
 const GATE_ID_SET = new Set<string>(GATE_IDS);
 const TARGET = /^[a-z_]+:[a-z0-9:]{1,24}$/;
 const BY = /^[A-Za-z0-9_:,.-]{1,96}$/;
@@ -2284,7 +2350,9 @@ function validateNav(raw: unknown, tick: number, version: number): NavState {
     ...(raw.opening !== undefined ? { opening: raw.opening as string } : {}), ...(raw.opened !== undefined ? { opened: raw.opened as string } : {}),
     ...(raw.far !== undefined ? { far: raw.far as [number, number] } : {}), ...(blocked ? { blocked } : {}), ...(wait ? { wait } : {}) });
 }
-const ITEMS = /^(?:water|seed|fiber|eggs|wool|milk|harvest:(?:wheat|potato|flax)|food|rations|ore|stone|wood)$/;
+const ITEMS = /^(?:water|seed|fiber|eggs|wool|milk|harvest:(?:wheat|potato|flax)|food|rations|ore|stone|wood|sapling:(?:oak|birch|beech|spruce|pine|cherry))$/;
+/** v5 only: a wildling sapling in a forester's hands (never stored). */
+const isSapling = (item: unknown) => typeof item === 'string' && item.startsWith('sapling:');
 
 /** Strict validation: unknown fields, ranges and references are rejected. */
 export function validateHomestead(raw: unknown, tick: number): HomesteadState {
@@ -2302,6 +2370,7 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
     let carry: Carry = null;
     if (v.carry !== null) {
       if (!isObj(v.carry) || !str(v.carry.item, ITEMS) || !int(v.carry.amount, 1, 100)
+        || isSapling(v.carry.item) && ((raw.version as number) < HOMESTEAD_WOODLAND_VERSION || v.carry.amount !== 1)
         || v.carry.site !== undefined && ((raw.version as number) < HOMESTEAD_WORK_VERSION || !str(v.carry.site, /^site:\d{1,6}$/))) throw new Error('invalid villager load');
       carry = { item: v.carry.item, amount: v.carry.amount, ...(v.carry.site !== undefined ? { site: v.carry.site as string } : {}) };
     }
@@ -2314,7 +2383,8 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
       }
       const legs: Leg[] = t.legs.map((l: unknown) => {
         if (!isObj(l) || (l.op !== 'walk' && l.op !== 'work') || !int(l.x, -POS, POS) || !int(l.z, -POS, POS)
-          || !int(l.ticks, 0, 1000) || !EFFECTS.has(l.effect as Effect)
+          || !int(l.ticks, 0, 1000) || !EFFECTS.has(l.effect as Effect) || V5_EFFECTS.has(l.effect as Effect) && (raw.version as number) < HOMESTEAD_WOODLAND_VERSION
+          || isSapling(l.item) && (raw.version as number) < HOMESTEAD_WOODLAND_VERSION
           || l.item !== undefined && !str(l.item, ITEMS) || l.amount !== undefined && !int(l.amount, 1, 100)) throw new Error('invalid task leg');
         return { op: l.op, x: l.x, z: l.z, ticks: l.ticks, effect: l.effect as Effect,
           ...(l.item !== undefined ? { item: l.item as string } : {}), ...(l.amount !== undefined ? { amount: l.amount as number } : {}) };
@@ -2369,7 +2439,7 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
   const overflow: Record<string, number> = {};
   for (const k of Object.keys(raw.overflow)) {
     const n = raw.overflow[k];
-    if (!str(k, ITEMS) || k.startsWith('harvest') || k === 'water' || !int(n, 1, OVERFLOW_CAPACITY)) throw new Error('snapshot has an invalid overflow pile');
+    if (!str(k, ITEMS) || k.startsWith('harvest') || k === 'water' || isSapling(k) || !int(n, 1, OVERFLOW_CAPACITY)) throw new Error('snapshot has an invalid overflow pile');
     overflow[k] = n;
   }
   if (total(overflow) > OVERFLOW_CAPACITY) throw new Error('overflow pile exceeds capacity');
@@ -2419,8 +2489,11 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
     // Reservations never exceed the stock they hold (checked against the store with the world).
   } else if (raw.sites !== undefined) throw new Error('only settlement rules v4 have building sites');
   for (const v of villagers) if (v.carry?.site && !sites?.some((st) => st.id === v.carry!.site)) throw new Error('a villager carries for an unknown site');
+  let woodland: WoodlandState | undefined;
+  if ((raw.version as number) >= HOMESTEAD_WOODLAND_VERSION) woodland = validateWoodland(raw.woodland, tick);
+  else if (raw.woodland !== undefined) throw new Error('only settlement rules v5 have a woodland');
   const h: HomesteadState = { version: raw.version as HomesteadVersion, anchorX: raw.anchorX, anchorZ: raw.anchorZ, rng: raw.rng, nextId: raw.nextId,
-    villagers, plots, enclosures, animals, overflow, steward, ...(gates ? { gates } : {}), ...(sites ? { sites } : {}) };
+    villagers, plots, enclosures, animals, overflow, steward, ...(gates ? { gates } : {}), ...(sites ? { sites } : {}), ...(woodland ? { woodland } : {}) };
   const canonical = homesteadSnapshot(h);
   if (JSON.stringify(canonical) !== JSON.stringify(raw)) throw new Error('snapshot homestead is not canonical');
   return canonical;

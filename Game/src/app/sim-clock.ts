@@ -28,6 +28,22 @@ export class SimClock {
     return true;
   }
 
+  /**
+   * M013 dev/testing time-lapse (`?timescale=N`): up to `maxTicks` ticks per
+   * call, so a timescale above one keeps up at low frame rates. It changes
+   * only how often the client issues ordinary one-tick commands; the rules
+   * and every tick are the same. The accumulator stays capped.
+   */
+  advanceMany(dt: number, active: boolean, maxTicks: number): number {
+    if (!active || !Number.isFinite(dt) || dt <= 0) return 0;
+    const cap = TICK_SECONDS * (maxTicks + 0.5);
+    this.accumulated = Math.min(cap, this.accumulated + Math.min(dt, TICK_SECONDS * maxTicks));
+    let n = 0;
+    while (n < maxTicks && this.accumulated >= TICK_SECONDS) { this.accumulated -= TICK_SECONDS; n++; }
+    this.ticksIssued += n;
+    return n;
+  }
+
   /** Forget partial progress (after resume or a manual time skip). */
   reset(): void { this.accumulated = 0; }
 

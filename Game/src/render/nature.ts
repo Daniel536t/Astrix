@@ -14,7 +14,8 @@
 // renderer never decides whether a tree exists. Distance LOD (render/lod.ts)
 // only swaps the model and its shadow casting.
 import * as THREE from 'three';
-import { Entity, World } from '../sim/world';
+import { Entity, World, chunkOriginX, chunkOriginZ } from '../sim/world';
+import { TreeStage, treeChangesSince, treeLife, woodlandOf } from '../sim/woodland';
 import { growthStage, isVegetationKind, treeSpecies, vegetationVariant } from '../sim/vegetation';
 import { DEFAULT_LOD_BANDS, LOD_FAR, LOD_MID, LOD_NEAR, LodBand, LodBands, LodBatch, LodGeometry, LodSet, LodTarget, TiledLodMesh, Vec3Like } from './lod';
 import { VegetationPlan, blocksGeometry, cairnPlan, orePlan, planBlocks, vegetationPlan } from './vegetation-kit';
@@ -23,8 +24,19 @@ interface ResolvedModel { key: string; plan: VegetationPlan }
 
 const propPlans = new Map<string, VegetationPlan>();
 
-/** The model of one entity, or null when the kind has no natural asset. */
-export function natureModel(e: Entity, seed: number): ResolvedModel | null {
+/**
+ * The model of one entity, or null when nothing is drawn. With `world`, a
+ * tree's species and stage come from the simulation's lifecycle (M013 rules
+ * v5: growing, dying, dead snags, stumps; a gap draws nothing); without it,
+ * or under older rules, they are the M008 visual stage.
+ */
+export function natureModel(e: Entity, seed: number, world?: World): ResolvedModel | null {
+  if (e.kind.startsWith('styl_tree_') && world) {
+    const life = treeLife(world, e);
+    if (!life || !life.present) return null;
+    const variant = vegetationVariant(e);
+    return { key: `${life.species}:${life.stage}:${variant}`, plan: vegetationPlan(life.species, life.stage as TreeStage, variant) };
+  }
   if (isVegetationKind(e.kind)) {
     const species = treeSpecies(e, seed), stage = growthStage(e);
     if (!species || !stage) return null;
@@ -75,6 +87,8 @@ export interface NatureBuildResult {
   lodCounts: NatureLodCounts;
   /** LOD controller; null when nothing is drawn. */
   lod: LodSet | null;
+  /** The incremental view that owns the result (M013). */
+  view?: NatureView;
 }
 
 export function lodCounts(lod: LodSet | null): NatureLodCounts {
@@ -100,89 +114,233 @@ export interface NatureBuildOptions {
   multiDraw?: boolean;
 }
 
+export interface NatureSyncStats {
+  /** Incremental work so far: instances added, retired and given a new model; chunks added and dropped. */
+  adds: number; removes: number; swaps: number; chunksAdded: number; chunksDropped: number;
+  /** Entities re-checked by the rotating lifecycle scan. */
+  scanned: number;
+  /** Chunks still queued for adding. */
+  pendingChunks: number;
+  lastMs: number; maxMs: number; syncs: number; totalMs: number;
+}
+
+const _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
+const _v = new THREE.Vector3();
+const _s = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
+
+/**
+ * The drawn natural assets, kept in step with the world incrementally (M013).
+ *
+ * The first build registers every loaded entity. After that `sync` only
+ * touches what changed: entities of newly loaded chunks are added (a few
+ * chunks per call), those of dropped chunks retired, and trees whose
+ * simulated stage or presence changed (felled, cut, resprouted, planted,
+ * seeded, or simply grown over time) get their new model in place. Growth
+ * is noticed two ways: the simulation's change channel names trees it
+ * touched, and a rotating scan re-checks a bounded slice of entities per
+ * call so time-driven stage changes appear within a few frames. Geometry for
+ * a model is registered once, when it first appears. Entities stay the
+ * source of truth: the view never decides whether a tree exists.
+ */
+export class NatureView {
+  readonly group = new THREE.Group();
+  lod: LodSet | null = null;
+  readonly stats: NatureSyncStats = { adds: 0, removes: 0, swaps: 0, chunksAdded: 0, chunksDropped: 0, scanned: 0, pendingChunks: 0, lastMs: 0, maxMs: 0, syncs: 0, totalMs: 0 };
+  private readonly entries = new Map<string, { inst: number; key: string; chunk: string }>();
+  private readonly geo = new Map<string, LodGeometry>();
+  private readonly models = new Map<string, ResolvedModel>();
+  private readonly batchIds: string[] = [];
+  private readonly targets: Array<LodTarget | null> = [];
+  private readonly chunks = new Set<string>();
+  private readonly queue: string[] = [];
+  private changeSeq = 0;
+  private scan: string[] = [];
+  private scanAt = 0;
+  private lastTick = -1;
+
+  constructor(private readonly world: World, private readonly options: NatureBuildOptions = {}) {
+    this.group.name = 'styl_nature';
+  }
+
+  get instances(): number { return this.entries.size; }
+
+  /** The initial build: every entity of the loaded chunks at once (or all chunks when `loaded` is null). */
+  build(loaded: ReadonlySet<string> | null, camera?: Vec3Like): void {
+    const world = this.world;
+    this.changeSeq = treeChangesSince(world, 0).seq;
+    const live: Array<{ e: Entity; model: ResolvedModel }> = [];
+    for (const e of world.entities.values()) {
+      if (world.entityRemovals?.has(e.id)) continue;
+      if (loaded && !loaded.has(e.chunk)) continue;
+      const model = this.modelOf(e);
+      if (!model) continue;
+      live.push({ e, model });
+      this.models.set(model.key, model);
+    }
+    if (loaded) for (const k of loaded) this.chunks.add(k);
+    else for (const k of world.entityChunks.keys()) this.chunks.add(k);
+    if (live.length === 0 && this.options.multiDraw !== false) return;
+    let mainVertices = 0, farVertices = 0;
+    for (const model of this.models.values()) {
+      mainVertices += natureGeometry(model, LOD_NEAR).attributes.position.count + natureGeometry(model, LOD_MID).attributes.position.count;
+      farVertices += natureGeometry(model, LOD_FAR).attributes.position.count;
+    }
+    const bands = this.options.bands ?? DEFAULT_LOD_BANDS;
+    this.lod = this.options.multiDraw === false
+      ? new TiledLodMesh({ name: 'styl_nature', material: natureMaterial, bands })
+      : new LodBatch({ name: 'styl_nature_batch', material: natureMaterial, maxInstances: Math.max(16, live.length), mainVertices: Math.max(64, mainVertices), farVertices: Math.max(64, farVertices), bands });
+    for (const model of this.models.values()) this.register(model);
+    for (const { e, model } of live) this.addEntity(e, model);
+    this.lod.setInspection(this.batchIds as string[], this.targets as LodTarget[]);
+    if (camera) this.lod.update(camera, true);
+    this.lod.finish();
+    this.group.add(...this.lod.objects);
+  }
+
+  private modelOf(e: Entity): ResolvedModel | null {
+    if (e.harvested && !e.kind.startsWith('styl_tree_')) return null;
+    return natureModel(e, this.world.seed, this.world);
+  }
+
+  private register(model: ResolvedModel): LodGeometry {
+    let g = this.geo.get(model.key);
+    if (g) return g;
+    const near = natureGeometry(model, LOD_NEAR), mid = natureGeometry(model, LOD_MID), far = natureGeometry(model, LOD_FAR);
+    g = { near: this.lod!.addGeometry(LOD_NEAR, near), mid: this.lod!.addGeometry(LOD_MID, mid), far: this.lod!.addGeometry(LOD_FAR, far), triangles: [tris(near), tris(mid), tris(far)] };
+    this.geo.set(model.key, g);
+    return g;
+  }
+
+  private target(e: Entity, model: ResolvedModel): LodTarget {
+    const top = natureGeometry(model, LOD_NEAR).boundingBox!.max.y;
+    const h = e.kind.startsWith('styl_tree_') ? Math.min(3.0, top * 0.5) * e.scale
+      : e.kind === 'styl_shrub' ? Math.min(0.7, top * 0.6) * e.scale : e.kind === 'styl_ore' ? 0.65 * e.scale : e.scale;
+    return { entityId: e.id, x: e.x, y: e.y + h, z: e.z };
+  }
+
+  private addEntity(e: Entity, model: ResolvedModel, camera?: Vec3Like): void {
+    _q.setFromAxisAngle(_up, e.rot);
+    _v.set(e.x, e.y - 0.15, e.z);
+    _s.setScalar(e.scale);
+    const id = this.lod!.addInstance(this.register(model), _m.compose(_v, _q, _s), { x: e.x, y: e.y + 2, z: e.z });
+    this.batchIds[id] = e.id;
+    this.targets[id] = this.target(e, model);
+    this.entries.set(e.id, { inst: id, key: model.key, chunk: e.chunk });
+    if (camera) this.lod!.placeBand(id, camera);
+  }
+
+  private retire(id: string): void {
+    const en = this.entries.get(id);
+    if (!en) return;
+    this.lod!.removeInstance(en.inst);
+    delete this.batchIds[en.inst];
+    this.targets[en.inst] = null;
+    this.entries.delete(id);
+    this.stats.removes++;
+  }
+
+  /** Bring one entity's drawing in line with the world (add, retire or swap the model). Returns true when something changed. */
+  private refresh(id: string, camera: Vec3Like): boolean {
+    const e = this.world.entities.get(id);
+    const en = this.entries.get(id);
+    const model = e && this.chunks.has(e.chunk) && !this.world.entityRemovals.has(id) ? this.modelOf(e) : null;
+    if (!model) { if (en) { this.retire(id); return true; } return false; }
+    if (!en) { this.ensureLod(); this.addEntity(e!, model, camera); this.stats.adds++; return true; }
+    if (en.key === model.key) return false;
+    this.lod!.setInstanceGeometry(en.inst, this.register(model));
+    en.key = model.key;
+    this.targets[en.inst] = this.target(e!, model);
+    this.stats.swaps++;
+    return true;
+  }
+
+  private ensureLod(): void {
+    if (this.lod) return;
+    const bands = this.options.bands ?? DEFAULT_LOD_BANDS;
+    this.lod = this.options.multiDraw === false
+      ? new TiledLodMesh({ name: 'styl_nature', material: natureMaterial, bands })
+      : new LodBatch({ name: 'styl_nature_batch', material: natureMaterial, maxInstances: 256, mainVertices: 20_000, farVertices: 4_000, bands });
+    this.lod.setInspection(this.batchIds as string[], this.targets as LodTarget[]);
+    this.group.add(...this.lod.objects);
+  }
+
+  /**
+   * Incremental update, bounded by `budgetMs` (at least one unit of work per
+   * call). Returns true when anything visible changed (the inspector's
+   * target list is then stale).
+   */
+  sync(loaded: ReadonlySet<string>, camera: Vec3Like, budgetMs = 1.5, scanPerCall = 400): boolean {
+    const t0 = performance.now();
+    const world = this.world;
+    let changed = false;
+    // Dropped chunks: retire their instances now (cheap).
+    for (const k of [...this.chunks]) {
+      if (loaded.has(k)) continue;
+      this.chunks.delete(k);
+      for (const [id, en] of [...this.entries]) if (en.chunk === k) { this.retire(id); changed = true; }
+      this.stats.chunksDropped++;
+    }
+    // New chunks queue (nearest first), added a few per call.
+    const queued = new Set(this.queue);
+    for (const k of loaded) if (!this.chunks.has(k) && !queued.has(k)) this.queue.push(k);
+    if (this.queue.length) {
+      const dist = (k: string) => { const [cx, cz] = k.split(',').map(Number); return Math.hypot(chunkOriginX(cx) + 16 - camera.x, chunkOriginZ(cz) + 16 - camera.z); };
+      this.queue.sort((a, b) => dist(a) - dist(b));
+    }
+    while (this.queue.length && (performance.now() - t0 < budgetMs || this.stats.syncs === 0)) {
+      const k = this.queue.shift()!;
+      if (!loaded.has(k)) continue;
+      this.chunks.add(k);
+      for (const id of world.entityChunks.get(k) ?? []) changed = this.refresh(id, camera) || changed;
+      this.stats.chunksAdded++;
+      if (performance.now() - t0 >= budgetMs) break;
+    }
+    // Trees the simulation touched (felled, cut, planted, seeded, resprouted, fell).
+    const ch = treeChangesSince(world, this.changeSeq);
+    this.changeSeq = ch.seq;
+    const ids = ch.ids ?? [...this.entries.keys()];
+    for (const id of ids) changed = this.refresh(id, camera) || changed;
+    // Time-driven growth: a rotating scan of every drawn entity, a slice per call, restarted when the tick moves.
+    const tick = world.life?.tick ?? 0;
+    // Only a living woodland (rules v5) changes over time; older worlds have nothing to scan for.
+    if (woodlandOf(world) && tick !== this.lastTick && this.scanAt >= this.scan.length) {
+      this.lastTick = tick;
+      this.scan = [...this.entries.keys()];
+      this.scanAt = 0;
+    }
+    const end = Math.min(this.scan.length, this.scanAt + scanPerCall);
+    for (; this.scanAt < end; this.scanAt++) { changed = this.refresh(this.scan[this.scanAt], camera) || changed; this.stats.scanned++; }
+    this.lod?.commit();
+    const ms = performance.now() - t0;
+    this.stats.syncs++; this.stats.lastMs = ms; this.stats.maxMs = Math.max(this.stats.maxMs, ms); this.stats.totalMs += ms;
+    this.stats.pendingChunks = this.queue.length;
+    return changed;
+  }
+
+  dispose(): void {
+    for (const o of this.lod?.objects ?? []) o.traverse((c) => { const m = c as THREE.Mesh; if (m.isMesh || (m as unknown as THREE.BatchedMesh).isBatchedMesh) m.geometry?.dispose(); });
+    if (this.lod instanceof TiledLodMesh) this.lod.dispose();
+    this.group.clear();
+  }
+}
+
 /**
  * Build the natural assets of the supplied loaded chunks into one LodBatch
  * (a shadow-casting near/mid BatchedMesh and a non-casting far BatchedMesh),
  * or into a TiledLodMesh when WEBGL_multi_draw is missing.
- * Entities remain the source of truth; harvested entities are skipped.
+ * Entities remain the source of truth; harvested entities are skipped (under
+ * rules v5 a felled tree's stump is drawn until it rots or resprouts).
  */
 export function buildNoxelNature(
   world: World,
   loadedChunks: ReadonlySet<string> | null = null,
   options: NatureBuildOptions = {},
 ): NatureBuildResult {
-  const group = new THREE.Group();
-  group.name = 'styl_nature';
-  const live: Array<{ e: Entity; model: ResolvedModel }> = [];
-  const models = new Map<string, ResolvedModel>();
-
-  for (const e of world.entities.values()) {
-    if (e.harvested) continue;
-    if (world.entityRemovals?.has(e.id)) continue;
-    if (loadedChunks && !loadedChunks.has(e.chunk)) continue;
-    const model = natureModel(e, world.seed);
-    if (!model) continue;
-    live.push({ e, model });
-    models.set(model.key, model);
-  }
-  if (live.length === 0) return { group, triangles: 0, instances: 0, lodCounts: lodCounts(null), lod: null };
-
-  let mainVertices = 0, farVertices = 0;
-  for (const model of models.values()) {
-    mainVertices += natureGeometry(model, LOD_NEAR).attributes.position.count
-      + natureGeometry(model, LOD_MID).attributes.position.count;
-    farVertices += natureGeometry(model, LOD_FAR).attributes.position.count;
-  }
-  const bands = options.bands ?? DEFAULT_LOD_BANDS;
-  const lod: LodSet = options.multiDraw === false
-    ? new TiledLodMesh({ name: 'styl_nature', material: natureMaterial, bands })
-    : new LodBatch({
-      name: 'styl_nature_batch',
-      material: natureMaterial,
-      maxInstances: live.length,
-      mainVertices,
-      farVertices,
-      bands,
-    });
-
-  const ids = new Map<string, LodGeometry>();
-  for (const [key, model] of models) {
-    const near = natureGeometry(model, LOD_NEAR), mid = natureGeometry(model, LOD_MID), far = natureGeometry(model, LOD_FAR);
-    ids.set(key, {
-      near: lod.addGeometry(LOD_NEAR, near),
-      mid: lod.addGeometry(LOD_MID, mid),
-      far: lod.addGeometry(LOD_FAR, far),
-      triangles: [tris(near), tris(mid), tris(far)],
-    });
-  }
-
-  // Raycasts report a batchId (instance id), not a Mesh per entity; the id
-  // list maps it to the entity. Keyboard targets list each entity once.
-  const batchIds: string[] = [];
-  const targets: LodTarget[] = [];
-
-  const m = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const v = new THREE.Vector3();
-  const s = new THREE.Vector3();
-  const up = new THREE.Vector3(0, 1, 0);
-  for (const { e, model } of live) {
-    q.setFromAxisAngle(up, e.rot);
-    v.set(e.x, e.y - 0.15, e.z);
-    s.setScalar(e.scale);
-    const id = lod.addInstance(ids.get(model.key)!, m.compose(v, q, s), { x: e.x, y: e.y + 2, z: e.z });
-    batchIds[id] = e.id;
-    const top = natureGeometry(model, LOD_NEAR).boundingBox!.max.y;
-    const targetHeight = e.kind.startsWith('styl_tree_') ? Math.min(3.0, top * 0.5) * e.scale
-      : e.kind === 'styl_shrub' ? Math.min(0.7, top * 0.6) * e.scale
-      : e.kind === 'styl_ore' ? 0.65 * e.scale
-      : e.scale;
-    targets[id] = { entityId: e.id, x: e.x, y: e.y + targetHeight, z: e.z };
-  }
-  lod.setInspection(batchIds, targets);
-  if (options.camera) lod.update(options.camera, true);
-  lod.finish();
-  group.add(...lod.objects);
-
-  return { group, triangles: lod.drawnTriangles(), instances: live.length, lodCounts: lodCounts(lod), lod };
+  const view = new NatureView(world, options);
+  view.build(loadedChunks, options.camera);
+  const lod = view.lod;
+  if (!lod) return { group: view.group, triangles: 0, instances: 0, lodCounts: lodCounts(null), lod: null, view };
+  return { group: view.group, triangles: lod.drawnTriangles(), instances: view.instances, lodCounts: lodCounts(lod), lod, view };
 }

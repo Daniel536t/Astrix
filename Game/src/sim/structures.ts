@@ -6,7 +6,7 @@
 // World.structures. The renderer reads those records; it never invents a
 // building that the simulation does not own.
 import {
-  World, ResourceType, MAT, surfaceAt, getVoxel,
+  World, ResourceType, MAT, surfaceAt, getVoxel, touchStructures,
 } from './world';
 import {
   Rect, VoxelRegion, normalizeRect, expandRect,
@@ -822,6 +822,7 @@ export function executeStructure(
     provisional: true,
   };
   world.structures.set(structure.id, structure);
+  touchStructures(world);
 
   const ledger: StructureLedger = {
     authority: LOCAL_AUTHORITY,

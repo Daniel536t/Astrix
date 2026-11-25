@@ -5,7 +5,10 @@ import {
   nearestHarvestable, residentSurfaceAt, residentVoxelAt, WORLD_SIZE, CHUNK_SIZE, SEA_LEVEL, Entity, LATEST_GENERATOR_VERSION,
 } from './sim/world';
 import { VoxelTerrainView, ViewMode } from './render/terrain';
-import { buildNoxelNature, lodCounts } from './render/nature';
+import { NatureView, lodCounts } from './render/nature';
+import { buildTreeShowcase } from './render/tree-showcase';
+import { resolveInspection } from './app/inspection';
+import { woodlandOf } from './sim/woodland';
 import { TiledLodMesh, type LodSet } from './render/lod';
 import { buildNoxelSite, buildKit } from './render/noxel';
 import { Sky, shadowLead, timeLabel } from './render/sky';
@@ -70,6 +73,12 @@ try {
 const worldSeed = params.has('seed') && seedValid ? seed : guestSeed ?? 1337;
 const startT = num('t', 0.42, 0, 1);
 const freeze = params.get('freeze') === '1';
+/**
+ * M013 dev/testing time-lapse: `?timescale=N` (1-60) issues settlement ticks
+ * N times as often, up to 8 per frame. Only the rate of ordinary one-tick
+ * commands changes; the rules, each tick and the journal format are the same.
+ */
+const timescale = num('timescale', 1, 1, 60);
 const sceneMode = params.get('scene') ?? 'world';
 const isKit = sceneMode === 'kit';
 const isMap = sceneMode === 'map';
@@ -172,7 +181,11 @@ const terrainView = new VoxelTerrainView(world, scene, {
 });
 
 let natureDirty = true;
-/** Full nature rebuilds so far (chunk loads, edits); LOD counters restart with each. */
+/** M013: the drawn nature follows the world incrementally (chunk loads, growth, felling); full rebuilds only at start and on request. */
+let natureView: NatureView | null = null;
+let natureTargetsStale = false;
+let natureTargetsAt = 0;
+/** Full nature rebuilds so far (startup, scripted actions); LOD counters restart with each. */
 let natureRebuilds = 0;
 let natureInstances = 0;
 // Distance LOD of trees, bushes and stone props (presentation only).
@@ -226,10 +239,15 @@ let homesteadGame: HomesteadGame | null = null;
 /** The object inspector is a developer tool now: ?inspect=1 (also in the kit scene). */
 const devInspect = params.get('inspect') === '1' || isKit;
 let faunaDirty = true;
-terrainView.onChunksChanged = () => { natureDirty = true; faunaDirty = true; };
+terrainView.onChunksChanged = () => { faunaDirty = true; };
 // Living creatures (ambient tier) for the resident near chunks.
 const fauna = isMap || isKit ? null : new FaunaView(world);
 if (fauna) scene.add(fauna.group);
+if (params.get('trees') === '1') {
+  // M013 developer lineup: every species through every lifecycle stage (near LOD), north of the kit spot.
+  const trees = buildTreeShowcase(kitX - 20, kitZ + 14, (x, z) => residentSurfaceAt(world, Math.floor(x), Math.floor(z)) ?? surfaceAt(world, Math.floor(x), Math.floor(z)));
+  scene.add(trees.group);
+}
 if (params.get('animals') === '1') {
   showcase = buildAnimalShowcase(kitX, kitZ, (x, z) => residentSurfaceAt(world, Math.floor(x), Math.floor(z)) ?? surfaceAt(world, Math.floor(x), Math.floor(z)));
   scene.add(showcase.group);
@@ -271,13 +289,12 @@ function disposeObject(obj: THREE.Object3D): void {
 function rebuildNature(): void {
   for (const child of natureGroup.children) disposeObject(child);
   natureGroup.clear();
-  const result = buildNoxelNature(world, terrainView.loadedChunkKeys, { camera: rig.camera.position, multiDraw });
-  // Map mode has no near chunks, so its hidden nature group is legitimately
-  // empty. Avoid Three's variadic add() warning when handed an empty spread.
-  if (result.group.children.length > 0) natureGroup.add(...result.group.children);
+  natureView = new NatureView(world, { multiDraw });
+  natureView.build(terrainView.loadedChunkKeys, rig.camera.position);
+  natureGroup.add(natureView.group);
   natureGroup.visible = !isMap;
-  natureInstances = result.instances;
-  natureLod = result.lod;
+  natureInstances = natureView.instances;
+  natureLod = natureView.lod;
   natureRebuilds++;
   sceneInspector?.refreshTargets();
   natureDirty = false;
@@ -347,6 +364,15 @@ function placeAt(cx: number, cz: number): boolean {
   return changed;
 }
 
+/** M013: the tree within reach as the living woodland describes it ("the mature oak · age 3.2 days · 15 wood · may be felled"). */
+function treeHint(e: Entity): string | null {
+  if (!e.kind.startsWith('styl_tree_') || !woodlandOf(world)) return null;
+  const info = resolveInspection(world, { entityId: e.id });
+  if (!info) return null;
+  const fact = (label: string) => info.facts.find((f) => f.label === label)?.value;
+  return [`the ${info.name.toLowerCase()}`, fact('Stage'), fact('Timber'), fact('Woodland')].filter(Boolean).join(' · ');
+}
+
 function harvestNearest(deplete = false): Entity | null {
   // Explore mode gathers what the founder can reach; builder mode keeps the
   // overview's 40 m radius around the camera target.
@@ -390,7 +416,7 @@ function harvestNearest(deplete = false): Entity | null {
     (session.world.entities.get(e.id)?.harvested ? ' (depleted)' : '');
   persistenceMessage = saved.ok ? saved.message
     : saved.message || persistenceMessage;
-  natureDirty = true;
+  // The drawn nature follows through the world's change channel (no rebuild).
   return e;
 }
 
@@ -531,6 +557,8 @@ function metrics() {
     pinkOverflow: world.stats.pinkOverflow,
     natureInstances,
     natureRebuilds,
+    natureSync: natureView ? { ...natureView.stats } : null,
+    timescale,
     vegetation: natureLod ? { ...lodCounts(natureLod), drawnTriangles: natureLod.drawnTriangles(),
       evaluations: natureLod.stats().evaluations, switches: natureLod.stats().switches,
       ...(natureLod instanceof TiledLodMesh ? { tileBuilds: natureLod.tileBuilds, meshBakes: natureLod.meshBakes, pendingBakes: natureLod.pendingBakes } : {}) } : null,
@@ -604,13 +632,14 @@ function frame(timestamp?: number) {
   // settlement time on low frame rates). SimClock caps each step at one tick.
   const simDt = lastSimAt ? (nowMs - lastSimAt) / 1000 : 0;
   lastSimAt = nowMs;
-  if (simClock.advance(simDt, simActive)) {
+  const dueTicks = timescale > 1 ? simClock.advanceMany(simDt * timescale, simActive, Math.min(8, Math.ceil(timescale))) : simClock.advance(simDt, simActive) ? 1 : 0;
+  for (let k = 0; k < dueTicks; k++) {
     const tTick = performance.now();
     const r = lifeGame!.realtimeTick();
     sections.record('tick', performance.now() - tTick);
     // A villager felled a tree (rules v4): redraw nature from the entities, as after the player's harvest.
-    const felled = felledTrees.get(world) ?? 0;
-    if (felled !== felledSeen) { felledSeen = felled; natureDirty = true; }
+    // (M013: felled trees, stumps and growth reach the drawing incrementally through NatureView.sync.)
+    felledSeen = felledTrees.get(world) ?? 0;
     if (r.ok) saveScheduler.markDirty(nowMs);
     else realtimeNote = `settlement time stopped: ${r.reasons.join('; ')}`;
   }
@@ -660,6 +689,15 @@ function frame(timestamp?: number) {
   terrainView.update(rig.target, mode);
   terrainView.cullMacro(rig.camera);
   sections.record('terrain', performance.now() - tTerrain);
+  if (natureView && !isMap) {
+    // M013: incremental nature: newly loaded chunks a few at a time, felled, planted and grown trees in place.
+    const tSync = performance.now();
+    if (natureView.sync(terrainView.loadedChunkKeys, rig.camera.position)) natureTargetsStale = true;
+    natureLod = natureView.lod;
+    natureInstances = natureView.instances;
+    sections.record('naturesync', performance.now() - tSync);
+    if (natureTargetsStale && nowMs - natureTargetsAt > 1000) { natureTargetsStale = false; natureTargetsAt = nowMs; sceneInspector?.refreshTargets(); }
+  }
   if (natureDirty && !isMap && frames % 2 === 0) {
     // Timed apart from 'vegetation' (band updates): a chunk load rebuilds the
     // whole nature set, which also re-bakes every fallback tile.
@@ -691,7 +729,7 @@ function frame(timestamp?: number) {
       const walking = !!explore?.active;
       const work = walking ? homesteadGame?.nearest() : null;
       const reach = work ? `<b>E: ${work.label}</b> · ` : walking && explore?.reachable
-        ? `<b>E: gather ${explore.reachable.resource ?? ''} from ${explore.reachable.kind.replace('styl_', '').replace(/_/g, ' ')}</b> · ` : '';
+        ? `<b>E: gather ${explore.reachable.resource ?? ''} from ${treeHint(explore.reachable) ?? explore.reachable.kind.replace('styl_', '').replace(/_/g, ' ')}</b> · ` : '';
       const useButton = document.getElementById('gather-nearest');
       const useLabel = work ? work.label : 'Gather';
       if (useButton && useButton.textContent !== useLabel) { useButton.textContent = useLabel; useButton.classList.toggle('work', !!work); }

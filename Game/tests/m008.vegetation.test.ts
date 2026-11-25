@@ -99,7 +99,9 @@ test('every species and stage has near > mid > far triangles, far <= 36, vertex 
         const t = [near, mid, far].map((g) => g.attributes.position.count / 3);
         assert.ok(t[0] > t[1] && t[1] > t[2], `${model.key} ${t}`);
         assert.ok(t[2] <= 36, `${model.key} far ${t[2]}`);
-        if (TREE_SPECIES.includes(species as never) && stage === 'mature') assert.ok(t[0] <= 160, `${model.key} near ${t[0]}`);
+        // M013 added near-only root spurs, crown lumps and layered spruce tips (REF-006): the near budget
+        // for a mature tree went from 160 to 240 triangles; mid and far triangle counts are unchanged.
+        if (TREE_SPECIES.includes(species as never) && stage === 'mature') assert.ok(t[0] <= 240, `${model.key} near ${t[0]}`);
         for (const g of [near, mid, far]) {
           assert.ok(g.attributes.color, 'vertex colours');
           assert.equal(g.attributes.uv, undefined, 'no texture coordinates');

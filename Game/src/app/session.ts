@@ -25,6 +25,10 @@ import {
   setGate, upgradeHomestead, HOMESTEAD_WORK_VERSION, SITE_KINDS, SiteKind, placeSite, approveSite, cancelSite, freeInStore, treeTarget,
 } from '../sim/homestead';
 import { GATE_STATES, GateState } from '../sim/nav';
+import { HOMESTEAD_WOODLAND_VERSION } from '../sim/homestead';
+import { HARVEST_MODES, HarvestMode, POLICY_LIMITS, WoodPolicy, speciesFromText } from '../sim/woodland';
+import type { TreeSpecies } from '../sim/vegetation';
+import { plantTree, protectTree, protectZone, removeZone, setWoodlandPolicy } from '../sim/forestry';
 
 export const JOURNAL_SCHEMA = 1 as const;
 export const DESIGN_JOURNAL_SCHEMA = 2 as const;
@@ -36,7 +40,18 @@ export type Command = LegacyBuildCommand | BuildCommand | HarvestCommand
 export type HomesteadCommand = FoundHomesteadCommand | HomesteadActCommand | AssignRoleCommand
   | ExpandFieldCommand | StewardProposeCommand | ResolveProposalCommand | StewardPolicyCommand
   | MarkFieldCommand | SetCropCommand | RemoveFieldCommand | SetGateCommand | UpgradeHomesteadCommand
-  | PlaceSiteCommand | ApproveSiteCommand | CancelSiteCommand;
+  | PlaceSiteCommand | ApproveSiteCommand | CancelSiteCommand
+  | PlantTreeCommand | ProtectTreeCommand | ProtectZoneCommand | RemoveZoneCommand | WoodlandPolicyCommand;
+type RulesVersion = typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION;
+/** M013 (rules v5): the owner plants a wildling sapling at a cell (whole metres), lifted from a seed parent within 20 m (of `species`, when given). */
+export interface PlantTreeCommand extends CommandEnvelope { type: 'plant_tree'; x: number; z: number; species?: TreeSpecies }
+/** M013: the owner marks or unmarks a tree protected. */
+export interface ProtectTreeCommand extends CommandEnvelope { type: 'protect_tree'; entityId: string; protect: boolean }
+/** M013: the owner protects a round area (centre and radius in whole metres), or removes one. */
+export interface ProtectZoneCommand extends CommandEnvelope { type: 'protect_zone'; x: number; z: number; r: number }
+export interface RemoveZoneCommand extends CommandEnvelope { type: 'remove_zone'; zoneId: string }
+/** M013: the owner's woodland policy (harvest mode, youngest fellable stage, veterans, snags, buffers, canopy minimum, replanting). */
+export interface WoodlandPolicyCommand extends CommandEnvelope, WoodPolicy { type: 'woodland_policy' }
 /** M012 Stage B (rules v4): the owner marks out a building site, approves it (its materials are reserved in the store) or cancels it. */
 export interface PlaceSiteCommand extends CommandEnvelope { type: 'place_site'; kind: SiteKind; x: number; z: number }
 export interface ApproveSiteCommand extends CommandEnvelope { type: 'approve_site'; siteId: string }
@@ -47,13 +62,13 @@ export interface SetGateCommand extends CommandEnvelope { type: 'set_gate'; gate
  * M010: a legacy (v1) homestead switches to settlement rules v2 (navigation, gates, stage timber).
  * M012: `rules: 3` switches a v1 or v2 homestead to settlement rules v3 (animals on the grid, villager avoidance).
  */
-export interface UpgradeHomesteadCommand extends CommandEnvelope { type: 'upgrade_homestead'; rules?: typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION }
+export interface UpgradeHomesteadCommand extends CommandEnvelope { type: 'upgrade_homestead'; rules?: typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION }
 /** The player lays out a field: where (metres, min corner), how big, and what to grow. */
 export interface MarkFieldCommand extends CommandEnvelope { type: 'mark_field'; x: number; z: number; w: number; d: number; crop: CropKind }
 export interface SetCropCommand extends CommandEnvelope { type: 'set_crop'; fieldId: string; crop: CropKind }
 export interface RemoveFieldCommand extends CommandEnvelope { type: 'remove_field'; fieldId: string }
 /** `rules: 2` founds under settlement rules v2 (M010), `rules: 3` under v3 (M012); absent is the legacy homestead every old journal recorded. */
-export interface FoundHomesteadCommand extends CommandEnvelope { type: 'found_homestead'; rules?: typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION }
+export interface FoundHomesteadCommand extends CommandEnvelope { type: 'found_homestead'; rules?: RulesVersion }
 export interface HomesteadActCommand extends CommandEnvelope { type: 'homestead_act'; action: HomesteadAction; target: string }
 export interface AssignRoleCommand extends CommandEnvelope { type: 'assign_role'; villagerId: string; role: Role; actor: Actor }
 export interface ExpandFieldCommand extends CommandEnvelope { type: 'expand_field'; actor: Actor }
@@ -117,10 +132,15 @@ export type HomesteadOutcome =
   | { type: 'set_crop'; fieldId: string; crop: CropKind }
   | { type: 'remove_field'; fieldId: string }
   | { type: 'set_gate'; gateId: string; state: GateState }
-  | { type: 'upgrade_homestead'; version: typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION }
+  | { type: 'upgrade_homestead'; version: RulesVersion }
   | { type: 'place_site'; siteId: string; kind: SiteKind; x: number; z: number }
   | { type: 'approve_site'; siteId: string; reserved: Record<string, number> }
-  | { type: 'cancel_site'; siteId: string; released: Record<string, number> };
+  | { type: 'cancel_site'; siteId: string; released: Record<string, number> }
+  | { type: 'plant_tree'; entityId: string; species: TreeSpecies; x: number; z: number }
+  | { type: 'protect_tree'; entityId: string; protect: boolean }
+  | { type: 'protect_zone'; zoneId: string; x: number; z: number; r: number }
+  | { type: 'remove_zone'; zoneId: string }
+  | ({ type: 'woodland_policy' } & WoodPolicy);
 export interface TransferOutcome {
   type: 'deposit' | 'withdraw'; stockpileId: typeof FOUNDER_STOCKPILE_ID;
   resources: Partial<Record<LifeResource, number>>;
@@ -231,18 +251,47 @@ const POLICIES = ['auto', 'approve', 'off'];
 const SITE_ID = /^site:\d{1,6}$/;
 const reasonText = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 160 && /^[\x20-\x7e]+$/.test(v);
 const actorOf = (v: unknown): v is Actor => v === 'player' || v === 'steward';
+const ZONE_ID = /^zone:\d{1,8}$/;
+const TREE_ENTITY = /^(?:e:\d+,\d+:\d+|hero:styl_[a-z_]+:-?\d+:-?\d+)$/;
+const cell = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= -1024 && v <= 1023;
+const within = (v: unknown, [lo, hi]: readonly [number, number]): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= lo && v <= hi;
+function policyOf(value: Record<string, unknown>): WoodPolicy | null {
+  if (!HARVEST_MODES.includes(value.harvest as HarvestMode) || (value.minStage !== 'mature' && value.minStage !== 'old') || typeof value.keepVeterans !== 'boolean'
+    || (value.snags !== 'fell' && value.snags !== 'keep') || !within(value.buffer, POLICY_LIMITS.buffer) || !within(value.waterBuffer, POLICY_LIMITS.waterBuffer)
+    || !within(value.minStanding, POLICY_LIMITS.minStanding) || !within(value.replant, POLICY_LIMITS.replant)) return null;
+  return { harvest: value.harvest as HarvestMode, minStage: value.minStage, keepVeterans: value.keepVeterans, snags: value.snags,
+    buffer: value.buffer, waterBuffer: value.waterBuffer, minStanding: value.minStanding, replant: value.replant };
+}
+const RULES: readonly number[] = [HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION];
 
 function validateHomesteadCommand(value: Record<string, unknown>, base: { schema: typeof CURRENT_JOURNAL_SCHEMA; id: string; expectedRevision: number }): Command | null {
   switch (value.type) {
     case 'found_homestead':
       if (value.rules === undefined) return { ...base, type: 'found_homestead' };
-      return value.rules === HOMESTEAD_NAV_VERSION || value.rules === HOMESTEAD_LIVING_VERSION || value.rules === HOMESTEAD_WORK_VERSION ? { ...base, type: 'found_homestead', rules: value.rules } : null;
+      return RULES.includes(value.rules as number) ? { ...base, type: 'found_homestead', rules: value.rules as RulesVersion } : null;
     case 'set_gate':
       if (!GATE_IDS.includes(value.gateId as never) || !GATE_STATES.includes(value.state as GateState)) return null;
       return { ...base, type: 'set_gate', gateId: value.gateId as string, state: value.state as GateState };
     case 'upgrade_homestead':
       if (value.rules === undefined) return { ...base, type: 'upgrade_homestead' };
-      return value.rules === HOMESTEAD_LIVING_VERSION || value.rules === HOMESTEAD_WORK_VERSION ? { ...base, type: 'upgrade_homestead', rules: value.rules } : null;
+      return value.rules === HOMESTEAD_LIVING_VERSION || value.rules === HOMESTEAD_WORK_VERSION || value.rules === HOMESTEAD_WOODLAND_VERSION ? { ...base, type: 'upgrade_homestead', rules: value.rules } : null;
+    case 'plant_tree': {
+      if (!cell(value.x) || !cell(value.z) || value.species !== undefined && !speciesFromText(value.species)) return null;
+      return { ...base, type: 'plant_tree', x: value.x, z: value.z, ...(value.species !== undefined ? { species: value.species as TreeSpecies } : {}) };
+    }
+    case 'protect_tree':
+      if (typeof value.entityId !== 'string' || value.entityId.length > 64 || !TREE_ENTITY.test(value.entityId) || typeof value.protect !== 'boolean') return null;
+      return { ...base, type: 'protect_tree', entityId: value.entityId, protect: value.protect };
+    case 'protect_zone':
+      if (!cell(value.x) || !cell(value.z) || !within(value.r, [2, 40])) return null;
+      return { ...base, type: 'protect_zone', x: value.x, z: value.z, r: value.r };
+    case 'remove_zone':
+      if (typeof value.zoneId !== 'string' || !ZONE_ID.test(value.zoneId)) return null;
+      return { ...base, type: 'remove_zone', zoneId: value.zoneId };
+    case 'woodland_policy': {
+      const p = policyOf(value);
+      return p ? { ...base, type: 'woodland_policy', ...p } : null;
+    }
     case 'place_site':
       if (!SITE_KINDS.includes(value.kind as SiteKind) || !coord(value.x) || !coord(value.z)) return null;
       return { ...base, type: 'place_site', kind: value.kind as SiteKind, x: value.x, z: value.z };
@@ -321,7 +370,23 @@ function validateHomesteadOutcome(value: Record<string, unknown>): CommandOutcom
       if (!GATE_IDS.includes(value.gateId as never) || !GATE_STATES.includes(value.state as GateState)) return null;
       return { type: 'set_gate', gateId: value.gateId as string, state: value.state as GateState };
     case 'upgrade_homestead':
-      return value.version === HOMESTEAD_NAV_VERSION || value.version === HOMESTEAD_LIVING_VERSION || value.version === HOMESTEAD_WORK_VERSION ? { type: 'upgrade_homestead', version: value.version } : null;
+      return RULES.includes(value.version as number) ? { type: 'upgrade_homestead', version: value.version as RulesVersion } : null;
+    case 'plant_tree':
+      if (typeof value.entityId !== 'string' || !TREE_ENTITY.test(value.entityId) || !speciesFromText(value.species) || !cell(value.x) || !cell(value.z)) return null;
+      return { type: 'plant_tree', entityId: value.entityId, species: value.species as TreeSpecies, x: value.x, z: value.z };
+    case 'protect_tree':
+      if (typeof value.entityId !== 'string' || !TREE_ENTITY.test(value.entityId) || typeof value.protect !== 'boolean') return null;
+      return { type: 'protect_tree', entityId: value.entityId, protect: value.protect };
+    case 'protect_zone':
+      if (typeof value.zoneId !== 'string' || !ZONE_ID.test(value.zoneId) || !cell(value.x) || !cell(value.z) || !within(value.r, [2, 40])) return null;
+      return { type: 'protect_zone', zoneId: value.zoneId, x: value.x, z: value.z, r: value.r };
+    case 'remove_zone':
+      if (typeof value.zoneId !== 'string' || !ZONE_ID.test(value.zoneId)) return null;
+      return { type: 'remove_zone', zoneId: value.zoneId };
+    case 'woodland_policy': {
+      const p = policyOf(value);
+      return p ? { type: 'woodland_policy', ...p } : null;
+    }
     case 'place_site':
       if (typeof value.siteId !== 'string' || !SITE_ID.test(value.siteId) || !SITE_KINDS.includes(value.kind as SiteKind) || !coord(value.x) || !coord(value.z)) return null;
       return { type: 'place_site', siteId: value.siteId, kind: value.kind as SiteKind, x: value.x, z: value.z };
@@ -959,7 +1024,28 @@ export class GameSession {
       }
       case 'upgrade_homestead': {
         const r = upgradeHomestead(world, command.rules ?? HOMESTEAD_NAV_VERSION);
-        return r.ok ? { ok: true, value: { type: 'upgrade_homestead', version: r.value.version as typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION } } : r;
+        return r.ok ? { ok: true, value: { type: 'upgrade_homestead', version: r.value.version as RulesVersion } } : r;
+      }
+      case 'plant_tree': {
+        const r = plantTree(world, command.x, command.z, command.species);
+        return r.ok ? { ok: true, value: { type: 'plant_tree', entityId: r.value.entityId, species: r.value.species, x: r.value.x, z: r.value.z } } : r;
+      }
+      case 'protect_tree': {
+        const r = protectTree(world, command.entityId, command.protect);
+        return r.ok ? { ok: true, value: { type: 'protect_tree', entityId: command.entityId, protect: command.protect } } : r;
+      }
+      case 'protect_zone': {
+        const r = protectZone(world, command.x, command.z, command.r);
+        return r.ok ? { ok: true, value: { type: 'protect_zone', zoneId: r.value.zoneId, x: command.x, z: command.z, r: command.r } } : r;
+      }
+      case 'remove_zone': {
+        const r = removeZone(world, command.zoneId);
+        return r.ok ? { ok: true, value: { type: 'remove_zone', zoneId: command.zoneId } } : r;
+      }
+      case 'woodland_policy': {
+        const { schema: _s, id: _i, expectedRevision: _r, type: _t, ...policy } = command;
+        const r = setWoodlandPolicy(world, policy);
+        return r.ok ? { ok: true, value: { type: 'woodland_policy', ...r.value } } : r;
       }
       case 'place_site': {
         const r = placeSite(world, command.kind, command.x, command.z);
