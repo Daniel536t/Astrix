@@ -20,6 +20,9 @@ import {
 const M = palette.materials as Record<string, { hex: string }>;
 const H = (k: string) => new THREE.Color(M[k].hex);
 
+/** The drawn water surface sits this far below the top of the water voxels (the sim surface). */
+export const WATER_DRAW_DROP = 0.1;
+
 /** Shared time uniform for every water material. */
 export const waterTime = { value: 0 };
 
@@ -151,7 +154,7 @@ export function meshChunkWater(world: World, chunk: VoxelChunk): THREE.Mesh | nu
         const m = getVoxel(world, x + dx, level - 1, z + dz);
         if (isSolid(m)) shore = 1;
       }
-      const y = level - 0.1;
+      const y = level - WATER_DRAW_DROP;
       const base = pos.length / 3;
       const fo = Math.max(shore * 0.65, Math.min(1, f.speed / 3.5));
       push(x, y, z, 0, 1, 0, fx, fz, dep, fo, 0);
@@ -165,7 +168,7 @@ export function meshChunkWater(world: World, chunk: VoxelChunk): THREE.Mesh | nu
         const nLevel = levelAt(x + dx, z + dz, lx + dx, lz + dz);
         if (nLevel === -9999 || nLevel >= level) continue;
         if (isSolid(getVoxel(world, x + dx, level - 1, z + dz))) continue;
-        const top = level - 0.1, bottom = nLevel - 0.1;
+        const top = level - WATER_DRAW_DROP, bottom = nLevel - WATER_DRAW_DROP;
         const b = pos.length / 3;
         // Face on the shared edge, oriented toward the lower neighbour.
         const ex = dx > 0 ? x + 1 : dx < 0 ? x : x, ez = dz > 0 ? z + 1 : dz < 0 ? z : z;

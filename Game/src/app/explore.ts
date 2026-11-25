@@ -35,6 +35,8 @@ interface SavedAvatar {
   x: number; y: number; z: number; heading: number;
   health?: number; stamina?: number; safe?: { x: number; y: number; z: number };
 }
+/** While floating, the camera stays at least this far above the water surface (m). */
+export const CAMERA_WATER_CLEARANCE = 0.35;
 /** Seconds the death screen shows before the character respawns. */
 export const RESPAWN_DELAY = 3;
 /** A return to a far banner waits this long for its terrain to stream in, then gives up. */
@@ -325,7 +327,7 @@ export class ExploreController {
     const a = this.accumulator / FIXED_STEP;
     const x = p.x + (s.x - p.x) * a, y = p.y + (s.y - p.y) * a, z = p.z + (s.z - p.z) * a;
     placeFigure(this.figure, x, y, z, s.heading);
-    animateFigure(this.figure, s, frameDt);
+    animateFigure(this.figure, s, frameDt, y);
 
     // Follow camera: smooth the target (snappier horizontally than vertically
     // so stepping up a voxel does not jolt the view).
@@ -335,6 +337,12 @@ export class ExploreController {
     this.smoothTarget.y += (y + 1.5 - this.smoothTarget.y) * ky;
     rig.target.copy(this.smoothTarget);
     rig.apply();
+    // Floating at the surface: keep the lens above the water (a low orbit
+    // would otherwise dip under the surface and look like the head is under).
+    if (s.mode === 'swim' && !s.headUnderwater) {
+      const floor = s.waterSurface + CAMERA_WATER_CLEARANCE;
+      if (rig.camera.position.y < floor) { rig.camera.position.y = floor; rig.camera.lookAt(rig.target); }
+    }
 
     // Interaction prompt.
     const e = nearestHarvestable(this.o.world, s.x, s.z, INTERACT_REACH + 1.5);

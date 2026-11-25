@@ -51,8 +51,22 @@ export const STEP_HEIGHT = 1.05;
 export const SWIM_DEPTH = 1.35;
 /** Eye height above the feet; the head is underwater when the surface is above it. */
 export const EYE_HEIGHT = 1.5;
-/** Treading water keeps the eyes this far above the surface. */
-const FLOAT_EYE_CLEARANCE = 0.08;
+/**
+ * Buoyancy (M011): a swimmer at rest floats with the feet this far below the
+ * surface, so the water line sits at the upper chest and the eyes are
+ * EYE_HEIGHT - FLOAT_DEPTH = 0.2 m clear. (Before M011 the float line put the
+ * eyes only 0.08 m clear and the drawn figure's head 0.3 m under the drawn
+ * water.)
+ */
+export const FLOAT_DEPTH = 1.3;
+/** An exhausted swimmer still floats, lower: water at the chin, eyes just clear. */
+export const EXHAUSTED_FLOAT_DEPTH = 1.42;
+/** Holding Jump at the surface lifts the head this much higher (a kick up to look or reach a bank). */
+export const SURFACE_LIFT = 0.18;
+/** Vertical swimming speeds (m/s): dive down, swim up (Jump held), passive buoyant rise. */
+export const DIVE_DOWN_SPEED = 2.0;
+export const SWIM_UP_SPEED = 2.6;
+export const BUOYANT_RISE_SPEED = 1.1;
 /** Highest bank a swimmer at the surface can haul out onto. */
 export const SWIM_CLIMB = 2.2;
 
@@ -64,9 +78,15 @@ export const BREATH_SECONDS = 15;
 export const BREATH_REFILL_SECONDS = 2.5;
 /** Health lost per second while drowning (10 s from full health to death). */
 export const DROWN_DAMAGE_PER_S = 10;
-/** Stamina: treading water lasts 60 s, active swimming 40 s; 8 s to recover on land. */
-export const TREAD_SECONDS = 60;
+/**
+ * Stamina: active swimming (strokes, diving, swimming up) lasts 40 s; floating
+ * at rest with the head out recovers it in FLOAT_RECOVER_SECONDS; 8 s on land.
+ * (Before M011 treading water at rest drained it in 60 s and an exhausted
+ * swimmer sank and drowned, which is what drained the owner's life at the
+ * surface.)
+ */
 export const SWIM_STAMINA_SECONDS = 40;
+export const FLOAT_RECOVER_SECONDS = 30;
 export const STAMINA_RECOVER_SECONDS = 8;
 /** Health regenerates after this long without damage, at HEALTH_REGEN_PER_S. */
 export const HEALTH_REGEN_DELAY = 4;
@@ -279,7 +299,7 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
   const swimming = depth >= SWIM_DEPTH || (depth > 0.9 && !s.grounded && prev.mode === 'swim');
   const wading = !swimming && depth > 0.2;
   const exhausted = s.stamina <= 0;
-  const floatY = surface - EYE_HEIGHT + FLOAT_EYE_CLEARANCE;
+  const floatY = surface - (exhausted ? EXHAUSTED_FLOAT_DEPTH : FLOAT_DEPTH);
   const atSurface = swimming && s.y >= floatY - 0.35;
 
   let mx = input.moveX, mz = input.moveZ;
@@ -300,14 +320,18 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
   s.vz += (mz * target + driftZ - s.vz) * Math.min(1, accel * dt);
 
   if (swimming) {
-    // Buoyancy and strokes: tread water at the surface while stamina lasts,
-    // rise while jump is held, dive while dive is held, sink when exhausted.
+    // Buoyancy pulls the body toward its float line (water at the chest);
+    // the response is slightly underdamped, so a swimmer bobs gently into
+    // place. Holding Dive strokes down, holding Jump strokes up (faster than
+    // buoyancy alone, and a little higher at the surface). An exhausted
+    // swimmer cannot dive or kick up but still floats, lower in the water.
     let wantVy: number;
-    if (input.dive) wantVy = -2.2;
-    else if (input.rise || input.jump) wantVy = exhausted ? 0.35 : s.y < floatY ? 2.4 : (floatY + 0.15 - s.y) * 4;
-    else if (!exhausted) wantVy = Math.max(-1.6, Math.min(1.6, (floatY - s.y) * 3));
-    else wantVy = -0.8;
-    s.vy += (wantVy - s.vy) * Math.min(1, 4 * dt);
+    if (input.dive && !exhausted) wantVy = -DIVE_DOWN_SPEED;
+    else if ((input.rise || input.jump) && !exhausted) {
+      // Full speed from depth, easing off near the top so the kick does not overshoot out of the water.
+      wantVy = Math.max(-1, Math.min(SWIM_UP_SPEED, (floatY + SURFACE_LIFT - s.y) * 2.5));
+    } else wantVy = Math.max(-1.4, Math.min(BUOYANT_RISE_SPEED, (floatY - s.y) * 2.5));
+    s.vy += (wantVy - s.vy) * Math.min(1, 3.5 * dt);
   } else {
     const wantJump = input.jump || s.jumpBuffer > 0;
     if (wantJump && s.grounded) {
@@ -398,21 +422,28 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
     s.heading += d * Math.min(1, 12 * dt);
   }
   const depthAfter = feetWaterDepth(world, s.x, s.y, s.z);
-  const afloat = depthAfter >= SWIM_DEPTH || (swimming && depthAfter > 0.9 && !s.grounded);
+  // A swimmer whose feet brush a submerged ledge keeps swimming over it (M011):
+  // landing on it used to switch to wading, and stepping off the ledge then
+  // dropped the founder under the surface with full gravity.
+  const afloat = depthAfter >= SWIM_DEPTH || (swimming && depthAfter > 0.9);
   s.mode = afloat ? 'swim' : !s.grounded ? 'air' : depthAfter > 0.2 ? 'wade' : 'ground';
   if (s.mode === 'swim') s.grounded = false;
   s.waterSurface = s.y + depthAfter;
-  updateVitals(s, depthAfter, Math.hypot(mx, mz) > 0.1, dt);
+  const working = Math.hypot(mx, mz) > 0.1 || (!exhausted && (!!input.dive || !!input.rise || input.jump));
+  updateVitals(s, depthAfter, working, dt);
   return s;
 }
 
 /** Breath, stamina and health for one step. Pure and deterministic. */
-function updateVitals(s: CharacterState, depth: number, moving: boolean, dt: number): void {
-  s.headUnderwater = depth > 0 && s.y + depth > s.y + EYE_HEIGHT;
+function updateVitals(s: CharacterState, depth: number, working: boolean, dt: number): void {
+  // Breath is lost only while the eyes are below the surface.
+  s.headUnderwater = depth > EYE_HEIGHT;
   s.breath = s.headUnderwater ? Math.max(0, s.breath - dt / BREATH_SECONDS)
     : Math.min(1, s.breath + dt / BREATH_REFILL_SECONDS);
-  if (s.mode === 'swim') s.stamina = Math.max(0, s.stamina - dt / (moving ? SWIM_STAMINA_SECONDS : TREAD_SECONDS));
-  else if (s.mode === 'ground') s.stamina = Math.min(1, s.stamina + dt / STAMINA_RECOVER_SECONDS);
+  if (s.mode === 'swim') {
+    if (working) s.stamina = Math.max(0, s.stamina - dt / SWIM_STAMINA_SECONDS);
+    else if (!s.headUnderwater) s.stamina = Math.min(1, s.stamina + dt / FLOAT_RECOVER_SECONDS);
+  } else if (s.mode === 'ground') s.stamina = Math.min(1, s.stamina + dt / STAMINA_RECOVER_SECONDS);
 
   let damage = 0;
   if (s.headUnderwater && s.breath <= 0) damage += DROWN_DAMAGE_PER_S * dt;

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MAT, createWorld, ensureChunk, setVoxel, surfaceAt, worldToChunkX, worldToChunkZ } from '../src/sim/world';
 import {
-  BREATH_SECONDS, CharacterInput, CharacterState, DROWN_DAMAGE_PER_S, EYE_HEIGHT, FIXED_STEP, MAX_HEALTH,
-  WALK_SPEED, createCharacter, respawnCharacter, stepCharacter,
+  BREATH_SECONDS, CharacterInput, CharacterState, DROWN_DAMAGE_PER_S, EXHAUSTED_FLOAT_DEPTH, EXHAUSTED_SWIM_SPEED, EYE_HEIGHT,
+  FIXED_STEP, FLOAT_DEPTH, MAX_HEALTH, SWIM_STAMINA_SECONDS, WALK_SPEED, createCharacter, respawnCharacter, stepCharacter,
 } from '../src/sim/character';
 
 const SURFACE = 35; // water cells 31..34, bank top face at 35
@@ -27,15 +27,16 @@ function run(world: ReturnType<typeof createWorld>, s: CharacterState, steps: nu
   return s;
 }
 
-test('a swimmer treads water with the eyes above the surface and tires over time', () => {
+test('a swimmer at rest floats with head and shoulders out and does not tire (M011)', () => {
   const world = pool();
   let s = createCharacter(0.5, SURFACE - 1, 0.5);
   s = run(world, s, 5 * STEPS_PER_S);
   assert.equal(s.mode, 'swim');
   assert.equal(s.headUnderwater, false, `eye ${s.y + EYE_HEIGHT} vs surface ${SURFACE}`);
-  assert.ok(s.y + EYE_HEIGHT > SURFACE && s.y + EYE_HEIGHT < SURFACE + 0.3, `eye height ${s.y + EYE_HEIGHT}`);
+  assert.ok(Math.abs(s.y - (SURFACE - FLOAT_DEPTH)) < 0.03, `float line ${SURFACE - s.y}`);
+  assert.ok(s.y + EYE_HEIGHT > SURFACE + 0.15 && s.y + EYE_HEIGHT < SURFACE + 0.3, `eye height ${s.y + EYE_HEIGHT}`);
   assert.equal(s.waterSurface, SURFACE);
-  assert.ok(s.stamina < 1 && s.stamina > 0.85, `stamina ${s.stamina}`);
+  assert.equal(s.stamina, 1, 'floating at rest costs no stamina');
   assert.equal(s.breath, 1);
 });
 
@@ -76,27 +77,34 @@ test('surfacing refills breath and damage stops', () => {
   assert.equal(s.health, surfacedHealth, 'no drowning damage once the head is above water');
 });
 
-test('an exhausted swimmer cannot stay afloat and sinks', () => {
+test('an exhausted swimmer floats lower and slower, keeps breathing and cannot dive (M011)', () => {
   const world = pool();
   let s = createCharacter(0.5, SURFACE - 1.5, 0.5);
   s = run(world, s, STEPS_PER_S);
-  s = { ...s, stamina: 0 };
-  s = run(world, s, 4 * STEPS_PER_S);
-  assert.equal(s.headUnderwater, true, `feet ${s.y}`);
-  assert.ok(s.breath < 1);
+  s = { ...s, x: -4.5, stamina: 0 };
+  s = run(world, s, 4 * STEPS_PER_S, { moveX: 1, dive: true });
+  assert.equal(s.stamina, 0);
+  assert.equal(s.headUnderwater, false, `feet ${s.y}`);
+  assert.ok(Math.abs(s.y - (SURFACE - EXHAUSTED_FLOAT_DEPTH)) < 0.05, `float line ${SURFACE - s.y}`);
+  assert.ok(s.speed <= EXHAUSTED_SWIM_SPEED + 0.05, `speed ${s.speed}`);
+  assert.equal(s.breath, 1);
 });
 
-test('stamina lasts about a minute of treading water', () => {
+test('active swimming tires in about 40 s; resting afloat recovers (M011)', () => {
   const world = pool();
   let s = createCharacter(0.5, SURFACE - 1.5, 0.5);
-  s = run(world, s, 61 * STEPS_PER_S);
+  s = run(world, s, (SWIM_STAMINA_SECONDS + 1) * STEPS_PER_S, { rise: true });
   assert.equal(s.stamina, 0);
+  s = run(world, s, 10 * STEPS_PER_S);
+  assert.ok(s.stamina > 0.25 && s.stamina < 0.45, `stamina ${s.stamina}`);
+  assert.equal(s.headUnderwater, false);
 });
 
 test('a swimmer hauls out onto the bank, keeps a dry respawn point and recovers stamina', () => {
   const world = pool();
   let s = createCharacter(0.5, SURFACE - 1.5, 0.5);
   s = run(world, s, 2 * STEPS_PER_S);
+  s = { ...s, stamina: 0.5 };
   const tired = s.stamina;
   s = run(world, s, Math.round(3.5 * STEPS_PER_S), { moveX: 1 }); // swim east and climb the x = 7 bank
   assert.ok(s.x > 7, `x ${s.x}`);

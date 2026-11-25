@@ -9,8 +9,8 @@ Scripted captures (`?action=`, `?ui=0`, explicit camera params) and `?mode=build
 |---|---|---|
 | Move | WASD / arrow keys (camera-relative) | WASD / arrows pan the overview |
 | Run | Shift | Shift = faster pan |
-| Jump | Space (hold to swim up in water) | — |
-| Dive | Hold C while swimming | — |
+| Jump | Space (hold to swim up in water, faster than floating up) | — |
+| Dive | Hold C while swimming to swim down; let go and you float back up | — |
 | Plant banner (mark this spot) | V: your one field banner moves to where you stand (dry ground only) | — |
 | Return home | R, then hold still about 1.5 s: back beside your home banner at the founding spot. Moving, jumping or getting hurt cancels; R again cancels | — |
 | Return to banner | T, then hold still about 1.5 s: back beside your field banner | — |
@@ -41,7 +41,7 @@ Modelled on Minecraft Bedrock's joystick layout: move with the left thumb, look 
 | Look | Drag anywhere on the **right half** |
 | Zoom | Pinch on the right half, or the + / − buttons |
 | Jump / swim up | **Jump** (bottom right). Tap to jump; hold to swim up. |
-| Dive | **Dive** (appears left of Jump while swimming). Hold to swim down. |
+| Dive | **Dive** (appears left of Jump while swimming). Hold to swim down; release to float back up. |
 | Banners | A small column on the right, above the zoom buttons: **Home** (return home), **To banner** (return to your field banner; dimmed until one is planted), **Plant** (plant or move your field banner here). Tap Home or To banner, then keep the joystick thumb off for about 1.5 s; the button fills as a ring while you wait. |
 | Use / gather | The yellow button names what it will do ("Dig the flax field", "Draw water"…) |
 | Farm | **Farm** button (top left): fields, people, animals, steward; Plan a new field |
@@ -55,9 +55,9 @@ Every control tracks its own finger, so looking or jumping never stops or replac
 | Situation | What happens |
 |---|---|
 | Up to chest depth | You wade. The deeper the water, the slower the walk. Rivers push you downstream a little. |
-| Deeper | You swim. You tread water with your head above the surface, carried by the current (half its surface speed). |
-| Stamina (yellow bar) | Treading water lasts about 60 s, active swimming about 40 s. At zero you can no longer stay afloat and sink. It recovers in about 8 s on dry land. |
-| Breath (bubbles) | 15 s with your head underwater. |
+| Deeper | You float. At rest you tread water with head and shoulders out (water at the chest), bobbing gently, carried by the current (half its surface speed). Moving, you swim a breaststroke at the surface. Hold Dive to go under (an underwater breaststroke, body pointing where you swim); let go and you float back up; hold Jump to swim up faster. Over a submerged ledge you keep swimming. |
+| Stamina (yellow bar) | Active swimming (strokes, diving, swimming up) lasts about 40 s. Floating at rest costs nothing and recovers it in about 30 s; dry land in about 8 s. At zero you still float, lower (water at the chin), swim slowly and cannot dive. |
+| Breath (bubbles) | Lost only while your head is underwater: 15 s. With the head out it refills in about 2.5 s. |
 | Health (red bar) | Out of breath, you lose 10 health per second, so about 10 s to drowning. After 4 s without damage it regenerates at 3 per second. |
 | Drowning | "You drowned". After 3 s you respawn on the last dry ground you stood on, with full health, breath and stamina. |
 | Getting out | Swim at the surface into a bank up to about 2 m high to climb out. |

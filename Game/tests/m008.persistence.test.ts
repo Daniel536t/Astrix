@@ -188,11 +188,13 @@ test('the skinned villager figure is one mesh and moves every part rigidly with 
   assert.equal(meshes.length, 1, 'one draw per pass');
   const mesh = meshes[0] as THREE.SkinnedMesh;
   assert.ok(mesh.isSkinnedMesh);
+  // M011: the foam ring is hidden by a zero scale out of the water; show it so its frame is invertible.
+  f.ripple.scale.setScalar(1);
   f.root.updateMatrixWorld(true);
   const rootBind = f.root.matrixWorld.clone();
   const bones = mesh.skeleton.bones;
   const jointBind = bones.map((b) => b.parent!.matrixWorld.clone());
-  assert.deepEqual(bones.map((b) => b.parent!.name).sort(), ['armL', 'armR', 'head', 'legL', 'legR', 'torso']);
+  assert.deepEqual(bones.map((b) => b.parent!.name).sort(), ['armL', 'armR', 'head', 'legL', 'legR', 'ripple', 'torso']);
   // A walking, turning pose away from the origin.
   f.legL.rotation.x = 0.6; f.legR.rotation.x = -0.6;
   f.armL.rotation.x = -0.8; f.armR.rotation.z = 0.4;
