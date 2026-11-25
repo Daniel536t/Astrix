@@ -34,6 +34,11 @@ import { DAY_TICKS, felledTrees } from './sim/homestead';
 import { buildAnimalShowcase } from './render/animal-showcase';
 import { renderBreakdown } from './app/render-breakdown';
 import { GroundCoverView, groundCoverOffset } from './render/ground-cover';
+import { DEFAULT_LOD_BANDS } from './render/lod';
+import { FALLBACK_LOD_BANDS } from './render/nature';
+import { QUALITY_PRESETS, QUALITY_STORAGE_KEY, natureNearFor, parseQuality, pixelRatioFor, probeGpu, resolveQuality } from './app/quality';
+import { PerfOverlay } from './app/perf-overlay';
+import { mountSettings } from './app/settings';
 
 // A startup failure would otherwise leave a blank canvas with no explanation.
 window.addEventListener('error', (e) => {
@@ -96,13 +101,31 @@ if (noUi) document.body.classList.add('clean');
 if (isKit) document.body.classList.add('kit');
 if (isMap) document.body.classList.add('map');
 
+// ---- graphics quality (M015; presentation only) ----
+// ?quality=low|medium|high|auto, else the Settings choice, else chosen from the device.
+if (params.has('quality') && !parseQuality(params.get('quality'))) paramWarnings.push('ignored ?quality= (must be low, medium, high or auto)');
+const coarsePointer = matchMedia('(pointer: coarse)').matches;
+let savedQuality: string | null = null;
+try { savedQuality = localStorage.getItem(QUALITY_STORAGE_KEY); } catch { savedQuality = null; }
+const quality = resolveQuality(params.get('quality'), savedQuality, () => {
+  // Only touch devices need the GPU string (a throwaway context, released at once).
+  const gpu = coarsePointer ? probeGpu() : null;
+  return { touch: coarsePointer, dpr: devicePixelRatio, hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+    deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null, gpu: gpu?.gpu ?? null, multiDraw: gpu ? gpu.multiDraw : true,
+    screenShort: Math.min(screen.width, screen.height) };
+});
+const preset = QUALITY_PRESETS[quality.level];
+const perfOn = params.get('perf') === '1';
+/** Test harness: ?metrics=1 refreshes window.__metrics every frame instead of every 6th (read-only; for slow emulated runs). */
+const metricsEveryFrame = params.get('metrics') === '1';
+
 // ---- renderer ----
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({ antialias: preset.antialias, powerPreference: 'high-performance' });
+renderer.setPixelRatio(pixelRatioFor(preset, devicePixelRatio));
 renderer.setSize(app.clientWidth, app.clientHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = preset.shadows;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 app.appendChild(renderer.domElement);
@@ -110,7 +133,10 @@ app.appendChild(renderer.domElement);
 // BatchedMesh draws one call per visible instance without WEBGL_multi_draw
 // (some mobile GPUs). Vegetation then uses bounded merged tiles instead.
 // ?multidraw=0 forces that fallback for testing.
-const multiDraw = params.get('multidraw') !== '0' && renderer.extensions.has('WEBGL_multi_draw');
+const multiDrawSupported = renderer.extensions.has('WEBGL_multi_draw');
+const multiDraw = params.get('multidraw') !== '0' && multiDrawSupported;
+/** Trees, bushes and stone props: the quality level's full-detail distance on this render path. */
+const natureBands = { ...(multiDraw ? DEFAULT_LOD_BANDS : FALLBACK_LOD_BANDS), near: natureNearFor(preset, multiDraw) };
 
 const scene = new THREE.Scene();
 const rig = new OrbitRig(renderer.domElement);
@@ -119,7 +145,7 @@ const rig = new OrbitRig(renderer.domElement);
 // mobile rotation and browser-chrome changes that fire no window resize.
 function resizeRenderer(): void {
   const w = Math.max(1, app.clientWidth), h = Math.max(1, app.clientHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(pixelRatioFor(preset, devicePixelRatio));
   renderer.setSize(w, h);
   rig.camera.aspect = w / h;
   rig.camera.updateProjectionMatrix();
@@ -289,7 +315,7 @@ function disposeObject(obj: THREE.Object3D): void {
 function rebuildNature(): void {
   for (const child of natureGroup.children) disposeObject(child);
   natureGroup.clear();
-  natureView = new NatureView(world, { multiDraw });
+  natureView = new NatureView(world, { multiDraw, bands: natureBands });
   natureView.build(terrainView.loadedChunkKeys, rig.camera.position);
   natureGroup.add(natureView.group);
   natureGroup.visible = !isMap;
@@ -303,7 +329,7 @@ function rebuildNature(): void {
 rebuildNature();
 
 // Render-only grass, flowers, ferns, stones, logs and understory near the view.
-const groundCover = isMap || isKit ? null : new GroundCoverView(world);
+const groundCover = isMap || isKit ? null : new GroundCoverView(world, { radius: preset.groundCoverRadius });
 if (groundCover) scene.add(groundCover.group);
 const coverFocus = new THREE.Vector3();
 
@@ -334,6 +360,8 @@ if (isKit) {
 
 // ---- light / time ----
 const sky = new Sky(scene, renderer);
+sky.sun.castShadow = preset.shadows;
+sky.sun.shadow.mapSize.set(preset.shadowMapSize, preset.shadowMapSize);
 sky.fogScale = isMap ? 0 : 0.55;
 const time: TimeState = { t: startT, dayLengthSec: 600, paused: freeze };
 let speed = 1;
@@ -577,10 +605,13 @@ function metrics() {
     macroTilesInView: terrainView.macroTilesInView,
     viewAnchor: (() => {
       const near = viewGroundOffset(rig.camera, rig.target);
-      return { nearGround: Math.round(near * 10) / 10, shadowLead: Math.round(shadowLead(near) * 10) / 10, coverOffset: Math.round(groundCoverOffset(near) * 10) / 10 };
+      return { nearGround: Math.round(near * 10) / 10, shadowLead: Math.round(shadowLead(near) * 10) / 10, coverOffset: Math.round(groundCoverOffset(near, preset.groundCoverRadius) * 10) / 10 };
     })(),
     groundCover: groundCover?.metrics() ?? null,
     multiDraw,
+    quality: { level: quality.level, source: quality.source, reasons: quality.reasons, pixelRatio: renderer.getPixelRatio(), shadows: preset.shadows,
+      shadowMapSize: preset.shadows ? preset.shadowMapSize : 0, antialias: preset.antialias, natureNear: natureBands.near, groundCoverRadius: preset.groundCoverRadius },
+    perf: perfOverlay?.metrics() ?? null,
     rendererCalls: renderer.info.render.calls,
     rendererTriangles: renderer.info.render.triangles,
     rendererGeometries: renderer.info.memory.geometries,
@@ -603,6 +634,15 @@ function metrics() {
     touch: touch ? { stick: touch.stickActive, x: Math.round(touch.vector.x * 100) / 100, z: Math.round(touch.vector.z * 100) / 100, run: touch.vector.run } : null,
   };
 }
+// M015 opt-in performance monitor (?perf=1): reads frame timings and renderer counters only.
+const perfOverlay: PerfOverlay | null = perfOn && !isMap && !isKit ? new PerfOverlay({
+  renderer, multiDraw, multiDrawSupported, quality,
+  build: typeof __ASTRIX_BUILD__ !== 'undefined' ? __ASTRIX_BUILD__ : { commit: 'dev', dirty: true },
+  scene: () => ({ mode: explore?.active ? 'walk' : isMap || isKit ? 'other' : 'builder', x: rig.target.x, z: rig.target.z, distance: explore?.active ? rig.effectiveDistance : rig.distance }),
+  counters: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
+}) : null;
+if (!noUi && !isMap && !isKit) mountSettings({ current: quality, perfOn });
+
 window.__metrics = metrics();
 
 const timer = new THREE.Timer();
@@ -712,7 +752,7 @@ function frame(timestamp?: number) {
   sections.record('vegetation', performance.now() - tVegetation);
   if (natureGroup) natureGroup.visible = !isMap;
   const tCover = performance.now();
-  groundCover?.update(alongView(rig.target, rig.camera.position, groundCoverOffset(nearGround), coverFocus), terrainView.displayedChunkKeys);
+  groundCover?.update(alongView(rig.target, rig.camera.position, groundCoverOffset(nearGround, preset.groundCoverRadius), coverFocus), terrainView.displayedChunkKeys);
   sections.record('groundcover', performance.now() - tCover);
   m2Game?.update(performance.now());
   sceneInspector?.update();
@@ -721,8 +761,9 @@ function frame(timestamp?: number) {
   renderer.render(scene, rig.camera);
   sections.record('render', performance.now() - tRender);
   frameWork.record(performance.now() - workStart);
+  perfOverlay?.frame(workStart);
 
-  if (frames % 6 === 0) {
+  if (frames % 6 === 0 || metricsEveryFrame) {
     window.__metrics = metrics();
     if (!noUi && !isMap && !isKit) {
       const m = window.__metrics;

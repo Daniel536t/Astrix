@@ -904,3 +904,197 @@ body.building #vitals { display: none; }
 @media (pointer: coarse) and (orientation: landscape) {
   #build-bar { top: max(8px, env(safe-area-inset-top)); width: min(560px, calc(100vw - 260px)); max-height: 60vh; }
 }
+
+/* ======================================================================
+   M015 mobile verification: layout fixes found in the emulated audit
+   (13_Integration_and_QA/Evidence/M015-mobile-verification/REPORT.md).
+   ====================================================================== */
+
+/* Builder view + build mode (desktop and touch): the build bar covered the Settlement and milestone panels.
+   While a building is being placed those panels step aside; they come back when the bar closes. */
+body.building #life-panel, body.building #build-panel { display: none !important; }
+/* The Farm and Settings buttons sat under the build bar and the field planner on phones and portrait tablets. */
+body.building #farm-button, body.building #settings-button,
+body.planning-field #farm-button, body.planning-field #settings-button { display: none; }
+
+/* MagicBlock panel: a fold button; folded it is one small button (default on touch). */
+#chain-panel { right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); }
+#chain-panel .chain-fold {
+  display: block; margin: -2px 0 6px auto; padding: 4px 8px; color: #C9B8FF; background: transparent;
+  border: 1px solid rgba(167, 140, 255, 0.45); font-size: 11px;
+}
+#chain-panel.folded { width: auto; padding: 0; background: none; border: 0; }
+#chain-panel.folded .chain-body { display: none; }
+#chain-panel.folded .chain-fold { margin: 0; padding: 8px 12px; color: #F4EFE3; background: rgba(27, 32, 43, 0.86); border-radius: 8px; font-size: 12px; }
+body.building #chain-panel, body.planning-field #chain-panel { display: none; }
+@media (pointer: coarse) {
+  #chain-panel .chain-fold { min-height: 40px; min-width: 44px; }
+  #chain-panel button { min-height: 40px; padding: 8px 12px; }
+  /* Walking: top right, clear of the vitals, the banner column and the zoom buttons. */
+  body.explore #chain-panel { top: max(14px, calc(env(safe-area-inset-top) + 8px)); bottom: auto; max-height: calc(100dvh - 28px); overflow-y: auto; }
+  /* Builder view: bottom right, below the Gather button (the panels use the top). */
+  body:not(.explore) #chain-panel { top: auto; bottom: max(14px, env(safe-area-inset-bottom)); max-height: calc(100dvh - 90px); overflow-y: auto; }
+}
+@media (pointer: coarse) and (max-width: 760px) and (orientation: portrait) {
+  /* Phones: the top row holds the drawer tabs; below the Builder view button on the right. */
+  body.explore #chain-panel { top: max(152px, calc(env(safe-area-inset-top) + 144px)); right: max(8px, env(safe-area-inset-right)); max-height: calc(100dvh - 600px); }
+}
+
+/* Touch tap targets of at least 40 px (most were 24-36 px). */
+@media (pointer: coarse) {
+  #farm-button { min-height: 44px; min-width: 64px; }
+  #mode-button { min-height: 40px; padding: 10px 14px; }
+  #homestead-panel button, #field-planner button, #build-bar button { min-height: 40px; padding: 8px 12px; font-size: 12px; }
+  #homestead-panel select, #homestead-panel input[type="number"] { min-height: 40px; font-size: 14px; padding: 4px 6px; }
+  #homestead-panel header button { min-width: 44px; min-height: 44px; }
+  #homestead-panel label:has(> input[type="checkbox"]) { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; }
+  #homestead-panel input[type="checkbox"] { width: 22px; height: 22px; }
+  #homestead-panel .row-actions { margin: 4px 0 0; }
+  #homestead-panel {
+    left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); bottom: max(8px, env(safe-area-inset-bottom));
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
+  #enter-screen button { min-height: 44px; }
+  #life-panel input, #life-panel select, #life-panel button { min-height: 44px; }
+  /* Toasts move to the top while the Farm panel (bottom sheet) is open, so they never cover its rows. */
+  body:has(#homestead-panel:not([hidden])) .toast { bottom: auto; top: max(60px, calc(env(safe-area-inset-top) + 52px)); }
+  /* Builder view: the HUD stays clear of the zoom and Gather column on the right. */
+  body:not(.explore) #hud { max-width: min(440px, calc(100vw - 124px)); }
+}
+@media (pointer: coarse) and (orientation: landscape) {
+  #homestead-panel { left: auto; right: max(8px, env(safe-area-inset-right)); top: max(8px, env(safe-area-inset-top)); bottom: auto; }
+}
+#enter-screen { padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+
+/* Settlement panel: the deposit / withdraw amount field ran past the panel's right edge. */
+.life-transfer { grid-template-columns: minmax(0, 1fr) 76px; align-items: end; }
+.life-transfer label { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.life-transfer select, .life-transfer input { width: 100%; }
+
+/* Tablets in the builder view: the Settlement panel starts below the taller Farm / Settings row. */
+@media (pointer: coarse) and (min-width: 761px) {
+  #life-panel { top: max(134px, calc(env(safe-area-inset-top) + 126px)); max-height: calc(100dvh - 148px); }
+}
+/* Phones in the builder view: the Settlement and Build drawers start below the Farm row and the
+   Builder view button (they covered both), and the zoom buttons step aside for the Build drawer. */
+@media (max-width: 760px) {
+  #life-panel, #build-panel { top: max(152px, calc(env(safe-area-inset-top) + 144px)); }
+  #life-panel { max-height: calc(100dvh - 330px); }
+  #build-panel { max-height: calc(100dvh - 338px); }
+  body:not(.explore) #build-drawer:checked ~ #controls .zoomers { display: none; }
+}
+@media (max-width: 760px) and (orientation: landscape) {
+  #life-panel, #build-panel { top: max(8px, env(safe-area-inset-top)); max-height: calc(100dvh - 16px); }
+}
+
+/* Portrait phones: health, stamina and breath sit side by side in one row between the drawer tabs and the
+   Farm row, so the stamina and breath rows that appear while swimming no longer run over the Farm and
+   Settings buttons. */
+@media (max-width: 760px) and (orientation: portrait) {
+  #vitals { flex-direction: row; gap: 4px; }
+  #vitals .vital { padding: 3px 6px; gap: 4px; }
+  #vitals .bar { width: 60px; }
+  #vitals .bubbles { width: 60px; gap: 1px; }
+  #vitals .bubble { width: 5px; height: 5px; border-width: 1px; }
+}
+
+/* ---- M015 Settings (graphics quality, performance monitor) ---- */
+#settings-button {
+  position: fixed; z-index: 9; top: max(78px, calc(env(safe-area-inset-top) + 70px));
+  left: calc(max(14px, env(safe-area-inset-left)) + 72px);
+  min-width: 36px; min-height: 36px; padding: 0 9px; color: #F4EFE3; background: rgba(27, 32, 43, 0.82);
+  border: 1px solid rgba(244, 239, 227, 0.28); border-radius: 7px; font: 600 17px/1 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer; touch-action: manipulation;
+}
+#settings-button[aria-expanded="true"] { background: rgba(122, 215, 230, 0.25); }
+#settings-panel {
+  position: fixed; z-index: 13; left: max(14px, env(safe-area-inset-left));
+  top: calc(max(78px, calc(env(safe-area-inset-top) + 70px)) + 52px);
+  width: min(380px, calc(100vw - 28px)); max-height: calc(100dvh - 150px); overflow-y: auto; padding: 10px 14px 14px;
+  color: #F4EFE3; background: rgba(20, 23, 34, 0.95); border: 1px solid rgba(122, 215, 230, 0.5); border-radius: 10px;
+  font: 12px/1.45 ui-sans-serif, system-ui, sans-serif; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); overscroll-behavior: contain;
+}
+#settings-panel[hidden] { display: none; }
+#settings-panel header { display: flex; align-items: center; }
+#settings-panel h2 { margin: 0; flex: 1; font-size: 16px; color: #FFF3D6; }
+#settings-panel h3 { margin: 12px 0 4px; font-size: 12px; color: #7AD7E6; text-transform: uppercase; letter-spacing: 0.04em; }
+#settings-panel p { margin: 4px 0; }
+#settings-panel .dim { color: #B8B2A4; }
+#settings-panel header button { min-width: 40px; min-height: 40px; color: #F4EFE3; background: none; border: 0; font-size: 22px; cursor: pointer; }
+#settings-panel .q-opt { display: flex; gap: 10px; align-items: flex-start; min-height: 44px; padding: 7px 8px; margin: 4px 0; border-radius: 7px; background: rgba(240, 236, 220, 0.05); cursor: pointer; }
+#settings-panel .q-opt input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; }
+#settings-panel [data-perf-toggle] { min-height: 44px; padding: 8px 12px; color: #F4EFE3; background: #3a3550; border: 1px solid #7d6fc4; border-radius: 7px; font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+body.clean #settings-button, body.kit #settings-button, body.map #settings-button, body.clean #settings-panel { display: none !important; }
+@media (pointer: coarse) {
+  #settings-button { min-width: 44px; min-height: 44px; }
+  #settings-panel { top: calc(max(78px, calc(env(safe-area-inset-top) + 70px)) + 52px); }
+}
+@media (pointer: coarse) and (orientation: landscape) {
+  #settings-panel { top: max(8px, env(safe-area-inset-top)); left: calc(max(14px, env(safe-area-inset-left)) + 124px); max-height: calc(100dvh - 16px); }
+}
+
+/* ---- M015 performance monitor (?perf=1) ---- */
+#perf-overlay {
+  position: fixed; z-index: 25; left: 50%; transform: translateX(-50%); bottom: max(4px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; gap: 6px; font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: #F4EFE3;
+}
+#perf-overlay .perf-pill {
+  min-height: 28px; padding: 4px 10px; color: #CFF5D6; background: rgba(10, 12, 18, 0.72); border: 1px solid rgba(111, 227, 154, 0.45);
+  border-radius: 999px; font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; cursor: pointer; touch-action: manipulation; white-space: nowrap;
+}
+#perf-overlay .perf-pill.slow { color: #FFD0C8; border-color: rgba(232, 106, 94, 0.7); }
+#perf-overlay.open .perf-pill { min-height: 40px; }
+#perf-overlay .perf-body {
+  width: min(420px, calc(100vw - 16px)); max-height: min(70dvh, 520px); overflow-y: auto; padding: 8px 10px;
+  background: rgba(10, 12, 18, 0.92); border: 1px solid rgba(111, 227, 154, 0.45); border-radius: 9px;
+}
+#perf-overlay .perf-body[hidden] { display: none; }
+#perf-overlay .perf-stats { margin: 0 0 6px; white-space: pre-wrap; word-break: break-word; font: inherit; }
+#perf-overlay .perf-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+#perf-overlay .perf-actions button { min-height: 40px; padding: 8px 10px; color: #F4EFE3; background: #2E3446; border: 1px solid #6B7594; border-radius: 6px; font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+#perf-overlay .perf-status { min-height: 1.3em; margin-top: 4px; color: #F4E8A4; }
+#perf-overlay .perf-copy { width: 100%; height: 90px; margin-top: 6px; font: 10px/1.3 ui-monospace, monospace; }
+body.clean #perf-overlay { display: none; }
+
+/* M015 audit, second pass. */
+/* Farm panel on touch: it no longer covers the joystick and Jump. Portrait: a sheet from the top that ends
+   at 60 % of the height (the banner and zoom buttons step aside while it is open); landscape: beside the
+   right-hand thumb column. */
+@media (pointer: coarse) and (orientation: portrait) {
+  #homestead-panel { top: max(8px, env(safe-area-inset-top)); bottom: auto; max-height: calc(60dvh - 8px); }
+  body:has(#homestead-panel:not([hidden])) .toast { top: auto; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 144px); }
+}
+@media (pointer: coarse) {
+  body:has(#homestead-panel:not([hidden])) .banner-pad, body:has(#homestead-panel:not([hidden])) .zoomers { display: none; }
+}
+@media (pointer: coarse) and (orientation: landscape) {
+  #homestead-panel { right: calc(max(8px, env(safe-area-inset-right)) + 112px); width: min(420px, calc(100vw - 400px)); max-height: calc(100dvh - 16px); }
+  body:has(#homestead-panel:not([hidden])) .toast { top: auto; bottom: max(14px, env(safe-area-inset-bottom)); left: 30%; }
+  /* Build mode in landscape: the bar sits over the resources and the mode button; they step aside. */
+  body.building #inventory, body.building #mode-button { display: none; }
+}
+/* Builder view on tablets and landscape phones: the milestone panel moves left of the zoom / Gather column. */
+@media (pointer: coarse) and (min-width: 761px) {
+  body:not(.explore) #build-panel { right: calc(max(14px, env(safe-area-inset-right)) + 96px); top: max(62px, calc(env(safe-area-inset-top) + 54px)); max-height: calc(100dvh - 76px); }
+}
+@media (max-width: 760px) {
+  #life-panel { max-height: calc(100dvh - 346px); }
+}
+/* 360 px phones: the resources and the drawer tabs touched; the Settlement panel ran under the zoom buttons. */
+@media (max-width: 380px) {
+  .drawer-toggle label { min-width: 56px; padding: 8px 8px; }
+  #inventory { padding: 6px 7px; }
+  #inventory .inv-row { gap: 6px; }
+  #life-panel { width: calc(100vw - 96px); }
+}
+#settings-button { left: calc(max(14px, env(safe-area-inset-left)) + 70px); }
+/* Portrait phones: the perf pill sits under the vitals row, out of the joystick half and clear of Dive / Jump;
+   the Settings sheet ends at 60 % of the height like the Farm panel. */
+@media (pointer: coarse) and (max-width: 760px) and (orientation: portrait) {
+  #perf-overlay { top: calc(max(78px, calc(env(safe-area-inset-top) + 70px)) + 4px); bottom: auto; flex-direction: column-reverse; }
+  #perf-overlay .perf-pill { padding: 4px 8px; }
+  #perf-overlay .perf-body { max-height: calc(60dvh - 130px); }
+  #settings-panel { max-height: calc(60dvh - 130px); }
+}
+#settings-button { display: inline-grid; place-items: center; }
+@media (pointer: coarse) { #perf-overlay .perf-pill { min-height: 40px; } }

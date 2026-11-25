@@ -36,7 +36,27 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   const info = document.createElement('div');
   const controls = document.createElement('div');
   const links = document.createElement('div');
-  panel.append(info, controls, links);
+  // M015: on phones and tablets the panel starts folded to one button, so it never covers the Farm button,
+  // the vitals or the banner and zoom buttons; tap it to unfold (the choice is kept in this browser).
+  const fold = document.createElement('button');
+  fold.type = 'button';
+  fold.className = 'chain-fold';
+  const body = document.createElement('div');
+  body.className = 'chain-body';
+  body.append(info, controls, links);
+  panel.append(fold, body);
+  const FOLD_KEY = 'astrix:chainpanel:v1';
+  let folded = matchMedia('(pointer: coarse)').matches;
+  try { const v = localStorage.getItem(FOLD_KEY); if (v === 'open') folded = false; if (v === 'folded') folded = true; } catch { /* keep the default */ }
+  const setFold = (f: boolean) => {
+    folded = f;
+    panel.classList.toggle('folded', f);
+    fold.textContent = f ? 'MagicBlock ▸' : 'MagicBlock ▾ hide';
+    fold.setAttribute('aria-expanded', String(!f));
+    fold.setAttribute('aria-label', f ? 'Show the MagicBlock settlement panel' : 'Fold the MagicBlock settlement panel');
+  };
+  setFold(folded);
+  fold.addEventListener('click', () => { setFold(!folded); try { localStorage.setItem(FOLD_KEY, folded ? 'folded' : 'open'); } catch { /* ignore */ } });
   let controlsKey = '';
   let lastKey = '';
   let tickSamples: Array<{ t: number; tick: number }> = [];

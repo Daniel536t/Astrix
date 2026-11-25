@@ -1,6 +1,6 @@
 # ASTrix — Controls
 
-**Updated:** 2026-11-25 (M014 build mode) · Owner-approved key map (World_Engine_Audit §7). The game starts in **Walk** (explore) mode.
+**Updated:** 2026-11-25 (M015 mobile verification: Settings, quality levels, performance monitor, touch layout) · Owner-approved key map (World_Engine_Audit §7). The game starts in **Walk** (explore) mode.
 Scripted captures (`?action=`, `?ui=0`, explicit camera params) and `?mode=builder` start in the builder view.
 
 ## Desktop
@@ -45,12 +45,27 @@ Modelled on Minecraft Bedrock's joystick layout: move with the left thumb, look 
 | Dive | **Dive** (appears left of Jump while swimming). Hold to swim down; release to float back up. |
 | Banners | A small column on the right, above the zoom buttons: **Home** (return home), **To banner** (return to your field banner; dimmed until one is planted), **Plant** (plant or move your field banner here). Tap Home or To banner, then keep the joystick thumb off for about 1.5 s; the button fills as a ring while you wait. |
 | Use / gather | The yellow button names what it will do ("Dig the flax field", "Draw water"…) |
-| Farm | **Farm** button (top left): fields, people, animals, steward; Plan a new field |
+| Farm | **Farm** button (top left): fields, people, animals, steward; Plan a new field. On a portrait phone it opens as a sheet from the top that ends at 60 % of the height, so the joystick, Jump and Use stay usable (the banner and zoom buttons step aside while it is open); in landscape it opens beside the right-hand thumb column. Close it with ×. |
+| Settings | The gear button beside Farm: graphics quality (Auto / Low / Medium / High, applied after a reload; the world is saved first) and the performance monitor switch |
+| MagicBlock panel | Folded to one **MagicBlock ▸** button on phones and tablets (top right while walking, bottom right in the builder view); tap it to unfold, **▾ hide** to fold. M still hides it on a keyboard |
 | Build (M014) | Farm → **Build…**. The ghost starts in front of the founder; tap the ground on the right half to move it there (drag the ghost to slide it). The bar at the top has the catalogue, **Turn 90°**, **Place & approve** and **Close**; it stays clear of the joystick and Jump |
 | Switch mode | **Builder view / Walk** button (top centre) |
 | Panels | Settlement / Build / World tabs (top right). Walk mode opens the World tab. |
 
 Every control tracks its own finger, so looking or jumping never stops or replaces the walking thumb. Movement also stops when the browser loses focus or the page is hidden, so an OS gesture that swallows the touch cannot leave the character walking.
+
+## Graphics quality and the performance monitor (M015)
+
+| URL / setting | Effect |
+|---|---|
+| `?quality=low`, `medium`, `high`, `auto` | Graphics level for this load (overrides the Settings choice). Auto: high on computers, medium on phones and tablets, low on weak ones (4 or fewer CPU threads, 3 GB or less memory, an older Mali / Adreno 3xx-5xx / PowerVR or software GPU, or no WEBGL_multi_draw at a pixel density of 2.5 or more). |
+| high | pixel ratio up to 2, smoothing (MSAA), 2048 px shadows, full-detail trees to 90 m (70 m on the `multidraw=0` path), ground cover 52 m. The renderer as it was before M015. |
+| medium | pixel ratio up to 1.5, smoothing, 1024 px shadows, full-detail trees to 70 m, ground cover 40 m |
+| low | pixel ratio 1, no smoothing, no shadows, full-detail trees to 50 m, ground cover 30 m |
+| `?perf=1` | Performance monitor: a pill with fps and p95 frame time (bottom centre; under the vitals on portrait phones). Tap it for draw calls, triangles, the render path, GPU, pixel ratio, canvas size, battery, the thermal indicator and **Copy report**, **Download report**, **Share…** (where the browser offers it), **Mark**, **New session**. It stays on while `perf=1` is in the address; the log survives a reload in the same tab. |
+| `?metrics=1` | Test harness only: refreshes `window.__metrics` every frame (for slow emulated runs). |
+
+Animals, villagers, the founder and buildings are drawn the same at every level. None of these change the settlement, its journal or its save.
 
 ## Water
 
@@ -78,4 +93,5 @@ If you ever get stuck (a hole deeper than a double jump, about 2.5 m), use **Ret
 ## Known gaps
 
 - Gamepad input is not supported.
-- No physical-device testing yet. Touch was verified in Chrome mobile emulation with real multi-touch sequences (CDP), not on a phone.
+- No physical-device testing yet. Touch was verified in Chrome mobile emulation with real multi-touch sequences (CDP), not on a phone. M015 prepared the device test (13_Integration_and_QA/Evidence/M015-mobile-verification/DEVICE_TEST_PLAN.md); its results are pending the owner's phone or tablet.
+- Safe-area insets (`env(safe-area-inset-*)`) are applied to every edge-anchored control, but emulation reports zero insets, so notch / gesture-bar clearance is unverified until a device run.

@@ -7,3 +7,6 @@ interface Window {
   __scene?: any;
   __world?: any;
 }
+
+/** M015 build id for the performance report (vite.config.ts define): the source commit and whether the tree had uncommitted source changes. */
+declare const __ASTRIX_BUILD__: { commit: string; dirty: boolean };

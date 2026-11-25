@@ -59,6 +59,15 @@ export class HomesteadGame {
   private planCheckedKey = '';
   private planCheckedAt = 0;
   private panelRevision = -1;
+  /**
+   * M015: the panel is rebuilt when the world changes (every settlement tick).
+   * While a finger is on it, for a moment after scrolling, and while one of
+   * its selects or fields has focus, the rebuild waits: on a phone a rebuild
+   * under the finger swallowed taps, and one under an open select picker
+   * dropped the choice.
+   */
+  private panelHoldUntil = 0;
+  private panelHtml = '';
   private stewardTick = -1;
   private lastAssignTick = -1000;
   private eventsSeen = 0;
@@ -78,6 +87,10 @@ export class HomesteadGame {
     document.body.appendChild(this.panel);
     this.panel.addEventListener('click', (e) => this.onPanelClick(e));
     this.panel.addEventListener('change', (e) => this.onPanelChange(e));
+    const hold = (ms: number) => { this.panelHoldUntil = Math.max(this.panelHoldUntil, performance.now() + ms); };
+    this.panel.addEventListener('pointerdown', () => { this.panelHoldUntil = Infinity; });
+    for (const t of ['pointerup', 'pointercancel']) this.panel.addEventListener(t, () => { this.panelHoldUntil = 0; hold(700); });
+    this.panel.addEventListener('scroll', () => { if (this.panelHoldUntil !== Infinity) hold(1200); }, { passive: true });
     this.planBar = document.createElement('div');
     this.planBar.id = 'field-planner';
     this.planBar.hidden = true;
@@ -330,13 +343,20 @@ export class HomesteadGame {
 
   togglePanel(force?: boolean): void {
     this.panel.hidden = force === undefined ? !this.panel.hidden : !force;
-    if (!this.panel.hidden) { this.stopPlanning(); this.build.close(); this.panelRevision = -1; this.renderPanel(); }
+    if (!this.panel.hidden) { this.stopPlanning(); this.build.close(); this.panelRevision = -1; this.panelHoldUntil = 0; this.renderPanel(true); }
   }
 
-  private renderPanel(): void {
+  /** True while the owner is touching, scrolling or editing the panel (M015). */
+  panelBusy(now = performance.now()): boolean {
+    const a = document.activeElement;
+    return now < this.panelHoldUntil || (!!a && this.panel.contains(a) && (a.tagName === 'SELECT' || a.tagName === 'INPUT'));
+  }
+
+  private renderPanel(force = false): void {
     const h = this.world.homestead, life = this.world.life;
     if (!h || !life || this.panel.hidden) return;
     if (this.panelRevision === this.world.revision) return;
+    if (!force && this.panelBusy()) return;
     this.panelRevision = this.world.revision;
     const pct = (n: number, d: number) => `${Math.round((n / d) * 100)}%`;
     const task = (k?: string) => ({ till: 'digging a field', sow: 'sowing', water: 'watering', harvest: 'harvesting', thresh: 'threshing seed',
@@ -411,7 +431,7 @@ export class HomesteadGame {
     const reserve = h.plots.filter((p) => p.state === 'tilled' || p.state === 'wild').reduce((n, p) => n + unitsOf(p), 0);
     const clock = dayTime(life.tick);
     const events = (recentHomesteadEvents.get(this.world) ?? []).slice(-4).reverse().map((e) => `<li>${e}</li>`).join('');
-    this.panel.innerHTML = `
+    const html = `
       <header><h2>Homestead</h2><span class="dim">day ${clock.day + 1} · ${clock.night ? 'night' : 'day'}</span><button type="button" data-close aria-label="Close">×</button></header>
       <p class="${full ? 'warn' : 'dim'}">Store ${stored} / 200 · barn ${barn} / ${OVERFLOW_CAPACITY}${full ? ' · <b>full: ripe crops and products wait until there is room (use or withdraw goods)</b>' : ''}</p>
       ${isWorkHomestead(h) ? `<p class="dim" data-store>In store: ${Object.entries(stock).sort(([a], [b]) => a.localeCompare(b)).map(([k, n]) => `${n} ${k}${held[k] ? ` (${held[k]} reserved)` : ''}`).join(', ') || 'nothing'}</p>` : ''}
@@ -427,6 +447,8 @@ export class HomesteadGame {
       <div class="steward"><label><input type="checkbox" data-steward ${st.enabled ? 'checked' : ''}> Steward on</label> ${pol('assign_role', 'Reassign jobs')} ${pol('expand_field', 'Fence new fields')}</div>
       ${proposals ? `<ul class="proposals">${proposals}</ul>` : '<p class="dim">No requests.</p>'}
       ${events ? `<h3>Recently</h3><ul class="events">${events}</ul>` : ''}`;
+    // M015: an unchanged panel is not rebuilt (keeps focus, scroll and the element under a finger).
+    if (html !== this.panelHtml) { this.panelHtml = html; this.panel.innerHTML = html; }
   }
 
   // ---------- M013 woodland ----------
@@ -557,7 +579,7 @@ export class HomesteadGame {
     if (r && !r.ok) this.o.toast(r.reasons.join('; '), 'bad');
     if (r?.ok && r.outcome.type === 'resolve_proposal') this.o.toast(r.outcome.approved ? `Approved: ${r.outcome.result}` : 'Declined', 'good');
     this.panelRevision = -1;
-    this.renderPanel();
+    this.renderPanel(true);
   }
 
   private onPanelChange(e: Event): void {
@@ -577,7 +599,9 @@ export class HomesteadGame {
     }
     if (r && !r.ok) this.o.toast(r.reasons.join('; '), 'bad');
     this.panelRevision = -1;
-    this.renderPanel();
+    this.panelHoldUntil = 0;
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    this.renderPanel(true);
   }
 
   /** Every frame. */
@@ -619,7 +643,7 @@ export class HomesteadGame {
     const h = this.world.homestead, life = this.world.life;
     if (!h || !life) return null;
     return {
-      tick: life.tick, day: dayTime(life.tick),
+      tick: life.tick, day: dayTime(life.tick), anchor: { x: h.anchorX, z: h.anchorZ },
       fields: h.plots.map((p) => ({ id: p.id, crop: p.crop, x: p.x, z: p.z, w: p.w, d: p.d, state: p.state, stage: cropStage(p), growth: p.growth, moisture: p.moisture })),
       villagers: h.villagers.map((v) => ({ id: v.id, name: v.name, role: v.role, task: v.task?.kind ?? null, target: v.task?.target ?? null, leg: v.task?.leg ?? null,
         legOp: v.task?.legs[v.task.leg]?.op ?? null, x: v.x / DM, z: v.z / DM, carry: v.carry, energy: v.energy, hunger: v.hunger,

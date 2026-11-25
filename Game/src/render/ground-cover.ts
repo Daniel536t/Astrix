@@ -48,8 +48,8 @@ export const GROUND_COVER_NEAR_MARGIN = 8;
  * toward the camera so the nearest, largest ground on screen keeps its cover
  * (review v1: it used to sit around the target, leaving the foreground bare).
  */
-export function groundCoverOffset(nearOffset: number): number {
-  return Math.min(0, nearOffset + GROUND_COVER_RADIUS - GROUND_COVER_NEAR_MARGIN);
+export function groundCoverOffset(nearOffset: number, radius = GROUND_COVER_RADIUS): number {
+  return Math.min(0, nearOffset + radius - GROUND_COVER_NEAR_MARGIN);
 }
 
 export type CoverKind = 'grass' | 'flower' | 'fern' | 'stone' | 'log' | 'mushroom' | 'bush' | 'sapling';
@@ -361,7 +361,11 @@ export class GroundCoverView {
   private entityCount = -1;
   private stats: GroundCoverMetrics = { pieces: 0, triangles: 0, chunks: 0, rebuilds: 0, pending: 0, byKind: {} };
 
-  constructor(private readonly world: World) {
+  /** Drawing radius (m); M015 quality levels shorten it (presentation only). */
+  readonly radius: number;
+
+  constructor(private readonly world: World, options: { radius?: number } = {}) {
+    this.radius = options.radius ?? GROUND_COVER_RADIUS;
     this.group.name = 'ground_cover';
     this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), groundCoverMaterial);
     this.mesh.name = 'ground_cover_batch';
@@ -398,7 +402,7 @@ export class GroundCoverView {
    * dropped). Returns true when the mesh was rebuilt.
    */
   update(focus: { x: number; z: number }, loaded: ReadonlySet<string>, force = false): boolean {
-    const r = GROUND_COVER_RADIUS;
+    const r = this.radius;
     const keys: string[] = [];
     for (let cz = worldToChunkZ(Math.floor(focus.z - r)); cz <= worldToChunkZ(Math.floor(focus.z + r)); cz++) {
       for (let cx = worldToChunkX(Math.floor(focus.x - r)); cx <= worldToChunkX(Math.floor(focus.x + r)); cx++) {
@@ -431,7 +435,7 @@ export class GroundCoverView {
   invalidate(): void { this.cache.clear(); this.exclusions = null; }
 
   private rebuild(focus: { x: number; z: number }, keys: string[], ex: CoverExclusions): void {
-    const r2 = GROUND_COVER_RADIUS * GROUND_COVER_RADIUS;
+    const r2 = this.radius * this.radius;
     const chosen: CoverPiece[] = [];
     let vertices = 0;
     this.pending = 0;
