@@ -594,9 +594,6 @@ function frame(timestamp?: number) {
   rig.update(dt);
   explore?.update(dt);
   updateBannerButtons();
-  const tHome = performance.now();
-  homesteadGame?.update(dt);
-  sections.record('homestead', performance.now() - tHome);
   // Real-time simulation. Freeze (evidence captures), pause, hidden tabs and
   // non-leader tabs do not advance settlement time.
   const nowMs = Date.now();
@@ -618,6 +615,10 @@ function frame(timestamp?: number) {
     else realtimeNote = `settlement time stopped: ${r.reasons.join('; ')}`;
   }
   saveScheduler.poll(nowMs);
+  // After the tick, so the drawn homestead (gate leaves, sites, loads) is never a frame behind the state it reports.
+  const tHome = performance.now();
+  homesteadGame?.update(dt);
+  sections.record('homestead', performance.now() - tHome);
   realtimeNote = !lifeGame || session.journal.schema !== 3 ? ''
     : !lease.isLeader ? 'another tab is running this world — time paused here'
       : time.paused ? 'settlement paused (P)' : realtimeNote.startsWith('settlement time stopped') ? realtimeNote
