@@ -1,0 +1,975 @@
+{
+ "emulated": "Playwright Chromium phone emulation 390x844 @2x, software GL (SwiftShader), CPU throttle 4x while sampling: NOT a real device",
+ "quality": "medium",
+ "throttle": 4,
+ "seconds": 616,
+ "hashes": [
+  "63e6ad32757d1854"
+ ],
+ "views": {
+  "walk": {
+   "calls": 70,
+   "tris": 110726,
+   "quality": {
+    "level": "medium",
+    "source": "url",
+    "reasons": [
+     "?quality="
+    ],
+    "pixelRatio": 1.5,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "multiDraw": true,
+   "canvas": [
+    585,
+    1266
+   ],
+   "css": [
+    390,
+    844
+   ],
+   "dpr": 2,
+   "frameInterval": {
+    "frames": 18,
+    "p50Ms": 901.1,
+    "p95Ms": 10336.8,
+    "p99Ms": 10336.8,
+    "maxMs": 32670.6,
+    "longFrames": 18,
+    "hitches": 18,
+    "windowFrames": 18,
+    "heapMB": 45
+   },
+   "frameWork": {
+    "frames": 19,
+    "p50Ms": 18.1,
+    "p95Ms": 9661.6,
+    "p99Ms": 9661.6,
+    "maxMs": 31827.6,
+    "longFrames": 4,
+    "hitches": 3,
+    "windowFrames": 19,
+    "heapMB": 45
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 2.75,
+     "p95Ms": 1.9,
+     "maxMs": 42.5,
+     "n": 19
+    },
+    "fauna": {
+     "meanMs": 1.77,
+     "p95Ms": 3.6,
+     "maxMs": 7.7,
+     "n": 19
+    },
+    "terrain": {
+     "meanMs": 11.31,
+     "p95Ms": 74.1,
+     "maxMs": 120.7,
+     "n": 19
+    },
+    "naturesync": {
+     "meanMs": 0.56,
+     "p95Ms": 1.7,
+     "maxMs": 6,
+     "n": 19
+    },
+    "vegetation": {
+     "meanMs": 0.01,
+     "p95Ms": 0,
+     "maxMs": 0.1,
+     "n": 19
+    },
+    "groundcover": {
+     "meanMs": 1.58,
+     "p95Ms": 0.8,
+     "maxMs": 28,
+     "n": 19
+    },
+    "render": {
+     "meanMs": 2187.6,
+     "p95Ms": 9658.2,
+     "maxMs": 31743.4,
+     "n": 19
+    }
+   },
+   "vegetation": {
+    "near": {
+     "instances": 16,
+     "triangles": 2348
+    },
+    "mid": {
+     "instances": 25,
+     "triangles": 1056
+    },
+    "far": {
+     "instances": 13,
+     "triangles": 416
+    },
+    "drawnTriangles": 3820,
+    "evaluations": 2,
+    "switches": 50
+   },
+   "groundCover": {
+    "pieces": 264,
+    "triangles": 6508
+   },
+   "hash": "63e6ad32757d1854",
+   "mode": "walk",
+   "maxCalls": 70,
+   "maxTris": 110726
+  },
+  "walk-multidraw0": {
+   "calls": 77,
+   "tris": 116210,
+   "quality": {
+    "level": "medium",
+    "source": "url",
+    "reasons": [
+     "?quality="
+    ],
+    "pixelRatio": 1.5,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "multiDraw": false,
+   "canvas": [
+    585,
+    1266
+   ],
+   "css": [
+    390,
+    844
+   ],
+   "dpr": 2,
+   "frameInterval": {
+    "frames": 24,
+    "p50Ms": 867.1,
+    "p95Ms": 1431.3,
+    "p99Ms": 7945.2,
+    "maxMs": 27806.3,
+    "longFrames": 24,
+    "hitches": 24,
+    "windowFrames": 24,
+    "heapMB": 45
+   },
+   "frameWork": {
+    "frames": 25,
+    "p50Ms": 12.3,
+    "p95Ms": 34,
+    "p99Ms": 7068,
+    "maxMs": 26983.4,
+    "longFrames": 3,
+    "hitches": 2,
+    "windowFrames": 25,
+    "heapMB": 45
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 2.24,
+     "p95Ms": 2.7,
+     "maxMs": 44.1,
+     "n": 25
+    },
+    "fauna": {
+     "meanMs": 1.17,
+     "p95Ms": 3,
+     "maxMs": 3.8,
+     "n": 25
+    },
+    "terrain": {
+     "meanMs": 2,
+     "p95Ms": 10,
+     "maxMs": 14.9,
+     "n": 25
+    },
+    "naturesync": {
+     "meanMs": 0.11,
+     "p95Ms": 0.5,
+     "maxMs": 1.1,
+     "n": 25
+    },
+    "vegetation": {
+     "meanMs": 0.56,
+     "p95Ms": 3,
+     "maxMs": 5.4,
+     "n": 25
+    },
+    "groundcover": {
+     "meanMs": 0.79,
+     "p95Ms": 0.1,
+     "maxMs": 19,
+     "n": 25
+    },
+    "render": {
+     "meanMs": 1364.07,
+     "p95Ms": 17.1,
+     "maxMs": 26907.4,
+     "n": 25
+    }
+   },
+   "vegetation": {
+    "near": {
+     "instances": 16,
+     "triangles": 2348
+    },
+    "mid": {
+     "instances": 25,
+     "triangles": 1056
+    },
+    "far": {
+     "instances": 13,
+     "triangles": 416
+    },
+    "drawnTriangles": 3820,
+    "evaluations": 2,
+    "switches": 37,
+    "tileBuilds": 20,
+    "meshBakes": 37,
+    "pendingBakes": 0
+   },
+   "groundCover": {
+    "pieces": 264,
+    "triangles": 6508
+   },
+   "hash": "63e6ad32757d1854",
+   "mode": "walk",
+   "maxCalls": 77,
+   "maxTris": 116210
+  },
+  "farm": {
+   "calls": 54,
+   "tris": 83298,
+   "quality": {
+    "level": "medium",
+    "source": "url",
+    "reasons": [
+     "?quality="
+    ],
+    "pixelRatio": 1.5,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "multiDraw": true,
+   "canvas": [
+    585,
+    1266
+   ],
+   "css": [
+    390,
+    844
+   ],
+   "dpr": 2,
+   "frameInterval": {
+    "frames": 18,
+    "p50Ms": 898.9,
+    "p95Ms": 5484.4,
+    "p99Ms": 5484.4,
+    "maxMs": 32796.5,
+    "longFrames": 18,
+    "hitches": 18,
+    "windowFrames": 18,
+    "heapMB": 40
+   },
+   "frameWork": {
+    "frames": 19,
+    "p50Ms": 14.1,
+    "p95Ms": 4596.7,
+    "p99Ms": 4596.7,
+    "maxMs": 31981.9,
+    "longFrames": 3,
+    "hitches": 2,
+    "windowFrames": 19,
+    "heapMB": 40
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 3.12,
+     "p95Ms": 4.2,
+     "maxMs": 44.6,
+     "n": 19
+    },
+    "fauna": {
+     "meanMs": 3.1,
+     "p95Ms": 11.7,
+     "maxMs": 12.4,
+     "n": 19
+    },
+    "terrain": {
+     "meanMs": 0.78,
+     "p95Ms": 1.5,
+     "maxMs": 4.1,
+     "n": 19
+    },
+    "naturesync": {
+     "meanMs": 0.08,
+     "p95Ms": 0.4,
+     "maxMs": 0.4,
+     "n": 19
+    },
+    "vegetation": {
+     "meanMs": 0,
+     "p95Ms": 0,
+     "maxMs": 0,
+     "n": 19
+    },
+    "groundcover": {
+     "meanMs": 1.14,
+     "p95Ms": 1.1,
+     "maxMs": 19.5,
+     "n": 19
+    },
+    "render": {
+     "meanMs": 1928.94,
+     "p95Ms": 4587.3,
+     "maxMs": 31910.5,
+     "n": 19
+    }
+   },
+   "vegetation": {
+    "near": {
+     "instances": 14,
+     "triangles": 1716
+    },
+    "mid": {
+     "instances": 25,
+     "triangles": 1080
+    },
+    "far": {
+     "instances": 3,
+     "triangles": 96
+    },
+    "drawnTriangles": 2892,
+    "evaluations": 1,
+    "switches": 28
+   },
+   "groundCover": {
+    "pieces": 254,
+    "triangles": 6288
+   },
+   "hash": "63e6ad32757d1854",
+   "mode": "builder",
+   "maxCalls": 54,
+   "maxTris": 83298
+  },
+  "farm-multidraw0": {
+   "calls": 61,
+   "tris": 84278,
+   "quality": {
+    "level": "medium",
+    "source": "url",
+    "reasons": [
+     "?quality="
+    ],
+    "pixelRatio": 1.5,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "multiDraw": false,
+   "canvas": [
+    585,
+    1266
+   ],
+   "css": [
+    390,
+    844
+   ],
+   "dpr": 2,
+   "frameInterval": {
+    "frames": 18,
+    "p50Ms": 870.6,
+    "p95Ms": 2945,
+    "p99Ms": 2945,
+    "maxMs": 27561.1,
+    "longFrames": 18,
+    "hitches": 18,
+    "windowFrames": 18,
+    "heapMB": 40
+   },
+   "frameWork": {
+    "frames": 19,
+    "p50Ms": 11.9,
+    "p95Ms": 2198.3,
+    "p99Ms": 2198.3,
+    "maxMs": 26731.7,
+    "longFrames": 2,
+    "hitches": 2,
+    "windowFrames": 19,
+    "heapMB": 40
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 2.75,
+     "p95Ms": 3.3,
+     "maxMs": 36.8,
+     "n": 19
+    },
+    "fauna": {
+     "meanMs": 0.93,
+     "p95Ms": 1.8,
+     "maxMs": 2.2,
+     "n": 19
+    },
+    "terrain": {
+     "meanMs": 0.72,
+     "p95Ms": 2,
+     "maxMs": 6.6,
+     "n": 19
+    },
+    "naturesync": {
+     "meanMs": 0.08,
+     "p95Ms": 0.4,
+     "maxMs": 0.6,
+     "n": 19
+    },
+    "vegetation": {
+     "meanMs": 0.01,
+     "p95Ms": 0,
+     "maxMs": 0.1,
+     "n": 19
+    },
+    "groundcover": {
+     "meanMs": 3.34,
+     "p95Ms": 0.9,
+     "maxMs": 62.1,
+     "n": 19
+    },
+    "render": {
+     "meanMs": 1523.71,
+     "p95Ms": 2196.2,
+     "maxMs": 26626.9,
+     "n": 19
+    }
+   },
+   "vegetation": {
+    "near": {
+     "instances": 14,
+     "triangles": 1716
+    },
+    "mid": {
+     "instances": 25,
+     "triangles": 1080
+    },
+    "far": {
+     "instances": 3,
+     "triangles": 96
+    },
+    "drawnTriangles": 2892,
+    "evaluations": 1,
+    "switches": 28,
+    "tileBuilds": 8,
+    "meshBakes": 16,
+    "pendingBakes": 0
+   },
+   "groundCover": {
+    "pieces": 254,
+    "triangles": 6288
+   },
+   "hash": "63e6ad32757d1854",
+   "mode": "builder",
+   "maxCalls": 61,
+   "maxTris": 84278
+  },
+  "forest": {
+   "calls": 24,
+   "tris": 119650,
+   "quality": {
+    "level": "medium",
+    "source": "url",
+    "reasons": [
+     "?quality="
+    ],
+    "pixelRatio": 1.5,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "multiDraw": true,
+   "canvas": [
+    585,
+    1266
+   ],
+   "css": [
+    390,
+    844
+   ],
+   "dpr": 2,
+   "frameInterval": {
+    "frames": 12,
+    "p50Ms": 989.7,
+    "p95Ms": 3102.3,
+    "p99Ms": 3102.3,
+    "maxMs": 17908.4,
+    "longFrames": 12,
+    "hitches": 12,
+    "windowFrames": 12,
+    "heapMB": 48
+   },
+   "frameWork": {
+    "frames": 13,
+    "p50Ms": 14.5,
+    "p95Ms": 2397.2,
+    "p99Ms": 2397.2,
+    "maxMs": 16774.6,
+    "longFrames": 3,
+    "hitches": 3,
+    "windowFrames": 13,
+    "heapMB": 48
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 8.65,
+     "p95Ms": 3.4,
+     "maxMs": 103.3,
+     "n": 13
+    },
+    "fauna": {
+     "meanMs": 1.13,
+     "p95Ms": 3.1,
+     "maxMs": 3.5,
+     "n": 13
+    },
+    "terrain": {
+     "meanMs": 0.33,
+     "p95Ms": 1,
+     "maxMs": 1,
+     "n": 13
+    },
+    "naturesync": {
+     "meanMs": 0.26,
+     "p95Ms": 0.2,
+     "maxMs": 2.9,
+     "n": 13
+    },
+    "vegetation": {
+     "meanMs": 0,
+     "p95Ms": 0,
+     "maxMs": 0,
+     "n": 13
+    },
+    "groundcover": {
+     "meanMs": 2.01,
+     "p95Ms": 0.1,
+     "maxMs": 26,
+     "n": 13
+    },
+    "render": {
+     "meanMs": 1523.64,
+     "p95Ms": 2395,
+     "maxMs": 16635,
+     "n": 13
+    }
+   },
+   "vegetation": {
+    "near": {
+     "instances": 165,
+     "triangles": 27030
+    },
+    "mid": {
+     "instances": 207,
+     "triangles": 8772
+    },
+    "far": {
+     "instances": 128,
+     "triangles": 3916
+    },
+    "drawnTriangles": 39718,
+    "evaluations": 1,
+    "switches": 335
+   },
+   "groundCover": {
+    "pieces": 309,
+    "triangles": 8336
+   },
+   "hash": "63e6ad32757d1854",
+   "mode": "builder",
+   "maxCalls": 24,
+   "maxTris": 119650
+  },
+  "forest-multidraw0": {
+   "calls": 36,
+   "tris": 149788,
+   "quality": {
+    "level": "medium",
+    "source": "url",
+    "reasons": [
+     "?quality="
+    ],
+    "pixelRatio": 1.5,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "multiDraw": false,
+   "canvas": [
+    585,
+    1266
+   ],
+   "css": [
+    390,
+    844
+   ],
+   "dpr": 2,
+   "frameInterval": {
+    "frames": 12,
+    "p50Ms": 1274.4,
+    "p95Ms": 6052.7,
+    "p99Ms": 6052.7,
+    "maxMs": 15873.3,
+    "longFrames": 12,
+    "hitches": 12,
+    "windowFrames": 12,
+    "heapMB": 47
+   },
+   "frameWork": {
+    "frames": 13,
+    "p50Ms": 15.6,
+    "p95Ms": 5224,
+    "p99Ms": 5224,
+    "maxMs": 14406.9,
+    "longFrames": 3,
+    "hitches": 3,
+    "windowFrames": 13,
+    "heapMB": 47
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 7.48,
+     "p95Ms": 3.7,
+     "maxMs": 83.2,
+     "n": 13
+    },
+    "fauna": {
+     "meanMs": 2.38,
+     "p95Ms": 8.3,
+     "maxMs": 9.4,
+     "n": 13
+    },
+    "terrain": {
+     "meanMs": 0.92,
+     "p95Ms": 2.3,
+     "maxMs": 2.4,
+     "n": 13
+    },
+    "naturesync": {
+     "meanMs": 0.15,
+     "p95Ms": 0.4,
+     "maxMs": 1,
+     "n": 13
+    },
+    "vegetation": {
+     "meanMs": 0.01,
+     "p95Ms": 0,
+     "maxMs": 0.1,
+     "n": 13
+    },
+    "groundcover": {
+     "meanMs": 1.75,
+     "p95Ms": 0.7,
+     "maxMs": 21,
+     "n": 13
+    },
+    "render": {
+     "meanMs": 1708.01,
+     "p95Ms": 5205.1,
+     "maxMs": 14296.4,
+     "n": 13
+    }
+   },
+   "vegetation": {
+    "near": {
+     "instances": 165,
+     "triangles": 27030
+    },
+    "mid": {
+     "instances": 207,
+     "triangles": 8772
+    },
+    "far": {
+     "instances": 128,
+     "triangles": 3916
+    },
+    "drawnTriangles": 39718,
+    "evaluations": 1,
+    "switches": 335,
+    "tileBuilds": 9,
+    "meshBakes": 18,
+    "pendingBakes": 0
+   },
+   "groundCover": {
+    "pieces": 309,
+    "triangles": 8336
+   },
+   "hash": "63e6ad32757d1854",
+   "mode": "builder",
+   "maxCalls": 36,
+   "maxTris": 149788
+  },
+  "farm-600": {
+   "calls": 49,
+   "tris": 86644,
+   "quality": {
+    "level": "medium",
+    "source": "url",
+    "reasons": [
+     "?quality="
+    ],
+    "pixelRatio": 1.5,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "multiDraw": true,
+   "canvas": [
+    585,
+    1266
+   ],
+   "css": [
+    390,
+    844
+   ],
+   "dpr": 2,
+   "frameInterval": {
+    "frames": 18,
+    "p50Ms": 879.5,
+    "p95Ms": 3364.8,
+    "p99Ms": 3364.8,
+    "maxMs": 30050.7,
+    "longFrames": 18,
+    "hitches": 18,
+    "windowFrames": 18,
+    "heapMB": 40
+   },
+   "frameWork": {
+    "frames": 19,
+    "p50Ms": 15.2,
+    "p95Ms": 2577.4,
+    "p99Ms": 2577.4,
+    "maxMs": 29178,
+    "longFrames": 3,
+    "hitches": 3,
+    "windowFrames": 19,
+    "heapMB": 40
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 3.85,
+     "p95Ms": 11.1,
+     "maxMs": 46.6,
+     "n": 19
+    },
+    "fauna": {
+     "meanMs": 1.52,
+     "p95Ms": 2.3,
+     "maxMs": 7.3,
+     "n": 19
+    },
+    "terrain": {
+     "meanMs": 8.38,
+     "p95Ms": 1.7,
+     "maxMs": 148.9,
+     "n": 19
+    },
+    "naturesync": {
+     "meanMs": 0.14,
+     "p95Ms": 0.6,
+     "maxMs": 0.8,
+     "n": 19
+    },
+    "vegetation": {
+     "meanMs": 0,
+     "p95Ms": 0,
+     "maxMs": 0,
+     "n": 19
+    },
+    "groundcover": {
+     "meanMs": 0.07,
+     "p95Ms": 0.1,
+     "maxMs": 1,
+     "n": 19
+    },
+    "render": {
+     "meanMs": 1800.54,
+     "p95Ms": 2576.2,
+     "maxMs": 28974.9,
+     "n": 19
+    }
+   },
+   "vegetation": {
+    "near": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "mid": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "far": {
+     "instances": 42,
+     "triangles": 1224
+    },
+    "drawnTriangles": 1224,
+    "evaluations": 1,
+    "switches": 42
+   },
+   "groundCover": {
+    "pieces": 0,
+    "triangles": 0
+   },
+   "hash": "63e6ad32757d1854",
+   "mode": "builder",
+   "maxCalls": 49,
+   "maxTris": 86644
+  },
+  "farm-600-multidraw0": {
+   "calls": 56,
+   "tris": 86804,
+   "quality": {
+    "level": "medium",
+    "source": "url",
+    "reasons": [
+     "?quality="
+    ],
+    "pixelRatio": 1.5,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "multiDraw": false,
+   "canvas": [
+    585,
+    1266
+   ],
+   "css": [
+    390,
+    844
+   ],
+   "dpr": 2,
+   "frameInterval": {
+    "frames": 18,
+    "p50Ms": 824.4,
+    "p95Ms": 2750,
+    "p99Ms": 2750,
+    "maxMs": 24860.4,
+    "longFrames": 18,
+    "hitches": 18,
+    "windowFrames": 18,
+    "heapMB": 39
+   },
+   "frameWork": {
+    "frames": 19,
+    "p50Ms": 11.8,
+    "p95Ms": 2138.9,
+    "p99Ms": 2138.9,
+    "maxMs": 24042.1,
+    "longFrames": 3,
+    "hitches": 2,
+    "windowFrames": 19,
+    "heapMB": 39
+   },
+   "sections": {
+    "homestead": {
+     "meanMs": 2.46,
+     "p95Ms": 3.5,
+     "maxMs": 33.5,
+     "n": 19
+    },
+    "fauna": {
+     "meanMs": 1.48,
+     "p95Ms": 3.9,
+     "maxMs": 10.8,
+     "n": 19
+    },
+    "terrain": {
+     "meanMs": 8.14,
+     "p95Ms": 4.9,
+     "maxMs": 143.4,
+     "n": 19
+    },
+    "naturesync": {
+     "meanMs": 0.05,
+     "p95Ms": 0.2,
+     "maxMs": 0.4,
+     "n": 19
+    },
+    "vegetation": {
+     "meanMs": 0.01,
+     "p95Ms": 0.1,
+     "maxMs": 0.1,
+     "n": 19
+    },
+    "groundcover": {
+     "meanMs": 0.19,
+     "p95Ms": 0.2,
+     "maxMs": 3.1,
+     "n": 19
+    },
+    "render": {
+     "meanMs": 1374.98,
+     "p95Ms": 2137,
+     "maxMs": 23860.3,
+     "n": 19
+    }
+   },
+   "vegetation": {
+    "near": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "mid": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "far": {
+     "instances": 42,
+     "triangles": 1224
+    },
+    "drawnTriangles": 1224,
+    "evaluations": 1,
+    "switches": 42,
+    "tileBuilds": 8,
+    "meshBakes": 16,
+    "pendingBakes": 0
+   },
+   "groundCover": {
+    "pieces": 0,
+    "triangles": 0
+   },
+   "hash": "63e6ad32757d1854",
+   "mode": "builder",
+   "maxCalls": 56,
+   "maxTris": 86804
+  }
+ },
+ "shots": [
+  "perf-medium-walk.png",
+  "perf-medium-farm.png",
+  "perf-medium-forest.png",
+  "perf-medium-forest-multidraw0.png",
+  "perf-medium-farm-600.png"
+ ],
+ "errs": []
+}

@@ -1,0 +1,145 @@
+{
+ "vp": "t1280",
+ "size": [
+  1280,
+  800
+ ],
+ "emulated": "Playwright Chromium mobile emulation (isMobile, hasTouch, CDP touch), software GL: NOT a real device",
+ "quality": {
+  "level": "low",
+  "source": "auto",
+  "reasons": [
+   "GPU ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+  ],
+  "pixelRatio": 1,
+  "shadows": false,
+  "shadowMapSize": 0,
+  "antialias": false,
+  "natureNear": 50,
+  "groundCoverRadius": 30
+ },
+ "seconds": 462.6,
+ "verdict": {
+  "joystickWalk": true,
+  "jump": true,
+  "doubleJump": false,
+  "plantBanner": true,
+  "toBanner": true,
+  "home": true,
+  "farmJob": true,
+  "buildPlace": true,
+  "useGate": true,
+  "gatherTree": true,
+  "swimDive": true
+ },
+ "results": {
+  "fps": 1,
+  "joystickWalk": {
+   "ok": true,
+   "moved": 3.38,
+   "speedWhileHeld": 3.2,
+   "stoppedAfterRelease": true,
+   "driftAfterStopM": 0.01
+  },
+  "jump": {
+   "ok": true,
+   "air": true,
+   "rise": 0.88
+  },
+  "doubleJump": {
+   "ok": false,
+   "air": true,
+   "rise": 0.88,
+   "single": 0.88
+  },
+  "plantBanner": {
+   "ok": true,
+   "planted": {
+    "x": -19.58,
+    "y": 14,
+    "z": -20.17
+   }
+  },
+  "toBanner": {
+   "ok": true,
+   "awayM": 5.2,
+   "afterM": 1.2,
+   "channelled": false
+  },
+  "home": {
+   "ok": true,
+   "homeM": 1.2,
+   "returns": 2
+  },
+  "farmJob": {
+   "ok": true,
+   "from": "farmer",
+   "want": "woodcutter",
+   "to": "woodcutter"
+  },
+  "buildPlace": {
+   "ok": true,
+   "tried": [
+    {
+     "at": [
+      960,
+      496
+     ],
+     "pos": {
+      "x": -15,
+      "z": -22
+     },
+     "ok": true,
+     "pinned": true
+    }
+   ],
+   "turnedRot": 1,
+   "sites": [
+    {
+     "kind": "woodshed",
+     "x": -15,
+     "z": -22,
+     "rot": 1,
+     "state": "approved"
+    }
+   ]
+  },
+  "useGate": {
+   "ok": true,
+   "button": "Open the pen gate",
+   "before": "closed",
+   "after": "open"
+  },
+  "gatherTree": {
+   "ok": true,
+   "tree": "hero:styl_tree_spire:-22:-26",
+   "stage": "mature",
+   "reachable": "hero:styl_tree_spire:-22:-26",
+   "button": "Gather",
+   "lastAction": "harvested 4 wood from tree spire"
+  },
+  "swimDive": {
+   "ok": true,
+   "swimming": true,
+   "diveShown": true,
+   "headUnderWhileHeld": true,
+   "surfacedAfterRelease": true,
+   "after": {
+    "mode": "swim",
+    "breath": 0.933
+   }
+  },
+  "fpsEnd": 1
+ },
+ "shots": [
+  "ctl-t1280-1-walked.png",
+  "ctl-t1280-2-home.png",
+  "ctl-t1280-3-farm-job.png",
+  "ctl-t1280-4-build-turned.png",
+  "ctl-t1280-5-gate.png",
+  "ctl-t1280-6-gather.png",
+  "ctl-t1280-7-diving.png",
+  "ctl-t1280-8-surfaced.png"
+ ],
+ "errs": []
+}
