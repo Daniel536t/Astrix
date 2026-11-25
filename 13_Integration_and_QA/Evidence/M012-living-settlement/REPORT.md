@@ -484,3 +484,20 @@ At the end (tick 196): the store held 12 wood, and all three villagers were rest
 - **Builders and woodcutters do not avoid animals,** and villagers do not treat the player as an obstacle. This is unchanged from Stage A.
 - **Night interruption:** only felling and walking to a tree stop at nightfall. A haul or build stint already underway finishes first.
 - **Phone-portrait mode-button fix:** not checked on any phone or emulator.
+
+## Live deployment check (Stage A + B)
+
+Release `20261125T023524Z-d2b1ef2` was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd` but not merged to `main`. The served bundle matches the local build (`assets/index-C3WitcD5.js`).
+
+The reproducible job probe was generated with `node gen-jobs.mjs https://astrix.nyc.boxd.sh/ <out> live` and run against the live site in a fresh headless Chromium context (software GL, empty storage). The run took 406 s and covered ticks 3 to 196. There were no page errors, and **all 10 checks passed**. Results are in `m012-live-results.json`, and screenshots in `live-*.png`.
+
+- **Woodcutter:** Cora worked at mature tree `e:31,32:5` from tick 20. That tree went 12 → 8 → 4 → 0, then tree `e:31,30:4` went 12 → 8 → 4 → 0. She carried loads of up to 8 wood.
+- **Store wood:** it rose only when Cora was 0–0.5 m from the store: tick 54 (0 → 8), 109 (0 → 4), 147 (0 → 8) and 179 (8 → 12).
+- **Builder:** Ada carried reserved loads of 4 fibre, 8 wood and 4 wood. The woodshed went 0 → 12 → 25 → 50 → 62 → 75 → 87 → 100 % and was finished at tick 150.
+- **Reservations:** never exceeded store stock.
+- **Gates and doors:** there were 12 open/close events. The drawn leaves matched the sim state in every sample.
+- **No teleport:** the worst move was 0.97 of the walking-speed allowance (Cora, 5.2 m over 2 ticks).
+- **Reload at tick 46:** the state hash was `48ceedffcd0f5559` before and after, with identical villagers, site and store.
+- **Performance:** at most 96 draw calls and 138,978 triangles. The tick section averaged 4.51 ms (p95 7.2 ms, max 28.2 ms), and navigation averaged 0.9 ms per tick.
+
+No real phone was used.
