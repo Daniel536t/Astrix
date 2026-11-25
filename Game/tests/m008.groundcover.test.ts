@@ -257,7 +257,13 @@ test('without WEBGL_multi_draw the vegetation fallback keeps draw calls bounded 
   const lod = tiled.nature.lod as TiledLodMesh;
   assert.ok(lod.tileCount <= 16);
   assert.ok(tiled.b.totals.main.draws <= 20, `tiled draws ${tiled.b.totals.main.draws}`);
-  assert.deepEqual(tiled.nature.lodCounts, batched.nature.lodCounts, 'same LOD bands either way');
+  // M014: the fallback switches near to mid at 70 m instead of 90 m (FALLBACK_LOD_BANDS), so it draws fewer near
+  // instances than multi-draw; the far band and the total are the same.
+  const tc = tiled.nature.lodCounts as Record<'near' | 'mid' | 'far', { instances: number; triangles: number }>;
+  const bc = batched.nature.lodCounts as Record<'near' | 'mid' | 'far', { instances: number; triangles: number }>;
+  assert.deepEqual(tc.far, bc.far, 'the far band is the same either way');
+  assert.equal(tc.near.instances + tc.mid.instances, bc.near.instances + bc.mid.instances);
+  assert.ok(tc.near.instances < bc.near.instances && tc.near.triangles + tc.mid.triangles < bc.near.triangles + bc.mid.triangles, 'the fallback draws fewer triangles');
   // Raycasts report the entity under the hit triangle.
   const tree = [...world.entities.values()].find((e) => e.kind.startsWith('styl_tree_') && loaded.has(e.chunk)
     && Math.hypot(e.x - camera.position.x, e.z - camera.position.z) < 50)!;

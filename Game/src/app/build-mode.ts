@@ -328,7 +328,7 @@ export class BuildMode {
       <div class="build-info">${rule.label}: ${rule.role} · ${siteSize(this.kind, this.rot).w} × ${siteSize(this.kind, this.rot).d} m · ${cost} · ${rule.work} work ticks</div>
       <div class="build-verdict ${c?.ok ? 'ok' : 'bad'}" data-build-verdict aria-live="polite">${verdict}</div>
       ${wood}
-      <div class="build-row actions"><button type="button" data-build-turn aria-label="Turn the building a quarter">Turn ⟳</button><button type="button" class="primary" data-build-place ${c?.ok ? '' : 'disabled'}>Place &amp; approve</button><button type="button" data-build-close>Close</button>
+      <div class="build-row actions"><button type="button" data-build-turn aria-label="Turn the building a quarter">Turn 90°</button><button type="button" class="primary" data-build-place ${c?.ok ? '' : 'disabled'}>Place &amp; approve</button><button type="button" data-build-close>Close</button>
       <span class="dim build-help">${this.pinned ? 'Pinned: tap/click elsewhere or drag it to move' : 'Move over the ground; click or tap to pin'} · X / Shift+wheel: turn · Enter: place · Esc: close</span></div>`;
   }
 

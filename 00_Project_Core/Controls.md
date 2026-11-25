@@ -1,6 +1,6 @@
 # ASTrix — Controls
 
-**Updated:** 2026-11-24 · Owner-approved key map (World_Engine_Audit §7). The game starts in **Walk** (explore) mode.
+**Updated:** 2026-11-25 (M014 build mode) · Owner-approved key map (World_Engine_Audit §7). The game starts in **Walk** (explore) mode.
 Scripted captures (`?action=`, `?ui=0`, explicit camera params) and `?mode=builder` start in the builder view.
 
 ## Desktop
@@ -20,6 +20,7 @@ Scripted captures (`?action=`, `?ui=0`, explicit camera params) and `?mode=build
 | Work the homestead (dig, sow, water, harvest, feed, collect, milk, shear), open or close a gate or the farmhouse door within 2 m (M012; a locked one is unlocked and opened), or gather | E: the HUD names the action in reach; otherwise gathers (H also gathers) — prompt shows in the HUD, ring marks the target. Touch: the Use / Gather button does the same | H (nearest within 40 m of the view centre) |
 | Switch mode | Tab, or the **Builder view / Walk** button at top centre | Tab / button |
 | Plan a field (where, size, crop) | F, or Farm → Plan a new field | — |
+| Build (M014: choose a woodshed, log store or well, where it goes and which way it faces) | G, or Farm → Build…. The ghost follows the mouse; click to pin it (click elsewhere or drag the ghost to move it); X or Shift + wheel turns it a quarter (Shift + X back); Enter or **Place & approve** places and approves it (its materials are reserved); Escape, G or **Close** leaves. Green: good spot; red: the reasons are listed | same (G) |
 | Homestead (fields, people, animals, steward) | Farm button | Farm button |
 | Build panel | B | always shown |
 | Settlement (bag, stockpile, crops) | I | always shown |
@@ -45,6 +46,7 @@ Modelled on Minecraft Bedrock's joystick layout: move with the left thumb, look 
 | Banners | A small column on the right, above the zoom buttons: **Home** (return home), **To banner** (return to your field banner; dimmed until one is planted), **Plant** (plant or move your field banner here). Tap Home or To banner, then keep the joystick thumb off for about 1.5 s; the button fills as a ring while you wait. |
 | Use / gather | The yellow button names what it will do ("Dig the flax field", "Draw water"…) |
 | Farm | **Farm** button (top left): fields, people, animals, steward; Plan a new field |
+| Build (M014) | Farm → **Build…**. The ghost starts in front of the founder; tap the ground on the right half to move it there (drag the ghost to slide it). The bar at the top has the catalogue, **Turn 90°**, **Place & approve** and **Close**; it stays clear of the joystick and Jump |
 | Switch mode | **Builder view / Walk** button (top centre) |
 | Panels | Settlement / Build / World tabs (top right). Walk mode opens the World tab. |
 

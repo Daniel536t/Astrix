@@ -623,6 +623,7 @@ export class HomesteadGame {
       fields: h.plots.map((p) => ({ id: p.id, crop: p.crop, x: p.x, z: p.z, w: p.w, d: p.d, state: p.state, stage: cropStage(p), growth: p.growth, moisture: p.moisture })),
       villagers: h.villagers.map((v) => ({ id: v.id, name: v.name, role: v.role, task: v.task?.kind ?? null, target: v.task?.target ?? null, leg: v.task?.leg ?? null,
         legOp: v.task?.legs[v.task.leg]?.op ?? null, x: v.x / DM, z: v.z / DM, carry: v.carry, energy: v.energy, hunger: v.hunger,
+        lastLeg: v.task ? { effect: v.task.legs[v.task.legs.length - 1].effect, x: v.task.legs[v.task.legs.length - 1].x / DM, z: v.task.legs[v.task.legs.length - 1].z / DM } : null,
         nav: v.nav ? { corners: v.nav.path.length / 2, dest: v.nav.dest, opening: v.nav.opening ?? null, opened: v.nav.opened ?? null, blocked: v.nav.blocked ?? null, wait: v.nav.wait ?? null } : null,
         avoid: v.avoid ?? [] })),
       rules: h.version,

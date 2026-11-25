@@ -30,6 +30,14 @@ const propPlans = new Map<string, VegetationPlan>();
  * v5: growing, dying, dead snags, stumps; a gap draws nothing); without it,
  * or under older rules, they are the M008 visual stage.
  */
+/**
+ * M014: the multidraw=0 fallback (TiledLodMesh) bakes every near instance into
+ * its tiles, so it drew 15-28k more triangles than multi-draw in the same
+ * forest views (M013: peaks of 237k against the 250k budget). It switches to
+ * mid detail at 70 m instead of 90 m; mid and far are unchanged.
+ */
+export const FALLBACK_LOD_BANDS: LodBands = { ...DEFAULT_LOD_BANDS, near: 70 };
+
 export function natureModel(e: Entity, seed: number, world?: World): ResolvedModel | null {
   if (e.kind.startsWith('styl_tree_') && world) {
     const life = treeLife(world, e);
@@ -187,7 +195,7 @@ export class NatureView {
       mainVertices += natureGeometry(model, LOD_NEAR).attributes.position.count + natureGeometry(model, LOD_MID).attributes.position.count;
       farVertices += natureGeometry(model, LOD_FAR).attributes.position.count;
     }
-    const bands = this.options.bands ?? DEFAULT_LOD_BANDS;
+    const bands = this.options.bands ?? (this.options.multiDraw === false ? FALLBACK_LOD_BANDS : DEFAULT_LOD_BANDS);
     this.lod = this.options.multiDraw === false
       ? new TiledLodMesh({ name: 'styl_nature', material: natureMaterial, bands })
       : new LodBatch({ name: 'styl_nature_batch', material: natureMaterial, maxInstances: Math.max(16, live.length), mainVertices: Math.max(64, mainVertices), farVertices: Math.max(64, farVertices), bands });
@@ -258,7 +266,7 @@ export class NatureView {
 
   private ensureLod(): void {
     if (this.lod) return;
-    const bands = this.options.bands ?? DEFAULT_LOD_BANDS;
+    const bands = this.options.bands ?? (this.options.multiDraw === false ? FALLBACK_LOD_BANDS : DEFAULT_LOD_BANDS);
     this.lod = this.options.multiDraw === false
       ? new TiledLodMesh({ name: 'styl_nature', material: natureMaterial, bands })
       : new LodBatch({ name: 'styl_nature_batch', material: natureMaterial, maxInstances: 256, mainVertices: 20_000, farVertices: 4_000, bands });
