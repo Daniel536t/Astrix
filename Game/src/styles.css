@@ -1100,5 +1100,16 @@ body.clean #perf-overlay { display: none; }
 @media (pointer: coarse) { #perf-overlay .perf-pill { min-height: 40px; } }
 /* Portrait phones in build mode or the field planner: the bar takes the top, so the perf pill moves to the bottom centre. */
 @media (pointer: coarse) and (max-width: 760px) and (orientation: portrait) {
-  body.building #perf-overlay, body.planning-field #perf-overlay { top: auto; bottom: max(4px, env(safe-area-inset-bottom)); flex-direction: column; }
+  body.building #perf-overlay, body.planning-field #perf-overlay {
+    top: auto; left: auto; transform: none; right: max(8px, env(safe-area-inset-right)); bottom: calc(max(24px, env(safe-area-inset-bottom)) + 92px);
+    flex-direction: column; align-items: flex-end;
+  }
+}
+/* 360 px phones: the pill starts right of the Settings button. */
+@media (pointer: coarse) and (max-width: 380px) and (orientation: portrait) {
+  body:not(.building):not(.planning-field) #perf-overlay { left: 136px; transform: none; align-items: flex-start; }
+}
+/* Builder view on landscape phones and tablets: the milestone panel ends above the perf pill. */
+@media (pointer: coarse) and (min-width: 761px) {
+  body:not(.explore) #build-panel { max-height: calc(100dvh - 120px); }
 }
