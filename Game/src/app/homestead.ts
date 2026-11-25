@@ -471,6 +471,8 @@ export class HomesteadGame {
         <button type="button" class="primary" data-plant-here ${cell && !plantWhy.length ? '' : 'disabled'}>Plant a sapling here</button>
       </div>
       ${plantWhy.length ? `<p class="dim" data-plant-why>Planting here: ${plantWhy.join('; ')}</p>` : ''}
+      <p class="dim">Trees that may be felled now (${lot.trees.length}):</p><ul data-fellable>${lot.trees.slice(0, 6).map((e) => { const l = treeLife(this.world, e)!;
+        return `<li>${stageLabel(l.stage)} ${l.species} at ${Math.round(e.x)}, ${Math.round(e.z)}${e.harvestedOnce ? ` · ${e.remaining} wood left` : ''} <span class="row-actions"><button type="button" data-protect-tree="${e.id}">Protect</button></span></li>`; }).join('') || '<li class="dim">none now</li>'}</ul>
       ${zones || marked ? `<ul>${zones}${marked}${w.protect.length > 6 ? `<li class="dim">and ${w.protect.length - 6} more marked trees</li>` : ''}</ul>` : ''}`;
   }
 
@@ -511,6 +513,7 @@ export class HomesteadGame {
       const t = this.nearestTree();
       if (t) { r = this.send({ type: 'protect_tree', entityId: t.id, protect: true }, t.id); if (r.ok) this.o.toast(`The ${t.name} is protected: no one will fell it.`, 'good'); }
     }
+    if (b.dataset.protectTree) { r = this.send({ type: 'protect_tree', entityId: b.dataset.protectTree, protect: true }, b.dataset.protectTree); if (r.ok) this.o.toast('That tree is protected: no one will fell it.', 'good'); }
     if (b.dataset.unprotect) r = this.send({ type: 'protect_tree', entityId: b.dataset.unprotect, protect: false }, b.dataset.unprotect);
     if (b.hasAttribute('data-protect-zone')) {
       const p = this.o.player();
@@ -585,7 +588,7 @@ export class HomesteadGame {
       epoch: w.epoch, policy: { ...w.policy }, quota: w.quota, rate: w.rate, felled: w.felled, planted: w.planted, seeded: w.seeded, sprouted: w.sprouted,
       protect: [...w.protect], zones: w.zones.map((z) => ({ ...z })), orders: w.orders.map((o) => ({ ...o })), records: w.trees.length,
       standing: lot.standing, eligible: lot.trees.map((e) => e.id),
-      trees: lot.all.map((m) => ({ id: m.e.id, x: m.e.x, z: m.e.z, sp: m.life.species, stage: m.life.stage, present: m.life.present, age: m.life.age,
+      trees: lot.all.map((m) => ({ id: m.e.id, x: m.e.x, y: m.e.y, z: m.e.z, sp: m.life.species, stage: m.life.stage, present: m.life.present, age: m.life.age,
         remaining: m.e.harvestedOnce ? m.e.remaining : null, eligible: m.eligible, why: m.why, prot: m.protectedWhy, from: m.life.record?.from ?? 'wild' })),
       woodcutters: h.villagers.filter((v) => v.role === 'woodcutter').map((v) => ({ id: v.id, why: woodcutterStatus(this.world, h, v) })),
       stats: stats ? { ...stats, harvestableIds: undefined, protectedIds: undefined } : null,
