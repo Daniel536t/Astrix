@@ -51,7 +51,8 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   const setFold = (f: boolean) => {
     folded = f;
     panel.classList.toggle('folded', f);
-    fold.textContent = f ? 'MagicBlock ▸' : 'MagicBlock ▾ hide';
+    // Plain text: the triangle glyphs are missing from some Android and Linux fonts.
+    fold.textContent = f ? 'MagicBlock' : 'Hide MagicBlock';
     fold.setAttribute('aria-expanded', String(!f));
     fold.setAttribute('aria-label', f ? 'Show the MagicBlock settlement panel' : 'Fold the MagicBlock settlement panel');
   };

@@ -47,7 +47,7 @@ Modelled on Minecraft Bedrock's joystick layout: move with the left thumb, look 
 | Use / gather | The yellow button names what it will do ("Dig the flax field", "Draw water"…) |
 | Farm | **Farm** button (top left): fields, people, animals, steward; Plan a new field. On a portrait phone it opens as a sheet from the top that ends at 60 % of the height, so the joystick, Jump and Use stay usable (the banner and zoom buttons step aside while it is open); in landscape it opens beside the right-hand thumb column. Close it with ×. |
 | Settings | The gear button beside Farm: graphics quality (Auto / Low / Medium / High, applied after a reload; the world is saved first) and the performance monitor switch |
-| MagicBlock panel | Folded to one **MagicBlock ▸** button on phones and tablets (top right while walking, bottom right in the builder view); tap it to unfold, **▾ hide** to fold. M still hides it on a keyboard |
+| MagicBlock panel | Folded to one **MagicBlock** button on phones and tablets (top right while walking, bottom right in the builder view); tap it to unfold, **Hide MagicBlock** to fold. M still hides it on a keyboard |
 | Build (M014) | Farm → **Build…**. The ghost starts in front of the founder; tap the ground on the right half to move it there (drag the ghost to slide it). The bar at the top has the catalogue, **Turn 90°**, **Place & approve** and **Close**; it stays clear of the joystick and Jump |
 | Switch mode | **Builder view / Walk** button (top centre) |
 | Panels | Settlement / Build / World tabs (top right). Walk mode opens the World tab. |
