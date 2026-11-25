@@ -25,6 +25,7 @@ import {
   setGate, upgradeHomestead, HOMESTEAD_WORK_VERSION, SITE_KINDS, SiteKind, placeSite, approveSite, cancelSite, freeInStore, treeTarget,
 } from '../sim/homestead';
 import { GATE_STATES, GateState } from '../sim/nav';
+import { PRESENCE_KEYS, PRESENCE_POS, Presence } from '../sim/bodies';
 import { HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, HOMESTEAD_HERD_VERSION, BUILD_KINDS } from '../sim/homestead';
 import { HARVEST_MODES, HarvestMode, POLICY_LIMITS, WoodPolicy, speciesFromText } from '../sim/woodland';
 import type { TreeSpecies } from '../sim/vegetation';
@@ -93,7 +94,13 @@ export interface TransferCommand extends CommandEnvelope {
 export interface ProduceCommand extends CommandEnvelope {
   type: 'produce'; stockpileId: typeof FOUNDER_STOCKPILE_ID; recipe: keyof typeof RECIPES;
 }
-export interface TickCommand extends CommandEnvelope { type: 'tick'; ticks: number; }
+/**
+ * STAB-002 S2: `presence` is the player's quantised position (dm) and sign
+ * of motion when the tick was sent. Input, not state: it is never saved
+ * outside the journal, and only settlement rules v7 react to it (older rules
+ * ignore it). Absent when the player is not walking in the settlement.
+ */
+export interface TickCommand extends CommandEnvelope { type: 'tick'; ticks: number; presence?: Presence }
 export interface PlantCommand extends CommandEnvelope { type: 'plant'; plotId: string; }
 export interface HarvestCropCommand extends CommandEnvelope { type: 'harvest_crop'; plotId: string; }
 export interface LegacyBuildCommand {
@@ -232,6 +239,17 @@ function entityId(value: unknown): value is string {
     && (/^e:\d+,\d+:\d+$/.test(value)
       || /^hero:styl_[a-z_]+:-?\d+:-?\d+$/.test(value));
 }
+/** STAB-002 S2: a tick's presence, strict: exactly x, z (integer dm within ±2 km), mx and mz (-1, 0 or 1). */
+function presenceOf(value: unknown): Presence | null {
+  if (!object(value)) return null;
+  const keys = Object.keys(value);
+  if (keys.length !== PRESENCE_KEYS.length || !PRESENCE_KEYS.every((k) => keys.includes(k))) return null;
+  const pos = (v: unknown) => Number.isSafeInteger(v) && Math.abs(v as number) <= PRESENCE_POS;
+  const dir = (v: unknown) => v === -1 || v === 0 || v === 1;
+  if (!pos(value.x) || !pos(value.z) || !dir(value.mx) || !dir(value.mz)) return null;
+  return { x: value.x as number, z: value.z as number, mx: value.mx as -1 | 0 | 1, mz: value.mz as -1 | 0 | 1 };
+}
+
 function sameFields(a: unknown, b: unknown): boolean {
   if (object(a) && object(b)) {
     const aKeys = Object.keys(a).sort(), bKeys = Object.keys(b).sort();
@@ -456,7 +474,12 @@ export function validateCommand(value: unknown): Command {
       && (value.recipe === 'seed' || value.recipe === 'rations')) {
       command = { ...base, type: value.type, stockpileId: value.stockpileId, recipe: value.recipe };
     } else if (value.type === 'tick' && uint(value.ticks) && value.ticks > 0 && value.ticks <= MAX_TICKS_PER_COMMAND) {
-      command = { ...base, type: value.type, ticks: value.ticks };
+      if (value.presence === undefined) command = { ...base, type: value.type, ticks: value.ticks };
+      else {
+        const presence = presenceOf(value.presence);
+        if (!presence) throw new Error('invalid tick presence');
+        command = { ...base, type: value.type, ticks: value.ticks, presence };
+      }
     } else if (value.type === 'plant' && typeof value.plotId === 'string' && /^crop:[0-8]$/.test(value.plotId)) {
       command = { ...base, type: value.type, plotId: value.plotId };
     } else if (value.type === 'harvest_crop' && typeof value.plotId === 'string' && /^crop:[0-8]$/.test(value.plotId)) {
@@ -948,7 +971,8 @@ export class GameSession {
         recipe: result.value.recipe, remainingTicks: result.value.remainingTicks };
     } else if (command.type === 'tick') {
       const world = this.world;
-      const result = advanceTicks(world, command.ticks, (tick) => { stepHomestead(world, tick); });
+      const presence = command.presence;
+      const result = advanceTicks(world, command.ticks, (tick) => { stepHomestead(world, tick, presence); });
       if (!result.ok) return this.reject(command.id, result.code, result.reasons);
       outcome = { type: 'tick', ...result.value };
     } else if (command.type === 'plant') {

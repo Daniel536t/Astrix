@@ -2,7 +2,7 @@
 
 Repo `Astrix`, branch `deploy/boxd`. Base commit `4169c21` (STAB-001 docs). Not pushed or deployed. Everything below was measured headlessly or in an emulated desktop browser (Playwright Chromium). **No real phone or tablet was used.**
 
-Steps S2 to S4 are not part of this change.
+S1 and S2 are in this report. Steps S3 and S4 are not part of these changes.
 
 ## S1 · Animal unstick
 
@@ -169,3 +169,167 @@ From `Game/`:
 - `npm test`
 - `npx esbuild ../13_Integration_and_QA/Evidence/STAB-002-stabilization/s1/s1.ts --bundle --platform=node --format=esm --external:three --outfile=/tmp/s1.mjs`, then `node /tmp/s1.mjs fresh:7 15` or `node /tmp/s1.mjs up:6:7 15`. The scratch scripts import `../../../Astrix/Game/src`, so they run unchanged from `/projects/sandbox/.tools/scratch/stab-s1/`; elsewhere, adjust that import path.
 - Browser: build, copy `dist` to `.kiro/artifacts/screenshots/probe/dist`, then run a probe script with Playwright `browser_run_code_unsafe { filename }`.
+
+## S2 · Bodies and presence
+
+Base commit `cd0aff6` (S1). Not pushed or deployed. **No real phone or tablet was used.** Design A from `Diagnostics/STAB-001/BUG-B_player_animal_collision.md`, with the deviations listed under "Not met, or open".
+
+### What changed
+
+Everything new in the simulation is under **settlement rules v7**. No new rules version was added. Rules v1 to v6 never read presence, and a v7 journal without presence replays exactly as it did under S1.
+
+1. **Presence on the tick (journal).**
+   - `tick` gains an optional `presence: { x, z, mx, mz }`. `x` and `z` are integer decimetres within ±2 km. `mx` and `mz` are −1, 0 or 1. Validation is strict: no other keys are allowed, and any bad value rejects the command.
+   - `playerPresence()` in `sim/homestead.ts` builds it. The app sends it only under v7, only while the founder is walking (alive, not swimming), on the settlement grid, with feet within 1.5 m of the grid ground.
+   - The motion signs come from the move the founder is asking for (stick or keys), or from the velocity when there is no input. A founder pushing against something still says which way they want to go.
+   - Presence is input, not state. It is never in the snapshot. It is sent with every realtime tick, one every 2 s; there is no "only when changed" mode. Size is measured below.
+2. **Shared occupancy (sim).** At the start of a v7 tick with presence, the 1 to 4 cells the founder's disc covers go into the villagers' occupancy map under the id `player`.
+   - **Villagers** route round those cells. They queue with the reason "waiting for you to pass" or "queueing at the farmhouse door behind you". After `NAV_GIVE_UP` (15) ticks they give up openly, as with a blocked route.
+   - A villager never walks closer than 0.6 m to the presence point. Moves are clipped by `NavContext.clip`.
+   - A founder walking toward a villager in a doorway counts as a head-on meeting, and the villager steps aside. An idle villager within 1.5 m of a founder walking at it also steps aside.
+   - **Gates:** no gate is closed while the founder stands in one of its cells (`keepOpen` in `closeBehind`). A herder holding a gate holds up to 15 ticks longer, then leaves it open and logs "left the pen gate open: you are standing in it".
+3. **Animals (sim, `herdAnimal`).** Each species has distances, computed in `sim/bodies.ts` from the body table:
+   - `keep`: the whole body at any heading plus the founder's radius. Cattle 18 dm, horse 20, sheep 12, goat 14, pig 14, chicken 7.
+   - `ring = keep + 7`.
+   - `clear`: at least 2 m.
+
+   The rules:
+   - **Step aside.** An animal inside its ring steps to the neighbour cell (at most 10 dm per tick) that ends farthest from the founder plus its distance off the founder's line of travel. The cell must be free and reachable by the animal's own moves, with no gate crossing. It must be on the same side of the fence, and inside the pen it must be in the main area. The step must end farther from the founder than it started. An animal on its way somewhere never steps back from its target, and it keeps that target.
+   - **Routes.** Routes avoid the founder's cells and every cell whose centre is inside the ring. Every step is clipped so that it never comes closer than `keep`. A goal at the founder fails without a search.
+   - **Targets.** No new walk, graze or home target within `clear`: up to 3 more draws are tried, otherwise the animal stands this tick.
+   - **Cornered.** A cornered animal (no step takes it farther) carries on where it stands. While the founder stands still it may walk past them at `pass`: the side distance plus 2 dm, plus half the nose distance for cattle and horses.
+   - **Strays and drives.** These wait outside when the founder blocks the gate. A home spot that lands at the founder is redrawn.
+   - **Cost.** A search that runs out of budget with the ring in the way counts as a failure, so the animal chooses again instead of waiting forever.
+4. **Founder contact (player-local physics, `stepCharacter(…, bodies)`).** This works like the existing voxel, fence and trunk collision. The capsules come from sim state, not from the rendered meshes:
+   - `HomesteadBodies` blends each animal's and villager's positions from the last two ticks, starting from where they were shown, as the renderer does.
+   - Wildlife capsules are the creature records.
+   - Body sizes (`FARM_BODIES`, `WILD_BODIES`) were measured from `render/animal-models.ts`.
+
+   The rules:
+   - A move into a body stops at the contact point.
+   - A move that keeps or reduces the overlap is always allowed.
+   - An overlap is pushed out at up to 1.5 m/s, only to free positions, along the normal or its x/z parts, and only if the deepest overlap goes down.
+   - **Squeeze** (not in the design): after 2.5 s of pressing against bodies without getting anywhere, the founder may go up to 0.12 m into a body and push-out waits. Without this a founder could stand blocked indefinitely by animals cornered in a dead end, such as the sty's 1 m gate corridor.
+   - **Turning (renderer and capsules).** v7 animals turn at a rate where the body's ends sweep at most 1.2 m/s (`turnRate`). Before this, a sideways yield swung a horse's head 0.38 m into the founder.
+5. **Wildlife.** `stepCreature` rejects any step that ends within the creature's whole length plus 0.3 m of a person while getting closer. Fleeing already prevents this in normal play.
+6. **Metrics.**
+   - `__metrics.explore.contact`: capsule count, nearest gap, the deepest overlap and where it happened, held time, and per-frame cost of building the capsules and of the steps.
+   - `__metrics.realtime.presence`: the presence sent with the latest tick.
+
+Files:
+- new: `Game/src/sim/bodies.ts`
+- changed: `sim/homestead.ts`, `sim/nav.ts`, `sim/character.ts`, `sim/fauna.ts`, `app/session.ts`, `app/life.ts`, `app/explore.ts`, `main.ts`, `render/homestead.ts`, `render/fauna.ts`
+- tests: `Game/tests/stab002.s2.test.ts` (10), `stab002.s2-contact.test.ts` (9), `stab002-s2-harness.ts`
+- evidence: `s2/` (probe scripts, `s2-repro.ts` and its output, screenshots)
+- regenerated: `Game/dist`, `Game/tests/.build`
+
+### Tests (headless; separate from the browser)
+
+`cd Game && npx tsc --noEmit && npm test && npm run build`: typecheck clean, **381 tests pass** (362 before, plus 19), build OK.
+
+Pins:
+- v1 to v6 and genesis unchanged (S1 tests).
+- The M014 reference run with presence on every tick gives v6 `037429c4ffbcf710` and v5 `f249cb544027b9bd`.
+- v7 without presence equals S1, measured on `cd0aff6` before S2: reference run `f849279d086aa120`; 900-tick fresh runs on seeds 1, 42, 1337 and 2024: `0a9011b2db7e9b63`, `a4837164213ddc3b`, `69c99cab31257384`, `d3c8cd112e45a006`.
+- The v6 save fixture still restores byte-identical (S1 test).
+- A journal with presence replays to the same hash. A mid-run save restores and plays on identically.
+
+Founder walking at each species on the farm: capsules from sim state, presence on the ticks, 6 s per run.
+
+| species | min gap, 60 fps | min gap, fixed 1/30 s | min centre distance | sum of radii |
+|---|---|---|---|---|
+| cattle | 0.000 m | −0.015 m | 0.77 m | 0.76 m |
+| horse | 0.000 | −0.020 | 0.64 | 0.62 |
+| sheep | 0.000 | −0.003 | 0.73 | 0.72 |
+| goat | 0.000 | −0.001 | 0.57 | 0.56 |
+| pig | 0.000 | 0.000 | 0.66 | 0.65 |
+| chicken | 0.000 | 0.000 | 0.60 | 0.50 |
+
+On static capsules on a flat pad, covering all six farm species, four wildlife species and villagers, walking and running, at 60 fps and at the fixed 1/30 s step, the minimum gap is ≥ −0.02 m and the founder never gets deeper from one step to the next.
+
+Against the STAB-001 reproduction (`s2/s2-repro.txt`, same stretch, seed 1337):
+
+| case | STAB-001 (v6) | S2 (v7) |
+|---|---|---|
+| founder walks at the cow for 2 s | min centre distance **0.06 m**, ended 5.2 m past the cow | min centre distance **2.37 m** (the cow's length points at the founder), capsule gap 0.000 m, **did not pass** |
+| cow walks at the standing founder | d = 0.80 → **0.10 m**, walked through | **stopped**; minimum 1.89 m, capsule gap 0.000 m after placement |
+| 600 ticks: extra animals sharing a 1 m cell | **1,106** | 598 without presence; **1,113** with the founder standing in the paddock (animals bunch away from them); 0 animal-ticks in the founder's cells |
+| animal pairs < 0.5 m (animal-ticks) | 1,307 | 527 without presence; 1,172 with the founder standing in the paddock |
+
+Other measurements:
+- **Animal walking into the standing founder:**
+  - The cow stops at 2.50 m.
+  - The horse detours past at 1.94 m in the sim (keep 2.0 m); drawn gap +0.043 m.
+  - Sheep and goat detour at 2.18 m.
+  - The founder is never shoved more than 0.3 m.
+- **Standing in each pen for 100 ticks:** animals step aside. There are 0 re-entries into the ring and 0 moves closer while inside it. Every move passes the grid check, and no animal changes side of a fence.
+- **Crowded pens at capacity, founder in a corner for 300 ticks:**
+  - 0 animals in the founder's cells; 0 starving; 0 re-entries; 0 animals held inside `keep` for more than one tick.
+  - Walking out through the gate, the longest time held against animals was 2.00 s (coop), 0.72 s (pen), 2.52 s (sty) and 2.52 s (paddock).
+  - The deepest overlap was −0.12 m (squeeze) in the sty and the paddock.
+- **Villagers at the farmhouse door:**
+  - None ever entered the founder's cells or came within 0.6 m.
+  - The wait reason was "queueing at the farmhouse door behind you".
+  - They gave up after exactly 15 ticks, with the reason kept and validated in the save.
+  - If the founder steps away after 5 ticks, they go in.
+- **Gate:** with the founder in the pen gate, no animal entered the gate cells and the gate was never shut on the founder. The herder left the gate open after the bounded hold. The drives finished after the founder left.
+- **Wildlife:** a stalking fox, a following wolf, and a wandering deer and hare stay at least their keep distance from the founder. Without the founder, the same fox crosses the spot.
+- **Cost:**
+  - `stepCharacter` with 120 bodies: 7.99 → 8.98 µs per step (Node).
+  - 600 ticks with a founder walking the pens: search expansions 28,682 → 35,230 (+23 %); time 0.35 → 0.36 ms per tick in the scratch run, 181 → 226 ms per 600 ticks in the test run (noisy).
+
+### Journal growth
+
+| measured | without presence | with presence |
+|---|---|---|
+| headless, bytes per tick entry | 235 B | 279 B (+43.9 B) |
+| presence growth per minute (one tick every 2 s) | – | **+1.29 KB/min** (+19 %) |
+| browser, bytes per tick entry | – | 278–280 B (presence on 100 % of ticks) |
+| browser, whole save | – | 8.9–9.1 KB/min |
+
+Compaction is unchanged (at 400 entries).
+
+### Browser (separate from the tests; emulated desktop Chromium, not a phone)
+
+Setup:
+- `Game/dist` was copied to `.kiro/artifacts/screenshots/probe/dist` and served as `https://astrix.local/`.
+- Storage was fresh, with `astrix:entered:v1 = 1`.
+- Scripts: `s2/stab002-s2-chain0.js` and `s2/stab002-s2-chainon.js`.
+- The founder walks with W/A/S/D, steered from the camera direction. Gates are opened with E.
+- The gap is from `__metrics.explore.contact` (sim-derived capsules). The drawn centre distance is to the drawn herd instance.
+
+| segment | `?chain=0`: min gap | drawn centre / sum of radii | chain-on: min gap | drawn centre / sum of radii |
+|---|---|---|---|---|
+| cow, paddock (gate opened with E) | 0.000 m | 0.907 / 0.76 m | 0.000 m | 0.902 / 0.76 m |
+| horse | 0.000 | 0.778 / 0.62 | 0.000 | 0.819 / 0.62 |
+| sheep, pen | 0.000 | 0.710 / 0.72 | 0.000 | 0.769 / 0.72 |
+| standing in the pen, 24 s (12 ticks) | +0.084; 0 ring re-entries, 0 approaches | – | +0.079; 0 re-entries, 0 approaches | – |
+| chicken, coop | 0.000 (sampled) | see "Not met" | **−0.172** | see "Not met" |
+| villager | 0.000; drawn figure vs capsule median −0.004, min −0.171 m | – | 0.000; median −0.019, min −0.16 m | – |
+| whole run (all frames) | **−0.141 m** (chicken, coop) | – | **−0.403 m** (chicken, coop) | – |
+| longest held | 1.5 s | – | 2.0 s | – |
+| reload, same save with `freeze=1` | `6abd3921a5c861c4` = `6abd3921a5c861c4` (97 commands), `restored` | – | `5bb59d20143c7baf` = same (98), `restored` | – |
+
+Performance in the browser:
+- Draw calls at the farm: median 72–77 (`chain=0`) and 71–80 (chain-on). Triangles: 144–164 k.
+- Contact cost per frame: building the capsules 0.03–0.06 ms (max 0.7 ms); the frame's fixed steps including contact 0.08–0.15 ms.
+
+Screenshots in `s2/`, 1200×700: `stab002-s2-{chain0,chainon}-{cow,horse,pen,villager}.png`. The cow shot shows the founder stopped against the cow's flank.
+
+### Not met, or open
+
+- **Chicken overlap in the coop (browser only).** Both browser runs recorded one episode with a chicken, 0.14 m (`chain=0`) and **0.40 m** (chain-on). Each time the founder's feet were 0.32 m above the chicken's ground (y 12.32 against 12.0). The headless coop runs show nothing like it, and the terrain there is flat at y 12. **Cause not found.**
+- **Squeeze is a deviation from "refuse moves that go deeper".** After 2.5 s of pressing, the founder may go 0.12 m into a body. It never passes through one, and centre distance stays ≥ the sum of radii − 0.12 m.
+- **Drawn villager figures lead their capsules** by up to 0.17 m for about a second after a tick that comes early (the clock catching up). The median is 0.00–0.02 m. Animals did not show this.
+- **Animal–animal separation is not part of S2.** Shared cells are 598 per 600 ticks without the founder and 1,113 with the founder standing in the paddock, against 1,106 in STAB-001.
+- **Gates left open.** A herder who cannot shut a gate because the founder stands in it leaves it open. Animals may then wander out until the owner closes it.
+- **Cornered cattle and horses stay put while the founder is moving.** Pass mode only applies while the founder stands still.
+- **Presence is sent with every tick,** not only when it changes. That adds about 1.3 KB/min. Search expansions are +23 % when the founder walks the pens.
+- **Not tested in the browser:** standing in a gate, and villagers queueing at the door. Both are covered headless only. No real device was used.
+
+### Reproduce
+
+From `Game/`:
+- `npm test`
+- `npx esbuild ../13_Integration_and_QA/Evidence/STAB-002-stabilization/s2/s2-repro.ts --bundle --platform=node --format=esm --external:three --outfile=tests/.s2-repro.tmp.mjs && node tests/.s2-repro.tmp.mjs`, then delete the `.tmp.mjs` file.
+- Browser: copy `s2/stab002-s2-chain0.js` (or `-chainon.js`) under `.kiro/artifacts/screenshots/` and run it with Playwright `browser_run_code_unsafe { filename }`.

@@ -30,7 +30,9 @@ import { SceneInspector } from './app/inspector';
 import { TouchControls } from './app/touch-controls';
 import { VitalsHud } from './app/vitals-hud';
 import { HomesteadGame } from './app/homestead';
-import { DAY_TICKS, felledTrees } from './sim/homestead';
+import { DAY_TICKS, SPECIES_RULES, felledTrees, playerPresence } from './sim/homestead';
+import { DynamicBody, HomesteadBodies } from './sim/bodies';
+import type { Presence } from './sim/bodies';
 import { buildAnimalShowcase } from './render/animal-showcase';
 import { renderBreakdown } from './app/render-breakdown';
 import { GroundCoverView, groundCoverOffset } from './render/ground-cover';
@@ -277,6 +279,10 @@ function toggleMode(force?: 'explore' | 'builder'): void {
 let sceneInspector: SceneInspector | null = null;
 let showcase: { group: THREE.Group; update: (dt: number) => void } | null = null;
 let homesteadGame: HomesteadGame | null = null;
+/** STAB-002 S2: the presence sent with the latest tick (metrics only). */
+let lastPresence: Presence | null = null;
+/** STAB-002 S2: capsules of farm animals and villagers from sim state, for the founder's contact (player-local physics). */
+let contactBodies: HomesteadBodies | null = null;
 /** The object inspector is a developer tool now: ?inspect=1 (also in the kit scene). */
 const devInspect = params.get('inspect') === '1' || isKit;
 let faunaDirty = true;
@@ -660,7 +666,7 @@ function metrics() {
     lastAction,
     persistenceMessage,
     explore: explore?.metrics() ?? null,
-    realtime: { tickSeconds: TICK_SECONDS, issued: simClock.ticksIssued, leader: lease.isLeader, savePending: saveScheduler.pending },
+    realtime: { tickSeconds: TICK_SECONDS, issued: simClock.ticksIssued, leader: lease.isLeader, savePending: saveScheduler.pending, presence: lastPresence },
     fauna: fauna?.metrics() ?? null,
     chain: chainView?.metrics() ?? (chainError ? { error: chainError } : null),
     homestead: homesteadGame?.metrics() ?? null,
@@ -715,7 +721,9 @@ function frame(timestamp?: number) {
   const dueTicks = timescale > 1 ? simClock.advanceMany(simDt * timescale, simActive, Math.min(8, Math.ceil(timescale))) : simClock.advance(simDt, simActive) ? 1 : 0;
   for (let k = 0; k < dueTicks; k++) {
     const tTick = performance.now();
-    const r = lifeGame!.realtimeTick();
+    // STAB-002 S2: the player's quantised presence rides on the tick (rules v7, walking on the settlement grid only).
+    lastPresence = playerPresence(world, explore?.active ? explore.character : null, explore?.intent);
+    const r = lifeGame!.realtimeTick(lastPresence);
     sections.record('tick', performance.now() - tTick);
     // A villager felled a tree (rules v4): redraw nature from the entities, as after the player's harvest.
     // (M013: felled trees, stumps and growth reach the drawing incrementally through NatureView.sync.)
@@ -723,6 +731,8 @@ function frame(timestamp?: number) {
     if (r.ok) saveScheduler.markDirty(nowMs);
     else realtimeNote = `settlement time stopped: ${r.reasons.join('; ')}`;
   }
+  // STAB-002 S2: the contact capsules start blending a new tick in the same frame as the drawn herd does.
+  if (dueTicks && session.world.homestead) contactBodies?.observe(session.world.homestead, session.world.life?.tick ?? 0, performance.now());
   saveScheduler.poll(nowMs);
   // After the tick, so the drawn homestead (gate leaves, sites, loads) is never a frame behind the state it reports.
   const tHome = performance.now();
@@ -950,7 +960,20 @@ if (!isMap && !isKit) {
   // start in the settlement overview.
   let storage: Storage | null = null;
   try { storage = window.localStorage; } catch { storage = null; }
-  explore = new ExploreController({ world, scene, rig, storage, spawn: { x: -18, z: -18 } });
+  // STAB-002 S2: the founder's soft contact with farm animals, villagers and
+  // wildlife. Player-local physics; the capsules come from sim state (homestead
+  // positions of the last two ticks, wildlife records), not from the meshes.
+  contactBodies = new HomesteadBodies(TICK_SECONDS);
+  const groundAt = (x: number, z: number) => { const fx = Math.floor(x), fz = Math.floor(z); return residentSurfaceAt(world, fx, fz) ?? surfaceAt(world, fx, fz); };
+  const adultAge = (sp: keyof typeof SPECIES_RULES) => SPECIES_RULES[sp].adultAge;
+  const bodiesNear = (x: number, z: number): DynamicBody[] => {
+    const out: DynamicBody[] = [];
+    const h = session.world.homestead, tick = session.world.life?.tick ?? 0, now = performance.now();
+    if (h && contactBodies) { contactBodies.observe(h, tick, now); contactBodies.collect(h, tick, now, x, z, 8, groundAt, adultAge, out); }
+    fauna?.bodies(x, z, 8, out);
+    return out;
+  };
+  explore = new ExploreController({ world, scene, rig, storage, spawn: { x: -18, z: -18 }, bodies: bodiesNear });
   explore.onNotice = (message, kind) => {
     lastAction = message;
     m2Game?.toast(message, kind ?? 'good');

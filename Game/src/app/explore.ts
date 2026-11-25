@@ -9,7 +9,7 @@
 // position only decides *which* resource is in reach.
 import * as THREE from 'three';
 import {
-  CharacterState, FIXED_STEP, MAX_HEALTH, createCharacter, findStandingY, respawnCharacter, stepCharacter,
+  CHARACTER_RADIUS, CharacterState, FIXED_STEP, bodyLevel, MAX_HEALTH, createCharacter, findStandingY, respawnCharacter, stepCharacter,
 } from '../sim/character';
 import { Entity, World, isSolid, residentVoxelAt, nearestHarvestable } from '../sim/world';
 import { OrbitRig } from '../render/camera';
@@ -17,6 +17,7 @@ import { Figure, buildFigure, animateFigure, placeFigure } from '../render/chara
 import { BannerPoint, BannerSet, BannerTarget, ReturnChannel, bannerGroundY, findLanding, plantBanner } from '../sim/banners';
 import { BannerStore } from './banners';
 import { BannerView } from '../render/banners';
+import { DynamicBody, penetration } from '../sim/bodies';
 
 export const BANNER_NAMES: Record<BannerTarget, string> = { home: 'home banner', field: 'field banner' };
 
@@ -29,6 +30,12 @@ export interface ExploreOptions {
   storage: Storage | null;
   /** Where to spawn when there is no saved avatar position. */
   spawn: { x: number; z: number };
+  /**
+   * STAB-002 S2: moving bodies near the character (farm animals, villagers,
+   * wildlife), as capsules derived from sim state. Read once per frame and
+   * used for every fixed step of that frame (player-local physics).
+   */
+  bodies?: (x: number, z: number) => ReadonlyArray<DynamicBody>;
 }
 
 interface SavedAvatar {
@@ -290,6 +297,7 @@ export class ExploreController {
     const rig = this.o.rig;
     this.accumulator = Math.min(Math.max(0, this.accumulator) + Math.max(0, frameDt), FIXED_STEP * 6);
     const intent = rig.moveIntent();
+    this.lastIntent = { x: intent.x, z: intent.z };
     if (this.channel.active) {
       const why = this.state!.dead ? 'interrupted' : Math.hypot(intent.x, intent.z) > 0.1 ? 'cancelled: you moved'
         : this.jumpQueued ? 'cancelled: you jumped' : null;
@@ -300,19 +308,25 @@ export class ExploreController {
         if (!this.state) return;
       }
     }
+    const tContact = performance.now();
+    const bodies = this.accumulator >= FIXED_STEP && this.o.bodies ? this.o.bodies(this.state!.x, this.state!.z) : undefined;
+    const collectMs = performance.now() - tContact;
+    let stepped = 0;
     while (this.accumulator >= FIXED_STEP) {
       this.prev = this.state;
       const wasDead = this.state!.dead;
       this.state = stepCharacter(this.o.world, this.state!, {
         moveX: intent.x, moveZ: intent.z, run: intent.run, jump: this.jumpQueued,
         rise: this.jumpHeld, dive: this.diveHeld,
-      });
+      }, FIXED_STEP, bodies);
+      stepped++;
       this.jumpQueued = false;
       this.accumulator -= FIXED_STEP;
       this.steps++;
       if (this.state.dead && !wasDead) { this.deaths++; this.deadFor = 0; this.onDeath?.(this.state.cause ?? 'died'); }
       if (this.state.hurt > 0 && this.channel.active) this.cancelReturn('cancelled: you are hurt');
     }
+    if (bodies) this.noteContact(bodies, stepped, collectMs, performance.now() - tContact - collectMs, Math.hypot(intent.x, intent.z) > 0.1, frameDt);
     if (this.state!.dead) {
       this.deadFor += frameDt;
       if (this.deadFor >= RESPAWN_DELAY) {
@@ -375,6 +389,9 @@ export class ExploreController {
   }
 
   get character(): CharacterState | null { return this.state; }
+  /** STAB-002 S2: the move the founder last asked for (stick or keys), for the presence sent with a tick. */
+  get intent(): { x: number; z: number } { return this.lastIntent; }
+  private lastIntent = { x: 0, z: 0 };
 
   /** Banner state for metrics, HUD and browser probes. */
   bannerMetrics(): Record<string, unknown> {
@@ -390,6 +407,32 @@ export class ExploreController {
     };
   }
 
+  /** STAB-002 S2 contact metrics (presentation only). */
+  private contact = { frames: 0, steps: 0, bodies: 0, ms: 0, maxMs: 0, collectMs: 0, maxCollectMs: 0, nearest: null as null | { id: string; gap: number; x: number; z: number }, minGap: Infinity, minAt: null as null | { id: string; x: number; z: number; y: number; bodyY: number; pressing: number }, held: 0, maxHeld: 0 };
+  /** collect: building the capsules from sim state; step: the frame's fixed steps (all of stepCharacter, contact included). */
+  private noteContact(bodies: ReadonlyArray<DynamicBody>, steps: number, collect: number, ms: number, pushing: boolean, frameDt: number): void {
+    const c = this.contact, s = this.state!;
+    c.frames++; c.steps += steps; c.bodies = bodies.length; c.ms += ms; c.maxMs = Math.max(c.maxMs, ms);
+    c.collectMs += collect; c.maxCollectMs = Math.max(c.maxCollectMs, collect);
+    let best: { id: string; gap: number; x: number; z: number; y: number } | null = null;
+    for (const b of bodies) {
+      // Bodies the founder is above or below (standing on a step, a deck) are not in contact.
+      if (!bodyLevel(b, s.y)) continue;
+      const gap = -penetration(b, s.x, s.z, CHARACTER_RADIUS);
+      if (!best || gap < best.gap) best = { id: b.id, gap, x: b.x, z: b.z, y: b.y };
+    }
+    c.nearest = best ? { id: best.id, gap: Math.round(best.gap * 1000) / 1000, x: Math.round(best.x * 100) / 100, z: Math.round(best.z * 100) / 100 } : null;
+    if (best && s.mode !== 'swim' && best.gap < c.minGap) { c.minGap = best.gap; c.minAt = { id: best.id, x: Math.round(s.x * 100) / 100, z: Math.round(s.z * 100) / 100, y: Math.round(s.y * 100) / 100, bodyY: Math.round(best.y * 100) / 100, pressing: Math.round((s.pressing ?? 0) * 10) / 10 }; }
+    // Held: trying to move, touching a body, and barely moving.
+    if (pushing && best && best.gap < 0.02 && s.speed < 0.3) { c.held += frameDt; c.maxHeld = Math.max(c.maxHeld, c.held); } else c.held = 0;
+  }
+  contactMetrics(): Record<string, unknown> {
+    const c = this.contact;
+    return { frames: c.frames, steps: c.steps, bodies: c.bodies, stepMsPerFrame: c.frames ? Math.round((c.ms / c.frames) * 1000) / 1000 : 0, maxStepMs: Math.round(c.maxMs * 1000) / 1000,
+      collectMsPerFrame: c.frames ? Math.round((c.collectMs / c.frames) * 10000) / 10000 : 0, maxCollectMs: Math.round(c.maxCollectMs * 1000) / 1000,
+      nearest: c.nearest, minAt: c.minAt, minGap: Number.isFinite(c.minGap) ? Math.round(c.minGap * 1000) / 1000 : null, heldS: Math.round(c.held * 100) / 100, maxHeldS: Math.round(c.maxHeld * 100) / 100 };
+  }
+
   metrics(): Record<string, unknown> | null {
     if (!this.state) return { active: this.active, spawned: false, banners: this.bannerMetrics() };
     const s = this.state;
@@ -403,6 +446,8 @@ export class ExploreController {
       health: Math.round(s.health * 10) / 10, breath: Math.round(s.breath * 1000) / 1000,
       stamina: Math.round(s.stamina * 1000) / 1000, headUnderwater: s.headUnderwater,
       vy: Math.round(s.vy * 100) / 100, dead: s.dead, deaths: this.deaths, waterSurface: Math.round(s.waterSurface * 100) / 100,
+      vx: Math.round(s.vx * 100) / 100, vz: Math.round(s.vz * 100) / 100,
+      contact: this.contactMetrics(),
     };
   }
 

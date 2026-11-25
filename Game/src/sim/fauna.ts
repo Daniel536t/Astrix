@@ -17,6 +17,7 @@ import {
   CHUNK_SIZE, hydrologyFor, isRetiredStoneKind,
 } from './world';
 import { hash2i, mulberry32 } from './noise';
+import { PLAYER_R, WILD_BODIES, WildId, bodyReach } from './bodies';
 
 export type Habitat = 'meadow' | 'forest_edge' | 'water';
 export type CreatureTier = 'ambient' | 'authoritative';
@@ -319,9 +320,12 @@ export function stepCreature(world: World, c: Creature, ctx: FaunaContext): void
     // Steer around unsuitable ground by sampling a fan of headings.
     const base = Math.atan2(tx, tz);
     let moved = false;
+    // STAB-002 S2: a step never ends inside a person (the player's body plus this creature's whole length, any heading).
+    const keep = PLAYER_R + bodyReach(WILD_BODIES[c.species as WildId]);
     for (const off of [0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6]) {
       const a = base + off;
       const nx = c.x + Math.sin(a) * speed * dt, nz = c.z + Math.cos(a) * speed * dt;
+      if (intrudes(ctx, c, nx, nz, keep)) continue;
       const h = landOk(world, nx, nz, 1);
       if (h === null) continue;
       c.x = nx; c.z = nz; c.y = h;
@@ -334,6 +338,15 @@ export function stepCreature(world: World, c: Creature, ctx: FaunaContext): void
   } else {
     c.speed = 0;
   }
+}
+
+/** STAB-002 S2: would a step to (x, z) end within `keep` of a person while getting closer? (Moving away is always allowed.) */
+function intrudes(ctx: FaunaContext, c: Creature, x: number, z: number, keep: number): boolean {
+  for (const t of ctx.threats) {
+    const d1 = Math.hypot(x - t.x, z - t.z);
+    if (d1 < keep && d1 <= Math.hypot(c.x - t.x, c.z - t.z)) return true;
+  }
+  return false;
 }
 
 /** Fox: notice a hare, creep up, pounce; give up (rest) when it escapes or the timer ends. */

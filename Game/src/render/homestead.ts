@@ -14,6 +14,7 @@ import {
 } from '../sim/homestead';
 import type { GateState } from '../sim/nav';
 import { AnimalBatch } from './animal-kit';
+import { turnHeading, turnRate } from '../sim/bodies';
 import { SNAP_DISTANCE } from './smooth';
 import { ANIMAL_MODELS } from './animal-models';
 import { FOUNDER_STOCKPILE } from '../sim/economy';
@@ -315,7 +316,7 @@ function fieldMesh(world: World, p: Plot, ground: (x: number, z: number) => numb
 
 const HERD_CAP = 64;
 const shortest = (from: number, to: number) => { let d = to - from; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; };
-interface Seen { shown?: number; x: number; z: number; heading: number; phase: number; swing: number; hunger: number; eatUntil: number; speed: number; px: number; pz: number; sx: number; sz: number }
+interface Seen { shown?: number; h0?: number; at?: number; x: number; z: number; heading: number; phase: number; swing: number; hunger: number; eatUntil: number; speed: number; px: number; pz: number; sx: number; sz: number }
 
 /**
  * Every farm animal, one animated instanced mesh per species. Poses come from
@@ -343,6 +344,8 @@ class Herd {
       // Distance and heading come from the logical step; the blend starts from
       // where the animal is drawn now, so a late or early tick never pops it.
       const d = Math.hypot(x - s.x, z - s.z);
+      // Rules v7 (STAB-002 S2): the turn starts from the heading drawn now, at the rate the founder's contact uses.
+      s.h0 = s.shown ?? s.heading; s.at = now;
       if (d > 0.04) s.heading = Math.atan2(x - s.x, z - s.z);
       s.speed = d / tickSeconds;
       s.px = s.sx; s.pz = s.sz; s.x = x; s.z = z;
@@ -361,7 +364,8 @@ class Herd {
       const x = s.px + (s.x - s.px) * alpha, z = s.pz + (s.z - s.pz) * alpha;
       s.sx = x; s.sz = z;
       // Turn toward the direction of travel; walk cycle advances with distance covered.
-      if (walking) s.shown = (s.shown ?? s.heading) + shortest(s.shown ?? s.heading, s.heading) * (1 - Math.exp(-dt * 7));
+      if (isHerdHomestead(h)) s.shown = turnHeading(s.h0 ?? s.heading, s.heading, now - (s.at ?? now), turnRate(a.species));
+      else if (walking) s.shown = (s.shown ?? s.heading) + shortest(s.shown ?? s.heading, s.heading) * (1 - Math.exp(-dt * 7));
       const heading = s.shown ?? s.heading;
       s.phase += dt * (walking ? 2.5 + s.speed * 3.2 : 0);
       s.swing += ((walking ? Math.min(0.75, 0.3 + s.speed * 0.2) : 0) - s.swing) * (1 - Math.exp(-dt * 8));

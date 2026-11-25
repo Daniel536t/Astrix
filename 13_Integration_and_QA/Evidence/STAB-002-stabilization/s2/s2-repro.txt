@@ -1,0 +1,5 @@
+(1) 60fps: player walking at the cow for 2 s: min centre distance 2.37 m (sum of radii 0.76), min capsule gap -0.000 m, walked past: false, end x -24.87 (cow -22.50)
+(1) fixed: player walking at the cow for 2 s: min centre distance 2.37 m (sum of radii 0.76), min capsule gap 0.000 m, walked past: false, end x -24.87 (cow -22.50)
+(2) cow walking at the standing player: x per tick -25.5(d=1.89) -25.5(d=2.19) -25.5(d=2.83) -25.5(d=2.83) -25.5(d=2.83) -25.5(d=2.83) -25.5(d=2.83) -25.5(d=2.83); min centre distance 1.89 m; min drawn capsule gap -0.000 m after the first second (-0.376 m at placement); passed through: false
+(3) 600 ticks v7 without presence: 316 ms; animals 21; extra animals sharing a 1 m cell 598 (max stack 3); animal pairs < 0.5 m 527; villager-ticks in an animal's cell 5
+(3) 600 ticks v7 with the player standing in the paddock: 296 ms; animals 22; extra animals sharing a 1 m cell 1113 (max stack 4); animal pairs < 0.5 m 1172; villager-ticks in an animal's cell 10; animal-ticks in the player's cells 0

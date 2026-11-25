@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { World } from '../sim/world';
 import { Creature, FAUNA_STEP, FaunaContext, SPECIES, spawnChunkFauna, stepCreature } from '../sim/fauna';
 import { AnimalBatch } from './animal-kit';
+import { DynamicBody, creatureBody } from '../sim/bodies';
 import { ANIMAL_MODELS } from './animal-models';
 import { Pose, blendPose, stepAlpha } from './smooth';
 
@@ -70,6 +71,20 @@ export class FaunaView {
   }
 
   all(): Creature[] { return [...this.creatures.values()].flat(); }
+
+  /**
+   * STAB-002 S2: capsules of the creatures within `range` m of (x, z), from
+   * the creature sim records (not the drawn, blended poses). Trout are not bodies.
+   */
+  bodies(x: number, z: number, range: number, out: DynamicBody[]): void {
+    for (const list of this.creatures.values()) {
+      for (const c of list) {
+        if (c.species === 'trout' || Math.abs(c.x - x) > range || Math.abs(c.z - z) > range) continue;
+        const b = creatureBody(c);
+        if (b) out.push(b);
+      }
+    }
+  }
 
   update(dt: number, ctx: FaunaContext): void {
     this.accumulator = Math.min(this.accumulator + dt, FAUNA_STEP * 4);

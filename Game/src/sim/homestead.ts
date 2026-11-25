@@ -29,6 +29,7 @@ import {
   CARRIED_CAPACITY, FOUNDER_STOCKPILE, FOUNDER_STOCKPILE_ID, LifeResult, RECIPES, total, lifeState,
 } from './economy';
 import { placeBuilding } from './buildings';
+import { Presence, VILLAGER_KEEP_DM, clipApproach, keepDm, passDm, presenceCells, quantisePresence, ringDm, sideDm, targetClearDm } from './bodies';
 
 /** Legacy homestead rules (M006–M009): villagers walk straight lines, nothing collides. */
 export const HOMESTEAD_VERSION = 1 as const;
@@ -1838,10 +1839,32 @@ function navWalk(world: World, h: HomesteadState, v: Villager, t: Task, tick: nu
     canOperate: () => true,
     ...(occupied ? {
       occupied, self: v.id,
-      waitingOn: (id: string) => h.villagers.find((x) => x.id === id)?.nav?.wait?.by,
-      nameOf: (id: string) => h.villagers.find((x) => x.id === id)?.name ?? id,
+      // STAB-002 S2: a founder walking toward this villager counts as waiting on it (a head-on meeting in a
+      // doorway): the villager, the later id, steps aside as it does for another villager.
+      waitingOn: (id: string) => id === PLAYER_ID
+        ? (contact && (contact.p.mx * (v.x - contact.p.x) + contact.p.mz * (v.z - contact.p.z)) > 0 ? v.id : undefined)
+        : h.villagers.find((x) => x.id === id)?.nav?.wait?.by,
+      nameOf: (id: string) => id === PLAYER_ID ? 'you' : h.villagers.find((x) => x.id === id)?.name ?? id,
+    } : {}),
+    ...(contact ? {
+      clip: (ax: number, az: number, bx: number, bz: number) => clipApproach(ax, az, bx, bz, contact!.p.x, contact!.p.z, VILLAGER_KEEP_DM),
+      clipBy: PLAYER_ID,
+      keepOpen: (id: string) => gateHasPlayer(grid, id),
     } : {}),
   }, v, goal, speed, t.target);
+  // STAB-002 S2: waiting for the player gives up after NAV_GIVE_UP ticks, openly, as a blocked route does.
+  const wait = v.nav?.wait;
+  if (r.status === 'waiting' && wait?.by === PLAYER_ID && tick - wait.since >= NAV_GIVE_UP) {
+    const where = TASK_WORDS[t.kind] ?? t.target;
+    if (t.kind !== 'idle') {
+      v.avoid = [...(v.avoid ?? []).filter((a) => a.target !== t.target), { target: t.target, until: tick + NAV_AVOID, reason: wait.reason, by: PLAYER_ID }]
+        .sort((a, b) => a.target.localeCompare(b.target)).slice(-MAX_AVOID);
+      ev.log.push(`${v.name} gave up on ${where} after ${tick - wait.since} ticks: ${wait.reason}`);
+    }
+    delete v.nav!.wait;
+    v.task = null;
+    return;
+  }
   if (r.status === 'arrived') {
     // A moving animal: work where the villager actually stands, next to it.
     const next = t.legs[t.leg + 1];
@@ -1864,6 +1887,78 @@ function navWalk(world: World, h: HomesteadState, v: Villager, t: Task, tick: nu
 }
 const MAX_AVOID = 8;
 
+// ---------- STAB-002 S2: the player's presence (rules v7) ----------
+
+/** The player's id in the shared occupancy map. */
+export const PLAYER_ID = 'player';
+/** This tick's presence: the point (dm) and the cells the player's disc covers. Set only for the duration of one `stepHomestead`. */
+interface Contact { p: Presence; cells: Set<number>; grid: NavGrid }
+let contact: Contact | null = null;
+function contactOf(world: World, h: HomesteadState, p: Presence): Contact | null {
+  const g = homesteadNav(world, h);
+  const cells = new Set<number>();
+  for (const [x, z] of presenceCells(p)) if (g.inside(x, z)) cells.add(g.index(x, z));
+  // Outside the settlement grid nobody here can meet the player.
+  return cells.size ? { p, cells, grid: g } : null;
+}
+/** Does the player stand in one of a gate's two cells? */
+function gateHasPlayer(g: NavGrid, gateId: string): boolean {
+  const c = g.gateCells.get(gateId);
+  if (!contact || !c) return false;
+  return contact.cells.has(g.index(c[0], c[1])) || contact.cells.has(g.index(c[2], c[3]));
+}
+/**
+ * STAB-002 S2: the presence the app sends with a tick, from the founder's
+ * state: only under rules v7, while walking (alive, not swimming) on the
+ * settlement grid with the feet within 1.5 m of its ground (not on a roof).
+ * Otherwise null, and the tick carries none.
+ */
+export function playerPresence(world: World, ch: { x: number; y: number; z: number; vx: number; vz: number; dead: boolean; mode: string } | null,
+  intent?: { x: number; z: number }): Presence | null {
+  const h = world.homestead;
+  if (!ch || ch.dead || ch.mode === 'swim' || !h || !isHerdHomestead(h)) return null;
+  const g = homesteadNav(world, h);
+  const cx = Math.floor(ch.x), cz = Math.floor(ch.z);
+  if (!g.inside(cx, cz) || Math.abs(ch.y - g.ground[g.index(cx, cz)]) > 1.5) return null;
+  // The motion is what the founder is trying to do (the stick or keys), else its velocity: pressing against
+  // someone in a doorway still says which way they want to go.
+  const i = intent && Math.hypot(intent.x, intent.z) > 0.1 ? { x: intent.x * 4, z: intent.z * 4 } : { x: ch.vx, z: ch.vz };
+  return quantisePresence(ch.x, ch.z, i.x, i.z);
+}
+/**
+ * STAB-002 S2: a villager standing idle within 1.5 m of a founder walking
+ * toward it steps to the free neighbour cell that is farthest from the
+ * founder and off their line (not through a gate or door, not into anyone's
+ * cell), so an idle villager never blocks a doorway the founder is using.
+ */
+function villagerYield(world: World, h: HomesteadState, v: Villager, occupied: Map<number, string>): boolean {
+  const c = contact!;
+  const d0 = len2(v.x - c.p.x, v.z - c.p.z);
+  if (d0 >= 15 || (c.p.mx * (v.x - c.p.x) + c.p.mz * (v.z - c.p.z)) <= 0) return false;
+  const g = homesteadNav(world, h);
+  const cx = Math.floor(v.x / DM), cz = Math.floor(v.z / DM);
+  if (!g.inside(cx, cz)) return false;
+  const ml = len2(c.p.mx, c.p.mz);
+  let best: { x: number; z: number } | null = null, bestScore = -Infinity;
+  for (const [dx, dz] of DIRS8) {
+    const nx = cx + dx, nz = cz + dz;
+    if (!g.inside(nx, nz)) continue;
+    const j = g.index(nx, nz), who = occupied.get(j);
+    if (g.block[j] !== BLOCK.none || (who !== undefined && who !== v.id) || !canMove(g, cx, cz, nx, nz) || g.gateBetween(cx, cz, nx, nz)) continue;
+    const t = cellCentre(g, j);
+    if (clipApproach(v.x, v.z, t.x, t.z, c.p.x, c.p.z, VILLAGER_KEEP_DM) < 1) continue;
+    const d1 = len2(t.x - c.p.x, t.z - c.p.z);
+    if (d1 <= d0) continue;
+    const score = d1 + Math.abs((t.x - c.p.x) * c.p.mz - (t.z - c.p.z) * c.p.mx) / ml;
+    if (score > bestScore) { bestScore = score; best = t; }
+  }
+  if (!best) return false;
+  v.x = best.x; v.z = best.z;
+  if (v.nav) { v.nav.path = []; v.nav.plan = ''; delete v.nav.wait; }
+  return true;
+}
+const presenceDist = (x: number, z: number) => contact ? len2(x - contact.p.x, z - contact.p.z) : Infinity;
+
 /** v3 round-up: how long (ticks) the herder holds a gate open for driven strays, and how near (dm) a stray must be to be driven. */
 export const HOLD_GATE_TICKS = 30;
 export const HERD_REACH = 30;
@@ -1884,6 +1979,12 @@ function holdGate(h: HomesteadState, v: Villager, t: Task, leg: Leg, ev: Events)
   t.progress += 2;
   const waiting = straysOf(h, id).filter((a) => a.go === 'home');
   if (waiting.length && t.progress < leg.ticks * 2) return;
+  if (contact && leg.amount === 1 && g.state === 'open' && gateHasPlayer(contact.grid, gateId)) {
+    // STAB-002 S2: never shut the gate onto the player: hold it a while longer, then leave it open and say so.
+    if (t.progress < (leg.ticks + NAV_GIVE_UP) * 2) return;
+    ev.log.push(`${v.name} left the ${gateLabel(gateId)} open: you are standing in it`);
+    leg.amount = 0;
+  }
   if (leg.amount === 1 && g.state === 'open') g.state = 'closed';
   if (!waiting.length) ev.log.push(`${v.name} brought the strays back into the ${id} and shut the gate`);
   t.progress = 0;
@@ -1924,6 +2025,8 @@ function stepVillager(world: World, h: HomesteadState, v: Villager, tick: number
   if (v.avoid) { v.avoid = v.avoid.filter((a) => a.until > tick); if (!v.avoid.length) delete v.avoid; }
   if (!v.task) v.task = plan(world, h, v, tick, budget);
   const t = v.task;
+  // STAB-002 S2: a villager with nothing to do, or only strolling, steps out of the founder's way.
+  if (contact && occupied && (!t || t.kind === 'idle') && villagerYield(world, h, v, occupied)) return;
   if (!t) return;
   // v4: a woodcutter still on the way to a tree at nightfall turns for home (nothing in hand is lost; the tree is free again).
   if (isWorkHomestead(h) && (t.kind === 'chop' || (t.kind === 'plant' && isWoodlandHomestead(h) && t.legs.length > 2)) && t.leg === 0 && isNight(tick)) { v.task = plan(world, h, v, tick, budget); if (!v.task) return; return stepVillager(world, h, v, tick, ev, budget, occupied, true); }
@@ -1978,7 +2081,7 @@ function stepVillager(world: World, h: HomesteadState, v: Villager, tick: number
 // ---------- animals ----------
 
 function stepAnimals(world: World, h: HomesteadState, tick: number): void {
-  const living: AnimalNav | null = isLivingHomestead(h) ? { grid: homesteadNav(world, h), budget: { left: ANIMAL_TICK_BUDGET } } : null;
+  const living: AnimalNav | null = isLivingHomestead(h) ? { grid: homesteadNav(world, h), budget: { left: ANIMAL_TICK_BUDGET }, tick } : null;
   const byEnclosure = new Map<EnclosureId, Animal[]>();
   for (const a of h.animals) {
     const id = SPECIES_RULES[a.species].enclosure;
@@ -2076,7 +2179,7 @@ export const DRIVEN_SPEED = 12;
 /** Search expansions per animal move and per tick for all animals (deterministic counts, not time). */
 export const ANIMAL_SEARCH = 1500;
 export const ANIMAL_TICK_BUDGET = 20_000;
-interface AnimalNav { grid: NavGrid; budget: { left: number } }
+interface AnimalNav { grid: NavGrid; budget: { left: number }; tick: number }
 
 /**
  * One v3 animal tick: needs as before, but every move follows the walking
@@ -2236,15 +2339,124 @@ export function escapeRoute(world: World, h: HomesteadState, g: NavGrid, a: Anim
 }
 
 /** v7: walk up to `speed` dm along cells (centres in turn). */
-function stepAlong(g: NavGrid, a: Animal, cells: readonly number[], speed: number): void {
+function stepAlong(g: NavGrid, a: Animal, cells: readonly number[], speed: number, sp: Space | null): void {
+  advance(a, cells.map((i) => { const c = cellCentre(g, i); return [c.x, c.z] as [number, number]; }), speed, sp ? roomOf(a, sp).clip : 0);
+}
+
+/**
+ * v7: move up to `speed` dm through the points in turn. With the player's
+ * presence (STAB-002 S2) a move that would bring the animal closer than
+ * `clip` dm to the player stops short (0: no presence). Returns whether the animal moved.
+ */
+function advance(a: Animal, pts: ReadonlyArray<readonly [number, number]>, speed: number, clip: number): boolean {
+  const x0 = a.x, z0 = a.z;
   let budget = speed;
-  for (const i of cells) {
-    const { x: tx, z: tz } = cellCentre(g, i);
+  for (const [tx, tz] of pts) {
     const d = len2(tx - a.x, tz - a.z);
+    if (clip > 0 && contact && d > 0) {
+      const reach = Math.min(d, budget);
+      const t = clipApproach(a.x, a.z, a.x + ((tx - a.x) / d) * reach, a.z + ((tz - a.z) / d) * reach, contact.p.x, contact.p.z, clip);
+      if (t < 1) {
+        const k = Math.floor(t * reach);
+        if (k > 0) { a.x += Math.trunc(((tx - a.x) / d) * k); a.z += Math.trunc(((tz - a.z) / d) * k); }
+        break;
+      }
+    }
     if (d <= budget) { a.x = tx; a.z = tz; budget -= d; continue; }
     a.x += Math.round(((tx - a.x) / d) * budget); a.z += Math.round(((tz - a.z) / d) * budget);
     break;
   }
+  return a.x !== x0 || a.z !== z0;
+}
+
+/**
+ * STAB-002 S2: an animal's distances from the player (dm), by species and
+ * age: `keep` covers its whole body at any heading, `side` only its width
+ * (an animal walking past alongside), `ring` is where it steps aside and
+ * which its routes keep out of, `clear` how far its new targets must be.
+ */
+interface Space { keep: number; side: number; pass: number; ring: number; clear: number }
+function spaceOf(a: Animal, tick: number): Space | null {
+  if (!contact) return null;
+  const young = tick - a.born < SPECIES_RULES[a.species].adultAge;
+  return { keep: keepDm(a.species, young), side: sideDm(a.species, young), pass: passDm(a.species, young), ring: ringDm(a.species, young), clear: targetClearDm(a.species, young) };
+}
+/**
+ * STAB-002 S2: how close its route (`avoid`, dm) and its steps (`clip`, dm)
+ * may come to the player. Normally routes keep out of the ring and steps
+ * stop at `keep`. An animal already inside its ring had no step taking it
+ * farther (cornered); while the player stands still it may then walk past
+ * them alongside, at `pass` (`passDm`), so nobody is pinned in a corner.
+ */
+function roomOf(a: Animal, sp: Space): { avoid: number; clip: number } {
+  // Only past a player standing still (their presence is where they are), with 2 dm to spare; past a moving
+  // player the presence is up to a tick old, so the animal keeps its full distance and waits.
+  const still = contact!.p.mx === 0 && contact!.p.mz === 0;
+  return presenceDist(a.x, a.z) < sp.ring && still ? { avoid: sp.pass, clip: sp.pass } : { avoid: sp.ring, clip: sp.keep };
+}
+/** STAB-002 S2: cells an animal does not route through: the player's, and those whose centre is within `room` dm of the player. */
+function avoidPlayer(g: NavGrid, room: number): (i: number) => boolean {
+  const c = contact!;
+  return (i) => c.cells.has(i) || len2(g.cellX(i) * DM + 5 - c.p.x, g.cellZ(i) * DM + 5 - c.p.z) < room;
+}
+/** STAB-002 S2: retry a target choice (at most 3 more draws) while it lies within `clear` of the player; null if it still does. */
+function awayFromPlayer<T extends { x: number; z: number } | null>(sp: Space | null, pick: () => T): T | null {
+  let p = pick();
+  if (!sp) return p;
+  for (let k = 0; k < 3 && p && presenceDist(p.x, p.z) < sp.clear; k++) p = pick();
+  return p && presenceDist(p.x, p.z) < sp.clear ? null : p;
+}
+/** Step-aside preference (dm) for a step that also brings the animal nearer its own target. */
+const ONWARD_BONUS = 15;
+/** Step-aside speed (dm per tick): a startled step, never more than one cell. */
+export const YIELD_SPEED = 10;
+/**
+ * STAB-002 S2 (rules v7 with presence): an animal within its ring of the
+ * player steps to the neighbour cell that takes it farthest from the player
+ * and off the player's line of travel. The cell must be free, reachable by
+ * the animal's own moves, not through a gate, on the same side of its
+ * enclosure fence and, inside, in the enclosure's main area; the step must
+ * end farther from the player than it started (so standing next to a still
+ * player gives one retreat, never a back-and-forth). 'held' when no such cell
+ * exists (cornered: it stands, and the player's own contact keeps them apart).
+ */
+function yieldStep(world: World, h: HomesteadState, g: NavGrid, a: Animal, fac: Facility, sp: Space): 'none' | 'moved' | 'held' {
+  const c = contact!;
+  const d0 = presenceDist(a.x, a.z);
+  if (d0 >= sp.ring) return 'none';
+  const cx = Math.floor(a.x / DM), cz = Math.floor(a.z / DM);
+  if (!g.inside(cx, cz)) return 'none';
+  const inside = insideRect(fac.rect, a.x, a.z);
+  const pen = inside ? penCells(world, h, g, SPECIES_RULES[a.species].enclosure) : null;
+  const ml = len2(c.p.mx, c.p.mz);
+  const going = a.tx !== a.x || a.tz !== a.z;
+  let best: { x: number; z: number } | null = null, bestScore = -Infinity;
+  for (const [dx, dz] of DIRS8) {
+    const nx = cx + dx, nz = cz + dz;
+    if (!g.inside(nx, nz)) continue;
+    const j = g.index(nx, nz);
+    if (g.block[j] !== BLOCK.none || c.cells.has(j)) continue;
+    if (!canMove(g, cx, cz, nx, nz, ANIMAL_MOVE) || g.gateBetween(cx, cz, nx, nz)) continue;
+    const t = cellCentre(g, j);
+    if (insideRect(fac.rect, t.x, t.z) !== inside) continue;
+    if (pen && pen.list.length && !pen.main.has(j)) continue;
+    const dd = len2(t.x - a.x, t.z - a.z);
+    const ex = dd <= YIELD_SPEED ? t.x : a.x + Math.round(((t.x - a.x) / dd) * YIELD_SPEED);
+    const ez = dd <= YIELD_SPEED ? t.z : a.z + Math.round(((t.z - a.z) / dd) * YIELD_SPEED);
+    const d1 = presenceDist(ex, ez);
+    if (d1 <= d0) continue;
+    // An animal on its way somewhere never steps back from its target: that would undo the walk it takes next tick.
+    if (going && len2(ex - a.tx, ez - a.tz) > len2(a.x - a.tx, a.z - a.tz)) continue;
+    // Off the player's line of travel: the distance of the cell from that line (0 for a player standing still).
+    const off = ml ? Math.abs((t.x - c.p.x) * c.p.mz - (t.z - c.p.z) * c.p.mx) / ml : 0;
+    // Among the steps away, one that also gets it nearer its own target goes on past the player.
+    const onward = going && len2(ex - a.tx, ez - a.tz) < len2(a.x - a.tx, a.z - a.tz) ? ONWARD_BONUS : 0;
+    const score = d1 + off + onward;
+    if (score > bestScore) { bestScore = score; best = { x: ex, z: ez }; }
+  }
+  if (!best) return 'held';
+  a.x = best.x; a.z = best.z;
+  return 'moved';
 }
 
 /**
@@ -2257,29 +2469,28 @@ function walkTo(world: World, nav: AnimalNav, a: Animal, goal: NavGoal, speed: n
   const g = nav.grid;
   const cx = Math.floor(a.x / DM), cz = Math.floor(a.z / DM);
   if (!g.inside(cx, cz)) return 'fail';
+  // STAB-002 S2: a goal at the player is no goal now; routes go round the player's ring, never through it.
+  const sp = spaceOf(a, nav.tick);
+  const room = sp ? roomOf(a, sp) : null;
+  if (room && presenceDist(goal.x, goal.z) < room.avoid) return 'fail';
+  // A spot goal whose only cell is avoided (the player's cell) cannot be reached either: no search for it.
+  if (room && goal.reach <= ANIMAL_REACH && g.inside(Math.floor(goal.x / DM), Math.floor(goal.z / DM))
+    && avoidPlayer(g, room.avoid)(g.index(Math.floor(goal.x / DM), Math.floor(goal.z / DM)))) return 'fail';
   if (nav.budget.left <= 0) return 'wait';
-  const res = findPath(world, g, a, goal, { openGatesOnly: true, maxExpansions: Math.min(ANIMAL_SEARCH, nav.budget.left) });
+  const res = findPath(world, g, a, goal, { openGatesOnly: true, maxExpansions: Math.min(ANIMAL_SEARCH, nav.budget.left), ...(room ? { avoid: avoidPlayer(g, room.avoid) } : {}) });
   nav.budget.left -= res.expanded;
-  if (!res.ok) return res.code === 'budget' ? 'wait' : 'fail';
+  // With the player's ring in the way a search that runs out is a goal cut off by the player, not a busy tick: choose again.
+  if (!res.ok) return res.code === 'budget' && !room ? 'wait' : 'fail';
   if (!res.cells.length) {
-    if (Math.floor(goal.x / DM) === cx && Math.floor(goal.z / DM) === cz) {
-      const d = len2(goal.x - a.x, goal.z - a.z);
-      if (d <= speed) { a.x = goal.x; a.z = goal.z; }
-      else { a.x += Math.round(((goal.x - a.x) / d) * speed); a.z += Math.round(((goal.z - a.z) / d) * speed); }
-    }
+    if (Math.floor(goal.x / DM) === cx && Math.floor(goal.z / DM) === cz) advance(a, [[goal.x, goal.z]], speed, room?.clip ?? 0);
     return 'arrived';
   }
   const pts: Array<[number, number]> = [];
   for (let k = 0; k < res.cells.length; k += 2) pts.push([res.cells[k] * DM + 5, res.cells[k + 1] * DM + 5]);
   const [lx, lz] = [res.cells[res.cells.length - 2], res.cells[res.cells.length - 1]];
   if (Math.floor(goal.x / DM) === lx && Math.floor(goal.z / DM) === lz) pts[pts.length - 1] = [goal.x, goal.z];
-  let budget = speed;
-  for (const [tx, tz] of pts) {
-    const d = len2(tx - a.x, tz - a.z);
-    if (d <= budget) { a.x = tx; a.z = tz; budget -= d; continue; }
-    a.x += Math.round(((tx - a.x) / d) * budget); a.z += Math.round(((tz - a.z) / d) * budget);
-    break;
-  }
+  // Stopped short of the player without a step: no way past now (the animal chooses again).
+  if (!advance(a, pts, speed, room?.clip ?? 0) && room) return 'fail';
   return 'walking';
 }
 
@@ -2303,12 +2514,23 @@ function herdAnimal(world: World, h: HomesteadState, a: Animal, fac: Facility, e
   const idle = () => { a.act = 'wander'; a.until = tick; a.tx = a.x; a.tz = a.z; };
   if (!a.act) idle();
   // (1) Walk out of a blocked or cut-off cell.
+  const sp = spaceOf(a, tick);
   const out = escapeRoute(world, h, g, a);
   if (out && out.length) {
-    stepAlong(g, a, out, a.go === 'home' ? DRIVEN_SPEED : ANIMAL_SPEED);
+    stepAlong(g, a, out, a.go === 'home' ? DRIVEN_SPEED : ANIMAL_SPEED, sp);
     if (a.act !== 'wander') { a.act = 'wander'; a.until = tick; }
     if (!a.go) { a.tx = a.x; a.tz = a.z; }
     return;
+  }
+  // (1b) STAB-002 S2: the player is close: step aside. One on its way somewhere keeps its target and walks on
+  // next tick; one standing, grazing or resting gets up. Cornered ('held'), it carries on: its route may then pass
+  // the player alongside, and its steps stop short of the player.
+  if (sp) {
+    const going = a.tx !== a.x || a.tz !== a.z;
+    if (yieldStep(world, h, g, a, fac, sp) === 'moved') {
+      if (!going) { a.act = 'wander'; a.until = tick; a.tx = a.x; a.tz = a.z; }
+      return;
+    }
   }
   // (2) Gate runs and drives home, as under v3.
   if (a.go === 'out' && (!inside || st !== 'open')) { delete a.go; idle(); }
@@ -2317,7 +2539,11 @@ function herdAnimal(world: World, h: HomesteadState, a: Animal, fac: Facility, e
   if (a.go === 'home') {
     a.act = 'wander';
     const goal = st === 'open' ? { x: a.tx, z: a.tz, reach: ANIMAL_REACH } : { ...centre(gate.outside), reach: ANIMAL_REACH };
-    walkTo(world, nav, a, goal, DRIVEN_SPEED);
+    // STAB-002 S2: a home spot at the player is swapped for another one away from them (it waits outside meanwhile).
+    if (walkTo(world, nav, a, goal, DRIVEN_SPEED) === 'fail' && sp && st === 'open' && presenceDist(a.tx, a.tz) < sp.clear) {
+      const p = awayFromPlayer(sp, () => penPoint(world, h, g, rule.enclosure));
+      if (p) { a.tx = p.x; a.tz = p.z; }
+    }
     return;
   }
   if (a.go === 'out') {
@@ -2364,8 +2590,11 @@ function herdAnimal(world: World, h: HomesteadState, a: Animal, fac: Facility, e
   // (4) Idle: choose what to do next.
   if (hungry && (!inside || encl.water > 0 && (pasture || encl.feed >= rule.feed))) {
     if (!inside) { a.act = 'graze'; a.until = tick + span(h, HERD_RULES.graze); return; } // a stray grazes the wild grass where it stands
-    if (pasture) { const p = penPoint(world, h, g, rule.enclosure, true); a.act = 'graze'; a.until = 0; a.tx = p.x; a.tz = p.z; }
-    else { a.act = 'drink'; a.until = 0; a.tx = trough.x; a.tz = trough.z; }
+    if (pasture) {
+      const p = awayFromPlayer(sp, () => penPoint(world, h, g, rule.enclosure, true));
+      if (!p) return; // every grass spot drawn was at the player: stand this tick
+      a.act = 'graze'; a.until = 0; a.tx = p.x; a.tz = p.z;
+    } else { a.act = 'drink'; a.until = 0; a.tx = trough.x; a.tz = trough.z; }
     return;
   }
   const night = isNight(tick);
@@ -2379,25 +2608,30 @@ function herdAnimal(world: World, h: HomesteadState, a: Animal, fac: Facility, e
   }
   if (!night && roll >= R.dayWander && roll < R.dayWander + R.dayGraze) {
     // A casual grazing bout (no meal unless hungry when it ends): at a grass cell inside, where it stands outside.
-    if (inside) { const p = penPoint(world, h, g, rule.enclosure, true); a.act = 'graze'; a.until = 0; a.tx = p.x; a.tz = p.z; }
-    else { a.act = 'graze'; a.until = tick + span(h, R.graze); }
+    if (inside) {
+      const p = awayFromPlayer(sp, () => penPoint(world, h, g, rule.enclosure, true));
+      if (!p) return;
+      a.act = 'graze'; a.until = 0; a.tx = p.x; a.tz = p.z;
+    } else { a.act = 'graze'; a.until = tick + span(h, R.graze); }
     return;
   }
   if (night ? roll >= R.nightRest + R.nightWander : roll >= R.dayWander) return; // stands a moment
   // A walk: inside to a free cell of the main area (or out through an open gate), outside near its gate (or home).
-  let p: { x: number; z: number };
+  let p: { x: number; z: number } | null;
   if (inside) {
     if (st === 'open' && !gateHeld(h, gate.id) && rnd(h) < ESCAPE_CHANCE) {
       a.go = 'out';
-      p = strayCell(h, g, gate.outside[0] + Math.floor(rnd(h) * 7) - 3, gate.outside[1] - Math.floor(rnd(h) * 4), gate.outside) ?? centre(gate.outside);
-    } else p = penPoint(world, h, g, rule.enclosure);
+      p = awayFromPlayer(sp, () => strayCell(h, g, gate.outside[0] + Math.floor(rnd(h) * 7) - 3, gate.outside[1] - Math.floor(rnd(h) * 4), gate.outside) ?? centre(gate.outside));
+    } else p = awayFromPlayer(sp, () => penPoint(world, h, g, rule.enclosure));
   } else if (st === 'open' && rnd(h) < RETURN_CHANCE) {
     a.go = 'home';
-    p = penPoint(world, h, g, rule.enclosure);
+    p = awayFromPlayer(sp, () => penPoint(world, h, g, rule.enclosure));
   } else {
     const cx = Math.floor(a.x / DM), cz = Math.floor(a.z / DM);
-    p = strayCell(h, g, cx + Math.floor(rnd(h) * 7) - 3, cz + Math.floor(rnd(h) * 7) - 3, gate.outside) ?? { x: a.x, z: a.z };
+    p = awayFromPlayer(sp, () => strayCell(h, g, cx + Math.floor(rnd(h) * 7) - 3, cz + Math.floor(rnd(h) * 7) - 3, gate.outside)) ?? { x: a.x, z: a.z };
   }
+  // STAB-002 S2: no walk target near the player (it stands this tick instead).
+  if (!p) { delete a.go; return; }
   a.act = 'wander'; a.until = tick; a.tx = p.x; a.tz = p.z;
   // Start walking this tick.
   const r = walkTo(world, nav, a, { x: a.tx, z: a.tz, reach: ANIMAL_REACH }, a.go === 'home' ? DRIVEN_SPEED : ANIMAL_SPEED);
@@ -2473,9 +2707,15 @@ function stepPlots(h: HomesteadState, tick: number, ev: Events): void {
 export const recentHomesteadEvents = new WeakMap<World, string[]>();
 
 /** One homestead tick. Called by the journaled `tick` command after jobs. */
-export function stepHomestead(world: World, tick: number): string[] {
+export function stepHomestead(world: World, tick: number, presence?: Presence): string[] {
   const h = world.homestead;
   if (!h) return [];
+  // STAB-002 S2: the player's presence counts only under rules v7 (older rules never see it, so their journals replay unchanged).
+  contact = presence && isHerdHomestead(h) ? contactOf(world, h, presence) : null;
+  try { return stepHomesteadTick(world, h, tick); } finally { contact = null; }
+}
+
+function stepHomesteadTick(world: World, h: HomesteadState, tick: number): string[] {
   const ev: Events = { log: [] };
   // v5: the woodland's scheduled lifecycle events, quota and a slice of natural seeding, before anyone acts.
   if (isWoodlandHomestead(h)) stepWoodland(world, h, tick, ev.log);
@@ -2491,6 +2731,8 @@ export function stepHomestead(world: World, tick: number): string[] {
     // v3: cells held by villagers, in a fixed id order; each villager's own cells are released while it moves.
     const occupied = new Map<number, string>();
     let g = homesteadNav(world, h);
+    // STAB-002 S2: the player's cells first, under the id 'player' (the same map, the same queue and give-up rules).
+    if (contact) for (const c of contact.cells) occupied.set(c, PLAYER_ID);
     // Where each stands first (in id order), then the cells being stepped into that nobody stands on.
     for (const k of [0, 1]) for (const v of order) { const c = footprint(g, v)[k]; if (c !== undefined && !occupied.has(c)) occupied.set(c, v.id); }
     for (const v of order) {
@@ -2946,7 +3188,8 @@ function validateNav(raw: unknown, tick: number, version: number): NavState {
   let wait: NavState['wait'];
   if (raw.wait !== undefined) {
     const w = raw.wait;
-    if (version < HOMESTEAD_LIVING_VERSION || !isObj(w) || !str(w.by, /^villager:\d{1,3}$/) || !text160(w.reason) || !int(w.since, 0, tick)) throw new Error('invalid villager wait');
+    // STAB-002 S2: under rules v7 a villager may wait for the player.
+    if (version < HOMESTEAD_LIVING_VERSION || !isObj(w) || !str(w.by, version >= HOMESTEAD_HERD_VERSION ? /^(?:villager:\d{1,3}|player)$/ : /^villager:\d{1,3}$/) || !text160(w.reason) || !int(w.since, 0, tick)) throw new Error('invalid villager wait');
     wait = { by: w.by, reason: w.reason, since: w.since };
   }
   return navSnapshot({ path: raw.path as number[], plan: raw.plan, dest: raw.dest as [number, number, number],

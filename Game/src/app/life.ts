@@ -7,6 +7,7 @@ import { buildLifeMeshes, disposeLifeMeshes } from '../render/life';
 import { LifeIntent, LifePanel } from '../ui/life';
 import { BrowserSaveStore } from './persistence';
 import { Command, GameSession } from './session';
+import type { Presence } from '../sim/bodies';
 
 export interface LifeGameOptions {
   session: GameSession;
@@ -95,12 +96,13 @@ export class LifeGame {
    * path. Saving is left to the caller's SaveScheduler (throttled), so this
    * returns whether an accepted tick changed state.
    */
-  realtimeTick(): { ok: boolean; reasons: string[] } {
+  realtimeTick(presence?: Presence | null): { ok: boolean; reasons: string[] } {
     const session = this.options.session;
     if (session.journal.schema !== 3 || !session.world.life) return { ok: false, reasons: ['legacy world'] };
+    // STAB-002 S2: the player's quantised presence rides on the tick (only when there is one: see `playerPresence`).
     const result = session.dispatch({
       schema: 3, id: session.commandId('tick', 'realtime'), type: 'tick', ticks: 1,
-      expectedRevision: session.world.revision,
+      expectedRevision: session.world.revision, ...(presence ? { presence } : {}),
     });
     if (!result.ok) return { ok: false, reasons: result.reasons };
     if (result.outcome.type === 'tick') {

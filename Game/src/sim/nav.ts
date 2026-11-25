@@ -918,6 +918,16 @@ export interface NavContext {
   /** Who another walker is waiting for right now: a mutual wait is broken by the later id stepping aside. */
   waitingOn?(id: string): string | undefined;
   nameOf?(id: string): string;
+  /**
+   * STAB-002 S2 (rules v7 with the player's presence): how far (0..1) this
+   * walker may go along a move from a to b (dm) before it would come too
+   * close to the player. A cut move ends there and the walker waits for
+   * `clipBy` (the player). Absent: every move is whole.
+   */
+  clip?(ax: number, az: number, bx: number, bz: number): number;
+  clipBy?: string;
+  /** STAB-002 S2: a gate that must not be closed right now (the player stands in one of its cells). */
+  keepOpen?(gateId: string): boolean;
 }
 
 /** Expansions a detour around other walkers may use before the walker just waits in line. */
@@ -1034,6 +1044,21 @@ export function navStep(ctx: NavContext, w: { x: number; z: number; nav?: NavSta
     }
     const [tx, tz] = finalPoint(nx, nz, cells.length === 2, nav.dest);
     const d = dist(w.x, w.z, tx, tz);
+    if (ctx.clip) {
+      // STAB-002 S2: never walk into the player; stop short and wait for them to pass.
+      const reach = Math.min(d, budget);
+      const ex = d > 0 ? w.x + ((tx - w.x) / d) * reach : tx, ez = d > 0 ? w.z + ((tz - w.z) / d) * reach : tz;
+      const t = ctx.clip(w.x, w.z, ex, ez);
+      if (t < 1) {
+        const k = Math.floor(t * reach);
+        if (k > 0 && d > 0) {
+          w.x += Math.trunc(((tx - w.x) / d) * k); w.z += Math.trunc(((tz - w.z) / d) * k);
+          moved = true;
+        }
+        waitFor = ctx.clipBy ?? 'player'; waitCell = [nx, nz];
+        break;
+      }
+    }
     if (d <= budget) {
       w.x = tx; w.z = tz; budget -= d; cells.splice(0, 2); moved = true;
       if (nav.opened && nav.far && nav.far[0] === nx && nav.far[1] === nz) closeBehind(ctx, w, nav, true);
@@ -1096,6 +1121,7 @@ function queue(ctx: NavContext, w: { x: number; z: number; nav?: NavState }, nav
       if (!g.inside(sx, sz) || (sx === cell[0] && sz === cell[1]) || avoid(g.index(sx, sz)) || !canMove(g, cx, cz, sx, sz)) continue;
       if (g.gateBetween(cx, cz, sx, sz)) continue;
       const tx = centreDm(sx), tz = centreDm(sz), d = dist(w.x, w.z, tx, tz);
+      if (ctx.clip && ctx.clip(w.x, w.z, d <= speed ? tx : w.x + ((tx - w.x) / d) * speed, d <= speed ? tz : w.z + ((tz - w.z) / d) * speed) < 1) continue;
       if (d <= speed) { w.x = tx; w.z = tz; } else { w.x += Math.round(((tx - w.x) / d) * speed); w.z += Math.round(((tz - w.z) / d) * speed); }
       nav.path = d <= speed ? [] : [sx, sz];
       nav.plan = '';
@@ -1122,6 +1148,8 @@ function closeBehind(ctx: NavContext, w: { x: number; z: number }, nav: NavState
   const cx = cellOfDm(w.x), cz = cellOfDm(w.z);
   const onGate = !!cells && ((cells[0] === cx && cells[1] === cz) || (cells[2] === cx && cells[3] === cz));
   if (!through && onGate) return;
+  // STAB-002 S2: never shut a gate onto the player; it is closed on a later tick, once they are out of it.
+  if (ctx.keepOpen?.(nav.opened)) return;
   if (ctx.gate(nav.opened) === 'open') ctx.setGate(nav.opened, 'closed');
   delete nav.opened;
   delete nav.far;

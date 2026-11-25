@@ -23,6 +23,7 @@ import { LIFE_TRUNK, TreeStage, treeLife } from './woodland';
 // M012: the settlement's structure layer (fence and gate edges, buildings) is the one villagers and animals route on.
 import { settlementCollision } from './homestead';
 import { structureHits } from './nav';
+import { DynamicBody, penetration, pushNormal } from './bodies';
 
 export const CHARACTER_RADIUS = 0.3;
 export const CHARACTER_HEIGHT = 1.7;
@@ -137,6 +138,11 @@ export interface CharacterState {
   jumpBuffer: number;
   /** Last dry standing position: where a dead character respawns. */
   safe: { x: number; y: number; z: number };
+  /**
+   * STAB-002 S2: seconds the founder has been pressing against a body
+   * without getting anywhere (present only while bodies are near).
+   */
+  pressing?: number;
 }
 
 export interface CharacterInput {
@@ -295,6 +301,110 @@ function resolveEntities(world: World, s: CharacterState): void {
   }
 }
 
+// ---------- STAB-002 S2: soft contact with moving bodies ----------
+//
+// Player-local physics, like the voxel, fence and trunk collision above. The
+// bodies (farm animals, villagers, wildlife) are capsules built from sim
+// state by the caller (`sim/bodies.ts`); nothing here changes them. A move
+// that would go deeper into a body is cut at the contact point; a move that
+// keeps or reduces the overlap is always allowed, so a body never holds the
+// character; an overlap (a body walked into a standing founder) is pushed out
+// at no more than CONTACT_PUSH_SPEED, only to free positions.
+
+/** Push-out speed (m/s): faster than any animal or villager is drawn moving into the founder, far below walking. */
+export const CONTACT_PUSH_SPEED = 1.5;
+/**
+ * After pressing against bodies this long without getting anywhere (longer
+ * than one 2 s settlement tick, in which an animal that can yield has
+ * yielded), the founder may squeeze past: moves may go up to
+ * CONTACT_SQUEEZE_DEPTH into a body (never through it: every body is wider
+ * than twice that), and the push-out waits until they stop pressing.
+ */
+export const CONTACT_SQUEEZE_AFTER = 2.5;
+export const CONTACT_SQUEEZE_DEPTH = 0.12;
+/** Bodies farther than this from the character (m, either axis, beyond their own reach) are not tested. */
+const CONTACT_BROAD = 1.2;
+
+/** Does this body share height with the character's box at feet y? */
+export function bodyLevel(b: DynamicBody, y: number): boolean {
+  return y < b.y + b.h - 0.05 && y + CHARACTER_HEIGHT > b.y + 0.02;
+}
+/** The deepest overlap with any body at (x, z), and the body. */
+function deepest(bodies: ReadonlyArray<DynamicBody>, x: number, y: number, z: number): number {
+  let worst = 0;
+  for (const b of bodies) {
+    if (!bodyLevel(b, y)) continue;
+    const p = penetration(b, x, z, CHARACTER_RADIUS);
+    if (p > worst) worst = p;
+  }
+  return worst;
+}
+/** Bodies near enough to matter this step. */
+function nearBodies(bodies: ReadonlyArray<DynamicBody> | undefined, x: number, z: number): DynamicBody[] {
+  if (!bodies || !bodies.length) return [];
+  const out: DynamicBody[] = [];
+  for (const b of bodies) {
+    const reach = b.r + b.hl + CHARACTER_RADIUS + CONTACT_BROAD;
+    if (Math.abs(b.x - x) <= reach && Math.abs(b.z - z) <= reach) out.push(b);
+  }
+  return out;
+}
+/**
+ * How far (0..1) the character may move from (x, z) by (dx, dz) without
+ * going deeper into any body than it already is. Each body's overlap along
+ * a straight move is convex, so a bisection on the first deepening finds
+ * the contact point.
+ */
+function bodyFraction(bodies: ReadonlyArray<DynamicBody>, x: number, y: number, z: number, dx: number, dz: number, allow = 0): number {
+  let t = 1;
+  for (const b of bodies) {
+    if (!bodyLevel(b, y)) continue;
+    const p0 = penetration(b, x, z, CHARACTER_RADIUS);
+    // Deeper at the end: find the last point that is not deeper than the start (or than contact, or the squeeze depth).
+    const limit = Math.max(allow, p0);
+    const p1 = penetration(b, x + dx * t, z + dz * t, CHARACTER_RADIUS);
+    if (p1 <= limit + 1e-6) continue;
+    let lo = 0, hi = t;
+    for (let k = 0; k < 14; k++) {
+      const mid = (lo + hi) / 2;
+      if (penetration(b, x + dx * mid, z + dz * mid, CHARACTER_RADIUS) <= limit + 1e-6) lo = mid; else hi = mid;
+    }
+    t = lo;
+  }
+  return t;
+}
+
+/**
+ * Overlapping a body (it moved into the founder, or a load put it there):
+ * push out along the contact normal by at most CONTACT_PUSH_SPEED * dt per
+ * body, only to positions clear of terrain, structures and settlement
+ * structures and not deeper into any other body. No snap, no bounce.
+ */
+function separateBodies(world: World, s: CharacterState, near: ReadonlyArray<DynamicBody>, dt: number, allow = 0): void {
+  for (const b of near) {
+    if (!bodyLevel(b, s.y)) continue;
+    const p = penetration(b, s.x, s.z, CHARACTER_RADIUS) - allow;
+    if (p <= 1e-4) continue;
+    const { nx, nz } = pushNormal(b, s.x, s.z);
+    const step = Math.min(p, CONTACT_PUSH_SPEED * dt);
+    const base = settlementHits(world, s.x, s.y, s.z);
+    // The whole push, else its x or z part alone (against a wall the founder slides along it, as when walking).
+    // Accepted when it lowers the deepest overlap with any body: pinched between two bodies, the founder
+    // settles between them instead of being held deep inside one.
+    const before = deepest(near, s.x, s.y, s.z);
+    for (const [px, pz] of [[nx * step, nz * step], [nx * step / 2, nz * step / 2], [nx * step, 0], [0, nz * step]]) {
+      if (Math.abs(px) + Math.abs(pz) < 1e-6) continue;
+      const tx = s.x + px, tz = s.z + pz;
+      if (deepest(near, tx, s.y, tz) < before - 1e-6 && clear(world, tx, s.y, tz, base)) { s.x = tx; s.z = tz; break; }
+    }
+  }
+}
+
+/** STAB-002 S2 test and metrics hook: the deepest overlap (m) of the character's disc with any of the bodies. */
+export function bodyOverlap(bodies: ReadonlyArray<DynamicBody>, x: number, y: number, z: number): number {
+  return deepest(bodies, x, y, z);
+}
+
 /**
  * Depth of water over the feet: the water surface (top of the water cells in
  * the feet column) minus the feet height. 0 when the feet are dry. Searches a
@@ -320,7 +430,8 @@ function currentAt(world: World, x: number, z: number, surface: number): { dx: n
  * Advance one fixed step. Deterministic: the same world, state and input give
  * the same result on every machine.
  */
-export function stepCharacter(world: World, prev: CharacterState, input: CharacterInput, dt = FIXED_STEP): CharacterState {
+export function stepCharacter(world: World, prev: CharacterState, input: CharacterInput, dt = FIXED_STEP,
+  bodies?: ReadonlyArray<DynamicBody>): CharacterState {
   const s: CharacterState = { ...prev, hurt: 0 };
   if (s.dead) {
     // A dead character drifts to rest; the controller decides when to respawn.
@@ -388,9 +499,22 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
 
   // Horizontal: axis-separated with automatic step-up onto ledges.
   const wasGrounded = s.grounded;
+  // STAB-002 S2: moving bodies near enough to touch this step (none while swimming).
+  const near = swimming ? [] : nearBodies(bodies, s.x, s.z);
+  const pushing = Math.hypot(mx, mz) > 0.1;
+  const squeezing = near.length > 0 && pushing && (s.pressing ?? 0) >= CONTACT_SQUEEZE_AFTER;
   for (const axis of ['x', 'z'] as const) {
-    const delta = (axis === 'x' ? s.vx : s.vz) * dt;
+    let delta = (axis === 'x' ? s.vx : s.vz) * dt;
     if (delta === 0) continue;
+    // A move into a body stops at the contact point (it never goes deeper); the velocity on that axis ends there.
+    if (near.length) {
+      const f = bodyFraction(near, s.x, s.y, s.z, axis === 'x' ? delta : 0, axis === 'z' ? delta : 0, squeezing ? CONTACT_SQUEEZE_DEPTH : 0);
+      if (f < 1) {
+        delta *= f;
+        if (axis === 'x') s.vx = 0; else s.vz = 0;
+        if (Math.abs(delta) < 1e-9) continue;
+      }
+    }
     const nx = axis === 'x' ? s.x + delta : s.x;
     const nz = axis === 'z' ? s.z + delta : s.z;
     // Settlement structures already touched never hold the character (see settleBlocked).
@@ -444,6 +568,14 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
   }
 
   resolveEntities(world, s);
+  if (near.length) {
+    // While squeezing past, only overlap beyond the squeeze depth is pushed out (a body walking into a squeezing founder still moves them).
+    separateBodies(world, s, near, dt, squeezing ? CONTACT_SQUEEZE_DEPTH : 0);
+    // Pressing against a body without getting anywhere (this is what lets a founder squeeze past a cornered animal).
+    const touching = near.some((b) => bodyLevel(b, s.y) && penetration(b, s.x, s.z, CHARACTER_RADIUS) > -0.02);
+    const progress = Math.hypot(s.x - prev.x, s.z - prev.z) / dt;
+    s.pressing = pushing && touching && progress < 0.3 ? (s.pressing ?? 0) + dt : squeezing && pushing && touching ? s.pressing : 0;
+  } else if (s.pressing !== undefined) delete s.pressing;
   // Landing (also on a wading bed) or swimming re-arms the jumps; wet feet in mid-air do not.
   if (s.grounded || swimming) { s.airJumpUsed = false; s.jumped = false; }
   if (s.jumpBuffer > 0) s.jumpBuffer = Math.max(0, s.jumpBuffer - dt);
