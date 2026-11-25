@@ -4,6 +4,8 @@ interface Window {
   __metrics: Record<string, any>;
   __probe: { renderer: any; camera?: any; THREE?: any; terrainView?: any };
   __renderBreakdown?: () => import('./app/render-breakdown').RenderBreakdown;
+  /** M015 evidence: restart the rolling frame and section statistics (presentation only). */
+  __perfReset?: () => void;
   __scene?: any;
   __world?: any;
 }

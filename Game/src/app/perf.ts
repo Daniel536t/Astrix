@@ -11,6 +11,10 @@ export interface FrameStatsReport {
   longFrames: number;
   /** Frames slower than 100 ms (visible hitch) in the rolling window. */
   hitches: number;
+  /** Frames slower than 50 ms in the rolling window (the perf monitor's long frame). */
+  over50: number;
+  /** Frames slower than 50 ms since the start (not windowed). */
+  over50Total: number;
   windowFrames: number;
   heapMB: number | null;
 }
@@ -20,6 +24,7 @@ export class FrameStats {
   private next = 0;
   private filled = 0;
   private total = 0;
+  private over50Total = 0;
 
   constructor(private readonly windowSize = 600) {
     this.samples = new Float32Array(windowSize);
@@ -30,27 +35,30 @@ export class FrameStats {
     this.next = (this.next + 1) % this.windowSize;
     this.filled = Math.min(this.filled + 1, this.windowSize);
     this.total++;
+    if (frameMs > 50) this.over50Total++;
   }
 
   reset(): void {
     this.next = 0;
     this.filled = 0;
+    this.over50Total = 0;
   }
 
   report(): FrameStatsReport {
     const values = Array.from(this.samples.subarray(0, this.filled)).sort((a, b) => a - b);
     const at = (q: number) => values.length === 0 ? 0
       : Math.round(values[Math.min(values.length - 1, Math.floor(q * (values.length - 1)))] * 10) / 10;
-    let longFrames = 0, hitches = 0;
+    let longFrames = 0, hitches = 0, over50 = 0;
     for (const v of values) {
       if (v > 33) longFrames++;
+      if (v > 50) over50++;
       if (v > 100) hitches++;
     }
     const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
     return {
       frames: this.total,
       p50Ms: at(0.5), p95Ms: at(0.95), p99Ms: at(0.99), maxMs: at(1),
-      longFrames, hitches, windowFrames: values.length,
+      longFrames, hitches, over50, over50Total: this.over50Total, windowFrames: values.length,
       heapMB: memory ? Math.round(memory.usedJSHeapSize / 1048576) : null,
     };
   }

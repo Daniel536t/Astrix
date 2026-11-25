@@ -826,6 +826,19 @@ export class VoxelTerrainView {
   private waterGroup = new THREE.Group();
   private farWaterHole: { value: THREE.Vector4 };
   onChunksChanged: (() => void) | null = null;
+  /**
+   * M015: main-thread cost of streaming steps, for the perf sections
+   * ('chunkinstall', 'chunkpad', 'chunkgeom', 'chunkwater', 'macro').
+   * Worker results arrive outside the frame loop, so they are reported here.
+   */
+  onSection: ((name: string, ms: number) => void) | null = null;
+  private timed<T>(name: string, run: () => T): T {
+    if (!this.onSection) return run();
+    const t0 = performance.now();
+    const out = run();
+    this.onSection(name, performance.now() - t0);
+    return out;
+  }
 
   constructor(world: World, scene: THREE.Scene, opts: VoxelTerrainViewOptions = {}) {
     this.world = world;
@@ -949,8 +962,7 @@ export class VoxelTerrainView {
       // The main thread is the only World writer: install only if still wanted.
       if (this.world.seed !== seed || this.world.params.generatorVersion !== version
         || this.world.chunks.has(key)) { this.workerStats.discarded++; return; }
-      seedBaseColumns(this.world, key, r.columns);
-      installBaseChunk(this.world, r.base, r.ms);
+      this.timed('chunkinstall', () => { seedBaseColumns(this.world, key, r.columns); installBaseChunk(this.world, r.base, r.ms); });
       this.workerStats.generated++;
       this.workerStats.genMs += r.ms;
     });
@@ -963,7 +975,7 @@ export class VoxelTerrainView {
     this.meshStamp.set(key, stamp);
     this.world.dirty.delete(key);
     const ox = chunkOriginX(chunk.cx), oz = chunkOriginZ(chunk.cz);
-    const padded = paddedFor(this.world, chunk);
+    const padded = this.timed('chunkpad', () => paddedFor(this.world, chunk));
     void this.pool.mesh(padded, chunk.heights, ox, oz, this.world.seed).then((r) => {
       // Superseded (newer request, unloaded or synchronously rebuilt) results are dropped.
       if (this.meshStamp.get(key) !== stamp) { this.workerStats.discarded++; return; }
@@ -972,7 +984,7 @@ export class VoxelTerrainView {
       if (!current) { this.workerStats.discarded++; return; }
       // An edit to this chunk while in flight re-marked it dirty; the result is
       // still shown now and replaced by the next (fresh) request.
-      this.adoptMesh(key, current, geometryFromArrays(r.arrays));
+      this.adoptMesh(key, current, this.timed('chunkgeom', () => geometryFromArrays(r.arrays)));
       this.workerStats.meshed++;
       this.workerStats.meshMs += r.ms;
       this.onChunksChanged?.();
@@ -991,7 +1003,7 @@ export class VoxelTerrainView {
     mesh.receiveShadow = true;
     mesh.castShadow = false;
     this.nearGroup.add(mesh);
-    const water = meshChunkWater(this.world, chunk);
+    const water = this.timed('chunkwater', () => meshChunkWater(this.world, chunk));
     if (water) this.waterGroup.add(water);
     this.chunks.set(key, { mesh, water, triangles: result.triangles + (water?.userData.waterTriangles ?? 0) });
     this.loaded.add(key);
@@ -1224,6 +1236,7 @@ export class VoxelTerrainView {
     this.macroMode = mode;
     this.macroEditKey = macroEditKey(this.world);
     recordSample(this.macroSamples, performance.now() - macroT0);
+    this.onSection?.('macro', performance.now() - macroT0);
     if (result.sampleCached) this.macroCacheHits++;
     else recordSample(this.macroSampleSamples, result.sampleMs);
   }

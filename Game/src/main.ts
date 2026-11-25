@@ -552,7 +552,16 @@ let m2Game: M2Game | null = null;
 
 const frameWork = new FrameStats();
 const frameInterval = new FrameStats();
+/**
+ * M015: main-thread work per frame outside rendering: the frame loop minus the
+ * render call, plus streaming work done in worker callbacks since the last
+ * frame. Comparable across software and hardware GL.
+ */
+const frameUpdate = new FrameStats();
 const sections = new SectionStats();
+let inFrame = false;
+let asyncStreamMs = 0;
+terrainView.onSection = (name, ms) => { sections.record(name, ms); if (!inFrame) asyncStreamMs += ms; };
 let lastFrameAt = 0;
 
 function metrics() {
@@ -574,6 +583,7 @@ function metrics() {
     chunkWorkers: terrainView.workerMetrics,
     frameWork: frameWork.report(),
     frameInterval: frameInterval.report(),
+    frameUpdate: frameUpdate.report(),
     sections: sections.report(),
     cachedChunks: world.chunks.size,
     chunksGenerated: world.stats.chunksGenerated,
@@ -652,6 +662,7 @@ const coarse = matchMedia('(pointer: coarse)').matches;
 
 function frame(timestamp?: number) {
   const workStart = performance.now();
+  inFrame = true;
   if (lastFrameAt > 0) frameInterval.record(workStart - lastFrameAt);
   lastFrameAt = workStart;
   timer.update(timestamp);
@@ -695,7 +706,11 @@ function frame(timestamp?: number) {
   showcase?.update(dt);
   const tFauna = performance.now();
   if (fauna) {
-    if (faunaDirty) { fauna.sync(terrainView.loadedChunkKeys); faunaDirty = fauna.pendingSpawn; }
+    if (faunaDirty) {
+      const tSync = performance.now();
+      fauna.sync(terrainView.loadedChunkKeys); faunaDirty = fauna.pendingSpawn;
+      sections.record('faunasync', performance.now() - tSync);
+    }
     const ch = explore?.active ? explore.character : null;
     if (!freeze) fauna.update(dt, { threats: ch ? [{ x: ch.x, z: ch.z }] : [], night: time.t < 0.2 || time.t > 0.82 });
     else fauna.update(0, { threats: [], night: false });
@@ -759,8 +774,11 @@ function frame(timestamp?: number) {
 
   const tRender = performance.now();
   renderer.render(scene, rig.camera);
-  sections.record('render', performance.now() - tRender);
+  const renderMs = performance.now() - tRender;
+  sections.record('render', renderMs);
   frameWork.record(performance.now() - workStart);
+  frameUpdate.record(performance.now() - workStart - renderMs + asyncStreamMs);
+  asyncStreamMs = 0;
   perfOverlay?.frame(workStart);
 
   if (frames % 6 === 0 || metricsEveryFrame) {
@@ -800,6 +818,7 @@ function frame(timestamp?: number) {
 
   frames++;
   if (frames === 3) window.__ready = true;
+  inFrame = false;
   requestAnimationFrame(frame);
 }
 
@@ -918,6 +937,8 @@ if (!isMap && !isKit) {
 window.__probe = { renderer, camera: rig.camera };
 // Read-only draw call / triangle breakdown per scene owner (main + shadow pass).
 window.__renderBreakdown = () => renderBreakdown(scene, { camera: rig.camera, renderer, multiDraw });
+// Evidence runs: restart the rolling frame and section statistics before a measured window (no state change).
+window.__perfReset = () => { sections.reset(); frameWork.reset(); frameInterval.reset(); frameUpdate.reset(); terrainView.resetPerf(); };
 if (import.meta.env.DEV && params.get('debug') === '1') {
   Object.assign(window.__probe, { THREE, terrainView });
   window.__scene = scene;
