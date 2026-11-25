@@ -20,6 +20,9 @@ import type { ActiveEntityKind } from './world';
 import { OBSTRUCTION_RADIUS } from './terrain';
 // M010: a sapling's trunk is thinner than a mature tree's (the stage the renderer draws).
 import { STAGE_TRUNK, growthStage } from './vegetation';
+// M012: the settlement's structure layer (fence and gate edges, buildings) is the one villagers and animals route on.
+import { settlementCollision } from './homestead';
+import { structureHits } from './nav';
 
 export const CHARACTER_RADIUS = 0.3;
 export const CHARACTER_HEIGHT = 1.7;
@@ -234,6 +237,34 @@ function overlaps(world: World, x: number, y: number, z: number): boolean {
   return overlapsTerrain(world, x, y, z) || overlapsStructures(world, x, y, z);
 }
 
+const NO_HITS: string[] = [];
+/**
+ * M012: settlement structures the character's box overlaps at (x, y, z):
+ * fence edges, gates and the farmhouse door while not open, buildings,
+ * shelters, troughs and the store, from the same walking grid villagers and
+ * animals use. Empty without a homestead (or before settlement rules v2).
+ */
+export function settlementHits(world: World, x: number, y: number, z: number): string[] {
+  const c = settlementCollision(world);
+  if (!c) return NO_HITS;
+  return structureHits(c.grid, c.gate, x, y, z, CHARACTER_RADIUS - 1e-4, CHARACTER_HEIGHT);
+}
+/**
+ * True when moving to (x, y, z) would push into a settlement structure the
+ * character is not already touching. Anything it already overlaps (a gate
+ * shut on it, a fence it was standing in after a save) never holds it, so
+ * the character can always walk out: it cannot be sealed in.
+ */
+function settleBlocked(world: World, x: number, y: number, z: number, base: string[]): boolean {
+  const hits = settlementHits(world, x, y, z);
+  for (const k of hits) if (!base.includes(k)) return true;
+  return false;
+}
+/** Free for a horizontal move: terrain, structure modules and settlement structures. */
+function clear(world: World, x: number, y: number, z: number, base: string[]): boolean {
+  return !overlaps(world, x, y, z) && !settleBlocked(world, x, y, z, base);
+}
+
 /** Push the character out of tree trunks, ore and other natural obstructions. */
 function resolveEntities(world: World, s: CharacterState): void {
   const cx = worldToChunkX(Math.floor(s.x)), cz = worldToChunkZ(Math.floor(s.z));
@@ -255,7 +286,7 @@ function resolveEntities(world: World, s: CharacterState): void {
         if (d >= min || d < 1e-6) continue;
         const push = min - d;
         const nx = s.x + (ox / d) * push, nz = s.z + (oz / d) * push;
-        if (!overlaps(world, nx, s.y, nz)) { s.x = nx; s.z = nz; }
+        if (clear(world, nx, s.y, nz, settlementHits(world, s.x, s.y, s.z))) { s.x = nx; s.z = nz; }
       }
     }
   }
@@ -359,17 +390,19 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
     if (delta === 0) continue;
     const nx = axis === 'x' ? s.x + delta : s.x;
     const nz = axis === 'z' ? s.z + delta : s.z;
-    if (!overlaps(world, nx, s.y, nz)) { s.x = nx; s.z = nz; continue; }
+    // Settlement structures already touched never hold the character (see settleBlocked).
+    const base = settlementHits(world, s.x, s.y, s.z);
+    if (clear(world, nx, s.y, nz, base)) { s.x = nx; s.z = nz; continue; }
     if (wasGrounded || swimming || wading) {
       const stepY = Math.floor(s.y + 1e-3) + 1;
-      if (stepY - s.y <= STEP_HEIGHT && !overlaps(world, nx, stepY, nz)) {
+      if (stepY - s.y <= STEP_HEIGHT && clear(world, nx, stepY, nz, base)) {
         s.x = nx; s.z = nz; s.y = stepY; continue;
       }
       // A swimmer at the surface hauls out onto a bank up to SWIM_CLIMB above the feet.
       if (atSurface && !exhausted) {
         let climbed = false;
         for (let cy = stepY + 1; cy - s.y <= SWIM_CLIMB; cy++) {
-          if (!overlaps(world, nx, cy, nz) && overlaps(world, nx, cy - 1, nz)) {
+          if (clear(world, nx, cy, nz, base) && overlaps(world, nx, cy - 1, nz)) {
             s.x = nx; s.z = nz; s.y = cy; s.vy = 0; climbed = true; break;
           }
         }
@@ -377,7 +410,7 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
       }
       // Structure tops (slabs, terraces) are not on the voxel grid.
       const top = structureFloor(world, nx, s.y + STEP_HEIGHT, nz);
-      if (top > s.y && top - s.y <= STEP_HEIGHT && !overlaps(world, nx, top, nz)) {
+      if (top > s.y && top - s.y <= STEP_HEIGHT && clear(world, nx, top, nz, base)) {
         s.x = nx; s.z = nz; s.y = top; continue;
       }
     }
@@ -470,7 +503,7 @@ export function canStandAt(world: World, x: number, y: number, z: number): boole
   const fx = Math.floor(x), fz = Math.floor(z), fy = Math.floor(y + 1e-3);
   const below = residentVoxelAt(world, fx, fy - 1, fz);
   if (below === null || !isSolid(below)) return false;
-  if (overlaps(world, x, y, z)) return false;
+  if (overlaps(world, x, y, z) || settlementHits(world, x, y, z).length) return false;
   for (let cy = fy; cy <= Math.floor(y + CHARACTER_HEIGHT - 1e-3); cy++) if (water(world, fx, cy, fz)) return false;
   const cx = worldToChunkX(fx), cz = worldToChunkZ(fz);
   for (let dz = -1; dz <= 1; dz++) {

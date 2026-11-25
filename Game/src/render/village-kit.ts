@@ -85,7 +85,16 @@ export interface CottageOptions {
   roof?: 'thatch' | 'shingle';
   chimney?: boolean;
   seed?: number;
+  /**
+   * Draw the door leaf (default). M012: the homestead farmhouse passes false
+   * and draws its leaf from the simulated door state instead; the doorway is
+   * then a dark opening behind the frame.
+   */
+  door?: boolean;
 }
+
+/** Door opening of a cottage (m): width, height, plinth height under it. */
+export const COTTAGE_DOOR = { w: 1.2, h: 2.1, plinth: 0.5 } as const;
 
 /**
  * Timber-framed cottage: stone plinth, plaster infill, corner and mid posts,
@@ -138,10 +147,14 @@ export function buildCottage(o: CottageOptions = {}): THREE.Group {
     b.add(T, braceLen, 0.14, 0.12, W / 3, y0 + wall * 0.52, z, { rz: -brace });
   }
   // Door (front centre) and windows.
-  const doorW = 1.2, doorH = 2.1;
-  b.add('arch_timber_light', doorW, doorH, 0.12, 0, y0, D / 2 - 0.02);
+  const doorW = COTTAGE_DOOR.w, doorH = COTTAGE_DOOR.h;
+  if (o.door !== false) {
+    b.add('arch_timber_light', doorW, doorH, 0.12, 0, y0, D / 2 - 0.02);
+    b.add('prop_iron', 0.08, 0.08, 0.06, 0.38, y0 + 1.0, D / 2 + 0.05);
+  } else {
+    b.add('prop_iron', doorW, doorH, 0.04, 0, y0, D / 2 - 0.12, { k: 0.45 });
+  }
   b.add(T, doorW + 0.3, 0.16, 0.18, 0, y0 + doorH, D / 2 - 0.02);
-  b.add('prop_iron', 0.08, 0.08, 0.06, 0.38, y0 + 1.0, D / 2 + 0.05);
   for (const x of [-W / 3 + 0.25, W / 3 - 0.25]) {
     b.add('prop_iron', 0.9, 0.8, 0.06, x, y0 + 1.1, D / 2 - 0.03, { k: 0.6 });
     b.add(T, 1.1, 0.12, 0.2, x, y0 + 1.0, D / 2);

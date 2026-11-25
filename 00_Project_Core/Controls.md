@@ -17,7 +17,7 @@ Scripted captures (`?action=`, `?ui=0`, explicit camera params) and `?mode=build
 | Look / orbit | Drag with any mouse button | Drag orbits |
 | Zoom | Wheel (3–60 m, follows trackpad deltas) | Wheel (12–1400 m) |
 | Rotate camera | Drag | Q / E |
-| Work the homestead (dig, sow, water, harvest, feed, collect, milk, shear) or gather | E: the HUD names the action in reach; otherwise gathers (H also gathers) — prompt shows in the HUD, ring marks the target | H (nearest within 40 m of the view centre) |
+| Work the homestead (dig, sow, water, harvest, feed, collect, milk, shear), open or close a gate or the farmhouse door within 2 m (M012; a locked one is unlocked and opened), or gather | E: the HUD names the action in reach; otherwise gathers (H also gathers) — prompt shows in the HUD, ring marks the target. Touch: the Use / Gather button does the same | H (nearest within 40 m of the view centre) |
 | Switch mode | Tab, or the **Builder view / Walk** button at top centre | Tab / button |
 | Plan a field (where, size, crop) | F, or Farm → Plan a new field | — |
 | Homestead (fields, people, animals, steward) | Farm button | Farm button |

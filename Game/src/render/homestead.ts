@@ -16,7 +16,7 @@ import { AnimalBatch } from './animal-kit';
 import { SNAP_DISTANCE } from './smooth';
 import { ANIMAL_MODELS } from './animal-models';
 import { FOUNDER_STOCKPILE } from '../sim/economy';
-import { buildCottage, buildWell, kitMaterial } from './village-kit';
+import { COTTAGE_DOOR, buildCottage, buildWell, kitMaterial } from './village-kit';
 import { Figure, FARMER_STYLE, HERDER_STYLE, buildFigure, animateFigure, placeFigure } from './characters';
 import type { CharacterState } from '../sim/character';
 
@@ -107,6 +107,33 @@ function gateLeaf(list: B[], x: number, z: number, state: GateState, ground: (x:
   for (const h of [0.3, 0.8]) list.push({ w: 0.86, h: 0.09, d: 0.07, x: x + 0.5, y: y + h, z, c: STRAW_WOOD });
   list.push({ w: 0.86, h: 0.08, d: 0.06, x: x + 0.5, y: y + 0.55, z, c: WOOD });
   if (state === 'locked') list.push({ w: 0.12, h: 0.32, d: 0.12, x: x + 0.9, y: y + 0.4, z: z - 0.06, c: IRON });
+}
+
+/**
+ * The farmhouse door leaf (M012), from the simulated door state. `x` is the
+ * doorway centre, `z` the front wall face, `y` the threshold (top of the plinth).
+ * Closed: in the frame. Open: swung 90° outward on its left hinge, against the
+ * wall line. Locked: closed with an iron bar across.
+ */
+function doorLeaf(list: B[], x: number, z: number, y: number, state: GateState): void {
+  const w = COTTAGE_DOOR.w, h = COTTAGE_DOOR.h;
+  if (state === 'open') {
+    const hx = x - w / 2 + 0.06;
+    list.push({ w: 0.12, h, d: w, x: hx, y, z: z + w / 2, c: DOOR_WOOD });
+    list.push({ w: 0.14, h: 0.1, d: w * 0.9, x: hx, y: y + 0.4, z: z + w / 2, c: WOOD_DARK }, { w: 0.14, h: 0.1, d: w * 0.9, x: hx, y: y + 1.6, z: z + w / 2, c: WOOD_DARK });
+    list.push({ w: 0.08, h: 0.08, d: 0.06, x: hx + 0.08, y: y + 1.0, z: z + w - 0.22, c: IRON });
+    return;
+  }
+  list.push({ w, h, d: 0.12, x, y, z: z - 0.02, c: DOOR_WOOD });
+  list.push({ w: w * 0.9, h: 0.1, d: 0.14, x, y: y + 0.4, z: z - 0.02, c: WOOD_DARK }, { w: w * 0.9, h: 0.1, d: 0.14, x, y: y + 1.6, z: z - 0.02, c: WOOD_DARK });
+  list.push({ w: 0.08, h: 0.08, d: 0.06, x: x + 0.38, y: y + 1.0, z: z + 0.07, c: IRON });
+  if (state === 'locked') list.push({ w: w + 0.3, h: 0.12, d: 0.1, x, y: y + 1.05, z: z + 0.1, c: IRON });
+}
+const DOOR_WOOD = '#8A6142';
+
+/** Which state every gate leaf and the farmhouse door are drawn in (a legacy homestead draws them closed). */
+export function drawnLeaves(h: HomesteadState): Record<string, GateState> {
+  return Object.fromEntries(homesteadGates(h).map((g) => [g.id, h.gates?.find((x) => x.id === g.id)?.state ?? 'closed']));
 }
 
 /** A trough that shows its real contents: water level and a pile of straw. */
@@ -331,7 +358,8 @@ export class HomesteadView {
       const r = at(f), cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2;
       const list: B[] = [];
       if (f.kind === 'farmhouse') {
-        const house = buildCottage({ width: r.x1 - r.x0, depth: r.z1 - r.z0, roof: 'thatch', seed: 31, chimney: true });
+        // The door leaf is not baked in: it is drawn from the simulated door state with the gate leaves.
+        const house = buildCottage({ width: r.x1 - r.x0, depth: r.z1 - r.z0, roof: 'thatch', seed: 31, chimney: true, door: false });
         house.position.set(cx, this.lowest(r) , cz);
         house.userData.facility = f.id;
         g.add(house);
@@ -458,12 +486,19 @@ export class HomesteadView {
       const x = bx - 1.2 + (i % 4) * 0.8, z = bz - 0.6 + Math.floor(i / 4) % 2 * 0.8, y = by + Math.floor(i / 8) * 0.55;
       list.push({ w: 0.62, h: 0.52, d: 0.62, x, y, z, c: i % 2 ? '#B89B6A' : '#9C7A4C' });
     }
-    // Gate leaves show the simulated state (closed for a legacy homestead, which has no gates in its state).
+    // Gate leaves and the farmhouse door show the simulated state (closed for a legacy homestead, which has no gates in its state).
+    const leaves = drawnLeaves(h);
     for (const g of homesteadGates(h)) {
-      if (!g.id.startsWith('gate:')) continue;
-      gateLeaf(list, g.x, g.z, h.gates?.find((x) => x.id === g.id)?.state ?? 'closed', this.ground);
+      if (g.id.startsWith('gate:')) { gateLeaf(list, g.x, g.z, leaves[g.id], this.ground); continue; }
+      const house = homesteadLayout(h).find((f) => f.kind === 'farmhouse')!;
+      const r = { x0: house.rect.x0 / DM, z0: house.rect.z0 / DM, x1: house.rect.x1 / DM, z1: house.rect.z1 / DM };
+      doorLeaf(list, g.x + 0.5, r.z1, this.lowest(r) + COTTAGE_DOOR.plinth, leaves[g.id]);
     }
-    if (list.length) this.dynamic.add(mesh(list, 'homestead_troughs'));
+    if (list.length) {
+      const m = mesh(list, 'homestead_troughs');
+      m.userData.leaves = leaves;
+      this.dynamic.add(m);
+    }
   }
 
   private drawPeople(h: HomesteadState, alpha: number, dt: number): void {
@@ -502,7 +537,9 @@ export class HomesteadView {
   }
 
   metrics(): Record<string, unknown> {
+    const dyn = this.dynamic.children[0] as THREE.Mesh | undefined;
     return {
+      leaves: dyn?.userData.leaves ?? null,
       fields: this.fields.children.length,
       herd: Object.fromEntries([...this.herd.batches].map(([k, b]) => [k, b.count])),
       villagers: [...this.people.values()].map((p) => ({ visible: p.fig.root.visible, task: p.fig.root.userData.task,

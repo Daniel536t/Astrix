@@ -64,6 +64,20 @@ export const WADE_MAX = 1;
 
 const WALL_E = 1, WALL_S = 2, GATE_E = 4, GATE_S = 8;
 
+/**
+ * M012 structure layer: which cells hold a solid built thing (a building, a
+ * shelter, a trough) for anything with a body, not only for walkers. Derived
+ * from the same features as the walking grid and never hashed, so v2 grids
+ * keep their hashes. The player's physics sweeps against these cells and the
+ * fence/gate edges (see `structureHits`).
+ */
+export const SOLID = { none: 0, building: 1, shelter: 2, low: 3 } as const;
+/** Height (m above the cell's ground) of each solid kind. */
+export const SOLID_HEIGHT = [0, 4.5, 2.6, 0.75] as const;
+/** Fence and gate edges: height above the higher side's ground, and half thickness (m). */
+export const FENCE_HEIGHT = 1.15;
+export const FENCE_HALF = 0.08;
+
 export interface CellRect { x0: number; z0: number; x1: number; z1: number } // world metres, [x0, x1) cells
 export type Side = 'n' | 's' | 'e' | 'w';
 /** A gate or door on the edge between cell (x, z) and its neighbour on `side`. */
@@ -75,8 +89,8 @@ export interface NavFeatures {
   decks: Array<CellRect & { y: number }>;
   costs: Array<CellRect & { extra: number }>;
   blocks: Array<CellRect & { reason: BlockReason; id: string }>;
-  /** Cells inside a block that stay walkable (a doorway, a threshold). */
-  clear: CellRect[];
+  /** Cells inside a block that stay walkable (a doorway, a threshold); `keepSolid` keeps them solid for bodies (an interior the renderer does not draw). */
+  clear: Array<CellRect & { keepSolid?: boolean }>;
   /** Fences on the rect's outline; `gaps` are cell edges left open (no gate). */
   fences: Array<CellRect & { id: string; gaps: Array<{ x: number; z: number; side: Side }> }>;
   gates: NavGate[];
@@ -96,6 +110,8 @@ export class NavGrid {
   readonly block: Uint8Array;
   readonly extra: Uint16Array;
   readonly walls: Uint8Array;
+  /** M012: solid built cells for bodies (SOLID kinds); not part of the hash. */
+  readonly solid: Uint8Array;
   /** Smallest blocking id per blocked cell (deterministic whatever the input order). */
   readonly blockId = new Map<number, string>();
   readonly gateAt = new Map<number, string>(); // cell index * 2 + (0 = east edge, 1 = south edge)
@@ -107,6 +123,7 @@ export class NavGrid {
   constructor(readonly ox: number, readonly oz: number, readonly w: number, readonly h: number) {
     const n = w * h;
     this.ground = new Int16Array(n); this.block = new Uint8Array(n); this.extra = new Uint16Array(n); this.walls = new Uint8Array(n);
+    this.solid = new Uint8Array(n);
     this.g = new Int32Array(n); this.parent = new Int32Array(n); this.closed = new Uint8Array(n);
   }
   inside(x: number, z: number): boolean { return x >= this.ox && z >= this.oz && x < this.ox + this.w && z < this.oz + this.h; }
@@ -215,8 +232,14 @@ function normEdge(x: number, z: number, side: Side): string {
 function applyFeatures(g: NavGrid, f: NavFeatures): void {
   for (const d of f.decks) forRect(g, d, (i) => { g.ground[i] = d.y; if (g.block[i] === BLOCK.deep_water) g.block[i] = BLOCK.none; });
   for (const c of f.costs) forRect(g, c, (i) => { g.extra[i] += c.extra; });
-  for (const b of f.blocks) forRect(g, b, (i) => setBlock(g, i, b.reason, b.id));
-  for (const c of f.clear) forRect(g, c, (i) => { if (g.block[i] !== BLOCK.deep_water && g.block[i] !== BLOCK.outside) { g.block[i] = BLOCK.none; g.blockId.delete(i); } });
+  for (const b of f.blocks) {
+    const kind = b.reason === 'building' ? SOLID.building : b.reason === 'occupied' ? (b.id.startsWith('trough:') ? SOLID.low : SOLID.shelter) : SOLID.none;
+    forRect(g, b, (i) => { setBlock(g, i, b.reason, b.id); if (kind && (!g.solid[i] || kind < g.solid[i])) g.solid[i] = kind; });
+  }
+  for (const c of f.clear) forRect(g, c, (i) => {
+    if (!c.keepSolid) g.solid[i] = SOLID.none;
+    if (g.block[i] !== BLOCK.deep_water && g.block[i] !== BLOCK.outside) { g.block[i] = BLOCK.none; g.blockId.delete(i); }
+  });
   const open = new Set<string>();
   for (const fe of f.fences) for (const gap of fe.gaps) open.add(normEdge(gap.x, gap.z, gap.side));
   for (const gt of f.gates) open.add(normEdge(gt.x, gt.z, gt.side));
@@ -362,6 +385,10 @@ export interface SearchOptions {
   ignoreLocked?: boolean;
   /** Treat trees, bushes and rocks as passable (used only to explain a failure). */
   ignoreNature?: boolean;
+  /** M012 animals: a gate is a passage only while it is open (they cannot open one); closed or locked it is a fence. */
+  openGatesOnly?: boolean;
+  /** M012 villagers: cells another walker stands on (never the start cell); also never chosen as the goal. */
+  avoid?: (cell: number) => boolean;
   maxExpansions: number;
 }
 
@@ -369,7 +396,7 @@ const natureBlock = (b: number) => b === BLOCK.tree || b === BLOCK.rock;
 
 function free(g: NavGrid, i: number, o: SearchOptions): boolean {
   const b = g.block[i];
-  return b === BLOCK.none || (!!o.ignoreNature && natureBlock(b));
+  return (b === BLOCK.none || (!!o.ignoreNature && natureBlock(b))) && !o.avoid?.(i);
 }
 
 /** Wall state of an orthogonal edge: 0 open, 1 gate (passable), 2 blocked. */
@@ -378,7 +405,11 @@ function edgeState(g: NavGrid, ax: number, az: number, bx: number, bz: number, o
   if (e < 0) return 2;
   const bits = g.walls[e >> 1], south = (e & 1) === 1;
   const wall = bits & (south ? WALL_S : WALL_E), gate = bits & (south ? GATE_S : GATE_E);
-  if (gate) return wall && !o.ignoreLocked ? 2 : 1;
+  if (gate) {
+    if (wall && !o.ignoreLocked) return 2;
+    if (o.openGatesOnly) return g.gateState.get(g.gateAt.get(e)!) === 'open' ? 1 : 2;
+    return 1;
+  }
   return wall ? 2 : 0;
 }
 
@@ -409,10 +440,44 @@ function moveCost(g: NavGrid, ax: number, az: number, dx: number, dz: number, o:
 }
 
 /** True when a walker can move from cell a to neighbour b right now (gates count as passable unless locked). */
-export function canMove(g: NavGrid, ax: number, az: number, bx: number, bz: number): boolean {
+export function canMove(g: NavGrid, ax: number, az: number, bx: number, bz: number, o: SearchOptions = { maxExpansions: 0 }): boolean {
   const dx = bx - ax, dz = bz - az;
   if (Math.abs(dx) > 1 || Math.abs(dz) > 1 || (dx === 0 && dz === 0) || !g.inside(ax, az)) return false;
-  return moveCost(g, ax, az, dx, dz, { maxExpansions: 0 }) >= 0;
+  return moveCost(g, ax, az, dx, dz, o) >= 0;
+}
+
+/**
+ * M012: built things a body (the player) overlaps at feet (x, y, z) with the
+ * given radius and height, as stable keys: solid cells (`c<index>`) and fence
+ * or gate edges (`e<edge>`). A gate or door edge counts only while it is not
+ * open. The same fence edges, gates and footprints the walkers route on.
+ */
+export function structureHits(g: NavGrid, gateState: (id: string) => GateState, x: number, y: number, z: number, r: number, height: number, out: string[] = []): string[] {
+  const fx0 = Math.floor(x - r) - 1, fx1 = Math.floor(x + r) + 1, fz0 = Math.floor(z - r) - 1, fz1 = Math.floor(z + r) + 1;
+  const vert = (lo: number, hi: number) => y + 0.02 < hi && y + height > lo + 0.02;
+  for (let cz = fz0; cz <= fz1; cz++) {
+    for (let cx = fx0; cx <= fx1; cx++) {
+      if (!g.inside(cx, cz)) continue;
+      const i = g.index(cx, cz), k = g.solid[i];
+      if (k && x + r > cx && x - r < cx + 1 && z + r > cz && z - r < cz + 1 && vert(g.ground[i], g.ground[i] + SOLID_HEIGHT[k])) out.push(`c${i}`);
+      const bits = g.walls[i];
+      if (!bits) continue;
+      for (const south of [false, true]) {
+        const wall = bits & (south ? WALL_S : WALL_E), gate = bits & (south ? GATE_S : GATE_E);
+        if (!wall && !gate) continue;
+        const e = i * 2 + (south ? 1 : 0);
+        if (gate && !wall && gateState(g.gateAt.get(e)!) === 'open') continue;
+        const j = south ? g.index(cx, cz + 1) : g.index(cx + 1, cz);
+        const lo = Math.min(g.ground[i], g.ground[j]), hi = Math.max(g.ground[i], g.ground[j]) + FENCE_HEIGHT;
+        // The edge is a thin box along the cell side, a post's width past each end so corners close.
+        const hit = south
+          ? x + r > cx - FENCE_HALF && x - r < cx + 1 + FENCE_HALF && z + r > cz + 1 - FENCE_HALF && z - r < cz + 1 + FENCE_HALF
+          : z + r > cz - FENCE_HALF && z - r < cz + 1 + FENCE_HALF && x + r > cx + 1 - FENCE_HALF && x - r < cx + 1 + FENCE_HALF;
+        if (hit && vert(lo, hi)) out.push(`e${e}`);
+      }
+    }
+  }
+  return out;
 }
 
 // ---------- search ----------
@@ -503,7 +568,7 @@ function search(g: NavGrid, from: { x: number; z: number }, goal: NavGoal, o: Se
     if (g.closed[i]) continue;
     g.closed[i] = 1;
     const x = g.cellX(i), z = g.cellZ(i);
-    if ((i !== start || g.block[i] === BLOCK.none || (o.ignoreNature && natureBlock(g.block[i]))) && isGoal(x, z, goal)) {
+    if ((i !== start || g.block[i] === BLOCK.none || (o.ignoreNature && natureBlock(g.block[i]))) && isGoal(x, z, goal) && !(i !== start && o.avoid?.(i))) {
       const cells: number[] = [];
       for (let k = i; k !== start; k = g.parent[k]) cells.push(g.cellZ(k), g.cellX(k));
       cells.reverse();
@@ -610,8 +675,11 @@ export interface NavState {
   opened?: string;
   far?: [number, number];
   blocked?: NavBlocked;
+  /** M012 (rules v3): waiting for another villager to move out of the next cell (queueing at a gate, a door or a work spot). */
+  wait?: NavWait;
 }
 export interface NavBlocked { reason: string; by: string; target: string; since: number }
+export interface NavWait { by: string; reason: string; since: number }
 
 export interface NavContext {
   world: World;
@@ -623,7 +691,23 @@ export interface NavContext {
   setGate(id: string, state: GateState): void;
   /** May this walker open and close the gate (it is never asked for a locked one). */
   canOperate(id: string): boolean;
+  /**
+   * M012 (settlement rules v3): cells other walkers stand on or are stepping
+   * into (cell index -> walker id). A walker never enters one; it waits, or
+   * takes a way round when there is one. Absent under v2 (walkers ignore each other).
+   */
+  occupied?: Map<number, string>;
+  /** This walker's id (its own cells are never in its way). */
+  self?: string;
+  /** Who another walker is waiting for right now: a mutual wait is broken by the later id stepping aside. */
+  waitingOn?(id: string): string | undefined;
+  nameOf?(id: string): string;
 }
+
+/** Expansions a detour around other walkers may use before the walker just waits in line. */
+export const DETOUR_BUDGET = 4000;
+/** A waiting walker looks for a way round when it starts waiting and then every this many ticks. */
+export const DETOUR_EVERY = 4;
 
 export type NavStep =
   | { status: 'arrived' }
@@ -675,8 +759,19 @@ export function navStep(ctx: NavContext, w: { x: number; z: number; nav?: NavSta
   if (!nav || goalMoved || nav.plan !== g.hash || (!nav.path.length && !atFinal(nav))) {
     if (ctx.budget.left <= 0) return { status: 'waiting' };
     const [sx, sz] = here();
-    const res = findPath(ctx.world, g, w, goal, { maxExpansions: ctx.budget.left });
-    ctx.budget.left -= res.expanded;
+    // v3: prefer a route round other walkers that ends on a free spot; else the plain route (then queue on it).
+    let res: PathResult | null = null;
+    const avoid = othersAt(ctx);
+    if (avoid && freeGoalCell(g, goal, avoid)) {
+      const r1 = findPath(ctx.world, g, w, goal, { maxExpansions: Math.min(ctx.budget.left, DETOUR_BUDGET), avoid });
+      ctx.budget.left -= r1.expanded;
+      if (r1.ok) res = r1;
+    }
+    if (!res) {
+      if (ctx.budget.left <= 0) return { status: 'waiting' };
+      res = findPath(ctx.world, g, w, goal, { maxExpansions: ctx.budget.left });
+      ctx.budget.left -= res.expanded;
+    }
     if (!res.ok && res.code === 'budget') return { status: 'waiting' };
     const keep: Partial<NavState> = nav ? { ...(nav.opened ? { opened: nav.opened } : {}), ...(nav.far ? { far: nav.far } : {}) } : {};
     if (!res.ok) {
@@ -703,12 +798,16 @@ export function navStep(ctx: NavContext, w: { x: number; z: number; nav?: NavSta
   const [sx0, sz0] = here();
   const cells = expandPath(nav.path, sx0, sz0);
   let moved = false;
+  let waitFor: string | null = null, waitCell: [number, number] | null = null;
   while (budget > 0 && cells.length) {
     const nx = cells[0], nz = cells[1];
     const [cx, cz] = here();
     if (w.x === centreDm(cx) && w.z === centreDm(cz) && (nx !== cx || nz !== cz)) {
       // About to leave a centre for the next cell: is the edge still passable?
       if (!canMove(g, cx, cz, nx, nz)) { nav.plan = ''; break; }
+      // v3: is another walker standing there (or stepping into it)?
+      const occ = ctx.occupied?.get(g.index(nx, nz));
+      if (occ !== undefined && occ !== ctx.self) { waitFor = occ; waitCell = [nx, nz]; break; }
       const gate = g.gateBetween(cx, cz, nx, nz);
       if (gate) {
         const st = ctx.gate(gate);
@@ -732,8 +831,72 @@ export function navStep(ctx: NavContext, w: { x: number; z: number; nav?: NavSta
   nav.path = compressPath(cells, ex, ez);
   closeBehind(ctx, w, nav);
   if (nav.blocked) delete nav.blocked;
+  if (waitFor && waitCell && !moved) return queue(ctx, w, nav, waitFor, waitCell, goal, speed);
+  if (nav.wait && (moved || !waitFor)) delete nav.wait;
   if (!cells.length && atFinal(nav)) return { status: 'arrived' };
   return moved || nav.opening ? { status: 'moving' } : { status: 'waiting' };
+}
+
+/** Cells other walkers hold, as a search filter (v3 only). */
+function othersAt(ctx: NavContext): ((i: number) => boolean) | undefined {
+  const occ = ctx.occupied;
+  if (!occ) return undefined;
+  return (i) => { const o = occ.get(i); return o !== undefined && o !== ctx.self; };
+}
+
+/** Is any standable goal cell free of other walkers? (A search that must end on a free spot is only tried then.) */
+function freeGoalCell(g: NavGrid, goal: NavGoal, avoid: (i: number) => boolean): boolean {
+  const tx = cellOfDm(goal.x), tz = cellOfDm(goal.z), r = Math.ceil(goal.reach / 10) + 1;
+  for (let z = tz - r; z <= tz + r; z++) {
+    for (let x = tx - r; x <= tx + r; x++) {
+      if (!g.inside(x, z) || !isGoal(x, z, goal)) continue;
+      const i = g.index(x, z);
+      if (g.block[i] === BLOCK.none && !avoid(i)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * The next cell is taken by another walker: wait in line (the reason is
+ * kept on the route state), look for a way round now and then, and break a
+ * head-on standoff by having the later id step aside to a free neighbour.
+ */
+function queue(ctx: NavContext, w: { x: number; z: number; nav?: NavState }, nav: NavState, by: string, cell: [number, number], goal: NavGoal, speed: number): NavStep {
+  const g = ctx.grid;
+  const cx = cellOfDm(w.x), cz = cellOfDm(w.z);
+  const name = ctx.nameOf?.(by) ?? by;
+  let gate = g.gateBetween(cx, cz, cell[0], cell[1]);
+  for (const [dx, dz] of DIRS.slice(0, 4)) gate ??= g.gateBetween(cell[0], cell[1], cell[0] + dx, cell[1] + dz);
+  const reason = gate ? `queueing at the ${gateLabel(gate)} behind ${name}`
+    : isGoal(cell[0], cell[1], { x: nav.dest[0], z: nav.dest[1], reach: nav.dest[2] }) ? `waiting for ${name} to make room` : `waiting for ${name} to pass`;
+  const since = nav.wait && nav.wait.by === by ? nav.wait.since : ctx.tick;
+  nav.wait = { by, reason, since };
+  const avoid = othersAt(ctx)!;
+  if (ctx.waitingOn?.(by) === ctx.self && ctx.self! > by) {
+    // Head-on: step aside into a free neighbour that is not the other walker's.
+    for (const [dx, dz] of DIRS) {
+      const sx = cx + dx, sz = cz + dz;
+      if (!g.inside(sx, sz) || (sx === cell[0] && sz === cell[1]) || avoid(g.index(sx, sz)) || !canMove(g, cx, cz, sx, sz)) continue;
+      if (g.gateBetween(cx, cz, sx, sz)) continue;
+      const tx = centreDm(sx), tz = centreDm(sz), d = dist(w.x, w.z, tx, tz);
+      if (d <= speed) { w.x = tx; w.z = tz; } else { w.x += Math.round(((tx - w.x) / d) * speed); w.z += Math.round(((tz - w.z) / d) * speed); }
+      nav.path = d <= speed ? [] : [sx, sz];
+      nav.plan = '';
+      nav.wait = { by, reason: `stepping aside for ${name}`, since };
+      return { status: 'moving' };
+    }
+    return { status: 'waiting' };
+  }
+  if ((ctx.tick - since) % DETOUR_EVERY === 0 && ctx.budget.left > 0) {
+    const r = findPath(ctx.world, g, w, goal, { maxExpansions: Math.min(ctx.budget.left, DETOUR_BUDGET), avoid });
+    ctx.budget.left -= r.expanded;
+    if (r.ok) {
+      const cells = !r.cells.length ? [cx, cz] : w.x !== centreDm(cx) || w.z !== centreDm(cz) ? [cx, cz, ...r.cells] : r.cells;
+      nav.path = compressPath(cells, cx, cz);
+    }
+  }
+  return { status: 'waiting' };
 }
 
 /** Close a gate this walker opened once it is through (or has left it behind). */

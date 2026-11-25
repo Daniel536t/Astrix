@@ -692,7 +692,7 @@ function frame(timestamp?: number) {
       if (useButton && useButton.textContent !== useLabel) { useButton.textContent = useLabel; useButton.classList.toggle('work', !!work); }
       const hint = walking
         ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · tap Jump twice to jump higher, hold to swim up · Dive · Plant: mark this spot with your banner · Home / To banner: hold still to return · Farm: fields, people, animals'
-          : 'WASD: walk · Shift: run · Space: jump (tap twice to jump higher, hold to swim up) · C: dive · E: use / gather · V: plant banner · R: return home · T: return to banner · F: plan a field · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
+          : 'WASD: walk · Shift: run · Space: jump (tap twice to jump higher, hold to swim up) · C: dive · E: use / gather / open a gate · V: plant banner · R: return home · T: return to banner · F: plan a field · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
         : coarse
           ? 'drag: orbit · two fingers: move + zoom'
           : debugMutations

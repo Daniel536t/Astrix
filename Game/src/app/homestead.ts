@@ -12,8 +12,10 @@ import { BrowserSaveStore } from './persistence';
 import {
   CROPS, CROP_RULES, CropKind, DM, FIELD_MAX, FIELD_MIN, HomesteadAction, MOISTURE_MAX, Policy, Role, SPECIES, SPECIES_RULES,
   checkField, cropStage, fenceCost, fieldUnits, homesteadLayout, nearbyActions, recentHomesteadEvents, unitsOf, findFieldSpot,
-  dayTime, OVERFLOW_CAPACITY, HOMESTEAD_NAV_VERSION, homesteadGates, isNavHomestead,
+  dayTime, OVERFLOW_CAPACITY, HOMESTEAD_LIVING_VERSION, homesteadGates, isNavHomestead, isLivingHomestead, nearbyGate, straysOf,
 } from '../sim/homestead';
+import type { EnclosureId } from '../sim/homestead';
+import type { GateState } from '../sim/nav';
 import { expandPath, navCell, navStats, gateLabel } from '../sim/nav';
 import { FOUNDER_STOCKPILE_ID } from '../sim/economy';
 import { HomesteadView } from '../render/homestead';
@@ -99,29 +101,42 @@ export class HomesteadGame {
   private ensureFounded(): void {
     if (!this.available) return;
     if (!this.world.homestead) {
-      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_NAV_VERSION });
+      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_LIVING_VERSION });
       if (r.ok) this.o.toast('Settlers arrived: Ada the farmer and Bram the herder, with animals and supplies. Open Farm to plan your first field.', 'good');
       return;
     }
-    if (!isNavHomestead(this.world.homestead)) {
-      const r = this.send({ type: 'upgrade_homestead' });
-      if (r.ok) this.o.toast('The homestead now has gates and doors: villagers walk real routes around fences, buildings and trees.', 'good');
+    if (!isLivingHomestead(this.world.homestead)) {
+      // M012: one journaled upgrade to settlement rules v3 (from v1 or v2); the saved hash loads first, unchanged.
+      const was = this.world.homestead.version;
+      const r = this.send({ type: 'upgrade_homestead', rules: HOMESTEAD_LIVING_VERSION });
+      if (r.ok) this.o.toast(was < 2 ? 'The homestead now has gates and doors: villagers and animals walk real routes around fences, buildings and trees.'
+        : 'The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use.', 'good');
     }
   }
 
   // ---------- actions near the player ----------
 
-  /** The best action within reach, for the Use button label and the E key. */
-  nearest(): { action: HomesteadAction; target: string; label: string } | null {
+  /** The best action within reach, for the Use button label and the E key (M012: a gate or door within reach counts too). */
+  nearest(): { action: HomesteadAction | 'gate'; target: string; label: string; next?: GateState } | null {
     const p = this.o.player();
     if (!p || !this.world.homestead) return null;
-    return nearbyActions(this.world, p.x, p.z)[0] ?? null;
+    const work = nearbyActions(this.world, p.x, p.z)[0] ?? null;
+    const gate = nearbyGate(this.world, p.x, p.z);
+    if (gate && (!work || gate.d <= work.d)) return { action: 'gate', target: gate.gateId, label: gate.label, next: gate.next };
+    return work;
   }
 
   /** Perform the nearest homestead action. Returns false when there is none (fall back to gathering). */
   useNearest(): boolean {
     const a = this.nearest();
     if (!a) return false;
+    if (a.action === 'gate') {
+      // The same journaled command as the Farm panel's gate buttons.
+      const r = this.send({ type: 'set_gate', gateId: a.target, state: a.next }, a.target);
+      if (r.ok) this.o.toast(`${a.label.replace(/^Unlock and open/, 'Unlocked and opened').replace(/^Open/, 'Opened').replace(/^Close/, 'Closed')}`, 'good');
+      else this.o.toast(r.reasons.join('; '), 'bad');
+      return true;
+    }
     const r = this.send({ type: 'homestead_act', action: a.action, target: a.target }, a.target);
     if (r.ok && r.outcome.type === 'homestead_act') {
       const gained = Object.entries(r.outcome.gained).map(([k, n]) => `+${n} ${k}`).join(' ');
@@ -296,7 +311,7 @@ export class HomesteadGame {
     this.panelRevision = this.world.revision;
     const pct = (n: number, d: number) => `${Math.round((n / d) * 100)}%`;
     const task = (k?: string) => ({ till: 'digging a field', sow: 'sowing', water: 'watering', harvest: 'harvesting', thresh: 'threshing seed',
-      water_trough: 'filling a trough', feed: 'feeding animals', collect: 'collecting eggs', shear: 'shearing', milk: 'milking',
+      water_trough: 'filling a trough', feed: 'feeding animals', collect: 'collecting eggs', round_up: 'bringing strays back', shear: 'shearing', milk: 'milking',
       store: 'carrying to the store', restock: 'tidying the store', eat: 'eating', rest: 'resting at home', idle: 'idle' } as Record<string, string>)[k ?? 'idle'] ?? k;
     const fields = h.plots.map((p) => {
       const rule = CROP_RULES[p.crop];
@@ -312,6 +327,7 @@ export class HomesteadGame {
       if (!n || !isNavHomestead(h)) return '';
       if (n.blocked) return ` · <b class="warn">can't get there: ${n.blocked.reason}</b> (${life.tick - n.blocked.since} ticks)`;
       if (n.opening) return ` · opening the ${gateLabel(n.opening)}`;
+      if (n.wait) return ` · <b>waiting</b>: ${n.wait.reason} (${life.tick - n.wait.since} ticks)`;
       const steps = v.task?.legs[v.task.leg]?.op === 'walk' ? expandPath(n.path, navCell(v.x), navCell(v.z)).length / 2 : 0;
       return steps ? ` · walking, ${steps} m to go` : '';
     };
@@ -326,7 +342,11 @@ export class HomesteadGame {
       const name = { chicken: ['chicken', 'chickens'], sheep: ['sheep', 'sheep'], goat: ['goat', 'goats'], pig: ['pig', 'pigs'], cattle: ['cow', 'cattle'], horse: ['horse', 'horses'] }[sp][list.length === 1 ? 0 : 1];
       return `<li><b>${list.length} ${name}</b>${young ? ` (${young} young)` : ''} · ${SPECIES_RULES[sp].purpose}${hungry ? ` · <b class="warn">${hungry} hungry</b>` : ''}</li>`;
     }).join('');
-    const troughs = h.enclosures.map((e) => `${homesteadLayout(h).find((f) => f.id === e.id)!.label.toLowerCase()}: water ${e.water}, feed ${e.feed}, pasture ${e.grass}%${e.id === 'coop' && e.eggs ? `, ${e.eggs} eggs` : ''}`).join(' · ');
+    const strays = isLivingHomestead(h) ? h.enclosures.map((e) => {
+      const n = straysOf(h, e.id as EnclosureId).length;
+      return n ? `${n} out of the ${e.id}` : '';
+    }).filter(Boolean).join(', ') : '';
+    const troughs = (strays ? `<b class="warn">${strays}</b> · ` : '') + h.enclosures.map((e) => `${homesteadLayout(h).find((f) => f.id === e.id)!.label.toLowerCase()}: water ${e.water}, feed ${e.feed}, pasture ${e.grass}%${e.id === 'coop' && e.eggs ? `, ${e.eggs} eggs` : ''}`).join(' · ');
     const gates = homesteadGates(h).map((g) => {
       const state = h.gates?.find((x) => x.id === g.id)?.state ?? 'closed';
       const btn = (to: string, label: string) => state === to ? '' : `<button type="button" data-gate="${g.id}" data-state="${to}">${label}</button>`;
@@ -418,12 +438,14 @@ export class HomesteadGame {
       fields: h.plots.map((p) => ({ id: p.id, crop: p.crop, x: p.x, z: p.z, w: p.w, d: p.d, state: p.state, stage: cropStage(p), growth: p.growth, moisture: p.moisture })),
       villagers: h.villagers.map((v) => ({ id: v.id, name: v.name, role: v.role, task: v.task?.kind ?? null, target: v.task?.target ?? null, leg: v.task?.leg ?? null,
         legOp: v.task?.legs[v.task.leg]?.op ?? null, x: v.x / DM, z: v.z / DM, carry: v.carry, energy: v.energy, hunger: v.hunger,
-        nav: v.nav ? { corners: v.nav.path.length / 2, dest: v.nav.dest, opening: v.nav.opening ?? null, opened: v.nav.opened ?? null, blocked: v.nav.blocked ?? null } : null,
+        nav: v.nav ? { corners: v.nav.path.length / 2, dest: v.nav.dest, opening: v.nav.opening ?? null, opened: v.nav.opened ?? null, blocked: v.nav.blocked ?? null, wait: v.nav.wait ?? null } : null,
         avoid: v.avoid ?? [] })),
       rules: h.version,
       gates: (h.gates ?? []).map((g) => ({ ...g })),
       navStats: { ...navStats(this.world) },
       animals: Object.fromEntries(SPECIES.map((sp) => [sp, h.animals.filter((a) => a.species === sp).length])),
+      herd: h.animals.map((a) => ({ id: a.id, species: a.species, x: a.x / DM, z: a.z / DM, go: a.go ?? null })),
+      strays: Object.fromEntries(h.enclosures.map((e) => [e.id, straysOf(h, e.id as EnclosureId).map((a) => a.id)])),
       enclosures: h.enclosures.map((e) => ({ ...e })),
       overflow: { ...h.overflow },
       store: { ...life.stockpiles.get(FOUNDER_STOCKPILE_ID)!.inventory },
