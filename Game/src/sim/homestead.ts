@@ -27,6 +27,7 @@ import {
 import {
   CARRIED_CAPACITY, FOUNDER_STOCKPILE, FOUNDER_STOCKPILE_ID, LifeResult, RECIPES, total, lifeState,
 } from './economy';
+import { placeBuilding } from './buildings';
 
 /** Legacy homestead rules (M006–M009): villagers walk straight lines, nothing collides. */
 export const HOMESTEAD_VERSION = 1 as const;
@@ -64,8 +65,21 @@ export const HOMESTEAD_WORK_VERSION = 4 as const;
  * it was already drawn in.
  */
 export const HOMESTEAD_WOODLAND_VERSION = 5 as const;
-export type HomesteadVersion = typeof HOMESTEAD_VERSION | typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION;
-export const HOMESTEAD_VERSIONS: readonly HomesteadVersion[] = [HOMESTEAD_VERSION, HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION];
+/**
+ * Settlement rules v6 (M014, "player-directed construction"): the owner picks
+ * a building from the catalogue (`SITE_RULES`), its place and its rotation;
+ * one validator (sim/buildings.ts) decides the placement preview and the
+ * journaled `place_site`; young growth in the footprint is cleared, mature
+ * trees block. Finished woodsheds and log stores hold timber: the woodcutter
+ * carries each load to the nearest one with room, and builders fetch from
+ * the store nearest their site. A finished well is a water source. Cancelling
+ * a site after materials arrived sends the builder to carry them back.
+ * Founded with `found_homestead { rules: 6 }` or switched by
+ * `upgrade_homestead { rules: 6 }`.
+ */
+export const HOMESTEAD_BUILD_VERSION = 6 as const;
+export type HomesteadVersion = typeof HOMESTEAD_VERSION | typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION;
+export const HOMESTEAD_VERSIONS: readonly HomesteadVersion[] = [HOMESTEAD_VERSION, HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION];
 /** Decimetres per metre: sim positions are integer decimetres. */
 export const DM = 10;
 /** One in-game day: 300 ticks of 2 s = 10 minutes, matching the sky's day length. */
@@ -167,7 +181,7 @@ export type Carry = { item: string; amount: number; site?: string } | null;
 export type Effect =
   | 'take' | 'store' | 'till' | 'sow' | 'reap' | 'water_plot' | 'draw' | 'water_trough' | 'fill_feed'
   | 'gather_eggs' | 'shear' | 'milk' | 'eat' | 'rest' | 'restock' | 'thresh' | 'herd' | 'hold_gate'
-  | 'chop' | 'fetch' | 'deliver' | 'build' | 'lift' | 'plant' | 'none';
+  | 'chop' | 'fetch' | 'deliver' | 'build' | 'lift' | 'plant' | 'stow' | 'reclaim' | 'none';
 export interface Leg { op: 'walk' | 'work'; x: number; z: number; ticks: number; effect: Effect; item?: string; amount?: number }
 export interface Task { kind: string; target: string; legs: Leg[]; leg: number; progress: number }
 export interface Villager {
@@ -226,33 +240,61 @@ export interface HomesteadState {
   woodland?: WoodlandState;
 }
 
-// ---- building sites (settlement rules v4) ----
-export type SiteKind = 'woodshed';
+// ---- building sites (settlement rules v4; the v6 catalogue) ----
+export type SiteKind = 'woodshed' | 'logstore' | 'well';
+/** Kinds rules v4 and v5 know (their saves and journals only ever hold these). */
 export const SITE_KINDS: readonly SiteKind[] = ['woodshed'];
+/** The v6 building catalogue (sorted). */
+export const BUILD_KINDS: readonly SiteKind[] = ['logstore', 'well', 'woodshed'];
 export interface SiteRule {
-  label: string; w: number; d: number;
+  label: string;
+  /** Footprint (whole metres) before rotation: `w` along x, `d` along z; the door is on the +z side. */
+  w: number; d: number;
   /** Materials the builder carries from the store to the site. */
   cost: Record<string, number>;
   /** Builder work ticks after (and in proportion to) the delivered materials. */
   work: number;
   purpose: string;
+  /** v6: highest step (m) of ground the footprint may span. */
+  maxStep: number;
+  /** v6: a timber store: what it holds and how much. Woodcutters stack their loads in the nearest one with room. */
+  store?: { item: 'wood'; capacity: number };
+  /** v6: a water source (villagers draw water at the nearest well). */
+  water?: boolean;
+  /** v6: the woodland the preview reports on around a timber store (m), and the wood a day it is planned for. */
+  workRadius?: number; demandPerDay?: number;
+  /** One line for the catalogue. */
+  role: string;
 }
 export const SITE_RULES: Record<SiteKind, SiteRule> = {
-  woodshed: { label: 'Woodshed', w: 3, d: 2, cost: { fiber: 4, wood: 12 }, work: 24,
-    purpose: 'a roofed timber store beside the yard (a solid building once finished)' },
+  logstore: { label: 'Log store', w: 2, d: 1, cost: { fiber: 2, wood: 6 }, work: 12, maxStep: 1,
+    purpose: 'an open lean-to for 24 wood near the felling', store: { item: 'wood', capacity: 24 }, workRadius: 22, demandPerDay: 6,
+    role: 'timber drop-off for 24 wood' },
+  well: { label: 'Well', w: 2, d: 2, cost: { fiber: 2, wood: 8 }, work: 18, maxStep: 1, water: true,
+    purpose: 'a timber-lined well: farmers and the herder draw water at the nearest well', role: 'water source' },
+  woodshed: { label: 'Woodshed', w: 3, d: 2, cost: { fiber: 4, wood: 12 }, work: 24, maxStep: 1,
+    purpose: 'a roofed timber store beside the yard (a solid building once finished)', store: { item: 'wood', capacity: 60 }, workRadius: 30, demandPerDay: 12,
+    role: 'timber store for 60 wood; the woodcutter\'s base' },
 };
-export type SiteState = 'planned' | 'approved' | 'done';
+export type SiteState = 'planned' | 'approved' | 'done' | 'cancelled';
 /**
  * A building site: `planned` is only marked out (no materials held);
  * `approved` holds store stock for it in `reserved` (still in the store,
  * usable by nobody else) and counts what the builder brought in `delivered`;
  * `work` is builder work done. `done` is a real building on the walking grid.
+ * v6: `rot` (0-3) turns the footprint a quarter at a time (door +z, +x, -z,
+ * -x); a finished timber store holds `stock`; `cancelled` is a site the owner
+ * gave up after materials arrived: the builder carries them back, then it goes.
  */
 export interface BuildSite {
   id: string; kind: SiteKind; x: number; z: number; state: SiteState;
   reserved: Record<string, number>; delivered: Record<string, number>; work: number;
+  rot?: number; stock?: Record<string, number>;
 }
 export const MAX_SITES = 8;
+/** v6: sites (planned, building, finished) a homestead may hold. */
+export const MAX_SITES_V6 = 16;
+export const isBuildHomestead = (h: Pick<HomesteadState, 'version'>) => h.version >= HOMESTEAD_BUILD_VERSION;
 /** Barn capacity (in addition to the 200 of the founder store). */
 export const OVERFLOW_CAPACITY = 300;
 
@@ -392,7 +434,7 @@ export function homesteadNavFeatures(h: HomesteadState): NavFeatures {
   }
   f.gates = homesteadGates(h).map(({ id, x, z, side }) => ({ id, x, z, side }));
   for (const g of h.gates ?? []) f.gateStates[g.id] = g.state;
-  f.key = `${isWorkHomestead(h) ? `v4|${built.map((st) => `${st.id}:${st.x},${st.z},${st.kind}`).join(';')}|` : ''}${isLivingHomestead(h) ? 'v3|' : ''}${ax},${az}|${h.plots.map((p) => `${p.id}:${p.x},${p.z},${p.w},${p.d}`).join(';')}|${(h.gates ?? []).map((g) => g.state).join(',')}`;
+  f.key = `${isWorkHomestead(h) ? `v4|${built.map((st) => `${st.id}:${st.x},${st.z},${st.kind}${st.rot ? `,${st.rot}` : ''}`).join(';')}|` : ''}${isLivingHomestead(h) ? 'v3|' : ''}${ax},${az}|${h.plots.map((p) => `${p.id}:${p.x},${p.z},${p.w},${p.d}`).join(';')}|${(h.gates ?? []).map((g) => g.state).join(',')}`;
   return f;
 }
 
@@ -412,15 +454,32 @@ const BED_CELLS: ReadonlyArray<[number, number]> = [[-11, -8], [-9, -8], [-10, -
  */
 const BED_CELLS_V4: ReadonlyArray<[number, number]> = [[-11, -9], [-9, -9], [-10, -10]];
 const HALL_V4: [number, number] = [-10, -9];
-/** A site's footprint in whole-metre cells. */
-export function siteCells(st: Pick<BuildSite, 'x' | 'z' | 'kind'>): { x0: number; z0: number; x1: number; z1: number } {
-  const r = SITE_RULES[st.kind];
-  return { x0: st.x, z0: st.z, x1: st.x + r.w, z1: st.z + r.d };
+/** A footprint's size (whole metres) after rotation. */
+export function siteSize(kind: SiteKind, rot = 0): { w: number; d: number } {
+  const r = SITE_RULES[kind];
+  return rot % 2 ? { w: r.d, d: r.w } : { w: r.w, d: r.d };
 }
-/** Where a builder stands to work on a site (dm): the cell just outside the middle of its front (+z) side. */
-export function siteSpot(st: Pick<BuildSite, 'x' | 'z' | 'kind'>): { x: number; z: number } {
-  const r = SITE_RULES[st.kind];
-  return { x: (st.x + Math.floor(r.w / 2)) * DM + 5, z: (st.z + r.d) * DM + 5 };
+/** A site's footprint in whole-metre cells (min corner x, z; v6 rotation swaps the sides). */
+export function siteCells(st: Pick<BuildSite, 'x' | 'z' | 'kind'> & { rot?: number }): { x0: number; z0: number; x1: number; z1: number } {
+  const s = siteSize(st.kind, st.rot ?? 0);
+  return { x0: st.x, z0: st.z, x1: st.x + s.w, z1: st.z + s.d };
+}
+/**
+ * The cell in front of a site's door (whole metres): outside the middle of its
+ * front. Rotation 0 is the +z side (the M012 spot); 1 faces +x, 2 -z, 3 -x.
+ */
+export function siteEntrance(st: Pick<BuildSite, 'x' | 'z' | 'kind'> & { rot?: number }): { x: number; z: number } {
+  const r = SITE_RULES[st.kind], rot = st.rot ?? 0;
+  const dc = Math.floor(r.w / 2);
+  if (rot === 1) return { x: st.x + r.d, z: st.z + r.w - dc - 1 };
+  if (rot === 2) return { x: st.x + r.w - dc - 1, z: st.z - 1 };
+  if (rot === 3) return { x: st.x - 1, z: st.z + dc };
+  return { x: st.x + dc, z: st.z + r.d };
+}
+/** Where a builder stands to work on a site (dm): the centre of its entrance cell. */
+export function siteSpot(st: Pick<BuildSite, 'x' | 'z' | 'kind'> & { rot?: number }): { x: number; z: number } {
+  const e = siteEntrance(st);
+  return { x: e.x * DM + 5, z: e.z * DM + 5 };
 }
 /**
  * Where a villager sleeps (dm): under v2 just inside the farmhouse door; under
@@ -654,15 +713,18 @@ function settlerArrives(world: World, h: HomesteadState): void {
  * `to: 3` switches a v1 or v2 homestead to v3 (gates keep their state; a
  * legacy one gets closed gates).
  */
-export function upgradeHomestead(world: World, to: typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION = HOMESTEAD_NAV_VERSION): LifeResult<{ version: HomesteadVersion }> {
+export function upgradeHomestead(world: World, to: typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION = HOMESTEAD_NAV_VERSION): LifeResult<{ version: HomesteadVersion }> {
   const h = world.homestead;
   if (!h) return fail('no_homestead', 'found the homestead first');
   if (h.version >= to) return fail('unchanged', `the homestead already uses settlement rules v${h.version}`);
+  const from = h.version;
   h.version = to;
   h.gates ??= GATE_IDS.map((id) => ({ id, state: 'closed' as GateState }));
   if (to >= HOMESTEAD_WORK_VERSION) { h.sites ??= []; settlerArrives(world, h); }
-  // v5: the woodland clock starts now; every tree keeps the stage it is drawn in.
-  if (to >= HOMESTEAD_WOODLAND_VERSION) startWoodland(world, h);
+  // v5: the woodland clock starts now; every tree keeps the stage it is drawn in (a v5 woodland carries on unchanged).
+  if (to >= HOMESTEAD_WOODLAND_VERSION && from < HOMESTEAD_WOODLAND_VERSION) startWoodland(world, h);
+  // v6: every site keeps its place and faces the way it was built (rotation 0); finished woodsheds become (empty) timber stores.
+  if (to >= HOMESTEAD_BUILD_VERSION) for (const st of h.sites ?? []) { st.rot = 0; if (st.state === 'done' && SITE_RULES[st.kind].store) st.stock = {}; }
   world.revision++;
   return { ok: true, value: { version: to } };
 }
@@ -737,8 +799,88 @@ export function reservations(h: HomesteadState): Record<string, number> {
 /** What anyone but the site's builder may take from the store: stock minus reservations. */
 export function freeInStore(world: World, item: string): number {
   const h = world.homestead;
-  const have = lifeState(world).stockpiles.get(FOUNDER_STOCKPILE_ID)?.inventory[item] ?? 0;
+  // v6: timber stacked in finished woodsheds and log stores is store stock too.
+  const have = (lifeState(world).stockpiles.get(FOUNDER_STOCKPILE_ID)?.inventory[item] ?? 0) + (h ? storedIn(h, item) : 0);
   return Math.max(0, have - (h ? reservedOf(h, item) : 0));
+}
+
+// ---------- settlement rules v6: timber stores and wells ----------
+
+/** v6: finished timber stores (woodsheds, log stores), id order. Empty below v6. */
+export function timberStores(h: HomesteadState): BuildSite[] {
+  if (!isBuildHomestead(h)) return [];
+  return (h.sites ?? []).filter((st) => st.state === 'done' && SITE_RULES[st.kind].store).sort((a, b) => a.id.localeCompare(b.id));
+}
+/** v6: how much of an item the finished timber stores hold. */
+export function storedIn(h: HomesteadState, item: string): number {
+  let n = 0;
+  for (const st of timberStores(h)) n += st.stock?.[item] ?? 0;
+  return n;
+}
+/** v6: room left in a timber store. */
+export function storeRoom(st: BuildSite): number {
+  const cap = SITE_RULES[st.kind].store?.capacity ?? 0;
+  return Math.max(0, cap - Object.values(st.stock ?? {}).reduce((n, a) => n + a, 0));
+}
+/** v6: total capacity of the finished timber stores. */
+export function storeCapacity(h: HomesteadState): number {
+  return timberStores(h).reduce((n, st) => n + (SITE_RULES[st.kind].store?.capacity ?? 0), 0);
+}
+/** v6: the finished timber store whose door spot is exactly (x, z) dm (a leg's position), or null. */
+export function storeAt(h: HomesteadState, x: number, z: number): BuildSite | null {
+  for (const st of timberStores(h)) { const p = siteSpot(st); if (p.x === x && p.z === z) return st; }
+  return null;
+}
+const d2 = (a: { x: number; z: number }, b: { x: number; z: number }) => (a.x - b.x) * (a.x - b.x) + (a.z - b.z) * (a.z - b.z);
+/**
+ * v6: where a load of timber from (x, z) dm is set down: the nearest of the
+ * finished timber stores with room and the founder store (straight line, the
+ * founder store on a tie). Below v6 always the founder store.
+ */
+export function woodDropOff(h: HomesteadState, x: number, z: number): { x: number; z: number; effect: 'store' | 'stow'; siteId: string | null } {
+  let best: { x: number; z: number; effect: 'store' | 'stow'; siteId: string | null } = { x: STOCK.x, z: STOCK.z, effect: 'store', siteId: null };
+  let bd = d2(STOCK, { x, z });
+  for (const st of timberStores(h)) {
+    if (storeRoom(st) <= 0) continue;
+    const p = siteSpot(st), d = d2(p, { x, z });
+    if (d < bd) { bd = d; best = { x: p.x, z: p.z, effect: 'stow', siteId: st.id }; }
+  }
+  return best;
+}
+/** v6: where a builder fetches an item reserved for a site: the founder store or the timber store holding some nearest the site. */
+function fetchSource(world: World, h: HomesteadState, st: BuildSite, item: string): { x: number; z: number; have: number } {
+  const at = siteSpot(st);
+  const founder = stock(world).inventory[item] ?? 0;
+  let best = { x: STOCK.x, z: STOCK.z, have: founder };
+  let bd = founder > 0 ? d2(STOCK, at) : Infinity;
+  for (const s of timberStores(h)) {
+    const n = s.stock?.[item] ?? 0;
+    if (n <= 0) continue;
+    const p = siteSpot(s), d = d2(p, at);
+    if (d < bd) { bd = d; best = { x: p.x, z: p.z, have: n }; }
+  }
+  return best;
+}
+/** v6: where water is drawn for a job at (x, z) dm: the nearest of the farm well and finished wells. Below v6 the farm well. */
+export function wellFor(h: HomesteadState, to: { x: number; z: number }): { x: number; z: number } {
+  let best = facility(h, 'well')!.use;
+  if (!isBuildHomestead(h)) return best;
+  let bd = d2(best, to);
+  for (const st of h.sites ?? []) {
+    if (st.state !== 'done' || !SITE_RULES[st.kind].water) continue;
+    const p = siteSpot(st), d = d2(p, to);
+    if (d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+/** v6: take store stock for the owner's or steward's use: the founder store first, then the timber stores in id order. */
+export function takeStoreStock(world: World, h: HomesteadState, item: string, amount: number): number {
+  let got = takeFrom(stock(world).inventory, item, amount);
+  for (const st of timberStores(h)) {
+    if (got >= amount) break;
+    got += takeFrom(st.stock!, item, amount - got);
+  }
+  return got;
 }
 /** The store as everyone but a site's builder sees it (reserved stock left out). */
 function freeView(world: World, h: HomesteadState): Record<string, number> {
@@ -796,6 +938,12 @@ export function siteStatus(world: World, st: BuildSite): string {
   const h = world.homestead!;
   if (st.state === 'done') return 'finished';
   if (st.state === 'planned') return 'waiting for your approval (nothing reserved yet)';
+  if (st.state === 'cancelled') {
+    const left = Object.entries(st.delivered).map(([k, n]) => `${n} ${k}`).join(' and ');
+    const busy = h.villagers.find((v) => v.task?.target === st.id);
+    return busy ? `cancelled: ${busy.name} is carrying the materials back (${left} left)` : h.villagers.some((v) => v.role === 'builder')
+      ? `cancelled: a builder will carry ${left} back to the store` : `cancelled: ${left} wait on site for a builder to carry them back`;
+  }
   const builders = h.villagers.filter((v) => v.role === 'builder');
   const short = siteShortfall(h, st);
   const missing = Object.entries(short).map(([k, n]) => `${n} ${k}`).join(' and ');
@@ -816,7 +964,7 @@ export function checkSite(world: World, kind: SiteKind, x: number, z: number, ig
   const h = world.homestead;
   if (!h) return ['found the homestead first'];
   if (!isWorkHomestead(h)) return ['building sites need settlement rules v4'];
-  if (!SITE_KINDS.includes(kind)) return ['unknown building'];
+  if (!SITE_KINDS.includes(kind)) return [BUILD_KINDS.includes(kind) ? 'this building needs settlement rules v6' : 'unknown building'];
   if (!Number.isSafeInteger(x) || !Number.isSafeInteger(z)) return ['sites are placed on whole metres'];
   const rule = SITE_RULES[kind];
   const reasons: string[] = [];
@@ -867,9 +1015,15 @@ export function findSiteSpot(world: World, kind: SiteKind = 'woodshed'): { x: nu
 }
 
 /** The owner marks out a building site. Nothing is reserved until it is approved. */
-export function placeSite(world: World, kind: SiteKind, x: number, z: number): LifeResult<{ siteId: string; kind: SiteKind; x: number; z: number }> {
+export function placeSite(world: World, kind: SiteKind, x: number, z: number, rot?: number): LifeResult<{ siteId: string; kind: SiteKind; x: number; z: number; rot?: number }> {
   const h = world.homestead;
   if (!h) return fail('no_homestead', 'found the homestead first');
+  // v6: any building of the catalogue, at the owner's place and rotation (sim/buildings.ts decides).
+  if (isBuildHomestead(h)) {
+    const r = placeBuilding(world, kind, x, z, rot ?? 0);
+    return r.ok ? { ok: true, value: { siteId: r.value.siteId, kind, x, z, ...(rot !== undefined ? { rot } : {}) } } : r;
+  }
+  if (rot !== undefined) return fail('needs_rules', 'turning a building needs settlement rules v6');
   const reasons = checkSite(world, kind, x, z);
   if (reasons.length) return { ok: false, code: 'invalid_site', reasons };
   const id = `site:${h.nextId++}`;
@@ -888,7 +1042,7 @@ export function approveSite(world: World, siteId: string): LifeResult<{ siteId: 
   const h = world.homestead;
   const st = h?.sites?.find((x) => x.id === siteId);
   if (!h || !st) return fail('invalid_target', 'no such building site');
-  if (st.state !== 'planned') return fail('unchanged', st.state === 'done' ? 'this building is finished' : 'this site is already approved');
+  if (st.state !== 'planned') return fail('unchanged', st.state === 'done' ? 'this building is finished' : st.state === 'cancelled' ? 'this site was cancelled' : 'this site is already approved');
   st.state = 'approved';
   reserveSites(world, h);
   world.revision++;
@@ -905,9 +1059,13 @@ export function cancelSite(world: World, siteId: string): LifeResult<{ siteId: s
   const st = h?.sites?.find((x) => x.id === siteId);
   if (!h || !st) return fail('invalid_target', 'no such building site');
   if (st.state === 'done') return fail('busy', 'this building is finished');
-  if (bagTotal(st.delivered) > 0 || st.work > 0) return fail('busy', 'materials are already on the site');
+  if (st.state === 'cancelled') return fail('unchanged', 'this site is already cancelled');
+  // v6: a site with materials on it is cancelled too: the builder carries them back to the store (no materials vanish or appear).
+  const onSite = bagTotal(st.delivered) > 0 || st.work > 0;
+  if (onSite && !isBuildHomestead(h)) return fail('busy', 'materials are already on the site');
   const released = Object.fromEntries(Object.entries(st.reserved).filter(([, n]) => n > 0).sort(([a], [b]) => a.localeCompare(b)));
-  h.sites = h.sites!.filter((x) => x.id !== siteId);
+  if (onSite) { st.state = 'cancelled'; st.reserved = {}; st.work = 0; }
+  else h.sites = h.sites!.filter((x) => x.id !== siteId);
   for (const v of h.villagers) {
     if (v.task?.target === siteId) v.task = null;
     if (v.carry?.site === siteId) v.carry = { item: v.carry.item, amount: v.carry.amount };
@@ -1090,6 +1248,9 @@ function plan(world: World, h: HomesteadState, v: Villager, tick: number, budget
   const carryingSapling = !!v.carry?.item.startsWith('sapling:');
   if (carryingSapling && v.role !== 'woodcutter') v.carry = null;
   if (v.carry && v.carry.item !== 'water' && !carryingSeed && !carryingFeed && !carryingSapling && !taken.has(`carry:${v.id}`)) {
+    // v6: timber goes to the nearest woodshed or log store with room (or the store when that is nearer).
+    const drop = v.carry.item === 'wood' && !v.carry.site ? woodDropOff(h, v.x, v.z) : null;
+    if (drop?.effect === 'stow') return task('store', `carry:${v.id}`, [walk(drop), work(drop, 1, 'stow')]);
     return task('store', `carry:${v.id}`, [walk(STOCK), work(STOCK, 1, 'store')]);
   }
   // Seed in hand is sown before anything else, so it is never set aside or lost.
@@ -1125,7 +1286,9 @@ function plan(world: World, h: HomesteadState, v: Villager, tick: number, budget
     const thirsty = plots.filter((p) => p.state === 'growing' && p.moisture <= 4 && free(p))
       .sort((a, b) => b.dry - a.dry || a.moisture - b.moisture || a.id.localeCompare(b.id))[0];
     if (thirsty) {
-      const legs = v.carry?.item === 'water' ? [] : [walk(well), work(well, 2, 'draw')];
+      // v6: the nearest well to the field (a well the owner built, or the farm well).
+      const w = wellFor(h, at(thirsty));
+      const legs = v.carry?.item === 'water' ? [] : [walk(w), work(w, 2, 'draw')];
       return task('water', thirsty.id, [...legs, walk(at(thirsty)), work(at(thirsty), 1, 'water_plot')]);
     }
     const seedAvailable = (s.seed ?? 0) + (h.overflow.seed ?? 0);
@@ -1157,13 +1320,25 @@ function plan(world: World, h: HomesteadState, v: Villager, tick: number, budget
     if (pick.why === 'busy') return null;
   } else if (v.role === 'builder') {
     // v4: carry reserved materials from the store to the first approved site, then build as far as they allow.
-    for (const st of [...(h.sites ?? [])].sort((a, b) => a.id.localeCompare(b.id))) {
+    const sorted = [...(h.sites ?? [])].sort((a, b) => a.id.localeCompare(b.id));
+    // v6: first carry back what lies on cancelled sites (then it goes to the store or a timber store as any load does).
+    for (const st of sorted) {
+      if (st.state !== 'cancelled' || taken.has(st.id)) continue;
+      const item = Object.keys(st.delivered).sort().find((k) => (st.delivered[k] ?? 0) > 0);
+      if (!item) continue;
+      const at = siteSpot(st);
+      return task('reclaim', st.id, [walk(at), work(at, 1, 'reclaim', item, Math.min(st.delivered[item], BUILDER_CARRY))]);
+    }
+    for (const st of sorted) {
       if (st.state !== 'approved' || taken.has(st.id)) continue;
       const at = siteSpot(st);
       const item = Object.keys(st.reserved).sort().find((k) => (st.reserved[k] ?? 0) > 0);
       if (item) {
         const amount = Math.min(st.reserved[item], BUILDER_CARRY);
-        return task('haul', st.id, [walk(STOCK), work(STOCK, 1, 'fetch', item, amount), walk(at), work(at, 1, 'deliver')]);
+        // v6: from the store (founder store, woodshed or log store) nearest the site that holds some.
+        const src = isBuildHomestead(h) ? fetchSource(world, h, st, item) : { x: STOCK.x, z: STOCK.z, have: amount };
+        const n = Math.max(1, Math.min(amount, src.have));
+        return task('haul', st.id, [walk(src), work(src, 1, 'fetch', item, n), walk(at), work(at, 1, 'deliver')]);
       }
       if (siteWorkAllowed(st) > st.work) return task('build', st.id, [walk(at), work(at, BUILD_STINT, 'build')]);
     }
@@ -1187,7 +1362,8 @@ function plan(world: World, h: HomesteadState, v: Villager, tick: number, budget
     const thirsty = encl.filter((e) => occupied(e) && e.water <= 14 && !taken.has(`water:${e.id}`)).sort((a, b) => a.water - b.water)[0];
     if (thirsty) {
       const t = byId.get(thirsty.id)!.trough!;
-      const legs = v.carry?.item === 'water' ? [] : [walk(well), work(well, 2, 'draw')];
+      const w = wellFor(h, t);
+      const legs = v.carry?.item === 'water' ? [] : [walk(w), work(w, 2, 'draw')];
       return task('water_trough', `water:${thirsty.id}`, [...legs, walk(t), work(t, 1, 'water_trough')]);
     }
     const straw = (s.fiber ?? 0) + (h.overflow.fiber ?? 0) + (v.carry?.item === 'fiber' ? v.carry.amount : 0);
@@ -1234,7 +1410,7 @@ function plan(world: World, h: HomesteadState, v: Villager, tick: number, budget
 
 interface Events { log: string[] }
 /** Effects that put something into empty hands. */
-const PICKUP = new Set<Effect>(['take', 'draw', 'reap', 'gather_eggs', 'shear', 'milk', 'fetch', 'lift']);
+const PICKUP = new Set<Effect>(['take', 'draw', 'reap', 'gather_eggs', 'shear', 'milk', 'fetch', 'lift', 'reclaim']);
 
 function applyEffect(world: World, h: HomesteadState, v: Villager, leg: Leg, task: Task, ev: Events): boolean {
   const s = stock(world);
@@ -1363,11 +1539,14 @@ function applyEffect(world: World, h: HomesteadState, v: Villager, leg: Leg, tas
       const st = h.sites?.find((x) => x.id === task.target);
       const item = leg.item!;
       if (!st || st.state !== 'approved') return false;
-      const n = Math.min(leg.amount ?? 0, st.reserved[item] ?? 0, s.inventory[item] ?? 0);
+      // v6: the leg stands at the founder store or at a timber store's door; the stock comes from that one.
+      const src = storeAt(h, leg.x, leg.z);
+      const bag = src ? src.stock! : s.inventory;
+      const n = Math.min(leg.amount ?? 0, st.reserved[item] ?? 0, bag[item] ?? 0);
       if (n <= 0) return false;
       st.reserved[item] -= n;
       if (st.reserved[item] === 0) delete st.reserved[item];
-      takeFrom(s.inventory, item, n);
+      takeFrom(bag, item, n);
       v.carry = { item, amount: n, site: st.id };
       ev.log.push(`${v.name} took ${n} reserved ${item} for the ${SITE_RULES[st.kind].label.toLowerCase()}`);
       world.revision++;
@@ -1393,8 +1572,36 @@ function applyEffect(world: World, h: HomesteadState, v: Villager, leg: Leg, tas
       if (st.work >= rule.work && Object.entries(rule.cost).every(([k, n]) => (st.delivered[k] ?? 0) >= n)) {
         st.state = 'done';
         st.reserved = {};
+        if (isBuildHomestead(h) && rule.store) st.stock = {};
         ev.log.push(`${v.name} finished the ${rule.label.toLowerCase()}`);
       }
+      world.revision++;
+      return true;
+    }
+    case 'stow': {
+      // v6: stack the load in the timber store at this door, as much as fits (the rest is taken on to another store).
+      const st = storeAt(h, leg.x, leg.z);
+      const rule = st ? SITE_RULES[st.kind].store : undefined;
+      if (!st || !rule || !v.carry || v.carry.site || v.carry.item !== rule.item) return false;
+      const n = Math.min(v.carry.amount, storeRoom(st));
+      if (n <= 0) return false;
+      st.stock![rule.item] = (st.stock![rule.item] ?? 0) + n;
+      v.carry = v.carry.amount > n ? { item: v.carry.item, amount: v.carry.amount - n } : null;
+      ev.log.push(`${v.name} stacked ${n} ${rule.item} in the ${rule === SITE_RULES.woodshed.store ? 'woodshed' : SITE_RULES[st.kind].label.toLowerCase()}`);
+      return true;
+    }
+    case 'reclaim': {
+      // v6: carry materials back off a cancelled site; the site goes when it is empty.
+      const st = h.sites?.find((x) => x.id === task.target);
+      const item = leg.item!;
+      if (!st || st.state !== 'cancelled') return false;
+      const n = Math.min(leg.amount ?? 0, st.delivered[item] ?? 0);
+      if (n <= 0) return false;
+      st.delivered[item] -= n;
+      if (st.delivered[item] === 0) delete st.delivered[item];
+      v.carry = { item, amount: n };
+      ev.log.push(`${v.name} picked up ${n} ${item} from the cancelled ${SITE_RULES[st.kind].label.toLowerCase()}`);
+      if (!bagTotal(st.delivered)) h.sites = h.sites!.filter((x) => x.id !== st.id);
       world.revision++;
       return true;
     }
@@ -1460,7 +1667,7 @@ function goalFor(world: World, h: HomesteadState, t: Task, legIndex: number): Na
   if (next?.effect === 'lift') { const e = treeAt(world, h, leg.x, leg.z); return e ? lifeGoal(world, e) : { x: leg.x, z: leg.z, reach: 25 }; }
   if (next?.effect === 'plant') return { x: leg.x, z: leg.z, reach: 15 };
   // A building site: any cell next to its front.
-  if (next?.effect === 'deliver' || next?.effect === 'build') return { x: leg.x, z: leg.z, reach: 15 };
+  if (next?.effect === 'deliver' || next?.effect === 'build' || next?.effect === 'stow' || next?.effect === 'reclaim') return { x: leg.x, z: leg.z, reach: 15 };
   if (next?.effect === 'water_trough' || next?.effect === 'fill_feed') return { x: leg.x, z: leg.z, reach: 15 };
   if (next?.effect === 'herd') {
     // Walk to the stray itself, following it as it grazes.
@@ -1491,7 +1698,7 @@ const TASK_WORDS: Record<string, string> = {
   plant: 'the planting spot',
   eat: 'the store to eat', rest: 'home', store: 'the store', restock: 'the store', thresh: 'the store', harvest: 'the field',
   sow: 'the field', water: 'the field', till: 'the field', water_trough: 'the trough', feed: 'the trough', collect: 'the nest box',
-  shear: 'the sheep', milk: 'the animal', round_up: 'the stray', chop: 'the tree', haul: 'the building site', build: 'the building site',
+  shear: 'the sheep', milk: 'the animal', round_up: 'the stray', chop: 'the tree', haul: 'the building site', build: 'the building site', reclaim: 'the cancelled site',
 };
 
 /** v2 walk leg: follow a route over the real ground; arrive, wait, or report the obstruction. */
@@ -2088,7 +2295,9 @@ export function markField(world: World, spec: FieldSpec, payFrom: 'bag' | 'store
   // v4: wood reserved for a building site is not the steward's to spend.
   const have = payFrom === 'bag' ? bag.wood ?? 0 : freeInStore(world, 'wood');
   if (have < wood) return fail('insufficient_resources', `the fence needs ${wood} wood (${payFrom === 'bag' ? 'you have' : 'the store has free'} ${have})`);
-  takeFrom(bag, 'wood', wood);
+  // v6: the store's free wood includes the timber stores; the founder store is used first.
+  if (payFrom === 'store' && isBuildHomestead(h)) takeStoreStock(world, h, 'wood', wood);
+  else takeFrom(bag, 'wood', wood);
   const id = `field:${h.nextId++}`;
   h.plots.push({ id, x: spec.x, z: spec.z, w: spec.w, d: spec.d, crop: spec.crop, state: 'wild', growth: 0, moisture: 0, dry: 0, tilled: 0 });
   h.plots.sort((a, b) => a.id.localeCompare(b.id));
@@ -2296,7 +2505,9 @@ export function homesteadSnapshot(h: HomesteadState): HomesteadState {
     },
     ...(h.gates ? { gates: [...h.gates].sort((a, b) => a.id.localeCompare(b.id)).map((g) => ({ id: g.id, state: g.state })) } : {}),
     ...(h.sites ? { sites: [...h.sites].sort((a, b) => a.id.localeCompare(b.id)).map((st) => ({ id: st.id, kind: st.kind, x: st.x, z: st.z, state: st.state,
-      reserved: sortedPositive(st.reserved), delivered: sortedPositive(st.delivered), work: st.work })) } : {}),
+      reserved: sortedPositive(st.reserved), delivered: sortedPositive(st.delivered), work: st.work,
+      // v6 only (absent from v4/v5 snapshots, so their bytes and hashes are unchanged).
+      ...(st.rot !== undefined ? { rot: st.rot } : {}), ...(st.stock !== undefined ? { stock: sortedPositive(st.stock) } : {}) })) } : {}),
     ...(h.woodland ? { woodland: woodlandSnapshot(h.woodland) } : {}),
   };
 }
@@ -2318,8 +2529,9 @@ const int = (v: unknown, lo: number, hi: number): v is number => typeof v === 'n
 const str = (v: unknown, re: RegExp): v is string => typeof v === 'string' && v.length <= 64 && re.test(v);
 const POS = 20_000; // |dm| bound (±2 km)
 // 'thresh' was missing here before M010, so a save taken while a farmer threshed seed was rejected on load.
-const EFFECTS = new Set<Effect>(['take', 'store', 'till', 'sow', 'reap', 'water_plot', 'draw', 'water_trough', 'fill_feed', 'gather_eggs', 'shear', 'milk', 'eat', 'rest', 'restock', 'thresh', 'herd', 'hold_gate', 'chop', 'fetch', 'deliver', 'build', 'lift', 'plant', 'none']);
+const EFFECTS = new Set<Effect>(['take', 'store', 'till', 'sow', 'reap', 'water_plot', 'draw', 'water_trough', 'fill_feed', 'gather_eggs', 'shear', 'milk', 'eat', 'rest', 'restock', 'thresh', 'herd', 'hold_gate', 'chop', 'fetch', 'deliver', 'build', 'lift', 'plant', 'stow', 'reclaim', 'none']);
 const V5_EFFECTS = new Set<Effect>(['lift', 'plant']);
+const V6_EFFECTS = new Set<Effect>(['stow', 'reclaim']);
 const GATE_ID_SET = new Set<string>(GATE_IDS);
 const TARGET = /^[a-z_]+:[a-z0-9:]{1,24}$/;
 const BY = /^[A-Za-z0-9_:,.-]{1,96}$/;
@@ -2384,6 +2596,7 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
       const legs: Leg[] = t.legs.map((l: unknown) => {
         if (!isObj(l) || (l.op !== 'walk' && l.op !== 'work') || !int(l.x, -POS, POS) || !int(l.z, -POS, POS)
           || !int(l.ticks, 0, 1000) || !EFFECTS.has(l.effect as Effect) || V5_EFFECTS.has(l.effect as Effect) && (raw.version as number) < HOMESTEAD_WOODLAND_VERSION
+          || V6_EFFECTS.has(l.effect as Effect) && (raw.version as number) < HOMESTEAD_BUILD_VERSION
           || isSapling(l.item) && (raw.version as number) < HOMESTEAD_WOODLAND_VERSION
           || l.item !== undefined && !str(l.item, ITEMS) || l.amount !== undefined && !int(l.amount, 1, 100)) throw new Error('invalid task leg');
         return { op: l.op, x: l.x, z: l.z, ticks: l.ticks, effect: l.effect as Effect,
@@ -2466,8 +2679,9 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
     });
   } else if (raw.gates !== undefined) throw new Error('legacy homestead has gates');
   let sites: BuildSite[] | undefined;
+  const v6 = (raw.version as number) >= HOMESTEAD_BUILD_VERSION;
   if ((raw.version as number) >= HOMESTEAD_WORK_VERSION) {
-    if (!Array.isArray(raw.sites) || raw.sites.length > MAX_SITES) throw new Error('snapshot has invalid building sites');
+    if (!Array.isArray(raw.sites) || raw.sites.length > (v6 ? MAX_SITES_V6 : MAX_SITES)) throw new Error('snapshot has invalid building sites');
     const seen = new Set<string>();
     const bag = (b: unknown, max: Record<string, number>) => {
       if (!isObj(b)) throw new Error('snapshot has an invalid building site');
@@ -2475,15 +2689,24 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
       return b as Record<string, number>;
     };
     sites = raw.sites.map((st: unknown) => {
-      if (!isObj(st) || !str(st.id, /^site:\d{1,6}$/) || seen.has(st.id) || !SITE_KINDS.includes(st.kind as SiteKind)
-        || !int(st.x, -1000, 1000) || !int(st.z, -1000, 1000) || !['planned', 'approved', 'done'].includes(String(st.state))
-        || !int(st.work, 0, SITE_RULES[st.kind as SiteKind].work)) throw new Error('snapshot has an invalid building site');
+      if (!isObj(st) || !str(st.id, /^site:\d{1,6}$/) || seen.has(st.id) || !(v6 ? BUILD_KINDS : SITE_KINDS).includes(st.kind as SiteKind)
+        || !int(st.x, -1000, 1000) || !int(st.z, -1000, 1000) || !(v6 ? ['planned', 'approved', 'done', 'cancelled'] : ['planned', 'approved', 'done']).includes(String(st.state))
+        || !int(st.work, 0, SITE_RULES[st.kind as SiteKind].work)
+        || (v6 ? !int(st.rot, 0, 3) : st.rot !== undefined)) throw new Error('snapshot has an invalid building site');
       seen.add(st.id);
       const rule = SITE_RULES[st.kind as SiteKind];
       const site: BuildSite = { id: st.id, kind: st.kind as SiteKind, x: st.x, z: st.z, state: st.state as SiteState,
         reserved: bag(st.reserved, rule.cost), delivered: bag(st.delivered, rule.cost), work: st.work };
+      if (v6) site.rot = st.rot as number;
       if (site.state !== 'approved' && Object.keys(site.reserved).length) throw new Error('only an approved site holds stock');
       if (site.state === 'planned' && (Object.keys(site.delivered).length || site.work)) throw new Error('a planned site has no materials or work');
+      if (site.state === 'cancelled' && (!Object.keys(site.delivered).length || site.work)) throw new Error('a cancelled site holds only materials to carry back');
+      // v6: a finished timber store holds its timber (never more than it takes); nothing else has a stock.
+      if (v6 && site.state === 'done' && rule.store) {
+        if (!isObj(st.stock)) throw new Error('a timber store has no stock');
+        const stockBag = bag(st.stock, { [rule.store.item]: rule.store.capacity });
+        site.stock = stockBag;
+      } else if (st.stock !== undefined) throw new Error('only a finished timber store holds stock');
       return site;
     });
     // Reservations never exceed the stock they hold (checked against the store with the world).

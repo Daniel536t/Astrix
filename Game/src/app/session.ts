@@ -25,7 +25,7 @@ import {
   setGate, upgradeHomestead, HOMESTEAD_WORK_VERSION, SITE_KINDS, SiteKind, placeSite, approveSite, cancelSite, freeInStore, treeTarget,
 } from '../sim/homestead';
 import { GATE_STATES, GateState } from '../sim/nav';
-import { HOMESTEAD_WOODLAND_VERSION } from '../sim/homestead';
+import { HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, BUILD_KINDS } from '../sim/homestead';
 import { HARVEST_MODES, HarvestMode, POLICY_LIMITS, WoodPolicy, speciesFromText } from '../sim/woodland';
 import type { TreeSpecies } from '../sim/vegetation';
 import { plantTree, protectTree, protectZone, removeZone, setWoodlandPolicy } from '../sim/forestry';
@@ -42,7 +42,7 @@ export type HomesteadCommand = FoundHomesteadCommand | HomesteadActCommand | Ass
   | MarkFieldCommand | SetCropCommand | RemoveFieldCommand | SetGateCommand | UpgradeHomesteadCommand
   | PlaceSiteCommand | ApproveSiteCommand | CancelSiteCommand
   | PlantTreeCommand | ProtectTreeCommand | ProtectZoneCommand | RemoveZoneCommand | WoodlandPolicyCommand;
-type RulesVersion = typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION;
+type RulesVersion = typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION;
 /** M013 (rules v5): the owner plants a wildling sapling at a cell (whole metres), lifted from a seed parent within 20 m (of `species`, when given). */
 export interface PlantTreeCommand extends CommandEnvelope { type: 'plant_tree'; x: number; z: number; species?: TreeSpecies }
 /** M013: the owner marks or unmarks a tree protected. */
@@ -53,7 +53,7 @@ export interface RemoveZoneCommand extends CommandEnvelope { type: 'remove_zone'
 /** M013: the owner's woodland policy (harvest mode, youngest fellable stage, veterans, snags, buffers, canopy minimum, replanting). */
 export interface WoodlandPolicyCommand extends CommandEnvelope, WoodPolicy { type: 'woodland_policy' }
 /** M012 Stage B (rules v4): the owner marks out a building site, approves it (its materials are reserved in the store) or cancels it. */
-export interface PlaceSiteCommand extends CommandEnvelope { type: 'place_site'; kind: SiteKind; x: number; z: number }
+export interface PlaceSiteCommand extends CommandEnvelope { type: 'place_site'; kind: SiteKind; x: number; z: number; rot?: number }
 export interface ApproveSiteCommand extends CommandEnvelope { type: 'approve_site'; siteId: string }
 export interface CancelSiteCommand extends CommandEnvelope { type: 'cancel_site'; siteId: string }
 /** M010: the owner opens, closes or locks a gate or door. */
@@ -62,7 +62,7 @@ export interface SetGateCommand extends CommandEnvelope { type: 'set_gate'; gate
  * M010: a legacy (v1) homestead switches to settlement rules v2 (navigation, gates, stage timber).
  * M012: `rules: 3` switches a v1 or v2 homestead to settlement rules v3 (animals on the grid, villager avoidance).
  */
-export interface UpgradeHomesteadCommand extends CommandEnvelope { type: 'upgrade_homestead'; rules?: typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION }
+export interface UpgradeHomesteadCommand extends CommandEnvelope { type: 'upgrade_homestead'; rules?: typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION }
 /** The player lays out a field: where (metres, min corner), how big, and what to grow. */
 export interface MarkFieldCommand extends CommandEnvelope { type: 'mark_field'; x: number; z: number; w: number; d: number; crop: CropKind }
 export interface SetCropCommand extends CommandEnvelope { type: 'set_crop'; fieldId: string; crop: CropKind }
@@ -133,7 +133,7 @@ export type HomesteadOutcome =
   | { type: 'remove_field'; fieldId: string }
   | { type: 'set_gate'; gateId: string; state: GateState }
   | { type: 'upgrade_homestead'; version: RulesVersion }
-  | { type: 'place_site'; siteId: string; kind: SiteKind; x: number; z: number }
+  | { type: 'place_site'; siteId: string; kind: SiteKind; x: number; z: number; rot?: number }
   | { type: 'approve_site'; siteId: string; reserved: Record<string, number> }
   | { type: 'cancel_site'; siteId: string; released: Record<string, number> }
   | { type: 'plant_tree'; entityId: string; species: TreeSpecies; x: number; z: number }
@@ -262,7 +262,8 @@ function policyOf(value: Record<string, unknown>): WoodPolicy | null {
   return { harvest: value.harvest as HarvestMode, minStage: value.minStage, keepVeterans: value.keepVeterans, snags: value.snags,
     buffer: value.buffer, waterBuffer: value.waterBuffer, minStanding: value.minStanding, replant: value.replant };
 }
-const RULES: readonly number[] = [HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION];
+const RULES: readonly number[] = [HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION];
+const rotOf = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 && v <= 3;
 
 function validateHomesteadCommand(value: Record<string, unknown>, base: { schema: typeof CURRENT_JOURNAL_SCHEMA; id: string; expectedRevision: number }): Command | null {
   switch (value.type) {
@@ -274,7 +275,7 @@ function validateHomesteadCommand(value: Record<string, unknown>, base: { schema
       return { ...base, type: 'set_gate', gateId: value.gateId as string, state: value.state as GateState };
     case 'upgrade_homestead':
       if (value.rules === undefined) return { ...base, type: 'upgrade_homestead' };
-      return value.rules === HOMESTEAD_LIVING_VERSION || value.rules === HOMESTEAD_WORK_VERSION || value.rules === HOMESTEAD_WOODLAND_VERSION ? { ...base, type: 'upgrade_homestead', rules: value.rules } : null;
+      return value.rules === HOMESTEAD_LIVING_VERSION || value.rules === HOMESTEAD_WORK_VERSION || value.rules === HOMESTEAD_WOODLAND_VERSION || value.rules === HOMESTEAD_BUILD_VERSION ? { ...base, type: 'upgrade_homestead', rules: value.rules } : null;
     case 'plant_tree': {
       if (!cell(value.x) || !cell(value.z) || value.species !== undefined && !speciesFromText(value.species)) return null;
       return { ...base, type: 'plant_tree', x: value.x, z: value.z, ...(value.species !== undefined ? { species: value.species as TreeSpecies } : {}) };
@@ -293,8 +294,9 @@ function validateHomesteadCommand(value: Record<string, unknown>, base: { schema
       return p ? { ...base, type: 'woodland_policy', ...p } : null;
     }
     case 'place_site':
-      if (!SITE_KINDS.includes(value.kind as SiteKind) || !coord(value.x) || !coord(value.z)) return null;
-      return { ...base, type: 'place_site', kind: value.kind as SiteKind, x: value.x, z: value.z };
+      // M014: any catalogue kind and an optional rotation (the simulation refuses both below rules v6).
+      if (!BUILD_KINDS.includes(value.kind as SiteKind) || !coord(value.x) || !coord(value.z) || value.rot !== undefined && !rotOf(value.rot)) return null;
+      return { ...base, type: 'place_site', kind: value.kind as SiteKind, x: value.x, z: value.z, ...(value.rot !== undefined ? { rot: value.rot as number } : {}) };
     case 'approve_site': case 'cancel_site':
       if (typeof value.siteId !== 'string' || !SITE_ID.test(value.siteId)) return null;
       return { ...base, type: value.type, siteId: value.siteId };
@@ -388,8 +390,9 @@ function validateHomesteadOutcome(value: Record<string, unknown>): CommandOutcom
       return p ? { type: 'woodland_policy', ...p } : null;
     }
     case 'place_site':
-      if (typeof value.siteId !== 'string' || !SITE_ID.test(value.siteId) || !SITE_KINDS.includes(value.kind as SiteKind) || !coord(value.x) || !coord(value.z)) return null;
-      return { type: 'place_site', siteId: value.siteId, kind: value.kind as SiteKind, x: value.x, z: value.z };
+      if (typeof value.siteId !== 'string' || !SITE_ID.test(value.siteId) || !BUILD_KINDS.includes(value.kind as SiteKind) || !coord(value.x) || !coord(value.z)
+        || value.rot !== undefined && !rotOf(value.rot)) return null;
+      return { type: 'place_site', siteId: value.siteId, kind: value.kind as SiteKind, x: value.x, z: value.z, ...(value.rot !== undefined ? { rot: value.rot as number } : {}) };
     case 'approve_site':
       if (typeof value.siteId !== 'string' || !SITE_ID.test(value.siteId)) return null;
       return { type: 'approve_site', siteId: value.siteId, reserved: bag(value.reserved) };
@@ -610,7 +613,8 @@ export function validateJournal(value: unknown): CommandJournal {
       || (entry.command.type === 'approve_site' || entry.command.type === 'cancel_site' || entry.command.type === 'place_site')
       && (entry.outcome.type === 'approve_site' || entry.outcome.type === 'cancel_site' || entry.outcome.type === 'place_site')
       && (entry.command.type !== 'place_site' ? entry.command.siteId !== entry.outcome.siteId
-        : entry.outcome.type === 'place_site' && (entry.command.kind !== entry.outcome.kind || entry.command.x !== entry.outcome.x || entry.command.z !== entry.outcome.z))
+        : entry.outcome.type === 'place_site' && (entry.command.kind !== entry.outcome.kind || entry.command.x !== entry.outcome.x || entry.command.z !== entry.outcome.z
+          || entry.command.rot !== entry.outcome.rot))
       || entry.command.type === 'set_gate' && entry.outcome.type === 'set_gate'
       && (entry.command.gateId !== entry.outcome.gateId || entry.command.state !== entry.outcome.state)
       || entry.command.type === 'steward_policy' && entry.outcome.type === 'steward_policy'
@@ -1048,8 +1052,9 @@ export class GameSession {
         return r.ok ? { ok: true, value: { type: 'woodland_policy', ...r.value } } : r;
       }
       case 'place_site': {
-        const r = placeSite(world, command.kind, command.x, command.z);
-        return r.ok ? { ok: true, value: { type: 'place_site', siteId: r.value.siteId, kind: r.value.kind, x: r.value.x, z: r.value.z } } : r;
+        const r = placeSite(world, command.kind, command.x, command.z, command.rot);
+        return r.ok ? { ok: true, value: { type: 'place_site', siteId: r.value.siteId, kind: r.value.kind, x: r.value.x, z: r.value.z,
+          ...(command.rot !== undefined ? { rot: command.rot } : {}) } } : r;
       }
       case 'approve_site': {
         const r = approveSite(world, command.siteId);

@@ -736,7 +736,7 @@ export function findNearest(world: World, g: NavGrid, from: { x: number; z: numb
  * planning queries (woodland statistics, M014 placement previews) use it;
  * nothing in the hashed sim depends on it.
  */
-export function distanceField(g: NavGrid, from: { x: number; z: number }, maxExpansions = 40_000): Int32Array {
+export function distanceField(g: NavGrid, from: { x: number; z: number }, maxExpansions = 40_000, avoid?: (cell: number) => boolean): Int32Array {
   const out = new Int32Array(g.w * g.h).fill(-1);
   const sx = cellOfDm(from.x), sz = cellOfDm(from.z);
   if (!g.inside(sx, sz)) return out;
@@ -745,7 +745,8 @@ export function distanceField(g: NavGrid, from: { x: number; z: number }, maxExp
   const start = g.index(sx, sz);
   out[start] = 0;
   heap.push(0, 0, start);
-  const o: SearchOptions = { maxExpansions };
+  // M014: `avoid` treats extra cells as blocked (a building that is not on the grid yet).
+  const o: SearchOptions = avoid ? { maxExpansions, avoid } : { maxExpansions };
   let expanded = 0;
   while (heap.size && expanded < maxExpansions) {
     const i = heap.pop();

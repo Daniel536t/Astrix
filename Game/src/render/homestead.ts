@@ -9,7 +9,7 @@ import type { World } from '../sim/world';
 import { residentSurfaceAt, surfaceAt } from '../sim/world';
 import {
   CROP_RULES, DM, Facility, HomesteadState, MOISTURE_MAX, Plot, SPECIES, Species, TROUGH_MAX, cropStage, fieldRect,
-  dayTime, homesteadLayout, SPECIES_RULES, unitsOf, fieldOpening, homesteadGates, BuildSite, SITE_RULES, Role,
+  dayTime, homesteadLayout, SPECIES_RULES, unitsOf, fieldOpening, homesteadGates, BuildSite, SITE_RULES, Role, siteCells,
 } from '../sim/homestead';
 import type { GateState } from '../sim/nav';
 import { AnimalBatch } from './animal-kit';
@@ -33,46 +33,103 @@ function loadGeometry(kind: 'wood' | 'fiber' | 'other'): THREE.BufferGeometry {
   return loadGeos[kind];
 }
 
-/** Boxes for a building site (planned stakes, materials on site, a frame rising with the work, the finished woodshed). */
+/**
+ * Turn a box from a building's own frame (width W along x, depth D along z,
+ * door on the +z side, origin at its min corner) into the world for rotation
+ * `rot` (door +z, +x, -z, -x), at footprint corner (x0, z0). Matches the
+ * simulation's footprint and entrance (sim/homestead.ts siteCells, siteEntrance).
+ */
+export function turnBox(b: B, rot: number, x0: number, z0: number, W: number, D: number): B {
+  let x = b.x, z = b.z, w = b.w, d = b.d;
+  if (rot === 1) [x, z, w, d] = [z, W - x, d, w];
+  else if (rot === 2) [x, z] = [W - x, D - z];
+  else if (rot === 3) [x, z, w, d] = [D - z, x, d, w];
+  return { ...b, x: x0 + x, z: z0 + z, w, d };
+}
+
+/** A finished building's boxes in its own frame (bottom at y). Timber stores show how full they are. */
+function buildingModel(kind: BuildSite['kind'], W: number, D: number, y: number, stock: number | null): B[] {
+  const l: B[] = [];
+  const logs = (n: number, x0: number, x1: number, z0: number, rows: number) => {
+    for (let i = 0; i < n; i++) l.push({ w: x1 - x0, h: 0.2, d: 0.2, x: (x0 + x1) / 2, y: y + 0.05 + Math.floor(i / rows) * 0.2, z: z0 + (i % rows) * 0.24, c: i % 2 ? '#7A5530' : '#8A6238' });
+  };
+  if (kind === 'well') {
+    // A stone curb round dark water, two posts, a windlass beam and a little roof; a plank step at the front.
+    const cx = W / 2, cz = D / 2;
+    l.push({ w: 1.7, h: 0.75, d: 0.3, x: cx, y, z: cz - 0.7, c: STONE }, { w: 1.7, h: 0.75, d: 0.3, x: cx, y, z: cz + 0.7, c: STONE });
+    l.push({ w: 0.3, h: 0.75, d: 1.1, x: cx - 0.7, y, z: cz, c: '#9A9890' }, { w: 0.3, h: 0.75, d: 1.1, x: cx + 0.7, y, z: cz, c: '#9A9890' });
+    l.push({ w: 1.1, h: 0.1, d: 1.1, x: cx, y: y + 0.45, z: cz, c: WATER });
+    for (const px of [-0.85, 0.85]) l.push({ w: 0.16, h: 1.9, d: 0.16, x: cx + px, y, z: cz, c: WOOD_DARK });
+    l.push({ w: 1.9, h: 0.12, d: 0.12, x: cx, y: y + 1.55, z: cz, c: WOOD });
+    l.push({ w: 0.22, h: 0.22, d: 0.22, x: cx, y: y + 1.05, z: cz, c: '#6E5238' });
+    l.push({ w: 2.0, h: 0.12, d: 1.0, x: cx, y: y + 1.9, z: cz - 0.3, c: '#8E4A30' }, { w: 2.0, h: 0.12, d: 1.0, x: cx, y: y + 1.9, z: cz + 0.3, c: '#A2573A' });
+    l.push({ w: 0.8, h: 0.08, d: 0.3, x: cx, y, z: D - 0.05, c: WOOD });
+    return l;
+  }
+  if (kind === 'logstore') {
+    // An open lean-to: tall back posts, short front posts, a sloping roof in two steps, logs under it.
+    for (const px of [0.12, W - 0.12]) { l.push({ w: 0.16, h: 1.7, d: 0.16, x: px, y, z: 0.12, c: WOOD_DARK }, { w: 0.16, h: 1.3, d: 0.16, x: px, y, z: D - 0.12, c: WOOD_DARK }); }
+    l.push({ w: W + 0.3, h: 0.12, d: D * 0.55, x: W / 2, y: y + 1.7, z: D * 0.27, c: '#8E4A30' }, { w: W + 0.3, h: 0.12, d: D * 0.55, x: W / 2, y: y + 1.45, z: D * 0.75, c: '#A2573A' });
+    l.push({ w: W - 0.2, h: 0.1, d: 0.1, x: W / 2, y: y + 0.6, z: 0.08, c: WOOD });
+    logs(stock === null ? 4 : Math.min(8, Math.ceil(stock / 3)), 0.25, W - 0.25, 0.28, 2);
+    return l;
+  }
+  // Woodshed: corner posts, back and side walls, a thatched roof, timber stacked inside (open front).
+  const posts: Array<[number, number]> = [[0.15, 0.15], [W - 0.15, 0.15], [0.15, D - 0.15], [W - 0.15, D - 0.15]];
+  for (const [px, pz] of posts) l.push({ w: 0.22, h: 2.3, d: 0.22, x: px, y, z: pz, c: WOOD_DARK });
+  l.push({ w: W, h: 1.7, d: 0.12, x: W / 2, y, z: 0.1, c: WOOD });
+  l.push({ w: 0.12, h: 1.7, d: D, x: 0.1, y, z: D / 2, c: WOOD }, { w: 0.12, h: 1.7, d: D, x: W - 0.1, y, z: D / 2, c: WOOD });
+  l.push({ w: W + 0.4, h: 0.18, d: D + 0.5, x: W / 2, y: y + 2.3, z: D / 2 + 0.1, c: STRAW }, { w: W - 0.2, h: 0.18, d: D - 0.2, x: W / 2, y: y + 2.48, z: D / 2, c: '#B8964E' });
+  // v4/v5 woodsheds keep their six logs; a v6 timber store shows one log per 6 wood (up to 15).
+  logs(stock === null ? 6 : Math.min(15, Math.ceil(stock / 4)), 0.3, W - 0.3, 0.45, 3);
+  return l;
+}
+
+/** Boxes for a building site (planned stakes, materials on site, a frame rising with the work, the finished building), turned with the site. */
 export function siteBoxes(list: B[], st: BuildSite, ground: (x: number, z: number) => number): void {
   const rule = SITE_RULES[st.kind];
-  const x0 = st.x, z0 = st.z, x1 = st.x + rule.w, z1 = st.z + rule.d, cx = (x0 + x1) / 2;
+  const rot = st.rot ?? 0;
+  const W = rule.w, D = rule.d;
+  const cells = siteCells(st);
   let y = Infinity;
-  for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) y = Math.min(y, ground(x + 0.5, z + 0.5));
-  const posts: Array<[number, number]> = [[x0 + 0.15, z0 + 0.15], [x1 - 0.15, z0 + 0.15], [x0 + 0.15, z1 - 0.15], [x1 - 0.15, z1 - 0.15]];
+  for (let z = cells.z0; z < cells.z1; z++) for (let x = cells.x0; x < cells.x1; x++) y = Math.min(y, ground(x + 0.5, z + 0.5));
+  const put = (b: B) => list.push(turnBox(b, rot, cells.x0, cells.z0, W, D));
+  const putAt = (b: Omit<B, 'y'>) => { const t = turnBox({ ...b, y: 0 }, rot, cells.x0, cells.z0, W, D); list.push({ ...t, y: ground(t.x, t.z) }); };
   if (st.state === 'done') {
-    for (const [px, pz] of posts) list.push({ w: 0.22, h: 2.3, d: 0.22, x: px, y, z: pz, c: WOOD_DARK });
-    list.push({ w: rule.w, h: 1.7, d: 0.12, x: cx, y, z: z0 + 0.1, c: WOOD });
-    list.push({ w: 0.12, h: 1.7, d: rule.d, x: x0 + 0.1, y, z: (z0 + z1) / 2, c: WOOD }, { w: 0.12, h: 1.7, d: rule.d, x: x1 - 0.1, y, z: (z0 + z1) / 2, c: WOOD });
-    list.push({ w: rule.w + 0.4, h: 0.18, d: rule.d + 0.5, x: cx, y: y + 2.3, z: (z0 + z1) / 2 + 0.1, c: STRAW }, { w: rule.w - 0.2, h: 0.18, d: rule.d - 0.2, x: cx, y: y + 2.48, z: (z0 + z1) / 2, c: '#B8964E' });
-    // Stacked timber inside.
-    for (let i = 0; i < 6; i++) list.push({ w: rule.w - 0.6, h: 0.2, d: 0.2, x: cx, y: y + 0.05 + Math.floor(i / 3) * 0.2, z: z0 + 0.45 + (i % 3) * 0.24, c: i % 2 ? '#7A5530' : '#8A6238' });
+    const stock = st.stock ? Object.values(st.stock).reduce((a, b) => a + b, 0) : null;
+    for (const b of buildingModel(st.kind, W, D, y, stock)) put(b);
     return;
   }
-  // Corner stakes and a string line (planned and approved).
-  for (const [px, pz] of posts) list.push({ w: 0.08, h: 0.6, d: 0.08, x: px, y, z: pz, c: st.state === 'planned' ? '#E8E0C8' : '#C8A040' });
-  list.push({ w: rule.w, h: 0.02, d: 0.02, x: cx, y: y + 0.5, z: z0 + 0.15, c: '#F0EBDD' }, { w: rule.w, h: 0.02, d: 0.02, x: cx, y: y + 0.5, z: z1 - 0.15, c: '#F0EBDD' });
-  if (st.state !== 'approved') return;
-  // Materials on site: one log per 2 wood, one bundle per 2 fibre, beside the front.
+  const posts: Array<[number, number]> = [[0.15, 0.15], [W - 0.15, 0.15], [0.15, D - 0.15], [W - 0.15, D - 0.15]];
+  // Corner stakes and a string line (planned, approved; red-topped once cancelled).
+  for (const [px, pz] of posts) put({ w: 0.08, h: 0.6, d: 0.08, x: px, y, z: pz, c: st.state === 'planned' ? '#E8E0C8' : st.state === 'cancelled' ? '#B84A3A' : '#C8A040' });
+  put({ w: W, h: 0.02, d: 0.02, x: W / 2, y: y + 0.5, z: 0.15, c: '#F0EBDD' });
+  put({ w: W, h: 0.02, d: 0.02, x: W / 2, y: y + 0.5, z: D - 0.15, c: '#F0EBDD' });
+  if (st.state === 'planned') return;
+  // Materials on site: one log per 2 wood, one bundle per 2 fibre, beside the footprint.
   const wood = st.delivered.wood ?? 0, fiber = st.delivered.fiber ?? 0;
-  const used = Math.min(1, st.work / rule.work);
-  for (let i = 0; i < Math.ceil((wood * (1 - used)) / 2); i++) list.push({ w: 1.2, h: 0.16, d: 0.16, x: x1 + 0.7, y: ground(x1 + 0.7, z0 + 0.5) + Math.floor(i / 3) * 0.16, z: z0 + 0.3 + (i % 3) * 0.2, c: i % 2 ? '#7A5530' : '#8A6238' });
-  for (let i = 0; i < Math.ceil(fiber / 2); i++) list.push({ w: 0.4, h: 0.3, d: 0.3, x: x0 - 0.5, y: ground(x0 - 0.5, z0 + 0.5), z: z0 + 0.3 + i * 0.35, c: STRAW });
+  const used = st.state === 'cancelled' ? 0 : Math.min(1, st.work / rule.work);
+  for (let i = 0; i < Math.ceil((wood * (1 - used)) / 2); i++) {
+    const t = turnBox({ w: 1.2, h: 0.16, d: 0.16, x: W + 0.7, y: 0, z: 0.3 + (i % 3) * 0.2, c: i % 2 ? '#7A5530' : '#8A6238' }, rot, cells.x0, cells.z0, W, D);
+    list.push({ ...t, y: ground(t.x, t.z) + Math.floor(i / 3) * 0.16 });
+  }
+  for (let i = 0; i < Math.ceil(fiber / 2); i++) putAt({ w: 0.4, h: 0.3, d: 0.3, x: -0.5, z: 0.3 + i * 0.35, c: STRAW });
+  if (st.state === 'cancelled') return;
   // The frame rises with the work done: posts, then the wall rails, then the roof beams.
   if (st.work > 0) {
     const hgt = 2.3 * Math.min(1, used * 2);
-    for (const [px, pz] of posts) list.push({ w: 0.2, h: Math.max(0.2, hgt), d: 0.2, x: px, y, z: pz, c: WOOD_DARK });
-    if (used > 0.5) list.push({ w: rule.w, h: 1.7 * Math.min(1, (used - 0.5) * 2.5), d: 0.12, x: cx, y, z: z0 + 0.1, c: WOOD });
-    if (used > 0.8) list.push({ w: rule.w + 0.2, h: 0.12, d: 0.12, x: cx, y: y + 2.3, z: z0 + 0.15, c: WOOD_DARK }, { w: rule.w + 0.2, h: 0.12, d: 0.12, x: cx, y: y + 2.3, z: z1 - 0.15, c: WOOD_DARK });
+    for (const [px, pz] of posts) put({ w: 0.2, h: Math.max(0.2, hgt), d: 0.2, x: px, y, z: pz, c: WOOD_DARK });
+    if (used > 0.5) put({ w: W, h: 1.7 * Math.min(1, (used - 0.5) * 2.5), d: 0.12, x: W / 2, y, z: 0.1, c: WOOD });
+    if (used > 0.8) { put({ w: W + 0.2, h: 0.12, d: 0.12, x: W / 2, y: y + 2.3, z: 0.15, c: WOOD_DARK }); put({ w: W + 0.2, h: 0.12, d: 0.12, x: W / 2, y: y + 2.3, z: D - 0.15, c: WOOD_DARK }); }
   }
 }
 import type { CharacterState } from '../sim/character';
 
 const MAT = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
 
-type B = { w: number; h: number; d: number; x: number; y: number; z: number; c: string; ry?: number };
+export type B = { w: number; h: number; d: number; x: number; y: number; z: number; c: string; ry?: number };
 /** Merge boxes (y = bottom) into one vertex-coloured geometry with simple face shading. */
-function boxes(list: B[]): THREE.BufferGeometry {
+export function boxes(list: B[]): THREE.BufferGeometry {
   const geos = list.map((b) => {
     const g = new THREE.BoxGeometry(b.w, b.h, b.d).toNonIndexed();
     if (b.ry) g.rotateY(b.ry);
@@ -508,7 +565,7 @@ export class HomesteadView {
   private refreshTroughs(h: HomesteadState): void {
     const key = h.enclosures.map((e) => `${e.id}:${Math.round(e.water / 3)}:${Math.round(e.feed / 3)}:${e.eggs > 0 ? 1 : 0}`).join('|')
       + `|barn:${Math.ceil(Object.values(h.overflow).reduce((a, b) => a + b, 0) / 20)}|gates:${(h.gates ?? []).map((g) => g.state).join(',')}`
-      + `|sites:${(h.sites ?? []).map((st) => `${st.id}:${st.state}:${st.work}:${JSON.stringify(st.delivered)}`).join(';')}`;
+      + `|sites:${(h.sites ?? []).map((st) => `${st.id}:${st.state}:${st.work}:${st.rot ?? 0}:${JSON.stringify(st.delivered)}:${JSON.stringify(st.stock ?? null)}`).join(';')}`;
     if (key === this.troughKey) return;
     this.troughKey = key;
     for (const c of this.dynamic.children) (c as THREE.Mesh).geometry.dispose();

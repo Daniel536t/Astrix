@@ -298,7 +298,9 @@ function validateLifeFields(value: Record<string, unknown>): Pick<LifeSnapshot, 
   // Rules v4: site reservations are store stock set aside, so they can never exceed it.
   for (const st of homestead?.sites ?? []) for (const k of Object.keys(st.reserved)) {
     const held = homestead!.sites!.reduce((n, x) => n + (x.reserved[k] ?? 0), 0);
-    if (held > (stockpiles[0].inventory[k] ?? 0)) throw new Error('building-site reservations exceed the store');
+    // v6: timber in finished woodsheds and log stores is store stock too.
+    const stored = homestead!.sites!.reduce((n, x) => n + (x.stock?.[k] ?? 0), 0);
+    if (held > (stockpiles[0].inventory[k] ?? 0) + stored) throw new Error('building-site reservations exceed the store');
   }
   return { tick: value.tick, stockpiles, jobs, crops, ...(homestead ? { homestead } : {}) };
 }

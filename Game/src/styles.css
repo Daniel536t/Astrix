@@ -870,3 +870,37 @@ body.planning-field #vitals { display: none; }
   #field-planner { top: max(8px, env(safe-area-inset-top)); width: min(560px, calc(100vw - 260px)); }
   #homestead-panel { max-height: calc(100vh - 16px); top: 8px; left: auto; width: min(420px, 60vw); }
 }
+
+/* M014 build mode: catalogue, ghost verdict and woodland figures; top of the screen, clear of the joystick and Jump. */
+#build-bar {
+  position: fixed; z-index: 12; left: 50%; transform: translateX(-50%); top: max(88px, calc(env(safe-area-inset-top) + 80px));
+  width: min(600px, calc(100vw - 20px)); max-height: 46vh; overflow-y: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 5px;
+  color: #F4EFE3; background: rgba(20, 23, 34, 0.92); border: 1px solid rgba(216, 190, 106, 0.7); border-radius: 10px;
+  font: 12px/1.35 ui-sans-serif, system-ui, sans-serif;
+}
+#build-bar[hidden] { display: none; }
+#build-bar .build-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+#build-bar button { background: #2E3446; color: #F4EFE3; border: 1px solid #6B7594; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; touch-action: manipulation; }
+#build-bar button.on { background: #7A5E2E; border-color: #D8BE6A; }
+#build-bar button.primary { background: #5E7F2E; border-color: #A9CF6A; }
+#build-bar button:disabled { opacity: 0.45; cursor: not-allowed; }
+#build-bar .build-info, #build-bar .build-wood { color: #CFC8B8; font-size: 11px; }
+#build-bar .build-verdict.ok { color: #9EE2B8; }
+#build-bar .build-verdict.bad { color: #F2A65A; }
+#build-bar .fell { color: #8FE08F; }
+#build-bar .keep { color: #8FBEF4; }
+#build-bar .warn { color: #F2A65A; }
+#build-bar .dim { color: #B8B2A4; }
+#build-bar .build-help { font-size: 10px; }
+body.building #vitals { display: none; }
+@media (pointer: coarse) {
+  #build-bar .build-help { display: none; }
+  body.building .banner-pad, body.building #controls .harvest-touch { display: none; }
+}
+@media (max-width: 760px) and (orientation: portrait) {
+  #build-bar { top: max(56px, calc(env(safe-area-inset-top) + 50px)); max-height: 38vh; font-size: 11px; padding: 6px 8px; }
+  body.building #mode-button { display: none; }
+}
+@media (pointer: coarse) and (orientation: landscape) {
+  #build-bar { top: max(8px, env(safe-area-inset-top)); width: min(560px, calc(100vw - 260px)); max-height: 60vh; }
+}

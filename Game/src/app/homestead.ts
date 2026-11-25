@@ -14,8 +14,10 @@ import {
   checkField, cropStage, fenceCost, fieldUnits, homesteadLayout, nearbyActions, recentHomesteadEvents, unitsOf, findFieldSpot,
   dayTime, OVERFLOW_CAPACITY, homesteadGates, isNavHomestead, isLivingHomestead, nearbyGate, straysOf,
   HOMESTEAD_WORK_VERSION, isWorkHomestead, ROLES, SITE_RULES, findSiteSpot, reservations, siteProgress, siteStatus, woodlot, MIN_STANDING_TREES,
-  treeEntityId, HOMESTEAD_WOODLAND_VERSION,
+  treeEntityId, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, isBuildHomestead, timberStores, storeRoom, siteEntrance,
 } from '../sim/homestead';
+import { DOOR_FACING, findBuildingSpot } from '../sim/buildings';
+import { BuildMode } from './build-mode';
 import {
   isWoodlandHomestead, managedWoodland, woodcutterStatus, woodlandStats, plantable, seedParent, insideWindow,
 } from '../sim/forestry';
@@ -37,12 +39,17 @@ export interface HomesteadGameOptions {
   onSaved?: () => void;
   /** Where the player stands and faces (for the field planner and Use). */
   player: () => { x: number; z: number; heading: number } | null;
+  /** M014 build mode: the camera and canvas for the placement ghost (pointer to ground). */
+  camera?: () => THREE.Camera | null;
+  canvas?: HTMLElement | null;
 }
 
 type Receipt = ReturnType<GameSession['dispatch']>;
 
 export class HomesteadGame {
   readonly view: HomesteadView;
+  /** M014: choose a building, its place and its rotation (sim/buildings.ts validates). */
+  readonly build: BuildMode;
   private readonly panel: HTMLElement;
   private readonly planBar: HTMLElement;
   private readonly preview: THREE.Group;
@@ -85,6 +92,9 @@ export class HomesteadGame {
     toggle.setAttribute('aria-label', 'Open the homestead: fields, villagers, animals and steward');
     toggle.addEventListener('click', () => this.togglePanel());
     document.body.appendChild(toggle);
+    this.build = new BuildMode({ world: () => this.world, scene: o.scene, camera: o.camera ?? (() => null), canvas: o.canvas ?? null,
+      send: (c, t) => this.send(c, t) as never, toast: o.toast, player: o.player,
+      onChange: (on) => { if (on) { this.panel.hidden = true; this.stopPlanning(); } this.panelRevision = -1; } });
     this.ensureFounded();
   }
 
@@ -108,19 +118,20 @@ export class HomesteadGame {
   private ensureFounded(): void {
     if (!this.available) return;
     if (!this.world.homestead) {
-      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_WOODLAND_VERSION });
-      if (r.ok) this.o.toast('Settlers arrived: Ada the farmer, Bram the herder and Cora, with animals and supplies. Open Farm to plan a field, give Cora work or plan a woodshed.', 'good');
+      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_BUILD_VERSION });
+      if (r.ok) this.o.toast('Settlers arrived: Ada the farmer, Bram the herder and Cora, with animals and supplies. Open Farm to plan a field, give Cora work, or Build (G) a woodshed where you choose.', 'good');
       return;
     }
-    if (this.world.homestead.version < HOMESTEAD_WOODLAND_VERSION) {
-      // M012/M013: one journaled upgrade to settlement rules v5 (from v1-v4); the saved hash loads first, unchanged.
+    if (this.world.homestead.version < HOMESTEAD_BUILD_VERSION) {
+      // M012-M014: one journaled upgrade to settlement rules v6 (from v1-v5); the saved hash loads first, unchanged.
       const was = this.world.homestead.version;
-      const r = this.send({ type: 'upgrade_homestead', rules: HOMESTEAD_WOODLAND_VERSION });
+      const r = this.send({ type: 'upgrade_homestead', rules: HOMESTEAD_BUILD_VERSION });
       const cora = was < 4 ? ' Cora has joined the homestead: make her a woodcutter or a builder in Farm.' : '';
-      const wood = ' The woodland is alive now: trees grow, age and regrow; set how it is harvested in Farm.';
+      const wood = was < 5 ? ' The woodland is alive now: trees grow, age and regrow; set how it is harvested in Farm.' : '';
+      const build = ' You can now choose where to build and which way it faces: Build (G, or Farm → Build). Finished woodsheds store timber for the woodcutter.';
       if (r.ok) this.o.toast((was < 2 ? 'The homestead now has gates and doors: villagers and animals walk real routes around fences, buildings and trees.'
         : was < 3 ? 'The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use.'
-          : was < 4 ? 'Villagers can now fell trees and build.' : '') + cora + wood, 'good');
+          : was < 4 ? 'Villagers can now fell trees and build.' : '') + cora + wood + build, 'good');
     }
   }
 
@@ -162,6 +173,7 @@ export class HomesteadGame {
 
   startPlanning(crop: CropKind = 'wheat'): void {
     this.planning = { crop, w: 4, d: 4 };
+    this.build.close();
     this.panel.hidden = true;
     this.planBar.hidden = false;
     this.preview.visible = true;
@@ -318,7 +330,7 @@ export class HomesteadGame {
 
   togglePanel(force?: boolean): void {
     this.panel.hidden = force === undefined ? !this.panel.hidden : !force;
-    if (!this.panel.hidden) { this.stopPlanning(); this.panelRevision = -1; this.renderPanel(); }
+    if (!this.panel.hidden) { this.stopPlanning(); this.build.close(); this.panelRevision = -1; this.renderPanel(); }
   }
 
   private renderPanel(): void {
@@ -357,14 +369,20 @@ export class HomesteadGame {
         : `<button type="button" data-assign="${v.id}" data-role="${v.role === 'farmer' ? 'herder' : 'farmer'}">Make ${v.role === 'farmer' ? 'herder' : 'farmer'}</button>`}</span></li>`).join('');
     const held = reservations(h);
     const heldText = Object.entries(held).map(([k, n]) => `${n} ${k}`).join(', ');
+    const v6 = isBuildHomestead(h);
     const sites = isWorkHomestead(h) ? (h.sites ?? []).map((st) => {
       const rule = SITE_RULES[st.kind];
       const cost = Object.entries(rule.cost).map(([k, n]) => `${st.delivered[k] ?? 0}/${n} ${k}`).join(', ');
       const res = Object.entries(st.reserved).map(([k, n]) => `${n} ${k}`).join(', ');
-      return `<li data-site="${st.id}"><b>${rule.label}</b> at ${st.x}, ${st.z} · ${st.state === 'done' ? 'built' : `${st.state} · ${siteProgress(st)}% · on site ${cost}${res ? ` · reserved in store: ${res}` : ''}`}
+      const facing = v6 ? `, door ${DOOR_FACING[st.rot ?? 0]}` : '';
+      const held = st.stock ? ` · holds ${Object.values(st.stock).reduce((a, b) => a + b, 0)}/${rule.store!.capacity} ${rule.store!.item}` : '';
+      const state = st.state === 'done' ? `built${held}` : st.state === 'cancelled' ? `<b class="warn">cancelled</b> · on site ${cost}` : `${st.state} · ${siteProgress(st)}% · on site ${cost}${res ? ` · reserved in store: ${res}` : ''}`;
+      // v6: a site can be cancelled after delivery (the builder carries the materials back); before v6 only while nothing is on it.
+      const cancellable = st.state !== 'done' && st.state !== 'cancelled' && (v6 || (!Object.keys(st.delivered).length && !st.work));
+      return `<li data-site="${st.id}" data-site-kind="${st.kind}" data-site-state="${st.state}"><b>${rule.label}</b> at ${st.x}, ${st.z}${facing} · ${state}
         <br><span class="dim">${siteStatus(this.world, st)}</span>
-        <span class="row-actions">${st.state === 'planned' ? `<button type="button" class="primary" data-approve-site="${st.id}">Approve (reserve ${Object.entries(rule.cost).map(([k, n]) => `${n} ${k}`).join(', ')})</button>` : ''}${st.state !== 'done' && !Object.keys(st.delivered).length && !st.work ? `<button type="button" data-cancel-site="${st.id}">Cancel</button>` : ''}</span></li>`;
-    }).join('') || '<li class="dim">No building sites. A woodshed needs 12 wood (a woodcutter brings it) and 4 fibre.</li>' : '';
+        <span class="row-actions">${st.state === 'planned' ? `<button type="button" class="primary" data-approve-site="${st.id}">Approve (reserve ${Object.entries(rule.cost).map(([k, n]) => `${n} ${k}`).join(', ')})</button>` : ''}${cancellable ? `<button type="button" data-cancel-site="${st.id}">Cancel${v6 && Object.keys(st.delivered).length ? ' (carry materials back)' : ''}</button>` : ''}</span></li>`;
+    }).join('') || `<li class="dim">No building sites. ${v6 ? 'Build (G) lets you choose a woodshed, log store or well, where it goes and which way it faces.' : 'A woodshed needs 12 wood (a woodcutter brings it) and 4 fibre.'}</li>` : '';
     const lot = isWorkHomestead(h) ? woodlot(this.world, h) : null;
     const animals = SPECIES.map((sp) => {
       const list = h.animals.filter((a) => a.species === sp);
@@ -402,7 +420,7 @@ export class HomesteadGame {
       <h3>People</h3><ul>${people}</ul>
       ${lot && !isWoodlandHomestead(h) ? `<p class="dim">Woodland: ${lot.trees.length} mature trees may be felled · ${lot.standing} mature or old trees standing (${MIN_STANDING_TREES} are always kept)</p>` : ''}
       ${lot && isWoodlandHomestead(h) ? this.woodlandPanel() : ''}
-      ${lot ? `<h3>Building</h3><ul>${sites}</ul><div class="row-actions"><button type="button" data-site-new>Plan a woodshed</button>${heldText ? `<span class="dim">reserved for building: ${heldText} (not usable for anything else)</span>` : ''}</div>` : ''}
+      ${lot ? `<h3>Building</h3><ul data-sites>${sites}</ul><div class="row-actions">${v6 ? '<button type="button" class="primary" data-build-open>Build… (G)</button>' : ''}<button type="button" data-site-new>${v6 ? 'Quick woodshed near the farmhouse' : 'Plan a woodshed'}</button>${heldText ? `<span class="dim">reserved for building: ${heldText} (not usable for anything else)</span>` : ''}</div>` : ''}
       <h3>Animals</h3><ul>${animals}</ul><p class="dim">${troughs}</p>
       ${gates ? `<h3>Gates and doors</h3><ul>${gates}</ul>` : ''}
       <h3>Steward <span class="dim">(AI agent)</span></h3>
@@ -497,10 +515,11 @@ export class HomesteadGame {
     let r: Receipt | null = null;
     if (b.hasAttribute('data-close')) { this.togglePanel(false); return; }
     if (b.hasAttribute('data-plan-new')) { this.startPlanning(); return; }
+    if (b.hasAttribute('data-build-open')) { this.togglePanel(false); this.build.open(); return; }
     if (b.hasAttribute('data-site-new')) {
-      const spot = findSiteSpot(this.world, 'woodshed');
+      const spot = isBuildHomestead(this.world.homestead!) ? findBuildingSpot(this.world, 'woodshed', 0) : findSiteSpot(this.world, 'woodshed');
       if (!spot) { this.o.toast('There is no clear, level ground for a woodshed near the farmhouse.', 'bad'); return; }
-      r = this.send({ type: 'place_site', kind: 'woodshed', x: spot.x, z: spot.z }, `${spot.x},${spot.z}`);
+      r = this.send({ type: 'place_site', kind: 'woodshed', x: spot.x, z: spot.z, ...(isBuildHomestead(this.world.homestead!) ? { rot: 0 } : {}) }, `${spot.x},${spot.z}`);
       if (r.ok) this.o.toast(`Woodshed marked out at ${spot.x}, ${spot.z}. Approve it to reserve its materials.`, 'good');
     }
     if (b.dataset.approveSite) {
@@ -565,6 +584,7 @@ export class HomesteadGame {
   update(frameDt: number): void {
     if (!this.available) return;
     this.view.update(frameDt);
+    this.build.update();
     this.updatePlanner();
     this.runSteward();
     this.renderPanel();
@@ -613,7 +633,10 @@ export class HomesteadGame {
       strays: Object.fromEntries(h.enclosures.map((e) => [e.id, straysOf(h, e.id as EnclosureId).map((a) => a.id)])),
       enclosures: h.enclosures.map((e) => ({ ...e })),
       overflow: { ...h.overflow },
-      sites: (h.sites ?? []).map((st) => ({ ...st, reserved: { ...st.reserved }, delivered: { ...st.delivered }, progress: siteProgress(st), status: siteStatus(this.world, st) })),
+      sites: (h.sites ?? []).map((st) => ({ ...st, reserved: { ...st.reserved }, delivered: { ...st.delivered }, ...(st.stock ? { stock: { ...st.stock }, room: storeRoom(st) } : {}),
+        entrance: siteEntrance(st), progress: siteProgress(st), status: siteStatus(this.world, st) })),
+      timberStores: timberStores(h).map((st) => st.id),
+      build: this.build.metrics(),
       reserved: reservations(h),
       woodlot: isWorkHomestead(h) ? (() => { const l = woodlot(this.world, h); return { fellable: l.trees.length, standing: l.standing,
         trees: l.trees.map((e) => ({ id: e.id, x: e.x, z: e.z, stage: growthStage(e), remaining: e.remaining, cut: !!e.harvestedOnce })) }; })() : null,

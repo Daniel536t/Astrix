@@ -21,7 +21,7 @@ import { TREE_SPECIES } from './vegetation';
 import type { HomesteadState, Leg, Rect, Task, Villager } from './homestead';
 import {
   DM, FOOTPRINT, RESERVED_SITES, STORE_SPOT, WOOD_STOCK_TARGET, fieldRect, freeInStore, homesteadLayout, homesteadNav,
-  homesteadNavRegion, siteCells, treeTarget, woodWanted,
+  homesteadNavRegion, siteCells, treeTarget, woodWanted, woodDropOff, storeCapacity,
 } from './homestead';
 import { FOUNDER_STOCKPILE } from './economy';
 import { BLOCK, NavGoal, NavGrid, distanceField, findNearest } from './nav';
@@ -514,7 +514,9 @@ export function fellingHold(world: World, h: HomesteadState, lot: ManagedWoodlan
     return `sustainable quota reached: the woodland regrows about ${perDay.toFixed(1)} trees a day${wait !== null ? `; next tree in about ${wait} ticks` : ''}`;
   }
   const free = freeInStore(world, 'wood') + (h.overflow.wood ?? 0);
-  if (free >= WOOD_STOCK_TARGET && !woodWanted(h)) return `the store has ${free} wood and no site needs more`;
+  // v6: the timber stores' room is part of the stock the woodcutter keeps up.
+  const room = storeCapacity(h);
+  if (free >= WOOD_STOCK_TARGET + room && !woodWanted(h)) return room ? `the store and timber stores hold ${free} wood and no site needs more` : `the store has ${free} wood and no site needs more`;
   return null;
 }
 
@@ -580,7 +582,9 @@ export function planWoodcutter(world: World, h: HomesteadState, v: Villager, tak
   if (!res.ok) return res.code === 'budget' ? 'busy' : 'no fellable tree can be reached';
   const e = world.entities.get(res.id)!;
   const g = lifeGoal(world, e);
-  return mkTask('chop', treeTarget(e.id)!, [walkLeg(g.x, g.z), workLeg(g.x, g.z, 4, 'chop'), walkLeg(STORE_SPOT.x, STORE_SPOT.z), workLeg(STORE_SPOT.x, STORE_SPOT.z, 1, 'store')]);
+  // v6: the load goes to the nearest woodshed or log store with room, or the store when that is nearer (below v6 always the store).
+  const drop = woodDropOff(h, Math.round(e.x * DM), Math.round(e.z * DM));
+  return mkTask('chop', treeTarget(e.id)!, [walkLeg(g.x, g.z), workLeg(g.x, g.z, 4, 'chop'), walkLeg(drop.x, drop.z), workLeg(drop.x, drop.z, 1, drop.effect)]);
 }
 
 /** What an idle v5 woodcutter is waiting for (for the Farm panel; derived, never saved). */
@@ -703,6 +707,10 @@ export interface WoodlandQuery {
   store?: { x: number; z: number };
   /** Wood per day the planned use needs; the answer says how many managed trees that takes. */
   demandPerDay?: number;
+  /** M014: a planned building (dm rect): trees within the policy's building buffer of it count as protected. */
+  footprint?: Rect;
+  /** M014: trees its construction clears (left out of the answer). */
+  clears?: string[];
 }
 export interface WoodlandStats {
   centre: { x: number; z: number }; radius: number;
@@ -736,6 +744,8 @@ export interface WoodlandStats {
   /** The felling allowance now (trees) and per day. */
   quotaTrees: number;
   policy: WoodPolicy;
+  /** M014: trees that the planned building would put under the building buffer (and so protect). */
+  newlyProtected: number;
 }
 
 const fieldCache = new WeakMap<NavGrid, Map<string, Int32Array>>();
@@ -758,8 +768,15 @@ export function woodlandStats(world: World, q: WoodlandQuery): WoodlandStats | n
   let trees = 0, standingTimber = 0, harvestableTimber = 0, regrowing = 0;
   const harvestableIds: string[] = [], protectedIds: string[] = [];
   const store = q.store ?? { x: STORE_SPOT.x / DM, z: STORE_SPOT.z / DM };
-  for (const m of lot.all) {
-    if (!inArea(m.e)) continue;
+  const cleared = new Set(q.clears ?? []);
+  const fp = q.footprint;
+  const nearNew = (e: Entity) => !!fp && w.policy.buffer > 0 && rectDistance([fp], e.x, e.z) < w.policy.buffer;
+  let newlyProtected = 0;
+  for (const m0 of lot.all) {
+    if (!inArea(m0.e) || cleared.has(m0.e.id)) continue;
+    // M014: a planned building's buffer protects the trees beside it, as the finished building will.
+    const m = m0.eligible && nearNew(m0.e) ? { ...m0, eligible: false, protectedWhy: `within ${w.policy.buffer} m of the planned building` } : m0;
+    if (m !== m0) newlyProtected++;
     const { life } = m;
     byStage[life.stage]++;
     if (life.present) { trees++; bySpecies[life.species]++; }
@@ -794,7 +811,7 @@ export function woodlandStats(world: World, q: WoodlandQuery): WoodlandStats | n
     if (best < 0) { unreachable++; continue; }
     sum += best / 10; n++; max = Math.max(max, best / 10);
   }
-  const yieldNow = sustainableYield(world, h, inArea);
+  const yieldNow = sustainableYield(world, h, fp || cleared.size ? (e) => inArea(e) && !cleared.has(e.id) && !nearNew(e) : inArea);
   const meanTimber = yieldNow.treesPerDay > 0 ? yieldNow.woodPerDay / yieldNow.treesPerDay : TIMBER.spruce[w.policy.minStage].total;
   const rot = yieldNow.rotation || rotationDays('spruce', w.policy);
   const spotsForDemand = q.demandPerDay !== undefined ? Math.ceil(q.demandPerDay * rot / meanTimber) : null;
@@ -806,7 +823,7 @@ export function woodlandStats(world: World, q: WoodlandQuery): WoodlandStats | n
     sustainableTreesPerDay: Math.round(yieldNow.treesPerDay * 100) / 100, sustainableWoodPerDay: Math.round(yieldNow.woodPerDay * 10) / 10,
     rotationDays: Math.round(rot * 10) / 10,
     spotsForDemand, regenerationShortfall: spotsForDemand !== null ? Math.max(0, spotsForDemand - yieldNow.spots) : null,
-    quotaTrees: Math.floor(w.quota / QUOTA_TREE * 10) / 10, policy: { ...w.policy },
+    quotaTrees: Math.floor(w.quota / QUOTA_TREE * 10) / 10, policy: { ...w.policy }, newlyProtected,
   };
 }
 

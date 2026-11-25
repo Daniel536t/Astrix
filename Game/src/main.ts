@@ -735,12 +735,12 @@ function frame(timestamp?: number) {
       if (useButton && useButton.textContent !== useLabel) { useButton.textContent = useLabel; useButton.classList.toggle('work', !!work); }
       const hint = walking
         ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · tap Jump twice to jump higher, hold to swim up · Dive · Plant: mark this spot with your banner · Home / To banner: hold still to return · Farm: fields, people, animals'
-          : 'WASD: walk · Shift: run · Space: jump (tap twice to jump higher, hold to swim up) · C: dive · E: use / gather / open a gate · V: plant banner · R: return home · T: return to banner · F: plan a field · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
+          : 'WASD: walk · Shift: run · Space: jump (tap twice to jump higher, hold to swim up) · C: dive · E: use / gather / open a gate · V: plant banner · R: return home · T: return to banner · F: plan a field · G: build · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
         : coarse
           ? 'drag: orbit · two fingers: move + zoom'
           : debugMutations
             ? 'DEV ONLY · F: dig · G: place · H: harvest · P: pause'
-            : 'drag: orbit · WASD: pan · H: harvest · Tab: walk · P: pause';
+            : 'drag: orbit · WASD: pan · H: harvest · G: build · Tab: walk · P: pause';
       const channelTarget = explore?.channel.target;
       const channel = channelTarget ? `Returning to your ${BANNER_NAMES[channelTarget]} in ${explore!.channel.remaining(performance.now()).toFixed(1)} s · hold still` : '';
       const persistence = m.save.persistent ? m.save.message
@@ -779,6 +779,8 @@ window.addEventListener('keydown', (e) => {
     window.dispatchEvent(new KeyboardEvent('keyup', { key: e.key }));
     return;
   }
+  // M014 build mode takes Escape (close), X (turn) and Enter (place) while it is open.
+  if (homesteadGame?.build.key(e)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   // Key map (documented in 00_Project_Core/Controls.md): P pauses time; Space
   // is jump in explore mode (handled by the explore controller).
   if (e.key === 'p' || e.key === 'P') time.paused = !time.paused;
@@ -799,6 +801,10 @@ window.addEventListener('keydown', (e) => {
   if ((e.key === 'f' || e.key === 'F') && debugMutations) {
     digAt(Math.round(rig.target.x), Math.round(rig.target.z), 2, 3);
     lastAction = 'development-only excavation (not journaled)';
+  }
+  // M014: G opens build mode (choose a building, where it goes and which way it faces); G again closes it.
+  if ((e.key === 'g' || e.key === 'G') && !debugMutations && homesteadGame) {
+    if (homesteadGame.build.active) homesteadGame.build.close(); else homesteadGame.build.open();
   }
   if ((e.key === 'g' || e.key === 'G') && debugMutations) {
     const changed = placeAt(Math.round(rig.target.x), Math.round(rig.target.z));
@@ -829,7 +835,8 @@ if (!isMap && !isKit) {
     homesteadGame = new HomesteadGame({ session, store, scene,
       onSaved: () => saveScheduler.saved(Date.now()),
       toast: (message, kind) => { lastAction = message; m2Game?.toast(message, kind); },
-      player: () => { const c = explore?.character; return c && !c.dead ? { x: c.x, z: c.z, heading: c.heading } : null; } });
+      player: () => { const c = explore?.character; return c && !c.dead ? { x: c.x, z: c.z, heading: c.heading } : null; },
+      camera: () => rig.camera, canvas: renderer.domElement });
   }
   sceneInspector?.addRoot(m2Game.inspectableRoot);
   sceneInspector?.addRoot(lifeGame.inspectableRoot);
