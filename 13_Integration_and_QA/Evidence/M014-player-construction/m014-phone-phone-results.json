@@ -1,0 +1,235 @@
+{
+ "base": "https://astrix.local/",
+ "startedAt": "2026-11-25T08:34:59.576Z",
+ "seconds": 22.3,
+ "phase": "phone",
+ "verdict": {
+  "phone": true
+ },
+ "checks": {
+  "phone": {
+   "ok": true,
+   "opened": true,
+   "startPos": {
+    "x": -19,
+    "z": -24
+   },
+   "tried": [
+    {
+     "at": [
+      300,
+      520
+     ],
+     "pos": {
+      "x": -19,
+      "z": -21
+     },
+     "pinned": true,
+     "ok": true,
+     "reasons": []
+    }
+   ],
+   "tappedTo": {
+    "x": -19,
+    "z": -21
+   },
+   "turnedRot": 1,
+   "placed": [
+    {
+     "kind": "woodshed",
+     "x": -19,
+     "z": -21,
+     "rot": 1,
+     "state": "approved"
+    }
+   ],
+   "rects": {
+    "#build-bar": {
+     "x": 10,
+     "y": 56,
+     "w": 370,
+     "h": 229.59375
+    },
+    "#move-zone": {
+     "x": 0,
+     "y": 286.953125,
+     "w": 195,
+     "h": 557.046875
+    },
+    "#jump-button": {
+     "x": 286,
+     "y": 740,
+     "w": 80,
+     "h": 80
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60.359375,
+     "h": 36
+    },
+    "#gather-nearest": null
+   },
+   "barCoversJump": false,
+   "barCoversJoystickArea": false,
+   "commands": 2
+  },
+  "pageErrors": []
+ },
+ "perf": {},
+ "shots": [
+  {
+   "file": "phone-p1-build-open.png",
+   "why": "phone: build mode opened from Farm; the ghost starts in front of the founder",
+   "t": 13.3,
+   "tick": 2
+  },
+  {
+   "file": "phone-p2-ghost-turned.png",
+   "why": "phone: ghost tapped into place and turned (door east): Good spot. Door faces east · 40.4 m walk to the store",
+   "t": 18.8,
+   "tick": 2
+  },
+  {
+   "file": "phone-p3-placed.png",
+   "why": "phone: placed and approved",
+   "t": 22.3,
+   "tick": 2
+  }
+ ],
+ "samples": [
+  {
+   "t": 8.7,
+   "label": "loaded",
+   "tick": 2,
+   "rules": 6,
+   "hash": "312e644549a9859c",
+   "seq": 3,
+   "store": {
+    "fiber": 20,
+    "food": 10,
+    "seed": 6
+   },
+   "reserved": {},
+   "sites": [],
+   "cora": {
+    "role": "farmer",
+    "task": "idle",
+    "target": "idle:villager:2",
+    "op": "work",
+    "last": {
+     "effect": "none",
+     "x": -34.8,
+     "z": -9.1
+    },
+    "carry": null,
+    "x": -33.5,
+    "z": -8.5
+   },
+   "ada": {
+    "role": "farmer",
+    "task": "idle",
+    "target": "idle:villager:0",
+    "op": "work",
+    "last": {
+     "effect": "none",
+     "x": -31.8,
+     "z": -6.5
+    },
+    "carry": null,
+    "x": -32.5,
+    "z": -8.5
+   },
+   "calls": 70,
+   "tris": 124250,
+   "tickMs": {
+    "mean": 3.45,
+    "p95": 1.6,
+    "max": 5.3
+   },
+   "homeMs": {
+    "mean": 0.49,
+    "p95": 0.2,
+    "max": 24.8
+   }
+  },
+  {
+   "t": 21.6,
+   "label": "placed",
+   "tick": 2,
+   "rules": 6,
+   "hash": "1fbbdfe706e71c0d",
+   "seq": 5,
+   "store": {
+    "fiber": 20,
+    "food": 10,
+    "seed": 6
+   },
+   "reserved": {
+    "fiber": 4
+   },
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "x": -19,
+     "z": -21,
+     "rot": 1,
+     "state": "approved",
+     "delivered": {},
+     "reserved": {
+      "fiber": 4
+     },
+     "work": 0,
+     "stock": null,
+     "entrance": {
+      "x": -17,
+      "z": -20
+     },
+     "progress": 0,
+     "status": "waiting for a builder: assign one in People"
+    }
+   ],
+   "cora": {
+    "role": "farmer",
+    "task": "idle",
+    "target": "idle:villager:2",
+    "op": "work",
+    "last": {
+     "effect": "none",
+     "x": -34.8,
+     "z": -9.1
+    },
+    "carry": null,
+    "x": -33.5,
+    "z": -8.5
+   },
+   "ada": {
+    "role": "farmer",
+    "task": "idle",
+    "target": "idle:villager:0",
+    "op": "work",
+    "last": {
+     "effect": "none",
+     "x": -31.8,
+     "z": -6.5
+    },
+    "carry": null,
+    "x": -32.5,
+    "z": -8.5
+   },
+   "calls": 71,
+   "tris": 125354,
+   "tickMs": {
+    "mean": 3.45,
+    "p95": 1.6,
+    "max": 5.3
+   },
+   "homeMs": {
+    "mean": 0.71,
+    "p95": 0.2,
+    "max": 40.2
+   }
+  }
+ ]
+}
