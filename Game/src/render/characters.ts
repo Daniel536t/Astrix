@@ -253,10 +253,25 @@ function whipKick(u: number, recover: number, kick: number, end: number): { x: n
   return { x: lerp(0.16, 0.06, seg(u, end, 1)), z: 0.03 };
 }
 
+/** Leg swing amplitude (radians either side) of the ground walk at `speed` m/s. */
+const legAmplitude = (speed: number) => (0.35 + 0.45 * Math.min(1, speed / 7.5)) * Math.min(1, speed * 1.5);
+/** Height of the hip joint above the feet (m): the leg length the walk swings. */
+const LEG = 0.82;
+/**
+ * STAB-002 S4: ground covered per full gait cycle (two steps) at which a
+ * planted foot does not slide: each step the swinging leg sweeps
+ * 2 * LEG * sin(amplitude), so a cycle covers twice that. Villagers walk at
+ * 1.3 m/s (rules v1 to v6) or 1.95 m/s (v7); the cadence then rises with
+ * the speed (about 1.9 and 2.6 steps a second) instead of the feet skating.
+ */
+export function plantedStride(speed: number): number {
+  return Math.max(0.5, 4 * LEG * Math.sin(legAmplitude(speed)));
+}
+
 function groundPose(f: Figure, state: CharacterState): Pose {
   const speed = state.speed;
   const sw = Math.min(1, speed / 7.5);
-  let legSwing = Math.sin(f.phase) * (0.35 + 0.45 * sw) * Math.min(1, speed * 1.5);
+  let legSwing = Math.sin(f.phase) * legAmplitude(speed);
   let armSwing = -legSwing * 0.8;
   let lean = 0.10 * sw;
   let bob = Math.abs(Math.sin(f.phase)) * 0.05 * Math.min(1, speed);
@@ -347,12 +362,14 @@ function underPose(f: Figure): Pose {
  * submerged. Regimes cross-fade over a few tenths of a second.
  *
  * `feetY` is the drawn feet height (the interpolated position the figure is
- * placed at); it defaults to `state.y`.
+ * placed at); it defaults to `state.y`. `groundStride` sets the ground
+ * covered per gait cycle (default 2.4 m, the founder's).
  */
-export function animateFigure(f: Figure, state: CharacterState, dt: number, feetY = state.y): void {
+export function animateFigure(f: Figure, state: CharacterState, dt: number, feetY = state.y, groundStride?: number): void {
   f.time += dt;
   const speed = state.speed;
-  const stride = state.mode === 'wade' ? 1.6 : 2.4;
+  // `groundStride` (m per gait cycle) overrides the founder's stride on the ground (villagers: plantedStride).
+  const stride = state.mode === 'wade' ? 1.6 : groundStride ?? 2.4;
   f.phase += (speed / stride) * Math.PI * 2 * dt;
 
   // Which regime: underwater once the head is under (or the feet are well below the float line).

@@ -19,7 +19,7 @@ import { SNAP_DISTANCE } from './smooth';
 import { ANIMAL_MODELS } from './animal-models';
 import { FOUNDER_STOCKPILE } from '../sim/economy';
 import { COTTAGE_DOOR, buildCottage, buildWell, kitMaterial } from './village-kit';
-import { Figure, FARMER_STYLE, HERDER_STYLE, WOODCUTTER_STYLE, BUILDER_STYLE, FigureStyle, buildFigure, animateFigure, placeFigure } from './characters';
+import { Figure, FARMER_STYLE, HERDER_STYLE, WOODCUTTER_STYLE, BUILDER_STYLE, FigureStyle, buildFigure, animateFigure, placeFigure, plantedStride } from './characters';
 
 const ROLE_STYLE: Record<Role, FigureStyle> = { farmer: FARMER_STYLE, herder: HERDER_STYLE, woodcutter: WOODCUTTER_STYLE, builder: BUILDER_STYLE };
 /** A carried load (logs, a bundle or a sack), shared by every villager and shown only while the sim says they carry something. */
@@ -649,7 +649,8 @@ export class HomesteadView {
       placeFigure(p.fig, x, y, z, p.heading);
       const speed = dist / this.tickSeconds;
       const state = { mode: 'ground', speed, grounded: true } as unknown as CharacterState;
-      animateFigure(p.fig, state, dt);
+      // STAB-002 S4: the gait cycle follows the ground speed (1.3 m/s under v1 to v6, 1.95 m/s under v7) with planted feet.
+      animateFigure(p.fig, state, dt, undefined, plantedStride(speed));
       if (working && speed < 0.1) {
         // A simple work motion: both arms swing down and forward (digging, pouring, milking).
         const t = performance.now() / 260;

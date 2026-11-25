@@ -5,14 +5,14 @@
 //  - a 6 x 6 owner field on a busy farm (2, 4, 6 fields, default steward): taken within 30 ticks; fully
 //    sown within 60 ticks, or, when the store holds less free seed than the field has units when it is
 //    marked, at least that many units sown within 60 ticks;
-//  - no villager moves more than its walking allowance in a tick (VILLAGER_SPEED, plus 1 dm of integer rounding).
+//  - no villager moves more than its walking allowance in a tick (STAB-002 S4: under v7 exactly villagerSpeed x 1 tick,
+//    39 dm; the pre-upgrade v6 ticks VILLAGER_SPEED + 1 dm of the rounding v6 recorded; see the harness's maxStep).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { busyField, woodshed } from './stab002-s3-harness';
-import { VILLAGER_SPEED } from '../src/sim/homestead';
 
 const SEEDS = [1337, 42, 7];
-const ALLOWANCE = (VILLAGER_SPEED + 1) / VILLAGER_SPEED;
+const ALLOWANCE = 1;
 
 test('S3 acceptance: an approved woodshed (and a well) with no hand-assigned roles is finished within 300 ticks, fresh v7 (approved at 0, 120, 400) and v6 -> v7 (at 0, 120); never a jump', () => {
   const rows: string[] = [];

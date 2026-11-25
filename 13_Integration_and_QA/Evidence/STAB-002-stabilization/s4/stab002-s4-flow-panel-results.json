@@ -1,0 +1,1371 @@
+{
+ "phase": "panel",
+ "base": "https://astrix.local/",
+ "startedAt": "2026-11-25T23:40:24.148Z",
+ "seconds": 47.4,
+ "ticks": [
+  3,
+  79
+ ],
+ "verdict": {
+  "freshWorld": true,
+  "placed": true,
+  "woodshed": true,
+  "noTeleport": true,
+  "reload": true,
+  "workTime": true
+ },
+ "checks": {
+  "freshWorld": {
+   "ok": true,
+   "rules": 7,
+   "tick": 3,
+   "roles": [
+    "Ada:farmer",
+    "Bram:herder",
+    "Cora:farmer"
+   ]
+  },
+  "placed": {
+   "ok": true,
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {},
+     "reserved": {
+      "fiber": 4
+     },
+     "work": 0,
+     "progress": 0,
+     "status": "waiting for 12 wood; the next free villager brings what is reserved"
+    }
+   ],
+   "commands": 2,
+   "rolesUnchanged": true
+  },
+  "woodshed": {
+   "ok": true,
+   "approvedAt": 3,
+   "doneTick": 63,
+   "after": 60,
+   "roleChanges": [
+    {
+     "tick": 19,
+     "n": "Cora",
+     "from": "farmer",
+     "to": "builder"
+    },
+    {
+     "tick": 79,
+     "n": "Cora",
+     "from": "builder",
+     "to": "farmer"
+    }
+   ],
+   "siteWork": {
+    "Ada:farmer:chop": 11,
+    "Bram:herder:chop": 6,
+    "Cora:farmer:haul": 2,
+    "Cora:builder:haul": 1,
+    "Cora:builder:build": 4,
+    "Bram:herder:build": 2
+   },
+   "lastAssign": 75,
+   "statusSeen": [
+    "Cora is fetching reserved materials; still waiting for 12 wood (none free in the store)",
+    "Cora is carrying 4 fiber to it; still waiting for 12 wood (none free in the store)",
+    "Cora is carrying 4 fiber to it; still waiting for 4 wood (none free in the store)",
+    "Cora is building; still waiting for 1 wood (none free in the store)",
+    "Bram is building; still waiting for 1 wood (none free in the store)",
+    "Ada is felling a tree for it",
+    "Bram is building",
+    "finished"
+   ]
+  },
+  "noTeleport": {
+   "ok": true,
+   "worst": {
+    "ratio": 0.999,
+    "id": "villager:0",
+    "from": 24,
+    "to": 27,
+    "d": 11.7
+   }
+  },
+  "reload": {
+   "ok": true,
+   "tick": 68,
+   "tickAfter": 68,
+   "hashBefore": "36988d3d6a02a5e0",
+   "hashAfter": "36988d3d6a02a5e0",
+   "lastAssign": [
+    15,
+    15
+   ],
+   "same": true
+  },
+  "workTime": {
+   "ok": true,
+   "total": {
+    "travel": 0,
+    "waiting": 0,
+    "work": 0,
+    "idle": 27,
+    "eating": 0,
+    "sleeping": 0,
+    "ticks": 27,
+    "starving": 0
+   },
+   "villagers": {
+    "villager:0": {
+     "travel": 0,
+     "waiting": 0,
+     "work": 0,
+     "idle": 9,
+     "eating": 0,
+     "sleeping": 0,
+     "ticks": 9,
+     "starving": 0
+    },
+    "villager:1": {
+     "travel": 0,
+     "waiting": 0,
+     "work": 0,
+     "idle": 9,
+     "eating": 0,
+     "sleeping": 0,
+     "ticks": 9,
+     "starving": 0
+    },
+    "villager:2": {
+     "travel": 0,
+     "waiting": 0,
+     "work": 0,
+     "idle": 9,
+     "eating": 0,
+     "sleeping": 0,
+     "ticks": 9,
+     "starving": 0
+    }
+   },
+   "waits": {
+    "count": 0,
+    "max": 0,
+    "open": null,
+    "byKind": {}
+   }
+  },
+  "pageErrors": []
+ },
+ "shots": [
+  {
+   "file": "stab002-s4-flow-panel-0-fresh.png",
+   "why": "fresh v7 world, roles as founded (Ada farmer, Bram herder, Cora farmer)",
+   "tick": 3
+  },
+  {
+   "file": "stab002-s4-flow-panel-2-panel-approved.png",
+   "why": "Farm panel: approved, no role assigned by hand",
+   "tick": 3
+  },
+  {
+   "file": "stab002-s4-flow-panel-4-woodshed-done.png",
+   "why": "woodshed finished at tick 63",
+   "tick": 63
+  },
+  {
+   "file": "stab002-s4-flow-panel-3-after-reload.png",
+   "why": "reloaded at tick 68",
+   "tick": 68
+  }
+ ],
+ "samples": [
+  {
+   "t": 10.6,
+   "label": "loaded",
+   "tick": 3,
+   "rules": 7,
+   "hash": "5d8d76499358beb1",
+   "seq": 4,
+   "lastAssign": null,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "idle",
+     "target": "idle:villager:0",
+     "op": "work",
+     "x": -32.5,
+     "z": -10.5,
+     "carry": null
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "idle",
+     "target": "idle:villager:1",
+     "op": "work",
+     "x": -34.5,
+     "z": -10.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "farmer",
+     "task": "idle",
+     "target": "idle:villager:2",
+     "op": "work",
+     "x": -33.5,
+     "z": -8.5,
+     "carry": null
+    }
+   ],
+   "sites": [],
+   "store": {
+    "fiber": 20,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 17.3,
+   "label": "placed",
+   "tick": 3,
+   "rules": 7,
+   "hash": "717667a6e5e798c6",
+   "seq": 6,
+   "lastAssign": null,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "idle",
+     "target": "idle:villager:0",
+     "op": "work",
+     "x": -32.5,
+     "z": -10.5,
+     "carry": null
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "idle",
+     "target": "idle:villager:1",
+     "op": "work",
+     "x": -34.5,
+     "z": -10.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "farmer",
+     "task": "idle",
+     "target": "idle:villager:2",
+     "op": "work",
+     "x": -33.5,
+     "z": -8.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {},
+     "reserved": {
+      "fiber": 4
+     },
+     "work": 0,
+     "progress": 0,
+     "status": "waiting for 12 wood; the next free villager brings what is reserved"
+    }
+   ],
+   "store": {
+    "fiber": 20,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 24.9,
+   "label": "run",
+   "tick": 11,
+   "rules": 7,
+   "hash": "07b7b32c6e76626b",
+   "seq": 14,
+   "lastAssign": null,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "walk",
+     "x": -26.2,
+     "z": 17.8,
+     "carry": null
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "chop",
+     "target": "tree:31:30:4",
+     "op": "walk",
+     "x": -25.9,
+     "z": -35.1,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "farmer",
+     "task": "haul",
+     "target": "site:15",
+     "op": "work",
+     "x": -50,
+     "z": -30.4,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {},
+     "reserved": {
+      "fiber": 4
+     },
+     "work": 0,
+     "progress": 0,
+     "status": "Cora is fetching reserved materials; still waiting for 12 wood (none free in the store)"
+    }
+   ],
+   "store": {
+    "fiber": 20,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 26.1,
+   "label": "run",
+   "tick": 14,
+   "rules": 7,
+   "hash": "21208003e2b5069a",
+   "seq": 17,
+   "lastAssign": null,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "work",
+     "x": -22.5,
+     "z": 21.5,
+     "carry": null
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "chop",
+     "target": "tree:31:30:4",
+     "op": "work",
+     "x": -23.5,
+     "z": -42.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "farmer",
+     "task": "haul",
+     "target": "site:15",
+     "op": "walk",
+     "x": -45.2,
+     "z": -25.2,
+     "carry": {
+      "item": "fiber",
+      "amount": 4,
+      "site": "site:15"
+     }
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {},
+     "reserved": {},
+     "work": 0,
+     "progress": 0,
+     "status": "Cora is carrying 4 fiber to it; still waiting for 12 wood (none free in the store)"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 27.1,
+   "label": "run",
+   "tick": 19,
+   "rules": 7,
+   "hash": "5f0e8570f216a266",
+   "seq": 23,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "work",
+     "x": -22.5,
+     "z": 21.5,
+     "carry": {
+      "item": "wood",
+      "amount": 5,
+      "site": "site:15"
+     }
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "chop",
+     "target": "tree:31:30:4",
+     "op": "work",
+     "x": -23.5,
+     "z": -42.5,
+     "carry": {
+      "item": "wood",
+      "amount": 3,
+      "site": "site:15"
+     }
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "haul",
+     "target": "site:15",
+     "op": "walk",
+     "x": -36.6,
+     "z": -9.6,
+     "carry": {
+      "item": "fiber",
+      "amount": 4,
+      "site": "site:15"
+     }
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {},
+     "reserved": {},
+     "work": 0,
+     "progress": 0,
+     "status": "Cora is carrying 4 fiber to it; still waiting for 4 wood (none free in the store)"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 28.2,
+   "label": "run",
+   "tick": 24,
+   "rules": 7,
+   "hash": "c0cea0344ea3ee03",
+   "seq": 28,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "walk",
+     "x": -30.5,
+     "z": 13.3,
+     "carry": {
+      "item": "wood",
+      "amount": 5,
+      "site": "site:15"
+     }
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "chop",
+     "target": "tree:31:30:4",
+     "op": "walk",
+     "x": -23.5,
+     "z": -34.7,
+     "carry": {
+      "item": "wood",
+      "amount": 6,
+      "site": "site:15"
+     }
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "build",
+     "target": "site:15",
+     "op": "work",
+     "x": -27.5,
+     "z": -7.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {
+      "fiber": 4
+     },
+     "reserved": {},
+     "work": 0,
+     "progress": 12,
+     "status": "Cora is building; still waiting for 1 wood (none free in the store)"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 29.3,
+   "label": "run",
+   "tick": 27,
+   "rules": 7,
+   "hash": "f488a8cf851427d1",
+   "seq": 31,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "walk",
+     "x": -30.5,
+     "z": 1.6,
+     "carry": {
+      "item": "wood",
+      "amount": 5,
+      "site": "site:15"
+     }
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "chop",
+     "target": "tree:31:30:4",
+     "op": "walk",
+     "x": -23.5,
+     "z": -23,
+     "carry": {
+      "item": "wood",
+      "amount": 6,
+      "site": "site:15"
+     }
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "build",
+     "target": "site:15",
+     "op": "work",
+     "x": -27.5,
+     "z": -7.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {
+      "fiber": 4
+     },
+     "reserved": {},
+     "work": 0,
+     "progress": 12,
+     "status": "Cora is building; still waiting for 1 wood (none free in the store)"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 30.4,
+   "label": "run",
+   "tick": 32,
+   "rules": 7,
+   "hash": "e931b03d5284d9d7",
+   "seq": 36,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "walk",
+     "x": -30.5,
+     "z": -4.1,
+     "carry": null
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "chop",
+     "target": "tree:31:30:4",
+     "op": "work",
+     "x": -25.5,
+     "z": -7.5,
+     "carry": {
+      "item": "wood",
+      "amount": 6,
+      "site": "site:15"
+     }
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "build",
+     "target": "site:15",
+     "op": "work",
+     "x": -27.5,
+     "z": -7.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {
+      "fiber": 4,
+      "wood": 5
+     },
+     "reserved": {},
+     "work": 6,
+     "progress": 40,
+     "status": "Cora is building; still waiting for 1 wood (none free in the store)"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 31.4,
+   "label": "run",
+   "tick": 37,
+   "rules": 7,
+   "hash": "bc98c865e57c2d8f",
+   "seq": 41,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "walk",
+     "x": -29.2,
+     "z": 14.8,
+     "carry": null
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "build",
+     "target": "site:15",
+     "op": "work",
+     "x": -25.5,
+     "z": -7.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": null,
+     "target": null,
+     "op": null,
+     "x": -27.5,
+     "z": -7.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {
+      "fiber": 4,
+      "wood": 11
+     },
+     "reserved": {},
+     "work": 12,
+     "progress": 71,
+     "status": "Bram is building; still waiting for 1 wood (none free in the store)"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 32.5,
+   "label": "run",
+   "tick": 40,
+   "rules": 7,
+   "hash": "62f40982b1822ccb",
+   "seq": 44,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "work",
+     "x": -22.5,
+     "z": 21.5,
+     "carry": null
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": null,
+     "target": null,
+     "op": null,
+     "x": -25.5,
+     "z": -7.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "build",
+     "target": "site:15",
+     "op": "work",
+     "x": -27.5,
+     "z": -7.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {
+      "fiber": 4,
+      "wood": 11
+     },
+     "reserved": {},
+     "work": 18,
+     "progress": 84,
+     "status": "Cora is building; still waiting for 1 wood (none free in the store)"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 33.6,
+   "label": "run",
+   "tick": 45,
+   "rules": 7,
+   "hash": "36a6eb9083efdf07",
+   "seq": 49,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "walk",
+     "x": -25.2,
+     "z": 18.8,
+     "carry": {
+      "item": "wood",
+      "amount": 5,
+      "site": "site:15"
+     }
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "idle",
+     "target": "idle:villager:1",
+     "op": "work",
+     "x": -31.5,
+     "z": -8.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "idle",
+     "target": "idle:villager:2",
+     "op": "work",
+     "x": -28.5,
+     "z": -7.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {
+      "fiber": 4,
+      "wood": 11
+     },
+     "reserved": {},
+     "work": 22,
+     "progress": 92,
+     "status": "Ada is felling a tree for it"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 34.7,
+   "label": "run",
+   "tick": 50,
+   "rules": 7,
+   "hash": "77568c74b5001084",
+   "seq": 54,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "walk",
+     "x": -30.5,
+     "z": 1.6,
+     "carry": {
+      "item": "wood",
+      "amount": 5,
+      "site": "site:15"
+     }
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": null,
+     "target": null,
+     "op": null,
+     "x": -31.5,
+     "z": -8.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "idle",
+     "target": "idle:villager:2",
+     "op": "work",
+     "x": -28.5,
+     "z": -7.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {
+      "fiber": 4,
+      "wood": 11
+     },
+     "reserved": {},
+     "work": 22,
+     "progress": 92,
+     "status": "Ada is felling a tree for it"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 35.8,
+   "label": "run",
+   "tick": 53,
+   "rules": 7,
+   "hash": "da335b121801b4c7",
+   "seq": 57,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "chop",
+     "target": "tree:31:32:5",
+     "op": "work",
+     "x": -27.5,
+     "z": -5.5,
+     "carry": {
+      "item": "wood",
+      "amount": 5,
+      "site": "site:15"
+     }
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "idle",
+     "target": "idle:villager:1",
+     "op": "work",
+     "x": -31.5,
+     "z": -8.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": null,
+     "target": null,
+     "op": null,
+     "x": -28.5,
+     "z": -7.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {
+      "fiber": 4,
+      "wood": 11
+     },
+     "reserved": {},
+     "work": 22,
+     "progress": 92,
+     "status": "Ada is felling a tree for it"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 36.8,
+   "label": "run",
+   "tick": 58,
+   "rules": 7,
+   "hash": "1ed149a939a80cc3",
+   "seq": 62,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "store",
+     "target": "carry:villager:0",
+     "op": "walk",
+     "x": -39.9,
+     "z": -12.9,
+     "carry": {
+      "item": "wood",
+      "amount": 4
+     }
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "build",
+     "target": "site:15",
+     "op": "work",
+     "x": -27.5,
+     "z": -7.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "idle",
+     "target": "idle:villager:2",
+     "op": "work",
+     "x": -28.5,
+     "z": -7.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "approved",
+     "delivered": {
+      "fiber": 4,
+      "wood": 12
+     },
+     "reserved": {},
+     "work": 22,
+     "progress": 95,
+     "status": "Bram is building"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 37.9,
+   "label": "run",
+   "tick": 63,
+   "rules": 7,
+   "hash": "6abd88ae4921ab3e",
+   "seq": 67,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "store",
+     "target": "carry:villager:0",
+     "op": "walk",
+     "x": -47.8,
+     "z": -28.8,
+     "carry": {
+      "item": "wood",
+      "amount": 4
+     }
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "idle",
+     "target": "idle:villager:1",
+     "op": "walk",
+     "x": -34.3,
+     "z": -6.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "idle",
+     "target": "idle:villager:2",
+     "op": "work",
+     "x": -30.5,
+     "z": -8.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "done",
+     "delivered": {
+      "fiber": 4,
+      "wood": 12
+     },
+     "reserved": {},
+     "work": 24,
+     "progress": 100,
+     "status": "finished"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6
+   }
+  },
+  {
+   "t": 42,
+   "label": "before-reload",
+   "tick": 68,
+   "rules": 7,
+   "hash": "36988d3d6a02a5e0",
+   "seq": 72,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "idle",
+     "target": "idle:villager:0",
+     "op": "walk",
+     "x": -44.6,
+     "z": -21.6,
+     "carry": null
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "idle",
+     "target": "idle:villager:1",
+     "op": "work",
+     "x": -34.5,
+     "z": -6.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "idle",
+     "target": "idle:villager:2",
+     "op": "work",
+     "x": -30.5,
+     "z": -8.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "done",
+     "delivered": {
+      "fiber": 4,
+      "wood": 12
+     },
+     "reserved": {},
+     "work": 24,
+     "progress": 100,
+     "status": "finished"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6,
+    "wood": 4
+   }
+  },
+  {
+   "t": 45.3,
+   "label": "after-reload",
+   "tick": 68,
+   "rules": 7,
+   "hash": "36988d3d6a02a5e0",
+   "seq": 72,
+   "lastAssign": 15,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "idle",
+     "target": "idle:villager:0",
+     "op": "walk",
+     "x": -44.6,
+     "z": -21.6,
+     "carry": null
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "idle",
+     "target": "idle:villager:1",
+     "op": "work",
+     "x": -34.5,
+     "z": -6.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "builder",
+     "task": "idle",
+     "target": "idle:villager:2",
+     "op": "work",
+     "x": -30.5,
+     "z": -8.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "done",
+     "delivered": {
+      "fiber": 4,
+      "wood": 12
+     },
+     "reserved": {},
+     "work": 24,
+     "progress": 100,
+     "status": "finished"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6,
+    "wood": 4
+   }
+  },
+  {
+   "t": 47.4,
+   "label": "run",
+   "tick": 79,
+   "rules": 7,
+   "hash": "ef93e8f5ee0c33f2",
+   "seq": 85,
+   "lastAssign": 75,
+   "v": [
+    {
+     "id": "villager:0",
+     "n": "Ada",
+     "role": "farmer",
+     "task": "idle",
+     "target": "idle:villager:0",
+     "op": "work",
+     "x": -37.5,
+     "z": -10.5,
+     "carry": null
+    },
+    {
+     "id": "villager:1",
+     "n": "Bram",
+     "role": "herder",
+     "task": "idle",
+     "target": "idle:villager:1",
+     "op": "work",
+     "x": -34.5,
+     "z": -6.5,
+     "carry": null
+    },
+    {
+     "id": "villager:2",
+     "n": "Cora",
+     "role": "farmer",
+     "task": "idle",
+     "target": "idle:villager:2",
+     "op": "work",
+     "x": -31.5,
+     "z": -8.5,
+     "carry": null
+    }
+   ],
+   "sites": [
+    {
+     "id": "site:15",
+     "kind": "woodshed",
+     "state": "done",
+     "delivered": {
+      "fiber": 4,
+      "wood": 12
+     },
+     "reserved": {},
+     "work": 24,
+     "progress": 100,
+     "status": "finished"
+    }
+   ],
+   "store": {
+    "fiber": 16,
+    "food": 10,
+    "seed": 6,
+    "wood": 4
+   }
+  }
+ ]
+}

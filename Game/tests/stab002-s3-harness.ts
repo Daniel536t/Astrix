@@ -4,7 +4,7 @@
 // the app's frame loop runs it (app/steward.ts, every 15th tick, after the tick).
 import { GameSession } from '../src/app/session';
 import { GENERATOR_V2 } from '../src/sim/world';
-import { DM, VILLAGER_SPEED, facility, findFieldSpot } from '../src/sim/homestead';
+import { DM, VILLAGER_SPEED, facility, findFieldSpot, isHerdHomestead, villagerSpeed } from '../src/sim/homestead';
 import type { SiteKind } from '../src/sim/homestead';
 import { checkBuilding } from '../src/sim/buildings';
 import { newStewardMemory, stewardCommands, stewardDue, stewardPlan } from '../src/app/steward';
@@ -16,7 +16,11 @@ export interface Farm {
   send: (c: Record<string, unknown>) => { ok: boolean; outcome?: any; reasons?: string[] };
   step: (n?: number) => void;
   work: WorkTime;
-  /** Largest villager step in one tick over VILLAGER_SPEED (1.0 = the walking allowance). */
+  /**
+   * Largest villager step in one tick over its allowance (1.0 = the allowance): under v7 the exact walking
+   * speed x 1 tick (`villagerSpeed`, STAB-002 S4); under v1 to v6 (the pre-upgrade ticks) VILLAGER_SPEED + 1 dm,
+   * the integer rounding those rules recorded.
+   */
   maxStep: () => number;
   stewardLog: string[];
 }
@@ -41,7 +45,8 @@ export function farm(seed: number, rules: number, o: { from?: number; pre?: numb
       if (!r.ok) throw new Error(JSON.stringify(r));
       for (const v of s.world.homestead!.villagers) {
         const b = before.get(v.id);
-        if (b) worst = Math.max(worst, Math.hypot(v.x - b.x, v.z - b.z) / VILLAGER_SPEED);
+        const h = s.world.homestead!;
+        if (b) worst = Math.max(worst, Math.hypot(v.x - b.x, v.z - b.z) / (isHerdHomestead(h) ? villagerSpeed(h) : VILLAGER_SPEED + 1));
       }
       const tick = s.world.life!.tick;
       work.observe(s.world, tick);

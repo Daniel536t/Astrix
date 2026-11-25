@@ -928,7 +928,16 @@ export interface NavContext {
   clipBy?: string;
   /** STAB-002 S2: a gate that must not be closed right now (the player stands in one of its cells). */
   keepOpen?(gateId: string): boolean;
+  /**
+   * STAB-002 S4 (rules v7): a part step rounds each axis toward zero, so a
+   * tick's move is never longer than `speed` (rounding to nearest could add
+   * up to 0.71 dm). Absent: the older rounding, as v2 to v6 recorded it.
+   */
+  exact?: boolean;
 }
+
+/** One axis of a part step of `k` dm along (dx, dz) of length d: nearest under the older rules, toward zero when exact. */
+const partStep = (ctx: NavContext, v: number, d: number, k: number) => (ctx.exact ? Math.trunc((v / d) * k) : Math.round((v / d) * k));
 
 /** Expansions a detour around other walkers may use before the walker just waits in line. */
 export const DETOUR_BUDGET = 4000;
@@ -1064,7 +1073,8 @@ export function navStep(ctx: NavContext, w: { x: number; z: number; nav?: NavSta
       if (nav.opened && nav.far && nav.far[0] === nx && nav.far[1] === nz) closeBehind(ctx, w, nav, true);
       continue;
     }
-    w.x += Math.round(((tx - w.x) / d) * budget); w.z += Math.round(((tz - w.z) / d) * budget);
+    const sx = partStep(ctx, tx - w.x, d, budget), sz = partStep(ctx, tz - w.z, d, budget);
+    w.x += sx; w.z += sz;
     moved = true;
     break;
   }
@@ -1122,7 +1132,7 @@ function queue(ctx: NavContext, w: { x: number; z: number; nav?: NavState }, nav
       if (g.gateBetween(cx, cz, sx, sz)) continue;
       const tx = centreDm(sx), tz = centreDm(sz), d = dist(w.x, w.z, tx, tz);
       if (ctx.clip && ctx.clip(w.x, w.z, d <= speed ? tx : w.x + ((tx - w.x) / d) * speed, d <= speed ? tz : w.z + ((tz - w.z) / d) * speed) < 1) continue;
-      if (d <= speed) { w.x = tx; w.z = tz; } else { w.x += Math.round(((tx - w.x) / d) * speed); w.z += Math.round(((tz - w.z) / d) * speed); }
+      if (d <= speed) { w.x = tx; w.z = tz; } else { const ax = partStep(ctx, tx - w.x, d, speed), az = partStep(ctx, tz - w.z, d, speed); w.x += ax; w.z += az; }
       nav.path = d <= speed ? [] : [sx, sz];
       nav.plan = '';
       nav.wait = { by, reason: `stepping aside for ${name}`, since };

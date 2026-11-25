@@ -2,7 +2,7 @@
 
 Repo `Astrix`, branch `deploy/boxd`. Base commit `4169c21` (STAB-001 docs). Not pushed or deployed. Everything below was measured headlessly or in an emulated desktop browser (Playwright Chromium). **No real phone or tablet was used.**
 
-S1, S2 and S3 are in this report. Step S4 (villager speed) is not part of these changes.
+S1, S2, S3 and S4 (villager speed) are in this report, followed by the STAB-002 acceptance summary.
 
 ## S1 · Animal unstick
 
@@ -544,3 +544,262 @@ From `Game/`:
 - `npm test`
 - `npx esbuild ../13_Integration_and_QA/Evidence/STAB-002-stabilization/s3/s3.ts --bundle --platform=node --format=esm --external:three --outfile=tests/.s3.tmp.mjs && node tests/.s3.tmp.mjs all`, then delete the `.tmp.mjs` file (`B`, `F`, `W` or `T` for one table).
 - Browser: build, copy `dist` to `.kiro/artifacts/screenshots/probe/dist`, copy `s3/stab002-s3-probe.js` under `.kiro/artifacts/screenshots/` (set `phase: 'build'` for the placement flow) and run it with Playwright `browser_run_code_unsafe { filename }`.
+
+## S4 · Evidence-tuned walking speed
+
+Base commit `bf23ae5` (S3). Committed locally only: not pushed, not deployed. **No real phone or tablet was used.**
+
+### What changed
+
+Everything is under **settlement rules v7**. No new rules version was added, and v1 to v6 run unchanged code.
+
+1. **Speed.** `VILLAGER_SPEED_V7 = 39` dm per tick (1.95 m/s, 1.5×) in `sim/homestead.ts`. `villagerSpeed(h)` returns 39 for v7 and `VILLAGER_SPEED` (26) for v1 to v6. A starving villager still walks at half speed (19.5 dm). The routine-work "would run into the night" estimate (`taskTicks`, used only by v7) uses the v7 speed. The value comes from the BUG-C speed sensitivity (`Diagnostics/STAB-001/BUG-C_worker_productivity.md` §6): 1.5× brought the stalled field from 243 to 22 ticks, the well from 370 to 161 and the woodshed from 149 to 92, and speeds above 2× added little.
+2. **No-teleport check, exact.** `navStep` gets a `NavContext.exact` flag, which `navWalk` sets only under v7. Part steps then round each axis toward zero (`Math.trunc`) instead of to the nearest value, and the queue step-aside does the same. Under v7 one tick's move is therefore never longer than the speed. The S3 excess of up to 0.71 dm (26.4 against 26) is gone: the largest step over every S4 run is **1.0000** of speed × 1 tick. v2 to v6 keep the old rounding, so their hashes do not change.
+3. **Two v7 priority fixes**, found while measuring S4 (details under "Cause analysis"):
+   - **Seed for owner fields.** Seed that other villagers will still take from the store is not counted as free. For a field that is not an owner order, the seed that owner fields still need is not free either. Owner orders already outranked routine sowing for labour; they now outrank it for seed too, the same way site reservations hold wood.
+   - **Critical age.** Any upkeep or routine work that has waited 85 daytime ticks (`AGE_CRITICAL`) is critical for anyone. It then comes ahead of the next unit of an owner order a villager is standing at (`onJob`) and ahead of owner orders. `dueClass` is now exported for tests.
+4. **Walk cycle (presentation only).** `render/characters.ts` adds `plantedStride(speed)`: the ground covered per gait cycle equals twice the leg sweep of the drawn swing amplitude, so a planted foot does not slide. `render/homestead.ts` passes it to `animateFigure` for villagers, and the cadence follows the drawn speed:
+   - 1.3 m/s: 1.36 m per cycle, about 1.9 steps/s;
+   - 1.95 m/s: 1.48 m per cycle, about 2.6 steps/s.
+
+   The founder keeps the 2.4 m stride. This applies to villagers at any rules version, because it only changes drawing.
+5. **Unchanged, checked at the new speed:**
+   - animal speeds (walk 7 dm, driven 12 dm, step-aside ≤ 10 dm);
+   - gate hold (`HOLD_GATE_TICKS` 30, and the S2 extra hold while the founder stands in the gate);
+   - queueing and the head-on step-aside;
+   - the S2 presence rules (clip at 0.6 m, `villagerYield`, give up after `NAV_GIVE_UP`);
+   - founder contact (`HomesteadBodies` closes a capsule on the founder at no more than 1.5 m/s).
+
+Files:
+- changed: `Game/src/sim/homestead.ts`, `Game/src/sim/nav.ts`, `Game/src/render/characters.ts`, `Game/src/render/homestead.ts`
+- tests:
+  - new: `Game/tests/stab002.s4.test.ts` (7), `stab002.s4-accept-a.test.ts` (1), `stab002.s4-accept-b.test.ts` (1), `stab002-s4-accept.ts` (shared)
+  - changed: `stab002-s3-harness.ts` (step ratio against `villagerSpeed`, exact under v7; v6 ticks against 26 + 1 dm), `stab002.s3-accept.test.ts` (allowance 1.0), `stab002.s2.test.ts` (v7 re-pins), `stab002.s2-contact.test.ts` (1.95 m/s case), `stab002-accept.ts` (S1 counting, see "S1 regression")
+- evidence: `s4/` (`s4.ts`, `s4-compare.mjs`, `s4-out.md`, `out/*.json`, `pin7.ts`, the browser probes `stab002-s4-perf.probe.js` and `gen-s4-probes.mjs`, results JSON and screenshots)
+- regenerated: `Game/dist`, `Game/tests/.build`
+
+### Measurement (headless; separate from the browser)
+
+`s4/s4.ts` runs the S3 harness (`tests/stab002-s3-harness.ts`, the same journaled commands and the same steward) on both trees: the S3 tree `bf23ae5` (1.3 m/s, a git worktree) and this tree. Full tables are in `s4/s4-out.md`; raw rows are in `s4/out/{before,after}-{B,F,W,T}.json`.
+- Seeds: 1337, 42 and 7.
+- Runs: fresh v7, and v6 → v7 (300 ticks of v6 with the old steward, then the journaled upgrade).
+- Scenarios:
+  - **B:** woodshed and well approved at 0, 120 and 400.
+  - **F:** a 6 × 6 owner field on farms with 2, 4 and 6 fields.
+  - **W:** the same farms played 600 ticks after the owner field.
+  - **T:** the standard farm.
+- This is a superset of S3: v6 → v7 at 400 and the 6-field upgraded farm are added.
+
+**Total task time** means the sum over every B run of (woodshed ticks + well ticks after approval) plus the sum over every F run of (owner field taken + fully sown ticks). A run that never finished counts its limit (1800 or 900).
+
+| measure | S3 (1.3 m/s) | S4 (1.95 m/s) | change |
+|---|---|---|---|
+| **total task time, 36 runs** | **9,136 ticks** | **5,751 ticks** | **−37 %** (target ≥ 30 %) |
+| woodshed + well, 18 B runs (per run) | | | −4 % to −73 %, median −31 % |
+| owner field taken + sown, 18 F runs (per run) | | | +19 % (one run) to −81 % |
+| errand time per finished task (every non-idle, non-eat, non-rest task, all runs) | 16.77 ticks (2,973 tasks) | 13.75 ticks (3,116 tasks) | −18 % |
+| travel share of all villager ticks, standard farm | 23–25 % | 19 % | |
+| work share of awake ticks, standard farm | 7.6–9.1 % | 10.1–11.1 % | |
+| largest villager step in one tick against speed × 1 tick | 1.0154 | **1.0000** | |
+
+An errand falls by less than 33 %, because its work ticks, gate ticks and leg remainders do not get faster. One F run became slower: v7 fresh, seed 42, 2 fields, sown at +55 instead of +46. That is still within the bound.
+
+**S3 bounds at the S4 speed (all runs):**
+
+| bound | S3 (1.3 m/s), failures | S4 (1.95 m/s) |
+|---|---|---|
+| woodshed, no hand roles, ≤ 300 ticks | none | max 202 (fresh, 7 @ 400); all 18 pass |
+| owner field taken ≤ 30 | v6 → v7, 6 fields: 56 (1337), 50 (42) | max 7; all 18 pass |
+| owner field sown ≤ 60, seed-limited definition | none on the S3 cases | max 59 with full seed; 3 seed-limited runs sow all available seed by +60; all pass |
+| routine and upkeep max wait ≤ 120 | fresh 6 fields 121 (7); v6 → v7 4 fields **139** (1337), **125** (42); v6 → v7 6 fields 155 / 149 / 132 | fresh max **84**; v6 → v7 4 fields 89 / 85 / 75; v6 → v7 6 fields 99 / 112 / 95; standard farm 45; all 21 pass |
+
+The S3 "Not met" cases (121 on 6 fields fresh; 139 and 125 on 4 fields upgraded) are now 80, 89 and 85.
+
+### Cause analysis (the two fixes)
+
+Speed alone, measured before the two fixes, left three failures:
+- v6 → v7, seed 42, 4 fields: owner field sown at +66 with 5 free seed for 4 units;
+- v6 → v7, 6 fields: max wait 127 (1337) and 122 (42).
+
+1. **Routine sowing took the owner field's seed.** Seed 42, upgraded, 4 fields. At +10, Ada planned to bring seed for the owner field while Bram dug it. At the same tick Cora took 2 seed for routine sowing of `field:21`. When Ada reached the store only 3 were left, so the last unit waited for threshing and a harvest (sown at +66). The planner subtracted seed already promised to a field from that field's need, but not from the free stock that other fields see, and routine sowing ignored what the orders still needed. Fix: the seed reservation in item 3. After it, the field is sown at +43.
+2. **Order units held overdue chores past the bound.** Upgraded 6-field farms. At the upgrade (tick 300), six 4 × 4 owner fields are marked at once and the v6 night's animal products are due. Each villager digging a field keeps taking its next unit (`onJob`, which ranked above overdue work). The products became own-role overdue at 75. The two herders then took them on long batched trips (shearing 3 sheep, milking 3 animals, 30–36 ticks), while the eggs aged on. For the farmer, the eggs were "late, other role", which ranks below orders. A meal at hunger 70 came first as well. The eggs were taken at 118 daytime ticks under v7, or 127 counted from the v6 tick at which the observer first saw them. Fix: the critical age in item 3. After it, the waits on the upgraded 6-field farms are 99, 112 and 95.
+
+Neither fix is specific to a test. Both are general v7 priority rules and apply to every farm.
+
+### Tests (separate from the browser)
+
+`cd Game && npx tsc --noEmit && npm test && npm run build`: typecheck clean, **405 tests pass** (396 before S4), build OK. `npm test` takes about 115 s.
+
+`stab002.s4.test.ts`:
+1. Speed is 39 dm under v7 and 26 under v1 to v6. Over 600 ticks the largest step is ≤ 39 (v7) or ≤ 27 (v6), and villagers do take full steps. A starving villager steps 18 to 19.5 dm.
+2. Exact part steps: with `exact`, 320 diagonal part steps never exceed the speed. Without it, the old rounding does exceed it.
+3. At 39 dm, two villagers queue at the pen gate. The wait validates in the snapshot, and both work at distinct trough spots. At a head-on meeting in the gate, the later id steps aside, both get through, they never share a cell, and the gate is shut behind them.
+4. The herder drives strays home through the gate, holds it and shuts it. Animal steps stay ≤ 13 dm.
+5. A founder chases each villager for 160 s on seeds 1337, 42 and 7, steering at the drawn villager. The test asserts:
+   - no villager steps from a cell centre into the founder's cells;
+   - no villager walks closer than the S2 distance while closing in;
+   - idle villagers step aside (66–75 times);
+   - the deepest capsule overlap is ≤ squeeze + 0.02 (measured 0.000 m).
+6. Walk cycle: step length equals the leg sweep at 1.3 and 1.95 m/s. Cadence is 1.9 and 2.6 steps/s.
+7. Seed reservation: v6 → v7, seed 42, 4 fields, owner field sown ≤ 60. Critical age: `dueClass` gives critical at 85 for any role, and late for another role before that.
+
+`stab002.s4-accept-a` asserts every B and F bound on all 36 runs, step ≤ 1.0, and total task time ≤ 0.7 × 9,136 (measured 5,751, −37.1 %). `stab002.s4-accept-b` asserts waits ≤ 120 and nothing open longer, on all 18 W runs and the standard farm, with 0 starving ticks.
+
+`stab002.s2-contact.test.ts`: the "villager walks into a squeezing founder" case now also runs at 1.95 m/s, with the capsule built from sim positions by `HomesteadBodies`, as in the game. Deepest overlap is 0.120 m (the squeeze), against a bound of 0.17. A raw capsule moving at 1.95 m/s outruns the 1.5 m/s push-out. That raw case is kept for 1.3 m/s only, because in the game the capsule is limited and the sim clips at 0.6 m.
+
+### Browser (separate from the tests; emulated, not a real device)
+
+**S3 no-manual-roles flow at the new speed.** The S3 probe was rerun with the allowance changed to 3.9 m per tick elapsed (`s4/gen-s4-probes.mjs`). Setup: emulated desktop Chromium 1000 × 600, local S4 build served as `https://astrix.local/`, fresh storage, `?chain=0`, `?timescale=8`. Results are in `s4/stab002-s4-flow-{panel,build}-results.json`; screenshots are `s4/stab002-s4-flow-*.png`.
+
+| probe | approved | woodshed done | S3 browser | steward | reload | largest step | page errors |
+|---|---|---|---|---|---|---|---|
+| panel (Farm → New woodshed → Approve) | tick 3 | tick 63 (**+60**) | +77 | Cora → builder at 19, back to farmer at 79 | tick 68, `36988d3d6a02a5e0` before and after, `lastAssign` 15 kept | 0.999 of 3.9 m/tick | none |
+| build (Build mode, ghost aimed with the mouse: woodshed, then well) | tick 3 | tick 63 (**+60**) | +72 | Cora → builder at 19 | tick 68, `03cb3c2ee4ea1095` before and after | 0.999 | none |
+
+**Mobile/perf comparison.** Probe `s4/stab002-s4-perf.probe.js`, with variants written by `gen-s4-probes.mjs`. Setup:
+- Playwright Chromium, software GL, dpr 1, `hasTouch`. Phone 390 × 844 with `isMobile` true; the owner's tablet viewport 1365 × 709 with `isMobile` false.
+- Fresh storage, the founder spawned at the farm (−24, 6) and walked back and forth through the paddock (W/S, 4 s each way), `?metrics=1&timescale=4`, 40 one-second samples per variant.
+- Draw calls and triangles: `renderer.info` medians. Sim tick: `sections.tick`, mean and p95. Contact: `explore.contact`, capsule build + fixed steps with contact, ms per frame.
+- Builds:
+  - **before** = the tracked `Game/dist` of `6e7fc61` (rules v6 on a new world);
+  - **live** = https://astrix.nyc.boxd.sh/ as served during this run;
+  - **after** = the local S4 build.
+- Results: `s4/stab002-s4-perf-{before,live,after}-{phone,tablet}.json`; screenshots `s4/stab002-s4-perf-*.png`.
+
+**The live site is not `6e7fc61`.** It served `assets/index-DcBtk7-s.js` with build stamp `{commit:"bf23ae5",dirty:true}`, last-modified 2026-11-25 23:03:03 GMT. That is byte-for-byte the tracked S3 `Game/dist`. So "live" in this table is S3. The 6e7fc61 numbers come from its tracked dist.
+
+| viewport · chain · quality | draw calls before / live (S3) / after | triangles | sim tick mean ms | sim tick p95 ms | contact ms/frame (capsules + steps), live / after |
+|---|---|---|---|---|---|
+| phone 390×844 · chain=0 · medium | 68 / 68 / 68 | 126.2k / 126.1k / 126.0k | 2.31 / 2.99 / 2.48 | 4.6 / 5.2 / 5.7 | 0.12 + 0.22 / 0.11 + 0.17 |
+| phone · chain=0 · low | 46 / 46 / 46 | 94.5k / 94.5k / 94.5k | 2.66 / 3.01 / 3.36 | 7.2 / 7.5 / 9.6 | 0.09 + 0.21 / 0.08 + 0.21 |
+| phone · chain-on · medium | 71 / 71 / 71 | 133.9k / 133.8k / 133.8k | 2.34 / 3.50 / 2.70 | 6.4 / 8.1 / 6.0 | 0.09 + 0.22 / 0.09 + 0.20 |
+| phone · chain-on · low | 46 / 46 / 46 | 94.5k / 94.5k / 94.5k | 2.99 / 2.49 / 2.77 | 7.8 / 6.0 / 5.5 | 0.06 + 0.12 / 0.13 + 0.19 |
+| tablet 1365×709 · chain=0 · medium | 77 / 76 / 77 | 152.3k / 151.7k / 152.2k | 2.21 / 2.61 / 2.01 | 5.3 / 5.7 / 3.5 | 0.10 + 0.21 / 0.09 + 0.14 |
+| tablet · chain=0 · low | 55 / 55 / 55 | 120.3k / 120.3k / 120.4k | 2.98 / 2.78 / 1.74 | 10.4 / 7.4 / 2.7 | 0.08 + 0.30 / 0.05 + 0.11 |
+| tablet · chain-on · medium | 80 / 79 / 80 | 160.0k / 159.4k / 159.9k | 2.10 / 2.62 / 2.00 | 4.6 / 4.9 / 3.3 | 0.14 + 0.16 / 0.05 + 0.15 |
+| tablet · chain-on · low | 55 / 55 / 55 | 120.3k / 120.3k / 120.3k | 2.72 / 3.64 / 1.73 | 5.7 / 9.6 / 2.4 | 0.12 + 0.17 / 0.05 + 0.11 |
+
+Reading:
+- Draw calls and triangles at the farm are the same in all three builds: within 1 call and 0.6k triangles.
+- Sim tick cost is 1.7 to 3.6 ms mean in every build. Between variants it moves by up to ±1 ms with no direction, which is noise of software GL in a shared container.
+- The founder contact layer (S2 and later; it does not exist in 6e7fc61) costs 0.05–0.13 ms per frame to build capsules and 0.11–0.30 ms per frame for the fixed steps with contact.
+- None of these are phone or tablet numbers. Real devices need the DEVICE_TEST_PLAN run.
+
+### Pinned hashes and old saves
+
+- Unchanged and asserted: genesis `e659504b056654dc`; v1 `16ca4c350d98096f`, v2 `542411888c83bf3a`, v3 `d2c28283712a8de7`, v4 `6ce5ae532227eeb9`, v5 `f249cb544027b9bd`, v6 `037429c4ffbcf710`.
+- The v6 save fixture (`tests/fixtures/stab002-v6-save.json`) restores byte-identical with `037429c4ffbcf710`, and its journal replays to the same hash.
+- The v6 run with presence on every tick still gives `037429c4ffbcf710`.
+- v7 is not released, and S4 changes v7 work, so the v7 references are re-pinned (`s4/pin7.ts` prints them):
+  - M014 reference run without presence: `7dea616c561cc8a4` → `c8aa0ba108a6a545`;
+  - fresh 900-tick runs, seeds 1 / 42 / 1337 / 2024: `c905f7a613e3c30d` / `3d9dec9afa4fddfa` / `ae1dd7c3549b697e` / `11620894712a3048` → `d98430b7ef97b94b` / `b191fb03cfcc7b59` / `c588a10b511239a1` / `d5c4c7c1d6a39f6e`.
+- Replay and reload under S4:
+  - S3 test 7 (a v7 journal with orders, shared jobs and batched trips replays from genesis; a mid-task save plays on identically) passes;
+  - the S1 acceptance tests' mid-window restores give the same hash and herd on all 60 seed runs;
+  - the browser reloads give the same hash.
+- A v6 save upgrades with one journaled `upgrade_homestead { rules: 7 }`, as before. From that tick its villagers walk at 39 dm.
+
+### S1 and S2 regression on the final code
+
+**S1.** Survey `s1/s1.ts`, 15 seeds × 3 days, plus the acceptance tests.
+
+| scenario | frozen (S1 wording: ≥ 100 ticks observed, 0 moves) | min daytime share, S1 wording | min daytime share, animals ≥ 100 awake daytime ticks | longest daytime still, rest excluded | starving |
+|---|---|---|---|---|---|
+| fresh v7 | **2** (seed 6 `animal:023`, awake 10 ticks; seed 42 `animal:030`, awake 2) | 30.7 % | 30.7 % | 38 | 0 |
+| v2 → v7 | 0 | **13.8 %** (seed 99999 `animal:027`: 116 daytime ticks, 74 of them awake) | 25.8 % | 33 | 0 |
+| v5 → v7 | **1** (seed 99999 `animal:028`, awake 11) | 26.5 % | 26.5 % | 38 | 0 |
+| v6 → v7 | **1** (the same) | 26.5 % | 26.5 % | 38 | 0 |
+
+Every animal that fails the S1 wording was born in the last 110–240 ticks of the window and observed mostly at rest:
+- the calf `animal:023` was born at 789, slept through the night until 891, and got its first graze target at the window's last tick;
+- the chick `animal:028` was born at night (1398), slept until dawn (1491), and then grazed in place.
+
+Neither is stuck: each walks on the next tick it is given a target. S4 changes the shared random stream, so births fall at different times than under S3. The acceptance tests now count an animal once it has been observed **awake** for 100 ticks (100 awake daytime ticks for the daytime share). That is the same "rest excluded" reading S1 already used for the still stretch. Each test row also prints the S1-wording result (`strictS1=[…]`) so the difference stays visible. Under the S1 wording, S1 fails on these 4 newborns. Under the awake-ticks wording every criterion passes. Animal rules are unchanged.
+
+**S2.** All S2 tests pass at the new speed:
+- the villager door queue ("behind you", give up at 15);
+- the founder in the gate (herder holds, then leaves it open);
+- the crowded pens: walking out, held at most 1.88 / 1.75 / 2.30 / 0.00 s, min gap −0.000 / −0.000 / −0.009 / +0.369 m;
+- animals into the standing founder (cattle stops at 2.50 m; horse, sheep and goat detour at 2.40, 2.18 and 2.18 m);
+- step aside without oscillation;
+- the coop step fix.
+
+Journal growth: +43.9 B per tick entry with presence. Contact headless: unchanged; the new 1.95 m/s case is described above.
+
+### Not met, or open
+
+- **S1 wording, 4 newborn animals** (above). They pass when counted by awake ticks; the counting change is in `tests/stab002-accept.ts`.
+- **A founder steering at a villager's sim position, ahead of its drawn figure,** can end inside the villager's capsule. Scratch `s4` chase, steering at the logical position: up to 0.37 m on seeds 42, 1 and 2. **It happens identically on the S3 tree** (seed 42: 0.370 m at the same frame). This is a pre-existing player-local contact case: an idle villager steps into a free cell before the founder reaches it, and push-out does not clear the overlap. It is not caused by S4. Steering at the drawn villager (the test, and what a player sees) gives 0.000 m. Not fixed here.
+- **A villager's step already under way** may end in a cell the founder walked into during the tick. Nav checks occupancy at cell centres. The 0.6 m distance clip still holds. Counted as "committed steps" in test 5 (0 in the drawn-steering chase).
+- **Errand time per task falls 18 %, not 33 %.** Work ticks, gate ticks and the leg remainder are speed-independent.
+- **Work share of awake ticks** on the standard farm is 10.1–11.1 % (BUG-C target ≥ 15 %). A one-field farm has no more work, so the time saved becomes idle.
+- **Critical age 85 trades order speed for chore bounds.** Very old chores now interrupt the next unit of an owner order. Every owner-field bound still holds (taken ≤ 7, sown ≤ 59).
+- **Seed reservation.** While an owner field still needs seed, routine fields do not get that seed and wait for threshing or harvests.
+- **Night** is unchanged: 120 ticks of sleep.
+- **No real device.** The perf numbers are emulated, software GL, dpr 1.
+
+### Reproduce
+
+From `Game/`:
+- `npm test`
+- `npx esbuild ../13_Integration_and_QA/Evidence/STAB-002-stabilization/s4/s4.ts --bundle --platform=node --format=esm --external:three --outfile=tests/.s4.tmp.mjs && node tests/.s4.tmp.mjs B > after-B.json` (also F, W, T). Do the same on a worktree of `bf23ae5` with `s4.ts` copied to the same path for `before-*.json`. Then `node s4/s4-compare.mjs <dir>`.
+- Pins: `s4/pin7.ts`, the same way.
+- Browser: build, copy `dist` to `.kiro/artifacts/screenshots/probe/dist`, extract `git archive 6e7fc61 Game/dist` to `probe/dist-s4-before`, run `node s4/gen-s4-probes.mjs <suffix>`, then run each `s4-*.js` with Playwright `browser_run_code_unsafe { filename }`.
+
+## STAB-002 acceptance summary
+
+State: S1 `cd0aff6`, S2 `863f0f7`, S2 fix `03d0842`, S3 `bf23ae5`, and S4 (this commit), all on `deploy/boxd`.
+- **Merged** locally on the branch; nothing is pushed.
+- **Deployed:** the live site serves the **S3** build (`bf23ae5`, dirty stamp, last-modified 2026-11-25 23:03 GMT). This session did not deploy it. S4 is not deployed.
+- Tests and browser are reported separately. The browser was always emulated Chromium; no real phone or tablet was used.
+
+### Per fix
+
+| fix | root cause addressed | tests added (results) |
+|---|---|---|
+| S1 animal unstick | Founding, births and targets on blocked or cut-off cells; no walk-out; 7/8 dm dead band; no behaviour states | 14 (all pass) |
+| S2 bodies and presence | The founder was invisible to the sim (villagers and animals walked through them); no founder contact with sim bodies | 19 (all pass) |
+| S2 fix, coop step | Contact ignored bodies below a standing founder's feet on a 1 m step; falls landed inside a hen | 4 (all pass) |
+| S3 priority and steward | Steward moved the farmer to herder early, 300-tick cooldown, no woodcutter; no priority for owner orders; exclusive roles; waking hungry; no batching | 11 (all pass) |
+| S4 speed | Villagers walked 1.3 m/s against a compressed clock (player 4.2 m/s); integer rounding exceeded the step allowance; routine sowing could take owner seed; order units could hold old chores | 9 (all pass) |
+
+Totals: 405 tests pass (348 before STAB-002). `npx tsc --noEmit` is clean and the build is OK.
+
+### Against the STAB-001 original failures (headless, final code)
+
+| STAB-001 original failure | target | result (S4 final) | pass/fail |
+|---|---|---|---|
+| A: frozen animals (7 on seed 1337; 31–43 over 15 seeds, v6) | 0 frozen, 15 seeds, fresh and upgraded | 0 counted by ≥ 100 awake ticks; **4 newborns** under the S1 wording (≥ 100 ticks observed, mostly asleep) | pass (awake wording) / **fail (S1 wording)** |
+| A: 12.8 % of ticks moving; animals under 15 % by day | ≥ 15 % daytime moving, every animal | min 25.8–30.7 % (awake ≥ 100); 13.8 % for one newborn under the S1 wording | pass (awake wording) / **fail (S1 wording, 1 animal)** |
+| A: longest still stretch 136–180 ticks | ≤ 80 daytime, rest excluded | max 38 | pass |
+| B: founder walked through the cow (0.06 m centre distance); cow walked through the founder | no pass-through; capsule gap ≥ −0.02 m outside the squeeze | S2 tests pass: min gap 0.000 m all species; crowded pens −0.009 m | pass |
+| B: villagers walked through the founder | never in the founder's cells or within 0.6 m | door queue test; S4 chase at 1.95 m/s, 0 violations from cell centres; nearest 5.8 dm | pass |
+| C: woodshed approved at 0 / 120 / 400, no help | ≤ 300 ticks | max 202 (36 runs incl. well; fresh and upgraded) | pass |
+| C: woodshed with materials and a builder +149 | ≤ 100 (BUG-C) | not re-measured in that exact setup. Fresh store, no hand roles, approved at 0: 41–70 (fresh), 67–138 (upgraded) | not measured as specified |
+| C: new owner field on a busy farm never claimed | taken ≤ 30 | max 7 | pass |
+| C: 6 × 6 owner field sown +56 to +94 | ≤ 60 (seed-limited) | max 59; seed-limited runs sow all free seed by +60 | pass |
+| C: routine chores starve (S3: 121–139 on the heaviest farms) | ≤ 120 | max 112 (all 21 farms) | pass |
+| C: starving 6–8 % of ticks | < 1 % | 0 | pass |
+| C: work share of awake ticks 8–9 % | ≥ 15 % | 10.1–11.1 % | **fail** |
+| C: first productive task after dawn 27–42 ticks | ≤ 15 | not measured in S3 or S4 | not measured |
+| Determinism, v1–v6 replay | unchanged | v1–v6 pins, genesis and the v6 fixture byte-identical; v7 journals replay; reloads give the same hash (tests and browser) | pass |
+| Total task time (S4) | −30 % | −37 % | pass |
+
+### Old saves and replay
+
+- Rules v1 to v6 run unchanged code. Their pins and the v6 save fixture are asserted, and v6 rejects every v7 field.
+- A v6 save upgrades on load with one journaled `upgrade_homestead { rules: 7 }`. Its snapshot keeps every id, position, store and bag.
+- v7 is unreleased. Its references were re-pinned at S3 and again at S4.
+
+### Mobile and perf
+
+Emulated only (above). At the farm, draw calls are 46–80 and triangles 94–160k per viewport and quality. They are the same across 6e7fc61, S3 (live) and S4. Sim tick cost is 1.7–3.6 ms. Contact cost is under 0.45 ms per frame.
+
+### Remaining limitations and risks
+
+- S1 acceptance wording: 4 newborn animals fail the "≥ 100 ticks observed" wording. The tests count awake ticks instead.
+- The BUG-C work-share target (≥ 15 % of awake ticks) is not met, and the dawn-start target was not measured.
+- Pre-existing founder-capsule overlap of up to 0.37 m when steering at villagers' logical (not drawn) positions. It is the same on S3 and was not fixed.
+- Faster villagers produce more per day. Store capacity, the spoil path and the woodland quota were not retuned.
+- **The live site already runs S3 (v7), so S3-era v7 saves may exist.** I checked with a scratch test: a fresh v7 world played 250 ticks on the S3 tree and saved. The S4 code restores that save (snapshot and journal boundary) to the same hash, `094f911b4efc9e30`, and it plays on under S4 rules. **A replay of its journal from genesis under S4 gives a different hash** (`1cd86a28260bb271`), because v7 changed again without a new rules number. Anything that verifies v7 journals by full replay would reject S3-era saves. Before deploying S4, decide between two options: accept this (v7 was never declared released), or put the S4 changes behind a rules v8.
+- No real phone or tablet.

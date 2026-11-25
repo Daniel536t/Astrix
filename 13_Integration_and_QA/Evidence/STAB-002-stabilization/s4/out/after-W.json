@@ -1,0 +1,512 @@
+{
+ "speed": 39,
+ "rows": [
+  {
+   "t": "W",
+   "label": "v7 fresh",
+   "seed": 1337,
+   "n": 2,
+   "count": 51,
+   "max": 52,
+   "open": {
+    "key": "product:animal:007",
+    "age": 10
+   },
+   "byKind": {
+    "water": 39,
+    "eggs": 39,
+    "harvest": 52,
+    "sow": 43,
+    "product": 40,
+    "trough": 1
+   },
+   "long": [],
+   "step": 1,
+   "errands": 61,
+   "errandTicks": 975,
+   "travel": 742,
+   "work": 243,
+   "idle": 471,
+   "ticks": 2700
+  },
+  {
+   "t": "W",
+   "label": "v7 fresh",
+   "seed": 1337,
+   "n": 4,
+   "count": 63,
+   "max": 80,
+   "open": {
+    "key": "product:animal:007",
+    "age": 10
+   },
+   "byKind": {
+    "water": 50,
+    "eggs": 77,
+    "harvest": 75,
+    "product": 80,
+    "sow": 79,
+    "trough": 21
+   },
+   "long": [],
+   "step": 1,
+   "errands": 90,
+   "errandTicks": 1284,
+   "travel": 996,
+   "work": 309,
+   "idle": 169,
+   "ticks": 2700
+  },
+  {
+   "t": "W",
+   "label": "v7 fresh",
+   "seed": 1337,
+   "n": 6,
+   "count": 66,
+   "max": 80,
+   "open": {
+    "key": "sow:field:16",
+    "age": 57
+   },
+   "byKind": {
+    "water": 70,
+    "eggs": 80,
+    "product": 75,
+    "harvest": 69,
+    "sow": 64,
+    "trough": 9
+   },
+   "long": [],
+   "step": 1,
+   "errands": 108,
+   "errandTicks": 1345,
+   "travel": 1008,
+   "work": 316,
+   "idle": 50,
+   "ticks": 2700
+  },
+  {
+   "t": "W",
+   "label": "v7 fresh",
+   "seed": 42,
+   "n": 2,
+   "count": 55,
+   "max": 65,
+   "open": {
+    "key": "product:animal:007",
+    "age": 22
+   },
+   "byKind": {
+    "water": 41,
+    "product": 65,
+    "harvest": 45,
+    "eggs": 45,
+    "sow": 46,
+    "trough": 0
+   },
+   "long": [],
+   "step": 1,
+   "errands": 62,
+   "errandTicks": 945,
+   "travel": 696,
+   "work": 247,
+   "idle": 515,
+   "ticks": 2700
+  },
+  {
+   "t": "W",
+   "label": "v7 fresh",
+   "seed": 42,
+   "n": 4,
+   "count": 70,
+   "max": 84,
+   "open": {
+    "key": "product:animal:007",
+    "age": 10
+   },
+   "byKind": {
+    "water": 42,
+    "product": 84,
+    "harvest": 42,
+    "eggs": 63,
+    "sow": 59,
+    "trough": 3
+   },
+   "long": [],
+   "step": 1,
+   "errands": 92,
+   "errandTicks": 1294,
+   "travel": 986,
+   "work": 330,
+   "idle": 154,
+   "ticks": 2700
+  },
+  {
+   "t": "W",
+   "label": "v7 fresh",
+   "seed": 42,
+   "n": 6,
+   "count": 75,
+   "max": 76,
+   "open": {
+    "key": "water:field:15",
+    "age": 53
+   },
+   "byKind": {
+    "water": 76,
+    "eggs": 54,
+    "product": 56,
+    "harvest": 75,
+    "sow": 75,
+    "trough": 11
+   },
+   "long": [],
+   "step": 1,
+   "errands": 121,
+   "errandTicks": 1438,
+   "travel": 1096,
+   "work": 369,
+   "idle": 56,
+   "ticks": 2700
+  },
+  {
+   "t": "W",
+   "label": "v7 fresh",
+   "seed": 7,
+   "n": 2,
+   "count": 54,
+   "max": 58,
+   "open": {
+    "key": "product:animal:007",
+    "age": 23
+   },
+   "byKind": {
+    "water": 46,
+    "eggs": 58,
+    "harvest": 45,
+    "product": 42,
+    "sow": 30,
+    "trough": 1
+   },
+   "long": [],
+   "step": 1,
+   "errands": 60,
+   "errandTicks": 953,
+   "travel": 708,
+   "work": 245,
+   "idle": 511,
+   "ticks": 2700
+  },
+  {
+   "t": "W",
+   "label": "v7 fresh",
+   "seed": 7,
+   "n": 4,
+   "count": 75,
+   "max": 58,
+   "open": {
+    "key": "harvest:field:15",
+    "age": 22
+   },
+   "byKind": {
+    "water": 31,
+    "eggs": 58,
+    "harvest": 45,
+    "product": 46,
+    "sow": 51,
+    "trough": 1
+   },
+   "long": [],
+   "step": 1,
+   "errands": 88,
+   "errandTicks": 1211,
+   "travel": 831,
+   "work": 321,
+   "idle": 251,
+   "ticks": 2700
+  },
+  {
+   "t": "W",
+   "label": "v7 fresh",
+   "seed": 7,
+   "n": 6,
+   "count": 76,
+   "max": 80,
+   "open": {
+    "key": "harvest:field:15",
+    "age": 45
+   },
+   "byKind": {
+    "water": 46,
+    "eggs": 79,
+    "harvest": 60,
+    "sow": 76,
+    "product": 80,
+    "trough": 6
+   },
+   "long": [],
+   "step": 1,
+   "errands": 109,
+   "errandTicks": 1409,
+   "travel": 1028,
+   "work": 344,
+   "idle": 92,
+   "ticks": 2700
+  },
+  {
+   "t": "W",
+   "label": "v6->v7",
+   "seed": 1337,
+   "n": 2,
+   "count": 56,
+   "max": 70,
+   "open": {
+    "key": "harvest:field:25",
+    "age": 23
+   },
+   "byKind": {
+    "eggs": 38,
+    "product": 70,
+    "water": 42,
+    "trough": 5,
+    "harvest": 57,
+    "sow": 46
+   },
+   "long": [],
+   "step": 1,
+   "errands": 71,
+   "errandTicks": 1269,
+   "travel": 995,
+   "work": 259,
+   "idle": 616,
+   "ticks": 3600
+  },
+  {
+   "t": "W",
+   "label": "v6->v7",
+   "seed": 1337,
+   "n": 4,
+   "count": 65,
+   "max": 89,
+   "open": {
+    "key": "product:animal:006",
+    "age": 43
+   },
+   "byKind": {
+    "eggs": 74,
+    "product": 89,
+    "water": 62,
+    "trough": 21,
+    "harvest": 66,
+    "sow": 57
+   },
+   "long": [],
+   "step": 1,
+   "errands": 90,
+   "errandTicks": 1420,
+   "travel": 1103,
+   "work": 316,
+   "idle": 470,
+   "ticks": 3600
+  },
+  {
+   "t": "W",
+   "label": "v6->v7",
+   "seed": 1337,
+   "n": 6,
+   "count": 66,
+   "max": 99,
+   "open": {
+    "key": "product:animal:027",
+    "age": 47
+   },
+   "byKind": {
+    "eggs": 96,
+    "product": 99,
+    "trough": 41,
+    "water": 83,
+    "harvest": 68,
+    "sow": 76
+   },
+   "long": [],
+   "step": 1,
+   "errands": 113,
+   "errandTicks": 1488,
+   "travel": 1102,
+   "work": 327,
+   "idle": 379,
+   "ticks": 3600
+  },
+  {
+   "t": "W",
+   "label": "v6->v7",
+   "seed": 42,
+   "n": 2,
+   "count": 62,
+   "max": 68,
+   "open": {
+    "key": "eggs:coop",
+    "age": 12
+   },
+   "byKind": {
+    "product": 68,
+    "eggs": 63,
+    "water": 47,
+    "trough": 10,
+    "harvest": 56,
+    "sow": 53
+   },
+   "long": [],
+   "step": 1,
+   "errands": 71,
+   "errandTicks": 1180,
+   "travel": 895,
+   "work": 265,
+   "idle": 729,
+   "ticks": 3600
+  },
+  {
+   "t": "W",
+   "label": "v6->v7",
+   "seed": 42,
+   "n": 4,
+   "count": 70,
+   "max": 85,
+   "open": {
+    "key": "product:animal:005",
+    "age": 44
+   },
+   "byKind": {
+    "product": 85,
+    "eggs": 72,
+    "water": 55,
+    "trough": 14,
+    "harvest": 73,
+    "sow": 46
+   },
+   "long": [],
+   "step": 1,
+   "errands": 94,
+   "errandTicks": 1357,
+   "travel": 1039,
+   "work": 323,
+   "idle": 560,
+   "ticks": 3600
+  },
+  {
+   "t": "W",
+   "label": "v6->v7",
+   "seed": 42,
+   "n": 6,
+   "count": 76,
+   "max": 112,
+   "open": {
+    "key": "harvest:field:21",
+    "age": 33
+   },
+   "byKind": {
+    "product": 112,
+    "eggs": 84,
+    "water": 79,
+    "trough": 19,
+    "harvest": 73,
+    "sow": 77
+   },
+   "long": [
+    "product:animal:007@262->403:112",
+    "product:animal:011@299->403:104"
+   ],
+   "step": 1,
+   "errands": 107,
+   "errandTicks": 1456,
+   "travel": 1111,
+   "work": 352,
+   "idle": 466,
+   "ticks": 3600
+  },
+  {
+   "t": "W",
+   "label": "v6->v7",
+   "seed": 7,
+   "n": 2,
+   "count": 60,
+   "max": 67,
+   "open": {
+    "key": "product:animal:007",
+    "age": 17
+   },
+   "byKind": {
+    "product": 67,
+    "eggs": 35,
+    "water": 45,
+    "trough": 14,
+    "harvest": 45,
+    "sow": 51
+   },
+   "long": [],
+   "step": 1,
+   "errands": 75,
+   "errandTicks": 1157,
+   "travel": 880,
+   "work": 260,
+   "idle": 756,
+   "ticks": 3600
+  },
+  {
+   "t": "W",
+   "label": "v6->v7",
+   "seed": 7,
+   "n": 4,
+   "count": 68,
+   "max": 75,
+   "open": {
+    "key": "water:field:17",
+    "age": 26
+   },
+   "byKind": {
+    "product": 75,
+    "eggs": 71,
+    "water": 47,
+    "trough": 4,
+    "harvest": 51,
+    "sow": 51
+   },
+   "long": [],
+   "step": 1,
+   "errands": 81,
+   "errandTicks": 1323,
+   "travel": 945,
+   "work": 308,
+   "idle": 586,
+   "ticks": 3600
+  },
+  {
+   "t": "W",
+   "label": "v6->v7",
+   "seed": 7,
+   "n": 6,
+   "count": 70,
+   "max": 95,
+   "open": {
+    "key": "harvest:field:17",
+    "age": 51
+   },
+   "byKind": {
+    "product": 95,
+    "eggs": 79,
+    "water": 76,
+    "trough": 11,
+    "harvest": 69,
+    "sow": 86
+   },
+   "long": [],
+   "step": 1,
+   "errands": 121,
+   "errandTicks": 1471,
+   "travel": 1083,
+   "work": 326,
+   "idle": 431,
+   "ticks": 3600
+  }
+ ]
+}

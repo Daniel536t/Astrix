@@ -110,7 +110,15 @@ export const DAY_TICKS = 300;
 /** Night inside a day (ticks), when villagers go home and rest. */
 export const NIGHT_START = 171;
 export const NIGHT_END = 291;
-export const VILLAGER_SPEED = 26; // dm per tick (1.3 m/s)
+export const VILLAGER_SPEED = 26; // dm per tick (1.3 m/s), settlement rules v1 to v6
+/**
+ * STAB-002 S4 (settlement rules v7): villagers walk 39 dm per tick (1.95 m/s,
+ * 1.5x), from the STAB-001 BUG-C speed sensitivity (field +243 -> +22, well
+ * +370 -> +161; above 2x little more is gained). Starving still halves it.
+ */
+export const VILLAGER_SPEED_V7 = 39;
+/** Walking speed of a homestead's villagers (dm per tick) under its rules. */
+export const villagerSpeed = (h: Pick<HomesteadState, 'version'>) => (h.version >= HOMESTEAD_HERD_VERSION ? VILLAGER_SPEED_V7 : VILLAGER_SPEED);
 export const ANIMAL_SPEED = 7;
 export const MAX_VILLAGERS = 8;
 export const MAX_ANIMALS = 60;
@@ -1596,6 +1604,12 @@ export const AGE_URGENT = 45;
 export const AGE_STEP = 30;
 /** Any upkeep or routine work waiting this many daytime ticks (75) is overdue: ahead of owner orders, and anyone may do it. */
 export const AGE_OVERDUE = 75;
+/**
+ * STAB-002 S4: any upkeep or routine work waiting this many daytime ticks (85) is critical, for anyone: it
+ * comes ahead of the next unit of an owner order a villager is standing at and of owner orders, so a chain of
+ * order units (a farm of newly marked fields) cannot hold chores past the 120-tick bound.
+ */
+export const AGE_CRITICAL = 85;
 /** A sprouted crop this many ticks dry, or a trough this low, is overdue at once (the crop withers at WITHER_TICKS). */
 export const CROP_CRITICAL_DRY = 15;
 export const TROUGH_CRITICAL = 6;
@@ -1751,7 +1765,7 @@ const fieldCorner = (p: Pick<Plot, 'x' | 'z'>) => ({ x: p.x * DM + 5, z: p.z * D
 function taskTicks(v: Villager, t: Task): number {
   let x = v.x, z = v.z, n = 0;
   for (const l of t.legs) {
-    if (l.op === 'walk') { n += Math.ceil((len2(l.x - x, l.z - z) * 1.4) / VILLAGER_SPEED); x = l.x; z = l.z; } else n += l.ticks;
+    if (l.op === 'walk') { n += Math.ceil((len2(l.x - x, l.z - z) * 1.4) / VILLAGER_SPEED_V7); x = l.x; z = l.z; } else n += l.ticks;
   }
   return n;
 }
@@ -1760,10 +1774,11 @@ function taskTicks(v: Villager, t: Task): number {
  * daytime ticks old, overdue for its own role (for the others it comes just after owner orders, until it is
  * twice that old); routine work 45 old, urgent.
  */
-function dueClass(h: HomesteadState, j: DueJob, tick: number, role: Role): number {
+export function dueClass(h: HomesteadState, j: DueJob, tick: number, role: Role): number {
   if (h.priority?.includes(j.place)) return PRIORITY.order;
   const age = daylightAge(h.due?.[j.key] ?? tick, tick);
   if (j.critical) return PRIORITY.critical;
+  if (age >= AGE_CRITICAL) return PRIORITY.critical;
   if (age >= AGE_OVERDUE) return j.role === null || j.role === role || age >= 2 * AGE_OVERDUE ? PRIORITY.overdue : PRIORITY.lateOther;
   return j.base === 3 && age < AGE_URGENT ? PRIORITY.routine : PRIORITY.urgent;
 }
@@ -1807,12 +1822,16 @@ function planV7(world: World, h: HomesteadState, v: Villager, tick: number, budg
   const sites = [...(h.sites ?? [])].sort((a, b) => a.id.localeCompare(b.id));
   const prio = new Set(h.priority ?? []);
   const isOrder = (p: Plot) => p.order !== undefined || prio.has(p.id);
-  const seedFree = (s.seed ?? 0) + (h.overflow.seed ?? 0);
+  // STAB-002 S4: seed other villagers will still take from the store is not free; nor, for a field that is not
+  // an owner order, the seed the owner's fields still need (orders outrank routine sowing for the seed too).
+  const seedStore = (s.seed ?? 0) + (h.overflow.seed ?? 0) - pending(h, v, (_t, l) => l.effect === 'take' && l.item === 'seed');
   const fiberFree = (s.fiber ?? 0) + (h.overflow.fiber ?? 0);
   const units = (p: Plot) => unitsOf(p);
   const cap = (p: Plot) => (units(p) >= 3 ? JOB_WORKERS : 1);
   const tillLeft = (p: Plot) => TILL_PER_UNIT * units(p) - p.tilled - pending(h, v, (t, l) => l.effect === 'till' && legAt(t, l) === p.id, true);
   const sowLeft = (p: Plot) => units(p) - (p.sown ?? 0) - seedGoing(h, v, p);
+  const orderSeed = plots.filter((p) => isOrder(p) && (p.state === 'wild' || p.state === 'tilled')).reduce((n, p) => n + Math.max(0, sowLeft(p)), 0);
+  const seedFor = (p: Plot) => Math.max(0, seedStore - (isOrder(p) ? 0 : orderSeed));
   const tillTask = (p: Plot): Task | null => {
     const left = tillLeft(p);
     if (left <= 0) return null;
@@ -1892,7 +1911,7 @@ function planV7(world: World, h: HomesteadState, v: Villager, tick: number, budg
   }
   // ---- P1 owner orders: fields the owner marked (until sown) or put on the priority list ----
   const sowJob = (p: Plot, cls: number, since: number, key: string) => {
-    const left = sowLeft(p);
+    const left = sowLeft(p), seedFree = seedFor(p);
     if (left <= 0 || !free(p.id, cap(p))) return;
     if (seedFree > 0) {
       push({ cls, own: v.role === 'farmer', since, d: d(STOCK), key, make: () => {
@@ -1932,10 +1951,10 @@ function planV7(world: World, h: HomesteadState, v: Villager, tick: number, budg
     if (p.state === 'wild') {
       if (tillLeft(p) <= 0 || !free(p.id, cap(p))) continue;
       const need = sowLeft(p);
-      if ((taken.get(p.id) ?? 0) > 0 && need > 0 && seedFree > 0) {
+      if ((taken.get(p.id) ?? 0) > 0 && need > 0 && seedFor(p) > 0) {
         // The second worker brings the seed while the first digs, then digs or sows with it.
         push({ cls: order, own, since, d: d(STOCK), key: p.id, make: () => {
-          const n = Math.min(need, seedFree), spot = fieldCorner(p);
+          const n = Math.min(need, seedFor(p)), spot = fieldCorner(p);
           return task('sow', p.id, [walk(STOCK), work(STOCK, 1, 'take', 'seed', n), walk(spot), atLeg(work(spot, 1, 'none'), p.id)]);
         } });
       } else push({ cls: order, own, since, d: d(fieldCentre(p)), key: p.id, make: () => tillTask(p) });
@@ -2578,6 +2597,8 @@ function navWalk(world: World, h: HomesteadState, v: Villager, t: Task, tick: nu
     gate: (id) => h.gates?.find((g) => g.id === id)?.state ?? 'locked',
     setGate: (id, state) => { const g = h.gates?.find((x) => x.id === id); if (g) g.state = state; },
     canOperate: () => true,
+    // STAB-002 S4: under v7 a tick's step never exceeds the walking speed (part steps round toward zero).
+    ...(isHerdHomestead(h) ? { exact: true } : {}),
     ...(occupied ? {
       occupied, self: v.id,
       // STAB-002 S2: a founder walking toward this villager counts as waiting on it (a head-on meeting in a
@@ -2778,7 +2799,7 @@ function stepVillager(world: World, h: HomesteadState, v: Villager, tick: number
   const leg = t.legs[t.leg];
   if (leg.op !== 'walk' && v.nav?.wait) delete v.nav.wait;
   if (leg.op === 'walk' && isNavHomestead(h)) {
-    navWalk(world, h, v, t, tick, starving ? VILLAGER_SPEED / 2 : VILLAGER_SPEED, ev, budget, occupied);
+    navWalk(world, h, v, t, tick, starving ? villagerSpeed(h) / 2 : villagerSpeed(h), ev, budget, occupied);
     if (v.task && t.leg >= t.legs.length) v.task = null;
     return;
   }

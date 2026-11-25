@@ -1,0 +1,137 @@
+{
+ "emulated": "Playwright Chromium 390x844, hasTouch, isMobile true, dpr 1, software GL: NOT a real device",
+ "tag": "before",
+ "base": "https://astrix.local/",
+ "seconds": 348,
+ "results": [
+  {
+   "key": "phone chain=0 medium",
+   "chain": false,
+   "level": "medium",
+   "rules": 6,
+   "ticks": [
+    29,
+    167
+   ],
+   "quality": "medium",
+   "drawCalls": {
+    "median": 68,
+    "max": 70
+   },
+   "triangles": {
+    "median": 126200,
+    "max": 126686
+   },
+   "simTickMs": {
+    "mean": 2.31,
+    "p95": 4.6,
+    "n": 167
+   },
+   "contactMsPerFrame": null,
+   "frameWorkP95": 34.9,
+   "walked": [
+    -23.68,
+    6.28,
+    -23.08,
+    8.6
+   ]
+  },
+  {
+   "key": "phone chain=0 low",
+   "chain": false,
+   "level": "low",
+   "rules": 6,
+   "ticks": [
+    14,
+    117
+   ],
+   "quality": "low",
+   "drawCalls": {
+    "median": 46,
+    "max": 47
+   },
+   "triangles": {
+    "median": 94468,
+    "max": 94732
+   },
+   "simTickMs": {
+    "mean": 2.66,
+    "p95": 7.2,
+    "n": 117
+   },
+   "contactMsPerFrame": null,
+   "frameWorkP95": 25.7,
+   "walked": [
+    -24.61,
+    5.41,
+    -19.92,
+    12.62
+   ]
+  },
+  {
+   "key": "phone chain-on medium",
+   "chain": true,
+   "level": "medium",
+   "rules": 6,
+   "ticks": [
+    25,
+    158
+   ],
+   "quality": "medium",
+   "drawCalls": {
+    "median": 71,
+    "max": 73
+   },
+   "triangles": {
+    "median": 133864,
+    "max": 134366
+   },
+   "simTickMs": {
+    "mean": 2.34,
+    "p95": 6.4,
+    "n": 158
+   },
+   "contactMsPerFrame": null,
+   "frameWorkP95": 23.7,
+   "walked": [
+    -24.18,
+    5.63,
+    -22.67,
+    9.27
+   ]
+  },
+  {
+   "key": "phone chain-on low",
+   "chain": true,
+   "level": "low",
+   "rules": 6,
+   "ticks": [
+    19,
+    120
+   ],
+   "quality": "low",
+   "drawCalls": {
+    "median": 46,
+    "max": 47
+   },
+   "triangles": {
+    "median": 94468,
+    "max": 94732
+   },
+   "simTickMs": {
+    "mean": 2.99,
+    "p95": 7.8,
+    "n": 120
+   },
+   "contactMsPerFrame": null,
+   "frameWorkP95": 18.5,
+   "walked": [
+    -24.69,
+    5.41,
+    -18.56,
+    12.6
+   ]
+  }
+ ],
+ "errs": []
+}

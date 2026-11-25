@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MAT, createWorld, ensureChunk, setVoxel, surfaceAt, worldToChunkX, worldToChunkZ } from '../src/sim/world';
 import { CHARACTER_RADIUS, CONTACT_PUSH_SPEED, CONTACT_SQUEEZE_DEPTH, CharacterState, FIXED_STEP, bodyOverlap, createCharacter, stepCharacter } from '../src/sim/character';
-import { DynamicBody, FARM_BODIES, PERSON_BODY, PLAYER_R, WILD_BODIES, bodyReach, creatureBody, penetration, segmentDistance } from '../src/sim/bodies';
+import { DynamicBody, FARM_BODIES, HomesteadBodies, PERSON_BODY, PLAYER_R, WILD_BODIES, bodyReach, creatureBody, penetration, segmentDistance } from '../src/sim/bodies';
 import { Creature, FAUNA_STEP, SPECIES, stepCreature } from '../src/sim/fauna';
 
 function flatPad() {
@@ -141,18 +141,42 @@ test('a body walking into a standing founder at 0.6 m/s (the fastest drawn anima
   }
 });
 
-test('a villager walking (1.3 m/s) into a founder who has been pressing into it for 3 s (squeezing) never gets deeper than the squeeze depth plus 0.05 m', () => {
+test('a villager walking (1.3 m/s raw capsule; 1.95 m/s, the v7 speed since STAB-002 S4, from sim positions) into a founder who has been pressing into it for 3 s (squeezing) never gets deeper than the squeeze depth plus 0.05 m', () => {
+  for (const speed of [1.3, 1.95]) {
+    const world = flatPad();
+    let s = settle(world, 0.5, 0.5);
+    let worst = 0;
+    for (let i = 0; i < 8 / FIXED_STEP; i++) {
+      const t = i * FIXED_STEP;
+      // Standing still in front of the founder for 3 s (they press into it), then walking through them.
+      const b = body('v', PERSON_BODY, t < 3 ? 1.05 : 1.05 - speed * (t - 3), 0.5, -Math.PI / 2);
+      s = step(world, s, 1, 0, FIXED_STEP, [b]);
+      worst = Math.max(worst, penetration(b, s.x, s.z, CHARACTER_RADIUS));
+    }
+    // A raw capsule moving at 1.95 m/s outruns the push-out (CONTACT_PUSH_SPEED, 1.5 m/s); in the game villager
+    // capsules come from HomesteadBodies, which never closes one on the founder faster than the push-out (S3), and
+    // the sim never walks a villager closer than 0.6 m to the presence (S2). The raw case is kept for 1.3 m/s only.
+    if (speed < CONTACT_PUSH_SPEED) assert.ok(worst <= CONTACT_SQUEEZE_DEPTH + 0.05, `${speed} m/s: deepest ${worst.toFixed(3)} m`);
+  }
+  // STAB-002 S4: the same walk-through at the v7 speed, with the capsule from sim positions as the game builds it:
+  // ticks of 2 s, the villager 39 dm further each tick, blended by HomesteadBodies with the founder's radius.
   const world = flatPad();
   let s = settle(world, 0.5, 0.5);
-  let worst = 0;
-  for (let i = 0; i < 8 / FIXED_STEP; i++) {
-    const t = i * FIXED_STEP;
-    // Standing still in front of the founder for 3 s (they press into it), then walking through them.
-    const b = body('v', PERSON_BODY, t < 3 ? 1.05 : 1.05 - 1.3 * (t - 3), 0.5, -Math.PI / 2);
-    s = step(world, s, 1, 0, FIXED_STEP, [b]);
-    worst = Math.max(worst, penetration(b, s.x, s.z, CHARACTER_RADIUS));
+  const bodies = new HomesteadBodies(2);
+  const v = { id: 'villager:0', x: 10, z: 5, task: null };
+  const h = { animals: [], villagers: [v] };
+  let worst = 0, tick = 0;
+  for (let i = 0; i < 10 / FIXED_STEP; i++) {
+    const t = i * FIXED_STEP, now = t * 1000;
+    if (Math.floor(t / 2) > tick) { tick = Math.floor(t / 2); if (t >= 3) v.x -= 39; }
+    bodies.observe(h, tick, now);
+    const out: DynamicBody[] = [];
+    bodies.collect(h, tick, now, s.x, s.z, 8, () => Y, () => 0, out, CHARACTER_RADIUS);
+    s = step(world, s, 1, 0, FIXED_STEP, out);
+    for (const b of out) worst = Math.max(worst, penetration(b, s.x, s.z, CHARACTER_RADIUS));
   }
-  assert.ok(worst <= CONTACT_SQUEEZE_DEPTH + 0.05, `deepest ${worst.toFixed(3)} m`);
+  console.log(`1.95 m/s from sim positions: deepest ${worst.toFixed(3)} m, founder ended at x ${s.x.toFixed(2)}`);
+  assert.ok(worst <= CONTACT_SQUEEZE_DEPTH + 0.05, `1.95 m/s from sim positions: deepest ${worst.toFixed(3)} m`);
 });
 
 test('without bodies (absent, empty, or far away) every step is identical to the code before S2', () => {

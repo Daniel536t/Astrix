@@ -1,0 +1,157 @@
+{
+ "emulated": "Playwright Chromium 390x844, hasTouch, isMobile true, dpr 1, software GL: NOT a real device",
+ "tag": "after",
+ "base": "https://astrix.local/",
+ "seconds": 331,
+ "results": [
+  {
+   "key": "phone chain=0 medium",
+   "chain": false,
+   "level": "medium",
+   "rules": 7,
+   "ticks": [
+    19,
+    155
+   ],
+   "quality": "medium",
+   "drawCalls": {
+    "median": 68,
+    "max": 70
+   },
+   "triangles": {
+    "median": 126044,
+    "max": 126296
+   },
+   "simTickMs": {
+    "mean": 2.48,
+    "p95": 5.7,
+    "n": 155
+   },
+   "contactMsPerFrame": {
+    "collect": 0.1066,
+    "stepsWithContact": 0.17,
+    "maxSteps": 0.8,
+    "bodies": 6
+   },
+   "frameWorkP95": 22.7,
+   "walked": [
+    -23.92,
+    5.96,
+    -23.7,
+    7.95
+   ]
+  },
+  {
+   "key": "phone chain=0 low",
+   "chain": false,
+   "level": "low",
+   "rules": 7,
+   "ticks": [
+    17,
+    116
+   ],
+   "quality": "low",
+   "drawCalls": {
+    "median": 46,
+    "max": 47
+   },
+   "triangles": {
+    "median": 94468,
+    "max": 94492
+   },
+   "simTickMs": {
+    "mean": 3.36,
+    "p95": 9.6,
+    "n": 116
+   },
+   "contactMsPerFrame": {
+    "collect": 0.0835,
+    "stepsWithContact": 0.212,
+    "maxSteps": 5.4,
+    "bodies": 4
+   },
+   "frameWorkP95": 29.4,
+   "walked": [
+    -24.95,
+    5.41,
+    -21.2,
+    11.15
+   ]
+  },
+  {
+   "key": "phone chain-on medium",
+   "chain": true,
+   "level": "medium",
+   "rules": 7,
+   "ticks": [
+    19,
+    142
+   ],
+   "quality": "medium",
+   "drawCalls": {
+    "median": 71,
+    "max": 73
+   },
+   "triangles": {
+    "median": 133848,
+    "max": 134002
+   },
+   "simTickMs": {
+    "mean": 2.7,
+    "p95": 6,
+    "n": 142
+   },
+   "contactMsPerFrame": {
+    "collect": 0.0938,
+    "stepsWithContact": 0.203,
+    "maxSteps": 2.2,
+    "bodies": 5
+   },
+   "frameWorkP95": 30.7,
+   "walked": [
+    -24.18,
+    5.63,
+    -22.94,
+    8.93
+   ]
+  },
+  {
+   "key": "phone chain-on low",
+   "chain": true,
+   "level": "low",
+   "rules": 7,
+   "ticks": [
+    20,
+    122
+   ],
+   "quality": "low",
+   "drawCalls": {
+    "median": 46,
+    "max": 47
+   },
+   "triangles": {
+    "median": 94468,
+    "max": 94506
+   },
+   "simTickMs": {
+    "mean": 2.77,
+    "p95": 5.5,
+    "n": 122
+   },
+   "contactMsPerFrame": {
+    "collect": 0.1255,
+    "stepsWithContact": 0.185,
+    "maxSteps": 2.5,
+    "bodies": 4
+   },
+   "frameWorkP95": 19.3,
+   "walked": [
+    -24.18,
+    5.63,
+    -21.08,
+    11.06
+   ]
+  }
+ ],
+ "errs": []
+}
