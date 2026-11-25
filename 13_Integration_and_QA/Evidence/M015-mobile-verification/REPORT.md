@@ -261,3 +261,11 @@ When the owner's report arrives: check it against the thresholds, fix anything i
 - `ctl-<vp>-*.png`
 - `perf-<level>-*.png`
 - `session-*.png`
+
+## Live deployment check
+
+Release `20261125T114310Z-b235406` was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd` but not merged to `main`. The served bundle matches the local build (`assets/index-BnwDzHwe.js`).
+
+A fresh emulated phone context (390x844, touch, dpr 2, software GL) opened `https://astrix.nyc.boxd.sh/?perf=1` with no page errors. The entry screen appeared over the world, as it does for every new browser. The quality level was chosen automatically as `low`, because the emulator's GPU is SwiftShader: pixel ratio 1, no shadows, trees at full detail to 50 m, ground cover to 30 m. The perf monitor was present. The renderer drew 46 calls and 86,760 triangles. Screenshot: `live-phone-perf.png`.
+
+This is emulation, not a device. **M015 remains open** until the owner's device report from `DEVICE_TEST_PLAN.md` is received and reviewed. Birds stay blocked until then.
