@@ -5,7 +5,7 @@
 import type * as THREE from 'three';
 import {
   BucketRecorder, BucketContext, DeviceInfo, PERF_SESSION_KEY, PerfEvent, PerfReport, REPORT_VERSION, SceneInfo,
-  buildReport, parseSavedSession, reportText, sceneKey, summarizeFrames, thermalDrift,
+  buildReport, compactReport, parseSavedSession, reportText, sceneKey, summarizeFrames, thermalDrift,
 } from './perf-monitor';
 import { gpuStrings } from './quality';
 
@@ -18,6 +18,8 @@ export interface PerfOverlayOptions {
   scene: () => SceneInfo;
   /** Draw calls and triangles of the last frame (renderer.info, main + shadow passes). */
   counters: () => { calls: number; triangles: number };
+  /** Frame-rate cap in force (fps; 0 = unlimited) and where it came from. */
+  frameCap?: () => { cap: number; source: string };
 }
 
 type BatteryManagerLike = { level: number; charging: boolean; addEventListener?: (t: string, f: () => void) => void };
@@ -52,6 +54,7 @@ export class PerfOverlay {
       gpu: g.gpu, gpuVendor: g.vendor, webgl2: typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext,
       multiDrawSupported: o.multiDrawSupported, maxTextureSize: Number(gl.getParameter(gl.MAX_TEXTURE_SIZE)) || null,
       touch: matchMedia('(pointer: coarse)').matches,
+      maxTouchPoints: navigator.maxTouchPoints ?? 0, anyCoarse: matchMedia('(any-pointer: coarse)').matches,
     };
     // Continue a session from this tab after a reload (Android may reload a tab under memory pressure).
     let saved = null;
@@ -61,7 +64,8 @@ export class PerfOverlay {
     if (saved?.histogram.length === this.recorder.histogram.length) this.recorder.histogram.set(saved.histogram);
     this.startedAt = saved?.startedAt ?? new Date().toISOString();
     this.events = saved?.events ?? [];
-    this.event(saved ? 'reload' : 'start', `quality ${o.quality.level} · ${o.multiDraw ? 'multi-draw' : 'fallback'}`);
+    const cap = o.frameCap?.().cap ?? 0;
+    this.event(saved ? 'reload' : 'start', `quality ${o.quality.level} · ${o.multiDraw ? 'multi-draw' : 'fallback'}${o.frameCap ? ` · cap ${cap || 'unlimited'}` : ''}`);
 
     this.root = document.createElement('section');
     this.root.id = 'perf-overlay';
@@ -117,6 +121,9 @@ export class PerfOverlay {
     }
   }
 
+  /** The frame-rate cap changed in Settings (logged as an event; buckets carry the cap). */
+  capChanged(cap: number): void { this.event('cap', cap ? `${cap} fps` : 'unlimited'); }
+
   private event(kind: string, detail?: string): void {
     this.events.push({ t: Math.round(this.recorder.sessionSeconds(performance.now()) * 10) / 10, kind, ...(detail ? { detail } : {}) });
     if (this.events.length > 400) this.events.splice(0, this.events.length - 400);
@@ -141,7 +148,8 @@ export class PerfOverlay {
     return { scene: sceneKey(this.o.scene()), calls: c.calls, triangles: c.triangles,
       heapMB: mem ? Math.round(mem.usedJSHeapSize / 1048576) : null,
       battery: this.battery ? { level: this.battery.level, charging: this.battery.charging } : null,
-      quality: this.o.quality.level, path: this.o.multiDraw ? 'multi-draw' : 'fallback' };
+      quality: this.o.quality.level, path: this.o.multiDraw ? 'multi-draw' : 'fallback',
+      ...(this.o.frameCap ? { cap: this.o.frameCap().cap } : {}) };
   }
 
   private canvasSize(): { width: number; height: number } {
@@ -155,7 +163,8 @@ export class PerfOverlay {
       build: { ...this.o.build, bundle: script ? script.src.split('/').pop() ?? null : null, url: location.href },
       device: { ...this.device, viewport: { width: innerWidth, height: innerHeight }, screen: { ...this.device.screen, orientation: screen.orientation?.type ?? null } },
       render: { path: this.o.multiDraw ? 'multi-draw' : 'fallback', quality: this.o.quality.level, qualitySource: this.o.quality.source, qualityReasons: this.o.quality.reasons,
-        pixelRatio: this.o.renderer.getPixelRatio(), canvas: this.canvasSize() },
+        pixelRatio: this.o.renderer.getPixelRatio(), canvas: this.canvasSize(),
+        ...(this.o.frameCap ? { frameCap: this.o.frameCap().cap, frameCapSource: this.o.frameCap().source } : {}) },
       startedAt: this.startedAt, createdAt: new Date().toISOString(), buckets: this.recorder.buckets, events: this.events,
       sessionP50: this.recorder.sessionPercentile(0.5), sessionP95: this.recorder.sessionPercentile(0.95),
     });
@@ -177,6 +186,7 @@ export class PerfOverlay {
     this.stats.textContent = [
       `fps ${s.fps} (p5 ${s.fpsP5}) · frame p50 ${s.p50Ms} / p95 ${s.p95Ms} ms (last ${s.frames} frames)`,
       `draw calls ${c.calls} · triangles ${c.triangles.toLocaleString('en')}`,
+      `frame cap ${this.o.frameCap ? (this.o.frameCap().cap ? `${this.o.frameCap().cap} fps` : 'unlimited') : 'unlimited'}`,
       `path ${this.o.multiDraw ? 'multi-draw' : 'fallback (no WEBGL_multi_draw' + (this.o.multiDrawSupported ? ', forced by ?multidraw=0)' : ')')} · quality ${this.o.quality.level} (${this.o.quality.source})`,
       `GPU ${this.device.gpu ?? 'not exposed'}`,
       `dpr ${devicePixelRatio} → pixel ratio ${this.o.renderer.getPixelRatio()} · canvas ${cs.width}×${cs.height} · viewport ${innerWidth}×${innerHeight}`,
@@ -197,20 +207,22 @@ export class PerfOverlay {
 
   private say(m: string): void { this.status.textContent = m; }
 
-  private files(): { name: string; json: string; text: string } {
+  private files(): { name: string; json: string; text: string; compact: string } {
     const r = this.report();
     const text = reportText(r);
     const stamp = r.createdAt.replace(/[:.]/g, '-').slice(0, 19);
-    return { name: `astrix-perf-${stamp}.json`, json: JSON.stringify({ summaryText: text, ...r }, null, 1), text };
+    return { name: `astrix-perf-${stamp}.json`, json: JSON.stringify({ summaryText: text, ...r }, null, 1), text, compact: compactReport(r) };
   }
 
   private async copy(): Promise<void> {
     const f = this.files();
-    const payload = `${f.text}\n\n--- JSON ---\n${JSON.stringify(JSON.parse(f.json))}`;
+    // M015 device report 1: summary + full JSON (17 KB and more) was cut off in chat. The paste is now
+    // the summary and a compact bucket table under 8 KB; Download and Share keep the full JSON.
+    const payload = f.compact;
     try {
       if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(payload);
       else throw new Error('no clipboard API');
-      this.say(`Copied the report (${Math.round(payload.length / 1024)} KB): paste it into the chat.`);
+      this.say(`Copied the report (${Math.max(1, Math.round(payload.length / 1024))} KB, summary and bucket table): paste it into the chat. Download report has the full JSON.`);
     } catch {
       // Fallback: a selected textarea the owner can copy by hand.
       const ta = document.createElement('textarea');
@@ -238,7 +250,7 @@ export class PerfOverlay {
     try {
       const file = typeof File === 'function' ? new File([f.json], f.name, { type: 'application/json' }) : null;
       if (file && navigator.canShare?.({ files: [file] })) await navigator.share({ title: 'ASTrix perf report', text: f.text, files: [file] });
-      else await navigator.share({ title: 'ASTrix perf report', text: f.text });
+      else await navigator.share({ title: 'ASTrix perf report', text: f.compact });
       this.say('Shared.');
     } catch (e) { this.say(`Share cancelled or unavailable (${(e as Error).name}). Use Copy or Download.`); }
   }

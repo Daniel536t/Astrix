@@ -164,8 +164,13 @@ interface Disc { x: number; z: number; r: number }
 export interface CoverExclusions {
   rects: Rect[];
   discs: Disc[];
-  /** Entities per chunk key (trees, shrubs, ore, cairns), for trunk clearance. */
-  entities: Map<string, Disc[]>;
+  /**
+   * Entities per chunk key (trees, shrubs, ore, cairns), for trunk clearance.
+   * M015: read on demand from world.entityChunks (the index collision and nav
+   * use), so it is always current and nothing indexes every entity when
+   * streamed chunks add theirs.
+   */
+  entities: { get(chunk: string): Disc[] | undefined; clear(): void };
   /** Cache key: changes when any exclusion input changes. */
   key: string;
 }
@@ -198,13 +203,24 @@ export function coverExclusions(world: World): CoverExclusions {
   for (const s of world.structures.values()) discs.push({ x: s.x, z: s.z, r: 6 });
   for (const s of world.sites) discs.push({ x: s.x, z: s.z, r: (OBSTRUCTION_RADIUS[s.kind] ?? 1) + 0.6 });
 
-  const entities = new Map<string, Disc[]>();
-  for (const e of world.entities.values()) {
-    let list = entities.get(e.chunk);
-    if (!list) { list = []; entities.set(e.chunk, list); }
-    const r = (OBSTRUCTION_RADIUS as Record<string, number>)[e.kind] ?? 1;
-    list.push({ x: e.x, z: e.z, r });
-  }
+  // Memoised per chunk until clear() (GroundCoverView clears it at every update).
+  const memo = new Map<string, Disc[] | undefined>();
+  const entities = {
+    clear(): void { memo.clear(); },
+    get(chunk: string): Disc[] | undefined {
+      if (memo.has(chunk)) return memo.get(chunk);
+      const ids = world.entityChunks.get(chunk);
+      if (!ids) { memo.set(chunk, undefined); return undefined; }
+      const list: Disc[] = [];
+      for (const id of ids) {
+        const e = world.entities.get(id);
+        if (!e || e.chunk !== chunk) continue;
+        list.push({ x: e.x, z: e.z, r: (OBSTRUCTION_RADIUS as Record<string, number>)[e.kind] ?? 1 });
+      }
+      memo.set(chunk, list);
+      return list;
+    },
+  };
   return { rects, discs, entities, key: coverExclusionKey(world) };
 }
 
@@ -358,14 +374,23 @@ export class GroundCoverView {
   /** Chunks in the ring whose neighbourhood was not ready at the last rebuild. */
   private pending = 0;
   private lastRebuildAt = -Infinity;
-  private entityCount = -1;
   private stats: GroundCoverMetrics = { pieces: 0, triangles: 0, chunks: 0, rebuilds: 0, pending: 0, byKind: {} };
 
   /** Drawing radius (m); M015 quality levels shorten it (presentation only). */
   readonly radius: number;
+  /**
+   * M015: main-thread milliseconds per update for placing newly entered
+   * chunks (at least one chunk per update). While chunks wait, the previous
+   * mesh stays and the merge runs once when they are all placed. Default:
+   * unlimited (everything in one update, as before).
+   */
+  budgetMs: number;
+  /** Chunks whose placements were deferred by the budget at the last update. */
+  deferred = 0;
 
-  constructor(private readonly world: World, options: { radius?: number } = {}) {
+  constructor(private readonly world: World, options: { radius?: number; budgetMs?: number } = {}) {
     this.radius = options.radius ?? GROUND_COVER_RADIUS;
+    this.budgetMs = options.budgetMs ?? Infinity;
     this.group.name = 'ground_cover';
     this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), groundCoverMaterial);
     this.mesh.name = 'ground_cover_batch';
@@ -413,18 +438,27 @@ export class GroundCoverView {
     const signature = keys.join(';');
     const moved = Math.hypot(focus.x - this.lastFocus.x, focus.z - this.lastFocus.z);
     const retry = this.pending > 0 && performance.now() - this.lastRebuildAt > 500;
-    // The fingerprint is cheap enough per frame; the zone list (it indexes
-    // every entity) is rebuilt only when the fingerprint or entity count changed.
+    // The fingerprint is cheap enough per frame; the zone list is rebuilt
+    // only when it changes (trunk clearance reads the entities live).
     const exKey = coverExclusionKey(this.world);
-    if (!(force || retry || moved >= GROUND_COVER_MOVE || signature !== this.chunkSignature
+    if (!(force || retry || this.deferred > 0 || moved >= GROUND_COVER_MOVE || signature !== this.chunkSignature
       || !this.exclusions || exKey !== this.exclusionKey)) return false;
     if (exKey !== this.exclusionKey) this.cache.clear();
-    if (!this.exclusions || exKey !== this.exclusionKey || this.entityCount !== this.world.entities.size) {
-      this.exclusions = coverExclusions(this.world);
-      this.entityCount = this.world.entities.size;
-    }
+    // The entity part reads the world live; only the rest is rebuilt when its fingerprint changes.
+    if (!this.exclusions || exKey !== this.exclusionKey) this.exclusions = coverExclusions(this.world);
+    else this.exclusions.entities.clear();
     this.exclusionKey = exKey;
     for (const key of [...this.cache.keys()]) if (!loaded.has(key)) this.cache.delete(key);
+    // Place new chunks within the budget; the merge waits until none are deferred.
+    const t0 = performance.now();
+    let placed = 0;
+    this.deferred = 0;
+    for (const key of keys) {
+      if (this.cache.has(key)) continue;
+      if (placed > 0 && performance.now() - t0 >= this.budgetMs) { this.deferred++; continue; }
+      if (this.chunkCover(key, this.exclusions)) placed++;
+    }
+    if (this.deferred > 0) return false;
     this.rebuild(focus, keys, this.exclusions);
     this.lastFocus.set(focus.x, 0, focus.z);
     this.chunkSignature = signature;
@@ -453,24 +487,25 @@ export class GroundCoverView {
     const normals = new Float32Array(vertices * 3);
     const colors = new Float32Array(vertices * 3);
     const byKind: Record<string, number> = {};
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), v = new THREE.Vector3();
-    const n = new THREE.Vector3(), nm = new THREE.Matrix3();
-    const up = new THREE.Vector3(0, 1, 0);
+    // M015: each piece is a turn about Y, a uniform scale and a move, so the transform is written out
+    // here (the Matrix4 / Matrix3 path cost 20-75 ms per merge at 4x CPU throttle while walking).
     let o = 0;
     for (const p of chosen) {
       byKind[p.kind] = (byKind[p.kind] ?? 0) + 1;
       const g = coverGeometry(p.model);
-      q.setFromAxisAngle(up, p.rot);
-      m.compose(v.set(p.x, p.y, p.z), q, s.setScalar(p.scale));
-      nm.getNormalMatrix(m);
+      const c = Math.cos(p.rot), sn = Math.sin(p.rot), k = p.scale;
       const gp = g.attributes.position.array as Float32Array;
       const gn = g.attributes.normal.array as Float32Array;
       const gc = g.attributes.color.array as Float32Array;
       for (let i = 0; i < gp.length; i += 3) {
-        v.set(gp[i], gp[i + 1], gp[i + 2]).applyMatrix4(m);
-        positions[o] = v.x; positions[o + 1] = v.y; positions[o + 2] = v.z;
-        n.set(gn[i], gn[i + 1], gn[i + 2]).applyMatrix3(nm).normalize();
-        normals[o] = n.x; normals[o + 1] = n.y; normals[o + 2] = n.z;
+        const x = gp[i], y = gp[i + 1], z = gp[i + 2];
+        positions[o] = (c * x + sn * z) * k + p.x;
+        positions[o + 1] = y * k + p.y;
+        positions[o + 2] = (c * z - sn * x) * k + p.z;
+        const nx = gn[i], ny = gn[i + 1], nz = gn[i + 2];
+        const rx = c * nx + sn * nz, rz = c * nz - sn * nx;
+        const len = Math.hypot(rx, ny, rz) || 1;
+        normals[o] = rx / len; normals[o + 1] = ny / len; normals[o + 2] = rz / len;
         colors[o] = gc[i]; colors[o + 1] = gc[i + 1]; colors[o + 2] = gc[i + 2];
         o += 3;
       }

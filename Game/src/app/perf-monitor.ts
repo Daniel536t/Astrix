@@ -78,6 +78,8 @@ export interface BucketContext {
   battery: { level: number; charging: boolean } | null;
   quality: string;
   path: 'multi-draw' | 'fallback';
+  /** Frame-rate cap in force (fps; 0 = unlimited). */
+  cap?: number;
 }
 
 export interface PerfBucket extends FrameSummary {
@@ -97,6 +99,8 @@ export interface PerfBucket extends FrameSummary {
   charging: boolean | null;
   quality: string;
   path: string;
+  /** Frame-rate cap in force at the end of the bucket (fps; 0 = unlimited). Absent in reports before M015 fix 1. */
+  cap?: number;
 }
 
 /**
@@ -155,6 +159,7 @@ export class BucketRecorder {
       visible: round(Math.max(0, 1 - hidden / dur), 2), ...summarizeFrames(this.intervals),
       scene: c.scene, calls: c.calls, triangles: c.triangles, heapMB: c.heapMB,
       battery: c.battery ? round(c.battery.level, 2) : null, charging: c.battery ? c.battery.charging : null, quality: c.quality, path: c.path,
+      ...(c.cap !== undefined ? { cap: c.cap } : {}),
     };
     this.buckets.push(b);
     this.intervals = [];
@@ -231,6 +236,9 @@ export interface DeviceInfo {
   multiDrawSupported: boolean;
   maxTextureSize: number | null;
   touch: boolean;
+  /** navigator.maxTouchPoints and any-pointer: coarse (M015: the quality heuristic reads them). */
+  maxTouchPoints?: number;
+  anyCoarse?: boolean;
 }
 
 export interface PerfEvent { t: number; kind: string; detail?: string }
@@ -243,7 +251,9 @@ export interface PerfReport {
   startedAt: string;
   durationS: number;
   device: DeviceInfo;
-  render: { path: 'multi-draw' | 'fallback'; quality: string; qualitySource: string; qualityReasons: string[]; pixelRatio: number; canvas: { width: number; height: number } };
+  render: { path: 'multi-draw' | 'fallback'; quality: string; qualitySource: string; qualityReasons: string[]; pixelRatio: number; canvas: { width: number; height: number };
+    /** Frame-rate cap in force when the report was made (fps; 0 = unlimited) and where it came from. */
+    frameCap?: number; frameCapSource?: string };
   summary: {
     buckets: number;
     visibleBuckets: number;
@@ -266,6 +276,11 @@ export interface PerfReport {
 
 /** Proposed pass thresholds (DEVICE_TEST_PLAN.md). */
 export const THRESHOLDS = { medianFps: 30, frameP95Ms: 50, maxDriftPct: 25 } as const;
+
+/** The median-fps pass mark: 30 fps, or 95 % of a lower frame cap. */
+export function medianFpsThreshold(cap: number): number {
+  return cap > 0 ? Math.min(THRESHOLDS.medianFps, round(cap * 0.95)) : THRESHOLDS.medianFps;
+}
 
 const median = (xs: number[]) => { if (!xs.length) return 0; const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
@@ -295,8 +310,10 @@ export function buildReport(o: {
     battery: { first: batFirst, last: batLast, charging: bats.at(-1)?.charging ?? null,
       dropPctPerHour: discharging && batSpan > 0.05 && batFirst !== null && batLast !== null ? round(((batFirst - batLast) * 100) / batSpan) : null },
   };
+  // A 30 fps cap ("battery saver") cannot reach 30.0 exactly: the check then allows 5 % under the cap.
+  const fpsFloor = medianFpsThreshold(o.render.frameCap ?? 0);
   const checks: PerfReport['checks'] = {
-    medianFps: { ok: vis.length ? medianFps >= THRESHOLDS.medianFps : null, value: medianFps, threshold: `>= ${THRESHOLDS.medianFps} fps` },
+    medianFps: { ok: vis.length ? medianFps >= fpsFloor : null, value: medianFps, threshold: `>= ${fpsFloor} fps${fpsFloor < THRESHOLDS.medianFps ? ` (frame cap ${o.render.frameCap})` : ''}` },
     frameP95: { ok: vis.length ? p95 <= THRESHOLDS.frameP95Ms : null, value: p95, threshold: `<= ${THRESHOLDS.frameP95Ms} ms` },
     thermalDrift: { ok: thermal.driftPct === null ? null : thermal.driftPct <= THRESHOLDS.maxDriftPct, value: thermal.driftPct, threshold: `<= ${THRESHOLDS.maxDriftPct} % fps loss vs the first 2 min (same scene)` },
     sessionLength: { ok: durationS >= 20 * 60, value: round(durationS / 60), threshold: '>= 20 min for the thermal check' },
@@ -316,7 +333,8 @@ export function reportText(r: PerfReport): string {
     `ASTrix perf report v${r.version} · build ${r.build.commit}${r.build.dirty ? '+dirty' : ''}${r.build.bundle ? ` (${r.build.bundle})` : ''}`,
     `Device: ${d.userAgent}`,
     `GPU: ${d.gpu ?? 'not exposed'} · cores ${fmt(d.hardwareConcurrency)} · memory ${fmt(d.deviceMemory, ' GB')} · screen ${d.screen.width}x${d.screen.height} @${d.dpr}x · viewport ${d.viewport.width}x${d.viewport.height}`,
-    `Render: ${r.render.path} · quality ${r.render.quality} (${r.render.qualitySource}: ${r.render.qualityReasons.join(', ')}) · pixel ratio ${r.render.pixelRatio} · canvas ${r.render.canvas.width}x${r.render.canvas.height}`,
+    `Render: ${r.render.path} · quality ${r.render.quality} (${r.render.qualitySource}: ${r.render.qualityReasons.join(', ')}) · pixel ratio ${r.render.pixelRatio} · canvas ${r.render.canvas.width}x${r.render.canvas.height}`
+      + (r.render.frameCap !== undefined ? ` · frame cap ${r.render.frameCap ? `${r.render.frameCap} fps` : 'unlimited'}${r.render.frameCapSource ? ` (${r.render.frameCapSource})` : ''}` : ''),
     `Session: ${fmt(Math.round(r.durationS / 6) / 10, ' min')} · ${s.buckets} buckets (${s.visibleBuckets} visible)`,
     `FPS: median ${s.medianFps} · worst bucket ${s.minBucketFps} · p5 ${s.fpsP5Median} · frame p50 ${ms(s.frameP50Ms)} · p95 ${ms(s.frameP95Ms)} · frames > 50 ms: ${s.longFrames50}`,
     `Draw calls max ${s.maxCalls} · triangles max ${s.maxTriangles}`,
@@ -326,6 +344,56 @@ export function reportText(r: PerfReport): string {
     r.events.length ? `Events: ${r.events.slice(-8).map((e) => `${Math.round(e.t)}s ${e.kind}${e.detail ? ` ${e.detail}` : ''}`).join(' · ')}` : 'Events: none',
   ];
   return lines.join('\n');
+}
+
+/** Size budget of the chat paste (characters; the M015 device report 1 paste was cut after about 17 KB). */
+export const COMPACT_REPORT_MAX = 8000;
+
+/**
+ * The chat form of the report (Copy report): the text summary, every event,
+ * and a bucket table of one short line per 10 s bucket. Long sessions are
+ * grouped into 1, 5, 10... minute lines so the whole paste stays under
+ * COMPACT_REPORT_MAX characters. Download and Share keep the full JSON.
+ */
+export function compactReport(r: PerfReport, maxChars = COMPACT_REPORT_MAX): string {
+  const head = reportText(r);
+  const evAll = r.events.map((e) => `${Math.round(e.t)}s ${e.kind}${e.detail ? ` ${e.detail}` : ''}`);
+  let events = evAll.length > 8 ? `All events: ${evAll.join(' · ')}` : '';
+  if (events.length > 1500) events = `All events (last 40 of ${evAll.length}): ${evAll.slice(-40).join(' · ')}`.slice(0, 1500);
+  const q = (x: string) => x === 'high' ? 'H' : x === 'medium' ? 'M' : x === 'low' ? 'L' : x.slice(0, 1).toUpperCase();
+  const b = r.buckets;
+  const table = (group: number): string[] => {
+    const rows: string[] = [];
+    let prevScene = '';
+    for (let i = 0; i < b.length; i += group) {
+      const g = b.slice(i, i + group);
+      const vis = g.filter((x) => x.frames > 0);
+      const frames = vis.reduce((a, x) => a + x.frames, 0);
+      const fps = frames ? round(vis.reduce((a, x) => a + x.fps * x.frames, 0) / frames) : 0;
+      const p5 = vis.length ? Math.min(...vis.map((x) => x.fpsP5)) : 0;
+      const p95 = vis.length ? Math.max(...vis.map((x) => x.p95Ms)) : 0;
+      const long = g.reduce((a, x) => a + x.long50, 0);
+      const calls = Math.max(...g.map((x) => x.calls));
+      const tris = Math.round(Math.max(...g.map((x) => x.triangles)) / 1000);
+      const visible = Math.min(...g.map((x) => x.visible));
+      // The scene most of the group was in; "=" when it repeats the previous line.
+      const counts = new Map<string, number>();
+      for (const x of g) counts.set(x.scene, (counts.get(x.scene) ?? 0) + 1);
+      const scene = [...counts.entries()].sort((a2, c) => c[1] - a2[1])[0][0];
+      const last = g.at(-1)!;
+      const bat = last.battery === null ? '-' : `${Math.round(last.battery * 100)}${last.charging ? 'c' : ''}`;
+      const flags = `${q(last.quality)}${last.path === 'fallback' ? 'f' : ''}${last.cap ? last.cap : ''}`;
+      rows.push([g[0].i, Math.round(g[0].t), `${fps}/${round(p5, 0)}`, Math.round(p95), long, calls, tris, visible < 0.9 ? `v${visible}` : '', bat, flags, scene === prevScene ? '=' : scene].filter((x) => x !== '').join(' '));
+      prevScene = scene;
+    }
+    return rows;
+  };
+  const header = (group: number) => `Buckets (${group === 1 ? 'one line per 10 s' : `one line per ${group / 6} min`}): i t(s) fps/p5 p95ms >50ms calls ktris [v<visible] bat% quality(H/M/L, f=fallback, cap) scene ("=" same)`;
+  for (const group of [1, 6, 30, 60, 180, 360]) {
+    const text = [head, events, '', header(group), ...table(group)].filter((x, k) => x !== '' || k === 2).join('\n');
+    if (text.length <= maxChars) return text;
+  }
+  return `${head}\n(bucket table omitted: the session is too long for a chat paste; use Download report)`.slice(0, maxChars);
 }
 
 /** Saved state so a reload in the same tab continues the session. */

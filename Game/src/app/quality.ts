@@ -50,6 +50,16 @@ export function parseQuality(text: string | null | undefined): QualityChoice | n
 export interface DeviceCaps {
   /** Coarse primary pointer (phones, tablets). */
   touch: boolean;
+  /**
+   * navigator.maxTouchPoints. M015 device report 1: Chrome on an Android
+   * tablet in desktop-site mode reported a fine primary pointer on the first
+   * load and a coarse one after a reload; the touch points do not change.
+   */
+  maxTouchPoints?: number;
+  /** Any coarse pointer present (any-pointer: coarse). */
+  anyCoarse?: boolean;
+  /** navigator.platform / userAgentData.platform (e.g. "Linux armv8l" on Android in desktop-site mode). */
+  platform?: string | null;
   dpr: number;
   hardwareConcurrency: number | null;
   /** navigator.deviceMemory (GB, Chrome only; rounded down to 0.25-8). */
@@ -64,21 +74,42 @@ export interface DeviceCaps {
 /** GPUs known to struggle with this scene: older Mali, Adreno 3xx-5xx, PowerVR, software rasterisers. */
 const WEAK_GPU = /(mali-[4t]\d|mali-g(31|51|52|57|68)\b|adreno \(tm\) [345]\d\d|adreno [345]\d\d|powervr|sgx|swiftshader|llvmpipe|software)/i;
 
+/** GPU families only found in phones and tablets (and ARM Chromebooks). */
+export const MOBILE_GPU = /(adreno|mali|powervr|apple gpu|xclipse|immortalis|videocore|tegra)/i;
+
 /**
- * The automatic level. Desktop (fine pointer) keeps `high`, so desktop
- * evidence and probes are unchanged. Touch devices start at `medium`; weak
+ * Phone or tablet? A coarse primary pointer, or a touch screen together with
+ * a mobile GPU or an ARM platform. The second rule keeps the answer the same
+ * on every load in Chrome's desktop-site mode, which reports a desktop user
+ * agent and (on some loads) a fine primary pointer. A touch laptop with a
+ * desktop GPU stays a desktop.
+ */
+export function mobileReason(c: DeviceCaps): string | null {
+  if (c.touch) return 'touch device';
+  const touchScreen = (c.maxTouchPoints ?? 0) > 0 || !!c.anyCoarse;
+  if (!touchScreen) return null;
+  if (c.gpu && MOBILE_GPU.test(c.gpu)) return `touch screen with a mobile GPU (${c.gpu})`;
+  if (c.platform && /\b(arm|aarch64|android)/i.test(c.platform)) return `touch screen on ${c.platform}`;
+  return null;
+}
+
+/**
+ * The automatic level. Desktop keeps `high`, so desktop evidence and probes
+ * are unchanged. Phones and tablets (mobileReason) start at `medium`; weak
  * signals (few cores, little memory, a known weak or software GPU, or no
- * WEBGL_multi_draw on a high-density screen) choose `low`.
+ * WEBGL_multi_draw on a high-density screen) choose `low`. Pure: the same
+ * capabilities give the same level on every load.
  */
 export function chooseQuality(c: DeviceCaps): { level: QualityLevel; reasons: string[] } {
-  if (!c.touch) return { level: 'high', reasons: ['fine pointer (desktop)'] };
+  const mobile = mobileReason(c);
+  if (!mobile) return { level: 'high', reasons: ['fine pointer (desktop)'] };
   const weak: string[] = [];
   if (c.hardwareConcurrency !== null && c.hardwareConcurrency <= 4) weak.push(`${c.hardwareConcurrency} CPU threads`);
   if (c.deviceMemory !== null && c.deviceMemory <= 3) weak.push(`${c.deviceMemory} GB memory`);
   if (c.gpu && WEAK_GPU.test(c.gpu)) weak.push(`GPU ${c.gpu}`);
   if (!c.multiDraw && c.dpr >= 2.5) weak.push('no WEBGL_multi_draw at a high pixel density');
   if (weak.length) return { level: 'low', reasons: weak };
-  return { level: 'medium', reasons: ['touch device'] };
+  return { level: 'medium', reasons: [mobile] };
 }
 
 /** URL parameter, then the saved choice, then auto. */

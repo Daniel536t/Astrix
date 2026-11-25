@@ -2,9 +2,11 @@
 // asynchronously; callers decide on the main thread whether they still apply.
 import type { BaseChunk, BaseColumns } from '../sim/world';
 import type { MeshArrays } from './mesher';
+import type { MacroArrays, MacroGrid, MacroTiers } from './terrain';
 
 export interface GenerateResult { base: BaseChunk; columns: BaseColumns; ms: number; }
 export interface MeshResultMsg { arrays: MeshArrays; ms: number; }
+export interface MacroResultMsg { arrays: MacroArrays; ms: number; }
 
 type Pending = { resolve: (value: unknown) => void; worker: number };
 
@@ -52,6 +54,13 @@ export class ChunkWorkerPool {
   mesh(padded: Uint8Array, heights: Uint8Array, ox: number, oz: number, seed: number): Promise<MeshResultMsg> {
     const h = heights.slice();
     return this.post({ kind: 'mesh', padded, heights: h, ox, oz, seed }, [padded.buffer, h.buffer]);
+  }
+
+  /** Far landscape LOD arrays. The grid is copied (the caller's cache stays intact). */
+  macro(grid: MacroGrid, seed: number, opts: { step: number; hole?: { minX: number; maxX: number; minZ: number; maxZ: number }; focus?: { x: number; z: number }; tiers?: MacroTiers }): Promise<MacroResultMsg> {
+    const g = { N: grid.N, heights: grid.heights.slice(), tops: grid.tops.slice(), underwater: grid.underwater.slice() };
+    const focus = opts.focus ? { x: opts.focus.x, z: opts.focus.z } : undefined;
+    return this.post({ kind: 'macro', grid: g, seed, step: opts.step, hole: opts.hole, focus, tiers: opts.tiers }, [g.heights.buffer, g.tops.buffer, g.underwater.buffer]);
   }
 
   dispose(): void {

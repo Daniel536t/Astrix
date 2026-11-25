@@ -39,6 +39,8 @@ import { FALLBACK_LOD_BANDS } from './render/nature';
 import { QUALITY_PRESETS, QUALITY_STORAGE_KEY, natureNearFor, parseQuality, pixelRatioFor, probeGpu, resolveQuality } from './app/quality';
 import { PerfOverlay } from './app/perf-overlay';
 import { mountSettings } from './app/settings';
+import { mergeStaticGroup } from './render/static-merge';
+import { FRAME_CAP_STORAGE_KEY, FrameLimiter, resolveFrameCap } from './app/frame-cap';
 
 // A startup failure would otherwise leave a blank canvas with no explanation.
 window.addEventListener('error', (e) => {
@@ -105,17 +107,30 @@ if (isMap) document.body.classList.add('map');
 // ?quality=low|medium|high|auto, else the Settings choice, else chosen from the device.
 if (params.has('quality') && !parseQuality(params.get('quality'))) paramWarnings.push('ignored ?quality= (must be low, medium, high or auto)');
 const coarsePointer = matchMedia('(pointer: coarse)').matches;
+// M015 device report 1: in desktop-site mode the primary pointer read fine on one load and coarse on
+// the next. The touch points and the GPU do not change between loads, so they decide too (quality.ts).
+const anyCoarse = matchMedia('(any-pointer: coarse)').matches;
+const maxTouchPoints = navigator.maxTouchPoints ?? 0;
 let savedQuality: string | null = null;
 try { savedQuality = localStorage.getItem(QUALITY_STORAGE_KEY); } catch { savedQuality = null; }
+// Decided here, before the renderer exists, so the first frame already uses the level.
 const quality = resolveQuality(params.get('quality'), savedQuality, () => {
-  // Only touch devices need the GPU string (a throwaway context, released at once).
-  const gpu = coarsePointer ? probeGpu() : null;
-  return { touch: coarsePointer, dpr: devicePixelRatio, hardwareConcurrency: navigator.hardwareConcurrency ?? null,
-    deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null, gpu: gpu?.gpu ?? null, multiDraw: gpu ? gpu.multiDraw : true,
+  // Only devices with a touch screen need the GPU string (a throwaway context, released at once).
+  const gpu = coarsePointer || anyCoarse || maxTouchPoints > 0 ? probeGpu() : null;
+  const nav = navigator as Navigator & { deviceMemory?: number; userAgentData?: { platform?: string } };
+  return { touch: coarsePointer, maxTouchPoints, anyCoarse, platform: [navigator.platform, nav.userAgentData?.platform].filter(Boolean).join(' · ') || null,
+    dpr: devicePixelRatio, hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+    deviceMemory: nav.deviceMemory ?? null, gpu: gpu?.gpu ?? null, multiDraw: gpu ? gpu.multiDraw : true,
     screenShort: Math.min(screen.width, screen.height) };
 });
 const preset = QUALITY_PRESETS[quality.level];
 const perfOn = params.get('perf') === '1';
+// M015 optional frame-rate cap: ?fps=0|30|60, else the Settings choice, else unlimited.
+if (params.has('fps') && resolveFrameCap(params.get('fps'), null).source !== 'url') paramWarnings.push('ignored ?fps= (must be 0, 30 or 60)');
+let savedCap: string | null = null;
+try { savedCap = localStorage.getItem(FRAME_CAP_STORAGE_KEY); } catch { savedCap = null; }
+const frameCap = resolveFrameCap(params.get('fps'), savedCap);
+const limiter = new FrameLimiter(frameCap.cap);
 /** Test harness: ?metrics=1 refreshes window.__metrics every frame instead of every 6th (read-only; for slow emulated runs). */
 const metricsEveryFrame = params.get('metrics') === '1';
 
@@ -329,13 +344,20 @@ function rebuildNature(): void {
 rebuildNature();
 
 // Render-only grass, flowers, ferns, stones, logs and understory near the view.
-const groundCover = isMap || isKit ? null : new GroundCoverView(world, { radius: preset.groundCoverRadius });
+const groundCover = isMap || isKit ? null : new GroundCoverView(world, { radius: preset.groundCoverRadius, budgetMs: 2 });
 if (groundCover) scene.add(groundCover.group);
 const coverFocus = new THREE.Vector3();
 
 const siteGroup = new THREE.Group();
 siteGroup.name = 'noxel_sites';
 for (const site of world.sites) siteGroup.add(buildNoxelSite(site));
+// M015: the waystones and markers never move; outside the object inspector they are one mesh
+// (one draw in each pass instead of one per site in view).
+if (!devInspect && siteGroup.children.length > 1) {
+  const merged = mergeStaticGroup(siteGroup, 'noxel_sites_merged');
+  siteGroup.clear();
+  siteGroup.add(...merged.group.children);
+}
 siteGroup.visible = !isMap;
 scene.add(siteGroup);
 
@@ -621,6 +643,7 @@ function metrics() {
     multiDraw,
     quality: { level: quality.level, source: quality.source, reasons: quality.reasons, pixelRatio: renderer.getPixelRatio(), shadows: preset.shadows,
       shadowMapSize: preset.shadows ? preset.shadowMapSize : 0, antialias: preset.antialias, natureNear: natureBands.near, groundCoverRadius: preset.groundCoverRadius },
+    frameCap: { cap: limiter.cap, source: frameCap.source },
     perf: perfOverlay?.metrics() ?? null,
     rendererCalls: renderer.info.render.calls,
     rendererTriangles: renderer.info.render.triangles,
@@ -650,8 +673,12 @@ const perfOverlay: PerfOverlay | null = perfOn && !isMap && !isKit ? new PerfOve
   build: typeof __ASTRIX_BUILD__ !== 'undefined' ? __ASTRIX_BUILD__ : { commit: 'dev', dirty: true },
   scene: () => ({ mode: explore?.active ? 'walk' : isMap || isKit ? 'other' : 'builder', x: rig.target.x, z: rig.target.z, distance: explore?.active ? rig.effectiveDistance : rig.distance }),
   counters: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
+  frameCap: () => ({ cap: limiter.cap, source: frameCap.source }),
 }) : null;
-if (!noUi && !isMap && !isKit) mountSettings({ current: quality, perfOn });
+if (!noUi && !isMap && !isKit) {
+  mountSettings({ current: quality, perfOn, frameCap,
+    onFrameCap: (cap) => { limiter.set(cap); frameCap.cap = cap; frameCap.source = 'saved'; perfOverlay?.capChanged(cap); } });
+}
 
 window.__metrics = metrics();
 
@@ -661,6 +688,8 @@ let frames = 0;
 const coarse = matchMedia('(pointer: coarse)').matches;
 
 function frame(timestamp?: number) {
+  // Frame-rate cap: skip this display frame entirely (no step, no render) until 1/cap s have passed.
+  if (timestamp !== undefined && !limiter.shouldDraw(timestamp)) { requestAnimationFrame(frame); return; }
   const workStart = performance.now();
   inFrame = true;
   if (lastFrameAt > 0) frameInterval.record(workStart - lastFrameAt);

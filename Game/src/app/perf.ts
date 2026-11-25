@@ -15,6 +15,8 @@ export interface FrameStatsReport {
   over50: number;
   /** Frames slower than 50 ms since the start (not windowed). */
   over50Total: number;
+  /** Sum of all recorded frame times since the start (ms, not windowed). */
+  totalMs: number;
   windowFrames: number;
   heapMB: number | null;
 }
@@ -25,6 +27,7 @@ export class FrameStats {
   private filled = 0;
   private total = 0;
   private over50Total = 0;
+  private sumMs = 0;
 
   constructor(private readonly windowSize = 600) {
     this.samples = new Float32Array(windowSize);
@@ -36,12 +39,14 @@ export class FrameStats {
     this.filled = Math.min(this.filled + 1, this.windowSize);
     this.total++;
     if (frameMs > 50) this.over50Total++;
+    this.sumMs += frameMs;
   }
 
   reset(): void {
     this.next = 0;
     this.filled = 0;
     this.over50Total = 0;
+    this.sumMs = 0;
   }
 
   report(): FrameStatsReport {
@@ -58,7 +63,7 @@ export class FrameStats {
     return {
       frames: this.total,
       p50Ms: at(0.5), p95Ms: at(0.95), p99Ms: at(0.99), maxMs: at(1),
-      longFrames, hitches, over50, over50Total: this.over50Total, windowFrames: values.length,
+      longFrames, hitches, over50, over50Total: this.over50Total, totalMs: Math.round(this.sumMs), windowFrames: values.length,
       heapMB: memory ? Math.round(memory.usedJSHeapSize / 1048576) : null,
     };
   }

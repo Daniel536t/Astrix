@@ -12,6 +12,10 @@ import { detectWallets, passkeySupported, PROTECTION_LABEL, DetectedWallet } fro
 import { showEnterScreen } from './enter';
 import { buildCottage, buildCrate, buildWoodpile, buildFence } from '../render/village-kit';
 import { buildFigure, VILLAGER_STYLE } from '../render/characters';
+import { mergeStaticGroup } from '../render/static-merge';
+
+/** One shared material for the on-chain crop rows (they are merged with the other props). */
+const ROW_MATERIAL = new THREE.MeshLambertMaterial({ color: 0x7fa64a });
 
 export interface ChainViewOptions {
   scene: THREE.Scene;
@@ -59,14 +63,18 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   setFold(folded);
   fold.addEventListener('click', () => { setFold(!folded); try { localStorage.setItem(FOLD_KEY, folded ? 'folded' : 'open'); } catch { /* ignore */ } });
   let controlsKey = '';
+  let mergedMeshes = { input: 0, output: 0 };
   let lastKey = '';
   let tickSamples: Array<{ t: number; tick: number }> = [];
 
+  // Built into a staging group, then baked into one mesh per material (M015: about 60 draw calls
+  // with shadows when every crate, woodpile and settler was its own mesh). None of them move.
+  let staging = new THREE.Group();
   const place = (obj: THREE.Object3D, dx: number, dz: number, ry = 0) => {
     const x = o.origin.x + dx, z = o.origin.z + dz;
     obj.position.set(x, o.groundY(Math.floor(x), Math.floor(z)), z);
     obj.rotation.y = ry;
-    root.add(obj);
+    staging.add(obj);
   };
 
   const rebuild = (v: ChainView) => {
@@ -76,7 +84,7 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
       Math.min(12, Math.ceil(s.stock.food / 40)), Math.min(8, Math.ceil(s.stock.planks / 3)), Math.min(6, Math.ceil(s.stock.ore / 6))].join('|');
     if (key === lastKey) return;
     lastKey = key;
-    root.clear();
+    staging = new THREE.Group();
     place(buildCottage({ width: 6, depth: 5, seed: 11 }), 0, 0, Math.PI);
     if (s.sawmill) place(buildCottage({ width: 7, depth: 5, roof: 'shingle', seed: 12, chimney: false }), 10, 0, Math.PI);
     // Stockpile: crates for food, woodpiles for planks, small stacks for ore.
@@ -85,7 +93,7 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
     // Crop rows: one fenced row per planted on-chain plot.
     s.plots.forEach((p, i) => {
       if (p === null) return;
-      const row = new THREE.Mesh(new THREE.BoxGeometry(5, 0.5, 0.9), new THREE.MeshLambertMaterial({ color: 0x7fa64a }));
+      const row = new THREE.Mesh(new THREE.BoxGeometry(5, 0.5, 0.9), ROW_MATERIAL);
       row.castShadow = true;
       place(row, -14, -6 + i * 1.4);
       row.position.y += 0.25;
@@ -96,6 +104,11 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
       const f = buildFigure(VILLAGER_STYLE);
       place(f.root, -3 + (i % 5) * 1.5, 10 + Math.floor(i / 5) * 1.6, Math.PI + (i % 3) * 0.4);
     }
+    for (const c of root.children) c.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
+    root.clear();
+    const merged = mergeStaticGroup(staging, 'magicblock_props');
+    root.add(merged.group);
+    mergedMeshes = { input: merged.input, output: merged.output };
   };
 
   const render = (v: ChainView) => {
@@ -209,5 +222,5 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   window.addEventListener('keydown', (e) => {
     if (e.key === 'm' || e.key === 'M') panel.classList.toggle('hidden');
   });
-  return { metrics: () => ({ ...watcher.view, address: watcher.addressBase58, guest: guest.record ? { slot: guest.record.slot, seed: guest.record.seed, key: guest.publicKey, kind: guest.kind, owner: guest.owner } : null }) };
+  return { metrics: () => ({ ...watcher.view, props: mergedMeshes, address: watcher.addressBase58, guest: guest.record ? { slot: guest.record.slot, seed: guest.record.seed, key: guest.publicKey, kind: guest.kind, owner: guest.owner } : null }) };
 }

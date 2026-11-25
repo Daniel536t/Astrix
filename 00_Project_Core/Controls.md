@@ -46,7 +46,7 @@ Modelled on Minecraft Bedrock's joystick layout: move with the left thumb, look 
 | Banners | A small column on the right, above the zoom buttons: **Home** (return home), **To banner** (return to your field banner; dimmed until one is planted), **Plant** (plant or move your field banner here). Tap Home or To banner, then keep the joystick thumb off for about 1.5 s; the button fills as a ring while you wait. |
 | Use / gather | The yellow button names what it will do ("Dig the flax field", "Draw water"…) |
 | Farm | **Farm** button (top left): fields, people, animals, steward; Plan a new field. On a portrait phone it opens as a sheet from the top that ends at 60 % of the height, so the joystick, Jump and Use stay usable (the banner and zoom buttons step aside while it is open); in landscape it opens beside the right-hand thumb column. Close it with ×. |
-| Settings | The gear button beside Farm: graphics quality (Auto / Low / Medium / High, applied after a reload; the world is saved first) and the performance monitor switch |
+| Settings | The gear button beside Farm: graphics quality (Auto / Low / Medium / High, applied after a reload; the world is saved first), frame rate (Unlimited / 60 / 30 battery saver, applied at once) and the performance monitor switch |
 | MagicBlock panel | Folded to one **MagicBlock** button on phones and tablets (top right while walking, bottom right in the builder view); tap it to unfold, **Hide MagicBlock** to fold. M still hides it on a keyboard |
 | Build (M014) | Farm → **Build…**. The ghost starts in front of the founder; tap the ground on the right half to move it there (drag the ghost to slide it). The bar at the top has the catalogue, **Turn 90°**, **Place & approve** and **Close**; it stays clear of the joystick and Jump |
 | Switch mode | **Builder view / Walk** button (top centre) |
@@ -58,11 +58,12 @@ Every control tracks its own finger, so looking or jumping never stops or replac
 
 | URL / setting | Effect |
 |---|---|
-| `?quality=low`, `medium`, `high`, `auto` | Graphics level for this load (overrides the Settings choice). Auto: high on computers, medium on phones and tablets, low on weak ones (4 or fewer CPU threads, 3 GB or less memory, an older Mali / Adreno 3xx-5xx / PowerVR or software GPU, or no WEBGL_multi_draw at a pixel density of 2.5 or more). |
+| `?quality=low`, `medium`, `high`, `auto` | Graphics level for this load (overrides the Settings choice). Auto: high on computers, medium on phones and tablets, low on weak ones (4 or fewer CPU threads, 3 GB or less memory, an older Mali / Adreno 3xx-5xx / PowerVR or software GPU, or no WEBGL_multi_draw at a pixel density of 2.5 or more). A phone or tablet is a coarse primary pointer, or a touch screen with a mobile GPU (Adreno, Mali, PowerVR, Apple GPU, Xclipse, Immortalis) or an ARM platform, so Chrome's desktop-site mode gets the same level on every load. |
+| `?fps=0`, `30`, `60` | Frame-rate cap for this load (overrides the Settings choice; 0 = unlimited, the default). The cap skips whole display frames, so 30 on a 60 Hz screen draws every second frame. |
 | high | pixel ratio up to 2, smoothing (MSAA), 2048 px shadows, full-detail trees to 90 m (70 m on the `multidraw=0` path), ground cover 52 m. The renderer as it was before M015. |
 | medium | pixel ratio up to 1.5, smoothing, 1024 px shadows, full-detail trees to 70 m, ground cover 40 m |
 | low | pixel ratio 1, no smoothing, no shadows, full-detail trees to 50 m, ground cover 30 m |
-| `?perf=1` | Performance monitor: a pill with fps and p95 frame time (bottom centre; under the vitals on portrait phones). Tap it for draw calls, triangles, the render path, GPU, pixel ratio, canvas size, battery, the thermal indicator and **Copy report**, **Download report**, **Share…** (where the browser offers it), **Mark**, **New session**. It stays on while `perf=1` is in the address; the log survives a reload in the same tab. |
+| `?perf=1` | Performance monitor: a pill with fps and p95 frame time (bottom centre; under the vitals on portrait phones). Tap it for draw calls, triangles, the render path, GPU, pixel ratio, canvas size, battery, the thermal indicator and **Copy report** (the summary and one short line per 10 s bucket, under 8 KB, for a chat paste), **Download report** (the full JSON), **Share…** (where the browser offers it), **Mark**, **New session**. It stays on while `perf=1` is in the address; the log survives a reload in the same tab. |
 | `?metrics=1` | Test harness only: refreshes `window.__metrics` every frame (for slow emulated runs). |
 
 Animals, villagers, the founder and buildings are drawn the same at every level. None of these change the settlement, its journal or its save.
