@@ -149,3 +149,14 @@ Render: 63 draw calls, about 108k triangles.
 - Ripples are body-attached blocks, not a water-surface effect.
 - The phone probe's zoom-button clicks did not change the camera distance, so the phone shots use the default 9 m
   distance.
+
+## Live deployment check
+
+Release `20261125T003015Z-b10e0d6` was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd` but not merged to `main`. The served bundle matches the local build (`assets/index-BeXCOc6U.js`). For this check the saved avatar was placed in the river at (-59.5, 4.5), using a fresh headless Chromium context with software GL. There were no page errors.
+
+- **Resting 16 s:** in all 8 samples the mode was swim, the eyes were 0.20 m above water, and breath, stamina and health stayed at 1.0, 1.0 and 100.
+- **Swimming forward 2 s:** eyes 0.28 m above water, breath 1.0, stamina 0.967. Screenshot: `live-b10e0d6-stroke.png`.
+- **Holding C:** the eyes went 0.50 m under and breath fell 1.0 → 0.96 → 0.92.
+- **Releasing C:** the swimmer surfaced within about 2 s (eyes −0.27 → +0.18 → +0.25 m) and breath refilled 0.88 → 0.98 → 1.0.
+
+No real phone was used.
