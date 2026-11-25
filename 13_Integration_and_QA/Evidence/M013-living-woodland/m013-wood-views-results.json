@@ -1,0 +1,495 @@
+{
+ "base": "https://astrix.local/",
+ "startedAt": "2026-11-25T07:46:26.278Z",
+ "seconds": 198,
+ "phase": "views",
+ "ticks": [
+  null,
+  null
+ ],
+ "verdict": {
+  "render": true
+ },
+ "checks": {
+  "render": {
+   "ok": true,
+   "maxCalls": 82,
+   "maxTris": 237210
+  },
+  "pageErrors": []
+ },
+ "perf": {
+  "farm": {
+   "calls": 82,
+   "tris": 121602,
+   "instances": 42,
+   "vegetation": {
+    "near": {
+     "instances": 25,
+     "triangles": 3414
+    },
+    "mid": {
+     "instances": 14,
+     "triangles": 616
+    },
+    "far": {
+     "instances": 3,
+     "triangles": 96
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 42,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 0.5,
+    "syncs": 67,
+    "totalMs": 1.7999999998137355
+   },
+   "tick": null
+  },
+  "forest": {
+   "calls": 38,
+   "tris": 189674,
+   "instances": 500,
+   "vegetation": {
+    "near": {
+     "instances": 244,
+     "triangles": 39598
+    },
+    "mid": {
+     "instances": 128,
+     "triangles": 5464
+    },
+    "far": {
+     "instances": 128,
+     "triangles": 3916
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 500,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 0.900000000372529,
+    "syncs": 55,
+    "totalMs": 1.300000000745058
+   },
+   "tick": null
+  },
+  "forest-140": {
+   "calls": 55,
+   "tris": 213736,
+   "instances": 500,
+   "vegetation": {
+    "near": {
+     "instances": 66,
+     "triangles": 11262
+    },
+    "mid": {
+     "instances": 88,
+     "triangles": 3752
+    },
+    "far": {
+     "instances": 346,
+     "triangles": 10632
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 500,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 1.8999999999068677,
+    "syncs": 49,
+    "totalMs": 2.400000000372529
+   },
+   "tick": null
+  },
+  "farm-600": {
+   "calls": 46,
+   "tris": 116156,
+   "instances": 42,
+   "vegetation": {
+    "near": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "mid": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "far": {
+     "instances": 42,
+     "triangles": 1224
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 42,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 0.2999999998137355,
+    "syncs": 85,
+    "totalMs": 0.5999999991618097
+   },
+   "tick": null
+  },
+  "forest-600": {
+   "calls": 39,
+   "tris": 168388,
+   "instances": 500,
+   "vegetation": {
+    "near": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "mid": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "far": {
+     "instances": 500,
+     "triangles": 15360
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 500,
+    "pendingChunks": 0,
+    "lastMs": 0.10000000009313226,
+    "maxMs": 1.2999999998137355,
+    "syncs": 67,
+    "totalMs": 2.3000000002793968
+   },
+   "tick": null
+  },
+  "forest-multidraw0": {
+   "calls": 49,
+   "tris": 217100,
+   "instances": 500,
+   "vegetation": {
+    "near": {
+     "instances": 244,
+     "triangles": 39598
+    },
+    "mid": {
+     "instances": 128,
+     "triangles": 5464
+    },
+    "far": {
+     "instances": 128,
+     "triangles": 3916
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 500,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 0.6000000000931323,
+    "syncs": 49,
+    "totalMs": 1.3999999994412065
+   },
+   "tick": null
+  },
+  "forest-140-multidraw0": {
+   "calls": 70,
+   "tris": 226720,
+   "instances": 500,
+   "vegetation": {
+    "near": {
+     "instances": 66,
+     "triangles": 11262
+    },
+    "mid": {
+     "instances": 88,
+     "triangles": 3752
+    },
+    "far": {
+     "instances": 346,
+     "triangles": 10632
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 500,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 0.7000000001862645,
+    "syncs": 43,
+    "totalMs": 1.5000000004656613
+   },
+   "tick": null
+  },
+  "farm-timelapse": {
+   "calls": 82,
+   "tris": 121250,
+   "instances": 42,
+   "vegetation": {
+    "near": {
+     "instances": 25,
+     "triangles": 3414
+    },
+    "mid": {
+     "instances": 14,
+     "triangles": 616
+    },
+    "far": {
+     "instances": 3,
+     "triangles": 96
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 2814,
+    "pendingChunks": 0,
+    "lastMs": 0.10000000009313226,
+    "maxMs": 0.3000000002793968,
+    "syncs": 67,
+    "totalMs": 5.000000001396984
+   },
+   "tick": {
+    "meanMs": 1.62,
+    "p95Ms": 2.5,
+    "maxMs": 7.6,
+    "n": 95
+   }
+  },
+  "pan-forest": {
+   "chunksAdded": 125,
+   "chunksDropped": 111,
+   "adds": 324,
+   "removes": 776,
+   "syncs": 258,
+   "syncMeanMs": 0.10465116278167323,
+   "syncMaxMs": 3.1000000000931323,
+   "syncSection": {
+    "meanMs": 0.1,
+    "p95Ms": 0.6,
+    "maxMs": 3.1,
+    "n": 295
+   },
+   "vegetationSection": {
+    "meanMs": 0.01,
+    "p95Ms": 0.1,
+    "maxMs": 0.3,
+    "n": 295
+   },
+   "fullRebuilds": 1,
+   "rebuildSection": null,
+   "calls": 43,
+   "tris": 183954,
+   "endCalls": 43,
+   "endTris": 119872,
+   "during": [
+    [
+     38,
+     183954
+    ],
+    [
+     38,
+     183316
+    ],
+    [
+     40,
+     182478
+    ],
+    [
+     36,
+     179028
+    ],
+    [
+     38,
+     180464
+    ],
+    [
+     39,
+     169332
+    ],
+    [
+     29,
+     133156
+    ],
+    [
+     23,
+     89272
+    ],
+    [
+     22,
+     65594
+    ],
+    [
+     28,
+     88312
+    ]
+   ],
+   "pendingBakes": null
+  },
+  "pan-forest-multidraw0": {
+   "chunksAdded": 118,
+   "chunksDropped": 106,
+   "adds": 320,
+   "removes": 773,
+   "syncs": 270,
+   "syncMeanMs": 0.042222222218427946,
+   "syncMaxMs": 1.1999999997206032,
+   "syncSection": {
+    "meanMs": 0.04,
+    "p95Ms": 0.2,
+    "maxMs": 1.2,
+    "n": 307
+   },
+   "vegetationSection": {
+    "meanMs": 0.64,
+    "p95Ms": 3.6,
+    "maxMs": 6.7,
+    "n": 307
+   },
+   "fullRebuilds": 1,
+   "rebuildSection": null,
+   "calls": 52,
+   "tris": 237210,
+   "endCalls": 36,
+   "endTris": 88884,
+   "during": [
+    [
+     52,
+     230828
+    ],
+    [
+     52,
+     237210
+    ],
+    [
+     50,
+     223632
+    ],
+    [
+     46,
+     221814
+    ],
+    [
+     49,
+     212138
+    ],
+    [
+     52,
+     201668
+    ],
+    [
+     47,
+     165974
+    ],
+    [
+     34,
+     113132
+    ],
+    [
+     28,
+     81808
+    ],
+    [
+     35,
+     81822
+    ]
+   ],
+   "pendingBakes": 0
+  }
+ },
+ "shots": [
+  {
+   "file": "wood-view-farm.png",
+   "why": "farm: 82 calls, 121602 triangles",
+   "t": 13.1,
+   "tick": null
+  },
+  {
+   "file": "wood-view-forest.png",
+   "why": "forest: 38 calls, 189674 triangles",
+   "t": 26.9,
+   "tick": null
+  },
+  {
+   "file": "wood-view-forest-140.png",
+   "why": "forest-140: 55 calls, 213736 triangles",
+   "t": 41.3,
+   "tick": null
+  },
+  {
+   "file": "wood-view-farm-600.png",
+   "why": "farm-600: 46 calls, 116156 triangles",
+   "t": 54,
+   "tick": null
+  },
+  {
+   "file": "wood-view-forest-600.png",
+   "why": "forest-600: 39 calls, 168388 triangles",
+   "t": 67.2,
+   "tick": null
+  },
+  {
+   "file": "wood-view-forest-multidraw0.png",
+   "why": "forest-multidraw0: 49 calls, 217100 triangles",
+   "t": 81.2,
+   "tick": null
+  },
+  {
+   "file": "wood-view-forest-140-multidraw0.png",
+   "why": "forest-140-multidraw0: 70 calls, 226720 triangles",
+   "t": 95.5,
+   "tick": null
+  },
+  {
+   "file": "wood-view-farm-timelapse.png",
+   "why": "farm-timelapse: 82 calls, 121250 triangles",
+   "t": 108.9,
+   "tick": null
+  },
+  {
+   "file": "wood-8-lineup.png",
+   "why": "dev lineup (?trees=1): rows oak, birch... columns sapling, young, mature, old, dying, dead snag, stump (near LOD)",
+   "t": 187.6,
+   "tick": null
+  },
+  {
+   "file": "wood-9-lineup-close.png",
+   "why": "lineup close-up: the first rows at near LOD (root spurs, lumpy crowns, layered spruce)",
+   "t": 198,
+   "tick": null
+  }
+ ],
+ "samples": []
+}
