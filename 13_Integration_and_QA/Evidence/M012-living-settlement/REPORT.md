@@ -213,7 +213,7 @@ The drawn pen leaf matched the sim gate state in all 63 samples (and the door ru
 
 ## Stage B: work (woodcutter, builder, reservations)
 
-**Date:** 2026-11-25 · **Branch:** deploy/boxd · **Commits:** feature `1cf4e4d`, then the frame-order fix and this evidence (see the end of this section). Merged locally only: **not pushed, not deployed.** No real phone was used.
+**Date:** 2026-11-25 · **Branch:** deploy/boxd · **Commits:** feature `1cf4e4d`, frame-order fix `77fcda9`, evidence `1a25958` (and this commit-list correction). Merged locally only: **not pushed, not deployed.** No real phone was used.
 
 ### Owner requirements (Stage B)
 
