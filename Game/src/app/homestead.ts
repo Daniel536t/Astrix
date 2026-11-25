@@ -7,13 +7,15 @@
 // its permissions (auto / ask first / never) per action. Anything set to
 // "ask first" becomes a proposal that only the owner can approve.
 import { HerdTime } from './herd-time';
+import { WorkTime } from './work-time';
+import { newStewardMemory, stewardCommands, stewardDue, stewardPlan } from './steward';
 import * as THREE from 'three';
 import { GameSession, Command } from './session';
 import { BrowserSaveStore } from './persistence';
 import {
   CROPS, CROP_RULES, CropKind, DM, FIELD_MAX, FIELD_MIN, HomesteadAction, MOISTURE_MAX, Policy, Role, SPECIES, SPECIES_RULES,
   checkField, cropStage, fenceCost, fieldUnits, homesteadLayout, nearbyActions, recentHomesteadEvents, unitsOf, findFieldSpot,
-  dayTime, OVERFLOW_CAPACITY, homesteadGates, isNavHomestead, isLivingHomestead, nearbyGate, straysOf,
+  dayTime, OVERFLOW_CAPACITY, isHerdHomestead, homesteadGates, isNavHomestead, isLivingHomestead, nearbyGate, straysOf,
   HOMESTEAD_WORK_VERSION, isWorkHomestead, ROLES, SITE_RULES, findSiteSpot, reservations, siteProgress, siteStatus, woodlot, MIN_STANDING_TREES,
   treeEntityId, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, HOMESTEAD_LATEST_VERSION, isBuildHomestead, timberStores, storeRoom, siteEntrance,
 } from '../sim/homestead';
@@ -70,11 +72,14 @@ export class HomesteadGame {
   private panelHoldUntil = 0;
   private panelHtml = '';
   private stewardTick = -1;
-  private lastAssignTick = -1000;
+  /** Below rules v7 only: the steward's cooldown (v7 keeps it in the world). */
+  private readonly stewardMemory = newStewardMemory();
   private eventsSeen = 0;
   private lastEvents: string[] | undefined;
   /** STAB-002: time per animal behaviour state, for __metrics (presentation only). */
   private readonly herdTime = new HerdTime();
+  /** STAB-002 S3: villagers' time (travel, waiting, work, idle, eating, sleeping) and waits of due work, for __metrics (presentation only). */
+  private readonly workTime = new WorkTime();
 
   constructor(private readonly o: HomesteadGameOptions) {
     this.view = new HomesteadView(o.session.world, TICK_SECONDS);
@@ -186,6 +191,15 @@ export class HomesteadGame {
     return true;
   }
 
+  /** Who will work a field the owner just marked (the toast). */
+  private fieldWorkers(): string {
+    const h = this.world.homestead;
+    if (!h) return '';
+    if (isHerdHomestead(h)) return 'It is an owner order: the next free villager digs and sows it.';
+    const farmers = h.villagers.filter((v) => v.role === 'farmer').map((v) => v.name);
+    return farmers.length ? `${farmers.join(' and ')} will dig and sow it.` : 'Nobody is a farmer: make someone a farmer in Farm.';
+  }
+
   // ---------- field planner ----------
 
   startPlanning(crop: CropKind = 'wheat'): void {
@@ -222,7 +236,7 @@ export class HomesteadGame {
       const spec = this.planSpec;
       const r = this.send({ type: 'mark_field', ...spec }, `${spec.x},${spec.z}`);
       if (r.ok && r.outcome.type === 'mark_field') {
-        this.o.toast(`Marked a ${spec.w} × ${spec.d} m ${CROP_RULES[spec.crop].label.toLowerCase()} field (${r.outcome.units} × 9 m², ${r.outcome.wood} wood for the fence). Ada will dig and sow it.`, 'good');
+        this.o.toast(`Marked a ${spec.w} × ${spec.d} m ${CROP_RULES[spec.crop].label.toLowerCase()} field (${r.outcome.units} × 9 m², ${r.outcome.wood} wood for the fence). ${this.fieldWorkers()}`, 'good');
         this.stopPlanning();
       } else if (!r.ok) {
         this.o.toast(r.reasons.join('; '), 'bad');
@@ -288,58 +302,24 @@ export class HomesteadGame {
 
   // ---------- steward (AI agent) ----------
 
-  /** Deterministic rules over authoritative state; every decision is a journaled, permission-checked command. */
+  /**
+   * Deterministic rules over authoritative state (app/steward.ts); every
+   * decision is a journaled, permission-checked command. Rules v7 keep the
+   * cooldown in the world; older rules keep it here, as before.
+   */
   private runSteward(): void {
     const h = this.world.homestead, life = this.world.life;
     if (!h || !life || !h.steward.enabled) return;
     const tick = life.tick;
-    if (tick === this.stewardTick || tick % 15 !== 0) return;
+    if (tick === this.stewardTick || !stewardDue(tick)) return;
     this.stewardTick = tick;
-    const s = life.stockpiles.get(FOUNDER_STOCKPILE_ID)!.inventory;
-    // Work waiting for each role.
-    const farm = h.plots.filter((p) => p.state === 'ripe' || p.state === 'wild' || (p.state === 'growing' && p.moisture <= 4)).length;
-    const herd = h.enclosures.filter((e) => e.water <= 10 || e.feed <= 4).length
-      + h.animals.filter((a) => { const p = SPECIES_RULES[a.species].product; return p && p.resource !== 'eggs' && a.product >= p.every; }).length;
-    const farmers = h.villagers.filter((v) => v.role === 'farmer'), herders = h.villagers.filter((v) => v.role === 'herder');
-    if (tick - this.lastAssignTick >= 300 && h.steward.policy.assign_role !== 'off') {
-      let move: { v: string; role: Role; why: string } | null = null;
-      // v4: an approved site with nobody to build it, or short of wood with nobody felling, takes a spare farmer (never the last one).
-      const approved = (h.sites ?? []).filter((st) => st.state === 'approved');
-      const spare = farmers.length > 1 || (farmers.length === 1 && h.plots.length === 0) ? farmers[farmers.length - 1] : null;
-      if (spare && approved.length && !h.villagers.some((v) => v.role === 'builder')) move = { v: spare.id, role: 'builder', why: `the ${SITE_RULES[approved[0].kind].label.toLowerCase()} is approved and nobody is building it` };
-      else if (spare && approved.some((st) => (SITE_RULES[st.kind].cost.wood ?? 0) > (st.delivered.wood ?? 0) + (st.reserved.wood ?? 0)) && !h.villagers.some((v) => v.role === 'woodcutter')
-        && woodlot(this.world, h).trees.length) move = { v: spare.id, role: 'woodcutter', why: 'a building site is waiting for timber' };
-      if (move) { /* v4 move first */ } else
-      if (farm >= 3 && herd === 0 && herders.length > 1) move = { v: herders[0].id, role: 'farmer', why: `${farm} fields need work and the animals are fine` };
-      else if (herd >= 3 && farm === 0 && farmers.length > 1) move = { v: farmers[0].id, role: 'herder', why: `${herd} animal tasks waiting and the fields are fine` };
-      else if (farmers.length === 0 && h.plots.length > 0) move = { v: herders[herders.length - 1].id, role: 'farmer', why: 'fields need a farmer' };
-      else if (herders.length === 0 && h.animals.length > 0) move = { v: farmers[farmers.length - 1].id, role: 'herder', why: 'the animals need a herder' };
-      if (move) {
-        this.lastAssignTick = tick;
-        const name = h.villagers.find((v) => v.id === move!.v)!.name;
-        if (h.steward.policy.assign_role === 'auto') {
-          const r = this.send({ type: 'assign_role', villagerId: move.v, role: move.role, actor: 'steward' }, move.v);
-          if (r.ok) this.o.toast(`Steward: ${name} now works as a ${move.role} (${move.why}).`, 'good');
-        } else {
-          this.send({ type: 'steward_propose', action: 'assign_role', villagerId: move.v, role: move.role, reason: `Make ${name} a ${move.role}: ${move.why}` });
-        }
-      }
-    }
-    // Suggest another field when every field is busy and there is seed and wood to spare.
-    const busy = h.plots.length > 0 && h.plots.every((p) => p.state === 'growing' || p.state === 'ripe');
-    const none = h.plots.length === 0 && tick > 60;
-    const wood = fenceCost(4, 4);
-    if ((busy || none) && (s.wood ?? 0) >= wood && (s.seed ?? 0) >= 2 && h.steward.policy.expand_field !== 'off'
-      && !h.steward.proposals.some((p) => p.action === 'expand_field') && findFieldSpot(this.world)) {
-      const reason = none ? `No fields yet: I can fence a 4 x 4 m wheat field for ${wood} wood from the store.`
-        : `Every field is in use and the store has seed; a 4 x 4 m wheat field costs ${wood} wood.`;
-      if (h.steward.policy.expand_field === 'auto') {
-        const r = this.send({ type: 'expand_field', actor: 'steward' });
-        if (r.ok) this.o.toast(`Steward fenced a new field (${reason})`, 'good');
-      } else {
-        const r = this.send({ type: 'steward_propose', action: 'expand_field', reason });
-        if (r.ok) this.o.toast('Steward has a request: open Farm to approve or decline.', 'warn');
-      }
+    const plan = stewardPlan(this.world, tick, this.stewardMemory);
+    for (const c of stewardCommands(h, plan)) {
+      const r = this.send(c);
+      if (!r.ok) continue;
+      if (c.type === 'assign_role' && plan.move) this.o.toast(`Steward: ${plan.move.name} now works as a ${plan.move.role} (${plan.move.why}).`, 'good');
+      if (c.type === 'expand_field') this.o.toast(`Steward fenced a new field (${plan.field})`, 'good');
+      if (c.type === 'steward_propose' && c.action === 'expand_field') this.o.toast('Steward has a request: open Farm to approve or decline.', 'warn');
     }
   }
 
@@ -374,6 +354,7 @@ export class HomesteadGame {
       const canChange = p.state === 'wild' || p.state === 'tilled';
       return `<li><span class="crop crop-${p.crop}"></span><b>${rule.label}</b> ${p.w}×${p.d} m · ${state}
         <span class="row-actions">${canChange ? `<select data-field="${p.id}" aria-label="Crop for this field">${CROPS.map((c) => `<option value="${c}" ${c === p.crop ? 'selected' : ''}>${CROP_RULES[c].label}</option>`).join('')}</select>` : ''}
+        ${isHerdHomestead(h) ? `<button type="button" data-prio="${p.id}" data-on="${h.priority?.includes(p.id) ? '0' : '1'}" aria-pressed="${!!h.priority?.includes(p.id)}" aria-label="Make this field's work a priority">${h.priority?.includes(p.id) ? 'Priority ✓' : 'Priority'}</button>` : ''}
         <button type="button" data-remove="${p.id}" aria-label="Remove this field">Remove</button></span></li>`;
     }).join('') || '<li class="dim">No fields yet. Plan one: you choose the place, the size and the crop.</li>';
     const route = (v: (typeof h.villagers)[number]) => {
@@ -572,6 +553,8 @@ export class HomesteadGame {
         if (r.ok && r.outcome.type === 'plant_tree') this.o.toast(`Planted a ${r.outcome.species} sapling (lifted from a nearby tree).`, 'good');
       }
     }
+    // STAB-002 S3: the owner's work priority list (rules v7).
+    if (b.dataset.prio) r = this.send({ type: 'set_priority', target: b.dataset.prio, on: b.dataset.on === '1' }, b.dataset.prio);
     if (b.dataset.remove) {
       if (!confirm('Remove this field? Anything growing there is lost and the fence wood is not returned.')) return;
       r = this.send({ type: 'remove_field', fieldId: b.dataset.remove }, b.dataset.remove);
@@ -613,6 +596,7 @@ export class HomesteadGame {
     if (!this.available) return;
     this.view.update(frameDt);
     this.herdTime.observe(this.world.homestead, this.world.life?.tick ?? 0);
+    this.workTime.observe(this.world, this.world.life?.tick ?? 0);
     this.build.update();
     this.updatePlanner();
     this.runSteward();
@@ -649,7 +633,9 @@ export class HomesteadGame {
     if (!h || !life) return null;
     return {
       tick: life.tick, day: dayTime(life.tick), anchor: { x: h.anchorX, z: h.anchorZ },
-      fields: h.plots.map((p) => ({ id: p.id, crop: p.crop, x: p.x, z: p.z, w: p.w, d: p.d, state: p.state, stage: cropStage(p), growth: p.growth, moisture: p.moisture })),
+      fields: h.plots.map((p) => ({ id: p.id, crop: p.crop, x: p.x, z: p.z, w: p.w, d: p.d, state: p.state, stage: cropStage(p), growth: p.growth, moisture: p.moisture,
+        tilled: p.tilled, sown: p.sown ?? 0, order: p.order ?? null })),
+      due: { ...(h.due ?? {}) }, priority: [...(h.priority ?? [])], stewardLastAssign: h.steward.lastAssign ?? null,
       villagers: h.villagers.map((v) => ({ id: v.id, name: v.name, role: v.role, task: v.task?.kind ?? null, target: v.task?.target ?? null, leg: v.task?.leg ?? null,
         legOp: v.task?.legs[v.task.leg]?.op ?? null, x: v.x / DM, z: v.z / DM, carry: v.carry, energy: v.energy, hunger: v.hunger,
         lastLeg: v.task ? { effect: v.task.legs[v.task.legs.length - 1].effect, x: v.task.legs[v.task.legs.length - 1].x / DM, z: v.task.legs[v.task.legs.length - 1].z / DM } : null,
@@ -661,6 +647,7 @@ export class HomesteadGame {
       animals: Object.fromEntries(SPECIES.map((sp) => [sp, h.animals.filter((a) => a.species === sp).length])),
       herd: h.animals.map((a) => ({ id: a.id, species: a.species, x: a.x / DM, z: a.z / DM, go: a.go ?? null, act: a.act ?? null, until: a.until ?? null })),
       herdTime: this.herdTime.metrics(),
+      workTime: this.workTime.metrics(),
       strays: Object.fromEntries(h.enclosures.map((e) => [e.id, straysOf(h, e.id as EnclosureId).map((a) => a.id)])),
       enclosures: h.enclosures.map((e) => ({ ...e })),
       overflow: { ...h.overflow },

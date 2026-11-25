@@ -32,6 +32,7 @@ import { VitalsHud } from './app/vitals-hud';
 import { HomesteadGame } from './app/homestead';
 import { DAY_TICKS, SPECIES_RULES, felledTrees, playerPresence } from './sim/homestead';
 import { DynamicBody, HomesteadBodies } from './sim/bodies';
+import { CHARACTER_RADIUS } from './sim/character';
 import type { Presence } from './sim/bodies';
 import { buildAnimalShowcase } from './render/animal-showcase';
 import { renderBreakdown } from './app/render-breakdown';
@@ -969,7 +970,7 @@ if (!isMap && !isKit) {
   const bodiesNear = (x: number, z: number): DynamicBody[] => {
     const out: DynamicBody[] = [];
     const h = session.world.homestead, tick = session.world.life?.tick ?? 0, now = performance.now();
-    if (h && contactBodies) { contactBodies.observe(h, tick, now); contactBodies.collect(h, tick, now, x, z, 8, groundAt, adultAge, out); }
+    if (h && contactBodies) { contactBodies.observe(h, tick, now); contactBodies.collect(h, tick, now, x, z, 8, groundAt, adultAge, out, CHARACTER_RADIUS); }
     fauna?.bodies(x, z, 8, out);
     return out;
   };

@@ -2,7 +2,7 @@
 
 Repo `Astrix`, branch `deploy/boxd`. Base commit `4169c21` (STAB-001 docs). Not pushed or deployed. Everything below was measured headlessly or in an emulated desktop browser (Playwright Chromium). **No real phone or tablet was used.**
 
-S1 and S2 are in this report. Steps S3 and S4 are not part of these changes.
+S1, S2 and S3 are in this report. Step S4 (villager speed) is not part of these changes.
 
 ## S1 · Animal unstick
 
@@ -399,3 +399,148 @@ From `Game/`:
 - `npx esbuild ../13_Integration_and_QA/Evidence/STAB-002-stabilization/s2/s2-repro.ts --bundle --platform=node --format=esm --external:three --outfile=tests/.s2-repro.tmp.mjs && node tests/.s2-repro.tmp.mjs`, then delete the `.tmp.mjs` file.
 - Browser: copy `s2/stab002-s2-chain0.js` (or `-chainon.js`) under `.kiro/artifacts/screenshots/` and run it with Playwright `browser_run_code_unsafe { filename }`.
 - Coop step fix: `s2/s2fix-step-repro.ts` as in its header; browser: `s2/stab002-s2fix-probe.template.js` with `__VARIANT__` set to `chain0` or `chainon`, run the same way.
+
+## S3 · Work priority and steward rules
+
+Base commit `03d0842` (the S2 coop chicken overlap fix, on top of S2 `863f0f7`). The hash `57b8f0b` named for the S2 fix does not exist in this repository; the S2 fix landed on the branch as `03d0842` while S3 was in progress, and every S3 number and test below was measured with it. Not pushed or deployed. **No real phone or tablet was used.** Villager speed (BUG-C cause 7) is S4 and is unchanged (`VILLAGER_SPEED` 26 dm/tick).
+
+### What changed
+
+Everything is under **settlement rules v7**; no new rules version. v1 to v6 run the code they ran before (`plan()` hands v7 homesteads to `planV7()`; every new effect, field and rule is gated on `isHerdHomestead`).
+
+1. **Priority classes** (`PRIORITY` in `sim/homestead.ts`), lowest first:
+   - safety: a load in hand goes where it is for first (a site load to its site, seed into a field, water on a crop or trough, the rest to the store), unless the villager is starving; then eating; then sleep;
+   - critical upkeep: a sprouted crop 15 or more ticks dry (it withers at 45), a trough at 6 or less;
+   - the next unit of an owner order the villager is standing at (the field it is in, the site it is at);
+   - overdue work of the villager's own role (75 daytime ticks old, `AGE_OVERDUE`);
+   - **owner orders**: approved sites (haul, build, fell for missing wood), cancelled sites (carry back), fields the owner marked (`plot.order`, until fully sown), and the owner's priority list (`set_priority`, new journaled command, v7 only; a Priority button per field in the Farm panel);
+   - overdue work of other roles (overdue for anyone at 150 daytime ticks);
+   - urgent upkeep: troughs at 14 or less, feed when the pasture is bare, strays, a crop drying out; routine work 45 daytime ticks old;
+   - routine work (eggs, milk, shear, ordinary watering, harvest, sowing and digging of fields that are not orders, restocking, the woodcutter's own felling and replanting); idle.
+
+   Within a class: own role first, then age (in steps of 30 daytime ticks), then distance, then key (a total order). Age is counted in daytime ticks only (`daylightAge`), from the tick the work became due, kept in the world as `h.due` (hashed). Routine work that would run into the night waits for the morning.
+2. **Roles are preferences.** Any villager may take an owner order or urgent upkeep; routine work stays with its role until it is overdue. Herders and farmers haul, build and fell for approved sites and dig and sow owner fields. Builders and woodcutters still prefer their own work.
+3. **Two workers on large jobs, without double use of reservations.** A site, and digging or sowing a field of 3 units or more, takes up to `JOB_WORKERS` = 2 villagers. Claims are counted per job key from the other villagers' remaining legs: what others will fetch (`fetch` legs), build, dig and sow, and the seed they carry or will take, is subtracted before a job is offered. `fetch` still takes only the site's own reservation, so a second hauler gets nothing that is not reserved.
+4. **Felling for a site.** A site short of wood that is not in the store gets a `chop` task from any villager: the cut goes straight to the site as its load (`carry.site`), stops once it covers the shortfall, and a cut above it is delivered as far as the site needs and the rest goes to the store (or to another site still short of wood). The woodland policy, protection and canopy minimum hold; under the sustainable quota an approved building may borrow one tree against regrowth (`fellingHold(..., borrow)`; the woodcutter's own felling waits until it has grown back), and a tree that covers the whole shortfall is preferred.
+5. **Batched trips.** One load for two sites (`carry.also`: the second site's share, delivered after the first); a bucket for each of up to three troughs on one trip, with the coop's last so the eggs come along on the way back; milking or shearing up to three ready animals on one trip; the rest of a can on the next dry field. Legs may name what they work on (`leg.at`), so a batched task claims each field, trough, animal and site it visits.
+6. **Small units and pre-emption.** Digging is one unit (4 work ticks) per task; sowing takes at most half a field's seed per sower, and units already dug may be sown while the rest is dug (`plot.sown`). An idle villager takes any job that comes up; a routine task still on its first walk takes strictly more important work. Never with something in hand and never while opening or holding a gate. `assign_role` under v7 keeps the task of a villager with a load in hand.
+7. **Eating and sleep.** From 25 ticks before nightfall a villager with hunger 40 or more eats before bed; asleep, hunger rises by 1 every 6 ticks instead of every 2.
+8. **Steward** (`app/steward.ts`, a pure function the app, the tests and the harness all call). It stays in the browser and acts only by journaled `assign_role` / `steward_propose` commands as before. Under v7:
+   - its cooldown is world state: `steward.lastAssign`, set by the steward's own `assign_role` and by its role requests, saved and hashed, so a reload changes nothing;
+   - an approved or cancelled site with no builder gets one within 60 ticks (`STEWARD_SITE_COOLDOWN`); a site short of wood with no woodcutter gets one from any role; a builder with nothing left goes back to farming (or herding when there is no herder);
+   - other moves wait 300 ticks, and no farmer becomes a herder in the first day or while there are fewer fields than farmers;
+   - an approved site never depends on the steward: any free villager hauls, builds and fells for it.
+   Rules v1 to v6 keep the old rules and the in-page cooldown. The planner toast names the real workers.
+9. **Time and waits for evidence** (`app/work-time.ts`, `__metrics.homestead.workTime`, not hashed): ticks per villager in travel, waiting, work, idle, eating and sleeping (the BUG-C grouping: walking to the store to eat counts as eating, to bed as sleeping), starving ticks, and the wait of every piece of due work (`dueWork`) from due to taken, in daytime ticks. The same observer runs under v6 for the before numbers.
+10. **Founder contact (S2), needed to keep the S2 tests passing.** S3 changes the shared random stream, and on the S2 crowded-pen scenario two pigs then closed on the founder from both sides in the sty's gate corridor (0.33 m overlap against the 0.15 m bound). `HomesteadBodies.collect(..., founderR)` now lets a capsule close on the founder no faster than the founder is pushed out (1.5 m/s), and not at all while two bodies overlap the founder (a pinch). Player-local physics only; not hashed.
+
+New state, all v7 only, in the snapshot and hash, strictly validated (rejected under v6): `leg.at`, `carry.also`, `plot.sown`, `plot.order`, `steward.lastAssign`, `h.due`, `h.priority`; tasks may have up to 12 legs.
+
+Files:
+- changed: `Game/src/sim/homestead.ts`, `sim/forestry.ts` (`planFelling`, quota borrow), `sim/bodies.ts`, `app/homestead.ts`, `app/session.ts` (`set_priority`, steward actor), `main.ts`
+- new: `Game/src/app/steward.ts`, `Game/src/app/work-time.ts`
+- tests: `Game/tests/stab002.s3.test.ts` (9), `stab002.s3-accept.test.ts` (2), `stab002-s3-harness.ts`; `stab002.s2.test.ts` (v7 pins re-pinned), `stab002-s2-harness.ts` (passes the founder radius as `main.ts` does)
+- evidence: `s3/` (`s3.ts` and its output `s3-out.md`, the browser probe `stab002-s3-probe.js`, results and screenshots)
+- regenerated: `Game/dist`, `Game/tests/.build`
+
+### Pinned hashes
+
+v1 `16ca4c350d98096f`, v2 `542411888c83bf3a`, v3 `d2c28283712a8de7`, v4 `6ce5ae532227eeb9`, v5 `f249cb544027b9bd`, v6 `037429c4ffbcf710`, genesis `e659504b056654dc`: unchanged and asserted. The v6 save fixture restores byte-identical with `037429c4ffbcf710`.
+
+v7 is not released, and S3 changes v7 villager work, so the S2 v7 pins were re-pinned: M014 reference run without presence `f849279d086aa120` → `7dea616c561cc8a4`; fresh 900-tick runs, seeds 1 / 42 / 1337 / 2024: `0a9011b2db7e9b63` / `a4837164213ddc3b` / `69c99cab31257384` / `d3c8cd112e45a006` → `c905f7a613e3c30d` / `3d9dec9afa4fddfa` / `ae1dd7c3549b697e` / `11620894712a3048`.
+
+### Acceptance (headless, the BUG-C scenarios, seeds 1337, 42, 7)
+
+Full tables: `s3/s3-out.md` (`s3.ts`, the same harness as the tests). "v6 → v7" plays 300 ticks under v6 with the old steward, then the journaled upgrade.
+
+**Woodshed and well approved, fresh store (0 wood), no owner help, no hand-assigned roles, default steward** (ticks after approval to the woodshed finished; target ≤ 300):
+
+| approved at | v6 fresh (before; BUG-C) | v7 fresh | v6 → v7 |
+|---|---|---|---|
+| 0 | 651 / 651 / 652 | 78 / 51 / 93 | 150 / 89 / 150 |
+| 120 | never / never / never | 215 / 188 / 248 | 272 / 183 / 233 |
+| 400 | never / never / never | 205 / 203 / 214 | – |
+
+The well (8 more wood) finished at +92 to +296 under v7 (v6: +743 to +775, or never). Approved at 120 or 400, the night (120 ticks) falls inside the window: the v7 times are 68 to 152 daytime ticks.
+
+**6 × 6 owner field on a busy farm** (n 4 × 4 fields marked at tick 0, 300 ticks played, default steward):
+
+| | v6 fresh (before) | v7 fresh | v6 → v7 |
+|---|---|---|---|
+| first taken (target ≤ 30) | never in 6 of 9 runs; 100, 105, 404 in the others | 1–3 | 1–12 |
+| fully sown, store seed ≥ 4 at marking (target ≤ 60) | never in 900 ticks, or 717–799 | 38, 46, 46, 50, 57 | (no run had the seed) |
+| seed short at marking: units sown by +60 / free seed | 0 | 2/2, 1/1, 0/0, 2/2 | 2/2, 1/1, 2/2, 1/1, 2/2, 0/0 |
+| fully sown when seed was short | – | 73–154 | 77–110 |
+
+Seed-limited case, as defined for this step: when the store holds less free seed than the field has units at the moment it is marked, the field must have at least that many units sown within 60 ticks; the rest follows from threshing and harvests (times in the last row).
+
+**Routine and upkeep waits** (daytime ticks from due to taken, all due work, 600 ticks after the owner field; target ≤ 120):
+
+| farm | v6 fresh (before) | v7 fresh | v6 → v7 |
+|---|---|---|---|
+| 2 fields | 161 / 162 / 177 | 77 / 66 / 86 | 91 / 95 / 85 |
+| 4 fields | 178 / 215 / 338 | 93 / 106 / 95 | **139** / **125** / 94 |
+| 6 fields | 165 / 147 / 144 | 110 / 78 / **121** | – |
+| standard farm (one 4 × 4 owner field, 1500 ticks) | 213 / 155 / 149 | 57 / 62 / 53 | – |
+
+**Time per villager** (standard farm, 1500 ticks, all three villagers, mean of seeds 1337 / 42 / 7; BUG-C grouping):
+
+| | travel | waiting | work | idle | eating | sleeping | starving |
+|---|---|---|---|---|---|---|---|
+| v6 (before) | 33 % | 2 % | 5–6 % | 10 % | 12–14 % | 35–37 % | 6–7 % |
+| v7 | 23–25 % | 2–3 % | 5–6 % | 21–24 % | 8–10 % | 35–38 % | **0 %** |
+
+Per villager, v6 Ada 38–41 % travel (BUG-C 41 %), Bram 37–40 % (43 %), Cora 22 % (22 %). Under v7 the same work takes about a quarter less walking, the meals before bed and the slower hunger at night remove the starving ticks and a third of the eating time, and the time saved shows as idle: this small farm has no more work to give. Wake hunger is below 70 every morning (asserted).
+
+**No teleport:** the largest villager step in one tick over all runs is 26.4 dm against `VILLAGER_SPEED` 26 dm (1.015; v6 runs show 26.5 dm). The excess is integer-dm rounding of the two axis steps (at most 0.71 dm); against the 27 dm allowance with that rounding the ratio is 0.978. The browser probes measured 0.963 of 2.7 m per tick elapsed.
+
+**S1 and S2 re-measured** (they share the random stream with the villagers):
+- S1 survey (`s1/s1.ts`, 15 seeds × 3 days): fresh v7 0 frozen, minimum daytime share 19.9 % (S1: 29.1 %), longest daytime still stretch 41 ticks (S1: 36), 0 starving, lowest trough 10; v6 → v7 0 frozen, 26.0 % (29.3 %), 35 ticks (31), 0 starving, lowest trough 4 (S1: 1 to 2). All within the S1 criteria (≥ 15 %, ≤ 80 ticks); the acceptance tests pass.
+- S2 crowded pens, walking out: min gap coop −0.000 m, pen −0.107 m, sty −0.111 m, paddock +0.025 m (bound −0.15 m); held at most 2.52 s. All S2 tests pass.
+
+### Tests (separate from the browser)
+
+`cd Game && npx tsc --noEmit && npm test && npm run build`: typecheck clean, **396 tests pass** (381 before S3), build OK. `npm test` takes about 105 s.
+
+`stab002.s3.test.ts`:
+1. v1 to v6 and genesis unchanged; the v6 fixture byte-identical; every S3 field rejected under v6; after a v6 → v7 upgrade and play the snapshot validates and round-trips; `set_priority` refused below v7.
+2. An owner field is an order from the tick it is marked, taken within 10 ticks, worked by a non-farmer too, and the order ends when it is sown; due ticks are kept; `set_priority` journaled, validated, reload-identical, removable.
+3. Two villagers share a job, never three; digging legs are one unit; one load for two sites; several troughs on one trip; several animals on one trip.
+4. Over 2 × 900 ticks with two sites and two fields: a load shrinks only on a leg that uses it (water poured and saplings set down by design); deliveries never exceed cost; reservations never exceed stock; no pre-emption with a load in hand.
+5. Eating before bed happens; wake hunger < 70; 0 starving ticks over 3 days (3 seeds).
+6. Steward: builder within 60 ticks, someone felling for the site within 15 ticks, no move to herder in the first day, `lastAssign` in the world; a reload, then the steward and sim run on both copies for 300 ticks: same hash.
+7. A v7 journal with orders, shared jobs and batched trips replays from genesis to the same hash; a mid-task save restores and plays on identically.
+8. Time categories add up to the ticks observed, per villager, under v6 and v7.
+9. Waits ≤ 120 on fresh v7 farms with 2 and 4 fields (600 ticks) and on the standard farm (1500 ticks).
+
+`stab002.s3-accept.test.ts`: the woodshed table (fresh v7 at 0, 120, 400; v6 → v7 at 0, 120) ≤ 300 with no jump, and the field table (fresh 2/4/6 fields, v6 → v7 2/4) taken ≤ 30 and sown ≤ 60 or as far as the seed allows.
+
+### Browser (separate from the tests; emulated desktop Chromium, not a phone)
+
+`Game/dist` from this build was copied to `.kiro/artifacts/screenshots/probe/dist` and served as `https://astrix.local/`; fresh storage with `astrix:entered:v1 = 1`; `?chain=0`; no role assigned by hand. Script `s3/stab002-s3-probe.js` (two phases), results `s3/stab002-s3-{panel,build}-results.json`, screenshots `s3/stab002-s3-*.png`.
+
+| probe | flow | approved at | woodshed done | role changes (steward) | who worked on the site (samples) | reload | largest step |
+|---|---|---|---|---|---|---|---|
+| panel (M012 job flow) | Farm → New woodshed → Approve | tick 3 | tick 80 (+77) | Cora farmer → builder at 19, back to farmer at 91 | Ada (farmer) and Bram (herder) felling, Cora hauling and building, Bram building | tick 64, hash `5bec0cacc3668b6e` before and after, `lastAssign` 15 kept | 0.963 of 2.7 m/tick |
+| build (M014 placement) | Build mode, ghost aimed with the mouse, Place: woodshed, then a well | tick 3 | tick 75 (+72) | Cora farmer → builder at 19 | Ada and Bram felling, Cora hauling and building, Ada building, Bram hauling | tick 64, hash `752c04a45bdfe985` before and after, `lastAssign` 15 kept | 0.963 |
+
+The probes ran at `?timescale=8`; no page errors.
+
+### Not met, or open
+
+- **Routine waits over 120 on the heaviest farms:** 121 (fresh, 6 fields, seed 7), 125 and 139 (v6 → v7, 4 fields). The long waits are animal products and eggs that came due overnight and wait through the first morning while three villagers work an owner field, several marked fields and the backlog; the bound holds (≤ 110) on every fresh 2- and 4-field farm and the standard farm, and is asserted there only. In v6 the same scenarios wait 144 to 338.
+- **Seed-limited fields:** with less free seed than units at marking, only that many units are sown by +60 (as defined above); the rest waits for threshing or harvests (73 to 154 ticks). With 0 free seed nothing is sown by +60.
+- **Work share of awake ticks** stays at 8–10 % on the standard farm (BUG-C target ≥ 15 %): on a farm with one field the time saved becomes idle time. Speed (S4) is unchanged.
+- **Night** is still 120 ticks of sleep; nothing works at night.
+- **Owner orders vs overdue routine work** is a trade-off: an owner's field or site can wait for a villager's own overdue chores (this is how routine work cannot starve), and the next unit of an order the villager is already at comes first.
+- **Founder contact change (S2):** a capsule held back from a pinched founder may lag the drawn animal by up to its closing distance in that frame. The S2 crowded-pen test also fails at `863f0f7` for seed 42 (the founder cannot get out of the coop); S3 does not change that case.
+- **Store full:** a load whose store and barn are both full still spoils (unchanged, rare).
+- **The steward runs every 15th tick of the page's frame loop.** With `?timescale` several ticks can pass in one frame and a 15th tick can be skipped (unchanged).
+- No real device was used.
+
+### Reproduce
+
+From `Game/`:
+- `npm test`
+- `npx esbuild ../13_Integration_and_QA/Evidence/STAB-002-stabilization/s3/s3.ts --bundle --platform=node --format=esm --external:three --outfile=tests/.s3.tmp.mjs && node tests/.s3.tmp.mjs all`, then delete the `.tmp.mjs` file (`B`, `F`, `W` or `T` for one table).
+- Browser: build, copy `dist` to `.kiro/artifacts/screenshots/probe/dist`, copy `s3/stab002-s3-probe.js` under `.kiro/artifacts/screenshots/` (set `phase: 'build'` for the placement flow) and run it with Playwright `browser_run_code_unsafe { filename }`.

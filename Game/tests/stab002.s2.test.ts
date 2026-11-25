@@ -63,7 +63,7 @@ const wandering = (s: GameSession) => {
   };
 };
 
-test('presence never changes rules v1-v6 (v6 M014 run with presence on every tick keeps 037429c4ffbcf710); v7 journals without presence replay exactly as S1 (pinned on cd0aff6)', () => {
+test('presence never changes rules v1-v6 (v6 M014 run with presence on every tick keeps 037429c4ffbcf710); v7 journals without presence replay to their pinned hashes (re-pinned for S3, which changed v7 work)', () => {
   assert.equal(GameSession.genesis(1337).stateHash, 'e659504b056654dc');
   const v6 = GameSession.genesis(1337, GENERATOR_V2);
   ok(v6, { type: 'found_homestead', rules: 6 });
@@ -73,9 +73,10 @@ test('presence never changes rules v1-v6 (v6 M014 run with presence on every tic
   assert.equal(withPresence.stateHash, '037429c4ffbcf710');
   assert.equal(reference(5, () => ({ x: -200, z: 0, mx: 1, mz: 0 })).stateHash, 'f249cb544027b9bd');
   assert.ok(withPresence.journal.entries.some((e) => e.command.type === 'tick' && e.command.presence), 'the v6 journal holds presence');
-  // v7 without presence: the S1 results (measured on cd0aff6 before S2).
-  assert.equal(reference(7).stateHash, 'f849279d086aa120');
-  const fresh: Record<number, string> = { 1: '0a9011b2db7e9b63', 42: 'a4837164213ddc3b', 1337: '69c99cab31257384', 2024: 'd3c8cd112e45a006' };
+  // v7 without presence. S1/S2 pinned f849279d086aa120 and 0a9011b2db7e9b63 / a4837164213ddc3b / 69c99cab31257384 /
+  // d3c8cd112e45a006 (measured on cd0aff6); STAB-002 S3 changed v7 villager work (rules v7 are not released), so these are re-pinned.
+  assert.equal(reference(7).stateHash, '7dea616c561cc8a4');
+  const fresh: Record<number, string> = { 1: 'c905f7a613e3c30d', 42: '3d9dec9afa4fddfa', 1337: 'ae1dd7c3549b697e', 2024: '11620894712a3048' };
   for (const [seed, hash] of Object.entries(fresh)) {
     const s = GameSession.genesis(Number(seed), GENERATOR_V2);
     ok(s, { type: 'found_homestead', rules: 7 });
@@ -83,7 +84,7 @@ test('presence never changes rules v1-v6 (v6 M014 run with presence on every tic
     assert.equal(s.stateHash, hash, `fresh v7 seed ${seed}`);
   }
   // With presence v7 does react (otherwise the rest of this file would test nothing).
-  assert.notEqual(reference(7, wandering(v6)).stateHash, 'f849279d086aa120');
+  assert.notEqual(reference(7, wandering(v6)).stateHash, '7dea616c561cc8a4');
 });
 
 test('tick presence is strict and replays: bad presence is rejected, the journal with presence replays to the same hash, a save mid-run restores and plays on identically', () => {

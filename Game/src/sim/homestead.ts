@@ -18,7 +18,7 @@ import { STAGE_FOOTPRINT, growthStage, treeTimber, treeSpecies } from './vegetat
 import type { TreeSpecies } from './vegetation';
 import { TIMBER, TREE_STAGES, WoodlandState, treeLife, validateWoodland, woodlandSnapshot } from './woodland';
 import {
-  clearGround, isWoodlandHomestead, liftSapling, lifeGoal, managedWoodland, planWoodcutter, plantSapling, startWoodland, stepWoodland,
+  clearGround, isWoodlandHomestead, liftSapling, lifeGoal, managedWoodland, planFelling, planWoodcutter, plantSapling, startWoodland, stepWoodland,
 } from './forestry';
 import {
   GATE_STATES, GateState, NavFeatures, NavGate, NavGoal, NavGrid, NavRegion, NavState, emptyFeatures, gateLabel, navGrid, navStats, navStep,
@@ -90,6 +90,13 @@ export const HOMESTEAD_BUILD_VERSION = 6 as const;
  * with an end tick, which the renderer draws as the pose. Founded with
  * `found_homestead { rules: 7 }` or switched by `upgrade_homestead { rules: 7 }`,
  * which keeps every animal where it stands.
+ *
+ * STAB-002 S2 adds the player's presence on the tick; S3 ("work priority")
+ * plans villager work by priority class (safety, overdue, owner orders, urgent
+ * upkeep, routine), ages waiting work, lets any villager help with owner
+ * orders, two share a large job, batches trips, splits digging into units,
+ * pre-empts only empty-handed idle or not-yet-begun routine work, eats before
+ * bed and slows hunger in sleep (see `planV7`).
  */
 export const HOMESTEAD_HERD_VERSION = 7 as const;
 /** The rules new homesteads are founded with and old ones are upgraded to on load. */
@@ -193,12 +200,16 @@ export const ROLES: readonly Role[] = ['builder', 'farmer', 'herder', 'woodcutte
 export const WORK_ROLES: readonly Role[] = ['builder', 'woodcutter'];
 export const FOOD_PREFERENCE = ['rations', 'eggs', 'milk', 'food'] as const;
 /** Resources a villager can carry in one load (one stack at a time). */
-export type Carry = { item: string; amount: number; site?: string } | null;
+export type Carry = { item: string; amount: number; site?: string;
+  /** v7: part of a site load that is for a second site (delivered after the first). */
+  also?: { site: string; amount: number } } | null;
 export type Effect =
   | 'take' | 'store' | 'till' | 'sow' | 'reap' | 'water_plot' | 'draw' | 'water_trough' | 'fill_feed'
   | 'gather_eggs' | 'shear' | 'milk' | 'eat' | 'rest' | 'restock' | 'thresh' | 'herd' | 'hold_gate'
   | 'chop' | 'fetch' | 'deliver' | 'build' | 'lift' | 'plant' | 'stow' | 'reclaim' | 'none';
-export interface Leg { op: 'walk' | 'work'; x: number; z: number; ticks: number; effect: Effect; item?: string; amount?: number }
+export interface Leg { op: 'walk' | 'work'; x: number; z: number; ticks: number; effect: Effect; item?: string; amount?: number;
+  /** v7: what this leg's effect works on when it is not the task's target (a second field, trough, animal or site of a batched trip). */
+  at?: string }
 export interface Task { kind: string; target: string; legs: Leg[]; leg: number; progress: number }
 export interface Villager {
   id: string; name: string; role: Role; x: number; z: number;
@@ -216,6 +227,10 @@ export type PlotState = 'wild' | 'tilled' | 'growing' | 'ripe';
 export interface Plot {
   id: string; x: number; z: number; w: number; d: number; crop: CropKind;
   state: PlotState; growth: number; moisture: number; dry: number; tilled: number;
+  /** v7: units sown so far while the field is still `tilled` (two sowers, or seed for part of it). */
+  sown?: number;
+  /** v7: the tick the owner marked this field: an owner order until it is first fully sown. */
+  order?: number;
 }
 export interface Enclosure { id: EnclosureId; grass: number; feed: number; water: number; eggs: number }
 export interface Animal {
@@ -247,6 +262,8 @@ export interface Steward {
   policy: Record<StewardAction, Policy>;
   proposals: Proposal[];
   nextProposal: number;
+  /** v7: the tick of the steward's last role change or role request (its cooldown lives in the world, not in the page). */
+  lastAssign?: number;
 }
 export const MAX_PROPOSALS = 8;
 
@@ -264,6 +281,10 @@ export interface HomesteadState {
   sites?: BuildSite[];
   /** v5 only: the living woodland (lifecycle records, policy, protection, replanting orders, quota). */
   woodland?: WoodlandState;
+  /** v7: routine and upkeep work waiting, by key, with the tick it became due (its age raises its priority). */
+  due?: Record<string, number>;
+  /** v7: fields, enclosures and sites the owner marked as priority work (sorted). */
+  priority?: string[];
 }
 
 // ---- building sites (settlement rules v4; the v6 catalogue) ----
@@ -1018,7 +1039,9 @@ function freeView(world: World, h: HomesteadState): Record<string, number> {
 }
 /** Carried by villagers for a site (on the way from the store to it). */
 function carriedFor(h: HomesteadState, siteId: string, item: string): number {
-  return h.villagers.reduce((n, v) => n + (v.carry?.site === siteId && v.carry.item === item ? v.carry.amount : 0), 0);
+  // v7: a load for two sites counts each site's share (`also` is the second site's).
+  return h.villagers.reduce((n, v) => n + (v.carry?.item !== item ? 0
+    : (v.carry.site === siteId ? v.carry.amount - (v.carry.also?.amount ?? 0) : 0) + (v.carry.also?.site === siteId ? v.carry.also.amount : 0)), 0);
 }
 /** Materials a site still needs reserved: cost less delivered, carried and already reserved. */
 export function siteShortfall(h: HomesteadState, st: BuildSite): Record<string, number> {
@@ -1074,12 +1097,19 @@ export function siteStatus(world: World, st: BuildSite): string {
   const short = siteShortfall(h, st);
   const missing = Object.entries(short).map(([k, n]) => `${n} ${k}`).join(' and ');
   const busy = h.villagers.find((v) => v.task?.target === st.id);
+  const felling = isHerdHomestead(h) ? h.villagers.find((v) => v.task?.kind === 'chop' && touches(v.task, st.id)) : undefined;
+  if (!busy && felling) return `${felling.name} is felling a tree for it${missing ? `; still waiting for ${missing}` : ''}`;
   if (busy) {
     const what = busy.task!.kind === 'build' ? 'building' : busy.carry?.site === st.id ? `carrying ${busy.carry.amount} ${busy.carry.item} to it` : 'fetching reserved materials';
     return `${busy.name} is ${what}${missing ? `; still waiting for ${missing} (none free in the store)` : ''}`;
   }
-  if (!builders.length) return 'waiting for a builder: assign one in People';
+  if (!builders.length && !isHerdHomestead(h)) return 'waiting for a builder: assign one in People';
   if (missing && !bagTotal(st.reserved) && siteWorkAllowed(st) <= st.work) return `waiting for ${missing}: none free in the store`;
+  if (isHerdHomestead(h)) {
+    // v7: approved work is everyone's: the next free villager takes it (a woodcutter, or anyone, fells for missing wood).
+    if (missing && !bagTotal(st.reserved) && siteWorkAllowed(st) <= st.work) return `waiting for ${missing}: none free in the store; the next free villager fells for it`;
+    return missing ? `waiting for ${missing}; the next free villager brings what is reserved` : 'ready: the next free villager builds it';
+  }
   return missing ? `waiting for ${missing}; the builder brings what is reserved` : 'ready: the builder is on the way';
 }
 
@@ -1193,8 +1223,9 @@ export function cancelSite(world: World, siteId: string): LifeResult<{ siteId: s
   if (onSite) { st.state = 'cancelled'; st.reserved = {}; st.work = 0; }
   else h.sites = h.sites!.filter((x) => x.id !== siteId);
   for (const v of h.villagers) {
-    if (v.task?.target === siteId) v.task = null;
-    if (v.carry?.site === siteId) v.carry = { item: v.carry.item, amount: v.carry.amount };
+    if (v.task && touches(v.task, siteId)) v.task = null;
+    // v7: a load shared with a second site becomes free stock too (the other site reserves again).
+    if (v.carry?.site === siteId || v.carry?.also?.site === siteId) v.carry = { item: v.carry.item, amount: v.carry.amount };
   }
   world.revision++;
   return { ok: true, value: { siteId, released } };
@@ -1304,22 +1335,35 @@ function chooseTree(world: World, h: HomesteadState, v: Villager, taken: Set<str
 }
 
 /** One cut (the player's harvest rule) into the woodcutter's load: chop again, carry it off, or stop. */
-function chop(world: World, h: HomesteadState, v: Villager, t: Task, ev: Events): 'again' | 'done' | 'fail' {
+function chop(world: World, h: HomesteadState, v: Villager, t: Task, ev: Events, leg?: Leg): 'again' | 'done' | 'fail' {
   const id = treeEntityId(t.target);
   const e = id ? world.entities.get(id) : undefined;
   if (v.carry && v.carry.item !== 'wood') return 'fail';
   const have = v.carry?.amount ?? 0;
   if (!id || !e || e.harvested) return have > 0 ? 'done' : 'fail';
+  // STAB-002 S3 (v7): felling for an approved site stops once the load covers what the site still needs; the load is the site's.
+  const forSite = isHerdHomestead(h) ? t.legs.find((l) => l.effect === 'deliver' && l.at)?.at : undefined;
+  const st = forSite ? h.sites?.find((x) => x.id === forSite && x.state === 'approved') : undefined;
+  let limit = WOOD_CARRY;
+  if (forSite) {
+    if (!st) return have > 0 ? 'done' : 'fail';
+    const mine = v.carry?.site === st.id ? have : 0;
+    const need = (SITE_RULES[st.kind].cost.wood ?? 0) - (st.delivered.wood ?? 0) - (st.reserved.wood ?? 0) - (carriedFor(h, st.id, 'wood') - mine);
+    limit = Math.min(WOOD_CARRY, leg?.amount ?? WOOD_CARRY, Math.max(0, need));
+    if (limit - have <= 0) return have > 0 ? 'done' : 'fail';
+  }
   const stageBefore = isWoodlandHomestead(h) ? treeLife(world, e)?.stage : growthStage(e);
+  // A cut is whole (3-5 wood): a load may end above what the site needs; the site takes its share and the rest goes to the store.
   const r = cutEntity(world, id, WOOD_CARRY - have);
   if (!r) return have > 0 ? 'done' : 'fail';
-  v.carry = { item: 'wood', amount: have + r.amount };
+  v.carry = st ? { item: 'wood', amount: have + r.amount, site: st.id } : { item: 'wood', amount: have + r.amount };
   if (e.harvested) {
     felledTrees.set(world, (felledTrees.get(world) ?? 0) + 1);
     ev.log.push(`${v.name} felled a ${stageBefore === 'snag' ? 'dead' : stageBefore} ${isWoodlandHomestead(h) ? treeLife(world, e)?.species ?? '' : ''}${isWoodlandHomestead(h) ? ' ' : ''}tree (${v.carry.amount} wood in hand)`);
     return 'done';
   }
   const next = Math.min(e.yieldPerHarvest, e.remaining);
+  if (forSite) return v.carry.amount < limit ? 'again' : 'done';
   return next <= WOOD_CARRY - v.carry.amount ? 'again' : 'done';
 }
 
@@ -1340,6 +1384,8 @@ function claimed(h: HomesteadState, self: Villager): Set<string> {
 }
 
 function plan(world: World, h: HomesteadState, v: Villager, tick: number, budget: { left: number } = { left: NAV_TICK_BUDGET }): Task | null {
+  // STAB-002 S3: rules v7 plan by priority class, with shared jobs and batched trips.
+  if (isHerdHomestead(h)) return planV7(world, h, v, tick, budget);
   const layout = homesteadLayout(h);
   const byId = new Map(layout.map((f) => [f.id, f]));
   const home = byId.get('farmhouse')!.use, well = byId.get('well')!.use;
@@ -1532,6 +1578,547 @@ function plan(world: World, h: HomesteadState, v: Villager, tick: number, budget
   return task('idle', `idle:${v.id}`, [walk({ x: home.x + ox, z: home.z + oz + 30 }), work({ x: home.x + ox, z: home.z + oz + 30 }, 8, 'none')]);
 }
 
+// ---------- STAB-002 S3: work priority, shared jobs and batched trips (settlement rules v7) ----------
+
+/**
+ * Priority classes under rules v7, lowest first: safety (eat, sleep, a load in
+ * hand); critical upkeep (a crop about to wither, a trough nearly dry); the
+ * next unit of an owner order the villager is already working on; overdue
+ * upkeep or routine work of the villager's own role; owner orders (approved
+ * sites, fields the owner marked until they are sown, the owner's priority
+ * list); overdue work of other roles (overdue for anyone at twice the age); urgent upkeep
+ * (thirsty or hungry animals, strays, a crop drying out); routine work; idle.
+ */
+export const PRIORITY = { safety: 0, critical: 0.25, onJob: 0.4, overdue: 0.5, order: 1, lateOther: 1.5, urgent: 2, routine: 3, idle: 4 } as const;
+/** Routine work waiting this many daytime ticks counts as urgent upkeep. */
+export const AGE_URGENT = 45;
+/** Waiting work of the same class is taken oldest first in steps of this many daytime ticks (nearest first within a step). */
+export const AGE_STEP = 30;
+/** Any upkeep or routine work waiting this many daytime ticks (75) is overdue: ahead of owner orders, and anyone may do it. */
+export const AGE_OVERDUE = 75;
+/** A sprouted crop this many ticks dry, or a trough this low, is overdue at once (the crop withers at WITHER_TICKS). */
+export const CROP_CRITICAL_DRY = 15;
+export const TROUGH_CRITICAL = 6;
+/** v7: a villager this hungry eats before bed (from DUSK_TICKS before nightfall). */
+export const BED_HUNGER = 40;
+export const DUSK_TICKS = 25;
+/** v7: while asleep, hunger rises by 1 every this many ticks (awake: every 2). */
+export const SLEEP_HUNGER_EVERY = 6;
+/** v7: legs a batched task may have. */
+export const MAX_LEGS_V7 = 12;
+/** v7: villagers that may share a large job (an approved site; digging or sowing a field of 3 units or more). */
+export const JOB_WORKERS = 2;
+/** v7: the most seed one sower takes for a field: half the field, at least this. */
+export const SOW_CHUNK = 4;
+export const MAX_DUE = 160;
+export const MAX_PRIORITY = 16;
+
+/** Daytime ticks in [0, t): night ticks are not counted (nobody works at night). */
+export function daylight(t: number): number {
+  const r = t % DAY_TICKS;
+  return Math.floor(t / DAY_TICKS) * (DAY_TICKS - (NIGHT_END - NIGHT_START)) + Math.min(r, NIGHT_START) + Math.max(0, r - NIGHT_END);
+}
+/** Daytime ticks between two ticks: the age of waiting work. */
+export const daylightAge = (since: number, tick: number) => Math.max(0, daylight(tick) - daylight(since));
+
+/** Upkeep and routine work that is due now (rules v7 ages it; the evidence harness measures its wait under any rules). */
+export interface DueJob {
+  key: string; kind: 'water' | 'harvest' | 'sow' | 'till' | 'stray' | 'trough' | 'feed' | 'eggs' | 'product' | 'restock';
+  /** The field, enclosure, animal or 'store' it is for. */
+  target: string;
+  /** The role it belongs to (null: anyone's). */
+  role: Role | null; base: 2 | 3; critical: boolean;
+  /** The field or enclosure an owner priority on which makes it an order. */
+  place: string;
+}
+export function dueWork(world: World, h: HomesteadState): DueJob[] {
+  const out: DueJob[] = [];
+  const s = freeView(world, h);
+  const room = stock(world);
+  const space = Math.max(0, room.capacity - total(room.inventory)) + Math.max(0, OVERFLOW_CAPACITY - total(h.overflow));
+  const seed = (s.seed ?? 0) + (h.overflow.seed ?? 0), fiber = (s.fiber ?? 0) + (h.overflow.fiber ?? 0);
+  for (const p of [...h.plots].sort((a, b) => a.id.localeCompare(b.id))) {
+    const one = (kind: DueJob['kind'], base: 2 | 3, critical = false) => out.push({ key: `${kind}:${p.id}`, kind, target: p.id, role: 'farmer', base, critical, place: p.id });
+    if (p.state === 'growing' && p.moisture <= 4) {
+      const drying = p.moisture === 0 && p.growth > 0;
+      one('water', drying ? 2 : 3, drying && p.dry >= CROP_CRITICAL_DRY);
+    } else if (p.state === 'ripe' && space >= Object.values(CROP_RULES[p.crop].yield).reduce((n, a) => n + a, 0) * unitsOf(p)) one('harvest', 3);
+    else if (p.state === 'tilled' && p.order === undefined && (seed > 0 || fiber >= RECIPES.seed.input.fiber!)) one('sow', 3);
+    else if (p.state === 'wild' && p.order === undefined) one('till', 3);
+  }
+  const occupied = (id: EnclosureId) => h.animals.some((a) => SPECIES_RULES[a.species].enclosure === id);
+  const straw = fiber;
+  for (const e of [...h.enclosures].sort((a, b) => a.id.localeCompare(b.id))) {
+    if (!occupied(e.id)) continue;
+    const one = (kind: DueJob['kind'], key: string, base: 2 | 3, critical = false) => out.push({ key, kind, target: e.id, role: 'herder', base, critical, place: e.id });
+    if (gateStateOf(h, `gate:${e.id}`) === 'closed' && straysOf(h, e.id).length) one('stray', `stray:${e.id}`, 2);
+    if (e.water <= 14) one('trough', `trough:${e.id}`, 2, e.water <= TROUGH_CRITICAL);
+    const needsTrough = h.animals.some((a) => SPECIES_RULES[a.species].enclosure === e.id && e.grass < SPECIES_RULES[a.species].graze * 3);
+    if (needsTrough && e.feed <= 8 && straw > 0) one('feed', `feed:${e.id}`, 2);
+  }
+  const coop = h.enclosures.find((e) => e.id === 'coop');
+  if (coop && coop.eggs >= 3 && space >= coop.eggs) out.push({ key: 'eggs:coop', kind: 'eggs', target: 'coop', role: 'herder', base: 3, critical: false, place: 'coop' });
+  for (const a of [...h.animals].sort((x, y) => x.id.localeCompare(y.id))) {
+    const p = SPECIES_RULES[a.species].product;
+    if (p && p.resource !== 'eggs' && a.product >= p.every && space >= p.amount) {
+      out.push({ key: `product:${a.id}`, kind: 'product', target: a.id, role: 'herder', base: 3, critical: false, place: SPECIES_RULES[a.species].enclosure });
+    }
+  }
+  if (Object.keys(h.overflow).length && total(room.inventory) < room.capacity) out.push({ key: 'restock:store', kind: 'restock', target: 'store', role: null, base: 3, critical: false, place: 'store' });
+  return out;
+}
+
+/** v7, once a tick before anyone acts: keep the tick each piece of due work became due; drop priorities that no longer apply. */
+function updateDue(world: World, h: HomesteadState, tick: number): void {
+  const next: Record<string, number> = {};
+  for (const j of dueWork(world, h).slice(0, MAX_DUE)) next[j.key] = h.due?.[j.key] ?? tick;
+  h.due = Object.fromEntries(Object.entries(next).sort(([a], [b]) => a.localeCompare(b)));
+  if (h.priority) {
+    const keep = h.priority.filter((t) => priorityTargetValid(h, t));
+    if (keep.length) h.priority = keep; else delete h.priority;
+  }
+}
+function priorityTargetValid(h: HomesteadState, target: string): boolean {
+  if (h.plots.some((p) => p.id === target)) return true;
+  if (h.enclosures.some((e) => e.id === target)) return true;
+  const st = h.sites?.find((x) => x.id === target);
+  return !!st && (st.state === 'planned' || st.state === 'approved');
+}
+
+/** Does a task (still) work on this target: its own target, or a remaining leg's? */
+export function touches(t: Task, target: string): boolean {
+  if (t.target === target) return true;
+  for (let i = t.leg; i < t.legs.length; i++) if (t.legs[i].at === target) return true;
+  return false;
+}
+/** v7 claims: how many other villagers hold each job key (a felling for a site is `fell:<site>`); give-ups count as full. */
+function claimsV7(h: HomesteadState, self: Villager, tick: number): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const v of h.villagers) {
+    if (v === self || !v.task) continue;
+    const t = v.task;
+    // Waiting beside a field with seed in hand takes no worker's place.
+    if (t.kind === 'sow' && t.legs.slice(t.leg).every((l) => l.op === 'walk' || l.effect === 'none') && v.carry) continue;
+    const keys = new Set<string>([t.target]);
+    for (let i = t.leg; i < t.legs.length; i++) {
+      const at = t.legs[i].at;
+      if (at) keys.add(t.kind === 'chop' && t.legs[i].effect === 'deliver' ? `fell:${at}` : at);
+    }
+    for (const k of keys) out.set(k, (out.get(k) ?? 0) + 1);
+  }
+  for (const a of self.avoid ?? []) if (a.until > tick) out.set(a.target, 99);
+  // A job someone gave up because the way is blocked (a fence, a tree) is blocked for everyone: nobody else walks into it too.
+  for (const v of h.villagers) if (v !== self) for (const a of v.avoid ?? []) if (a.until > tick && a.by !== PLAYER_ID) out.set(a.target, 99);
+  return out;
+}
+/** Sum over other villagers' remaining legs (amount, or work ticks when `ticks`). */
+function pending(h: HomesteadState, self: Villager, pick: (t: Task, l: Leg) => boolean, ticks = false): number {
+  let n = 0;
+  for (const v of h.villagers) {
+    if (v === self || !v.task) continue;
+    const t = v.task;
+    for (let i = t.leg; i < t.legs.length; i++) if (pick(t, t.legs[i])) n += ticks ? t.legs[i].ticks : t.legs[i].amount ?? 0;
+  }
+  return n;
+}
+const legAt = (t: Task, l: Leg) => l.at ?? t.target;
+/** Seed other villagers hold or are fetching for a field. */
+function seedGoing(h: HomesteadState, self: Villager, p: Plot): number {
+  let n = 0;
+  const r = fieldRect(p);
+  for (const v of h.villagers) {
+    if (v === self) continue;
+    // Seed in the hands of someone between tasks inside the field is for it too.
+    if (!v.task) { if (v.carry?.item === 'seed' && insideRect(r, v.x, v.z)) n += v.carry.amount; continue; }
+    if (!touches(v.task, p.id)) continue;
+    if (v.carry?.item === 'seed') n += v.carry.amount;
+    const t = v.task;
+    for (let i = t.leg; i < t.legs.length; i++) if (t.legs[i].effect === 'take' && t.legs[i].item === 'seed') n += t.legs[i].amount ?? 0;
+  }
+  return n;
+}
+/** Where the k-th worker of a field stands: one cell per unit, spread over the field. */
+export function fieldSpot(p: Pick<Plot, 'x' | 'z' | 'w' | 'd'>, k: number): { x: number; z: number } {
+  const cells = p.w * p.d, units = fieldUnits(p.w, p.d);
+  const i = Math.min(cells - 1, Math.floor((((k % units) + units) % units + 0.5) * cells / units));
+  return { x: (p.x + (i % p.w)) * DM + 5, z: (p.z + Math.floor(i / p.w)) * DM + 5 };
+}
+/** v7: units of a field that may be sown now: all once dug, else the units dug so far. */
+export const sowable = (p: Plot) => (p.state === 'tilled' ? unitsOf(p) : p.state === 'wild' ? Math.floor(p.tilled / TILL_PER_UNIT) : 0);
+/** Where a helper waits at a field without standing on a worker's spot: its corner cell. */
+const fieldCorner = (p: Pick<Plot, 'x' | 'z'>) => ({ x: p.x * DM + 5, z: p.z * DM + 5 });
+/** Rough length of a task (ticks): straight-line walks with a detour allowance, plus the work. */
+function taskTicks(v: Villager, t: Task): number {
+  let x = v.x, z = v.z, n = 0;
+  for (const l of t.legs) {
+    if (l.op === 'walk') { n += Math.ceil((len2(l.x - x, l.z - z) * 1.4) / VILLAGER_SPEED); x = l.x; z = l.z; } else n += l.ticks;
+  }
+  return n;
+}
+/**
+ * The class of due work for a villager of `role`: an owner priority makes it an order; critical, critical; 75
+ * daytime ticks old, overdue for its own role (for the others it comes just after owner orders, until it is
+ * twice that old); routine work 45 old, urgent.
+ */
+function dueClass(h: HomesteadState, j: DueJob, tick: number, role: Role): number {
+  if (h.priority?.includes(j.place)) return PRIORITY.order;
+  const age = daylightAge(h.due?.[j.key] ?? tick, tick);
+  if (j.critical) return PRIORITY.critical;
+  if (age >= AGE_OVERDUE) return j.role === null || j.role === role || age >= 2 * AGE_OVERDUE ? PRIORITY.overdue : PRIORITY.lateOther;
+  return j.base === 3 && age < AGE_URGENT ? PRIORITY.routine : PRIORITY.urgent;
+}
+/** The class of the work a routine task is doing (for pre-emption: only strictly more important work interrupts it). */
+function taskClass(world: World, h: HomesteadState, t: Task, tick: number, role: Role): number {
+  const plot = h.plots.find((p) => p.id === t.target);
+  if (plot && (plot.order !== undefined || h.priority?.includes(plot.id))) return PRIORITY.order;
+  const key = t.kind === 'collect' ? 'eggs:coop' : t.kind === 'milk' || t.kind === 'shear' ? `product:${t.target}` : t.kind === 'restock' ? 'restock:store'
+    : plot ? `${t.kind}:${plot.id}` : null;
+  const j = key ? dueWork(world, h).find((x) => x.key === key) : undefined;
+  return j ? dueClass(h, j, tick, role) : PRIORITY.routine;
+}
+/** Task kinds that are routine work: one still on its first walk with empty hands may give way to safety or overdue work. */
+const ROUTINE_KINDS = new Set(['collect', 'milk', 'shear', 'harvest', 'water', 'restock', 'thresh', 'sow', 'till', 'plant']);
+
+interface Job { cls: number; own: boolean; since: number; d: number; key: string; make: () => Task | 'busy' | null }
+
+/**
+ * v7 planning. Safety first (a load in hand is taken where it goes, eating,
+ * sleep), then the best job by class, own role, age (oldest first), distance
+ * and key. With `below`, only a job of a class below it is returned (a
+ * pre-emption probe: no state changes).
+ */
+function planV7(world: World, h: HomesteadState, v: Villager, tick: number, budget: { left: number }, below = Infinity as number): Task | null {
+  const layout = homesteadLayout(h);
+  const byId = new Map(layout.map((f) => [f.id, f]));
+  const home = byId.get('farmhouse')!.use;
+  const s = freeView(world, h);
+  const taken = claimsV7(h, v, tick);
+  const free = (k: string, cap = 1) => (taken.get(k) ?? 0) < cap;
+  const keySet = () => new Set([...taken.keys()]);
+  const task = (kind: string, target: string, legs: Leg[]): Task => ({ kind, target, legs, leg: 0, progress: 0 });
+  const atLeg = (l: Leg, at: string): Leg => ({ ...l, at });
+  const room = stock(world);
+  const space = Math.max(0, room.capacity - total(room.inventory)) + Math.max(0, OVERFLOW_CAPACITY - total(h.overflow));
+  const fits = (n: number) => space >= n;
+  const night = isNight(tick), dayT = tick % DAY_TICKS;
+  const dusk = !night && dayT >= NIGHT_START - DUSK_TICKS;
+  const probe = below !== Infinity;
+  const plots = [...h.plots].sort((a, b) => a.id.localeCompare(b.id));
+  const sites = [...(h.sites ?? [])].sort((a, b) => a.id.localeCompare(b.id));
+  const prio = new Set(h.priority ?? []);
+  const isOrder = (p: Plot) => p.order !== undefined || prio.has(p.id);
+  const seedFree = (s.seed ?? 0) + (h.overflow.seed ?? 0);
+  const fiberFree = (s.fiber ?? 0) + (h.overflow.fiber ?? 0);
+  const units = (p: Plot) => unitsOf(p);
+  const cap = (p: Plot) => (units(p) >= 3 ? JOB_WORKERS : 1);
+  const tillLeft = (p: Plot) => TILL_PER_UNIT * units(p) - p.tilled - pending(h, v, (t, l) => l.effect === 'till' && legAt(t, l) === p.id, true);
+  const sowLeft = (p: Plot) => units(p) - (p.sown ?? 0) - seedGoing(h, v, p);
+  const tillTask = (p: Plot): Task | null => {
+    const left = tillLeft(p);
+    if (left <= 0) return null;
+    const spot = fieldSpot(p, Math.floor((TILL_PER_UNIT * units(p) - left) / TILL_PER_UNIT));
+    return task('till', p.id, [walk(spot), atLeg(work(spot, Math.min(TILL_PER_UNIT, left), 'till'), p.id)]);
+  };
+  const food = FOOD_PREFERENCE.some((f) => (s[f] ?? 0) + (h.overflow[f] ?? 0) > 0) && free(`eat:${v.id}`);
+  const eat = () => task('eat', `eat:${v.id}`, [walk(STOCK), work(STOCK, 3, 'eat')]);
+
+  // ---- P0 safety ----
+  if (v.hunger >= 100 && food) return eat();
+  if (!probe && v.carry) {
+    const t = carryTaskV7(world, h, v, tick, budget, free, cap, sowLeft, tillLeft, tillTask, isOrder, plots, sites, byId);
+    if (t === 'busy') return null;
+    if (t) return t;
+  }
+  if (food && (v.hunger >= 70 || (v.hunger >= BED_HUNGER && (dusk || night)))) return eat();
+  if (night || v.energy <= 10) {
+    const bed = free(`home:${v.id}`) ? bedSpot(h, v) : { x: v.x, z: v.z };
+    return task('rest', `home:${v.id}`, [walk(bed), work(bed, 1, 'rest')]);
+  }
+  if (v.carry) return null; // a load nobody can take anywhere (a probe never gets here with one)
+
+  const jobs: Job[] = [];
+  const d = (p: { x: number; z: number }) => d2(v, p);
+  const push = (j: Job) => { if (j.cls < below) jobs.push(j); };
+
+  // ---- P1 owner orders: approved and cancelled sites, fellings for sites short of wood ----
+  for (const st of sites) {
+    // Sites in id order (the order reservations serve them); a site on the priority list first.
+    const spot = siteSpot(st), since = prio.has(st.id) ? -1 : Number(st.id.slice(5)), own = v.role === 'builder';
+    // The next load or stint of a site the villager stands at keeps it there (ahead of overdue routine work).
+    const order = d2(v, spot) <= 20 * 20 ? PRIORITY.onJob : PRIORITY.order;
+    if (st.state === 'cancelled') {
+      const item = Object.keys(st.delivered).sort().find((k) => (st.delivered[k] ?? 0) > 0);
+      if (item && free(st.id)) push({ cls: order, own, since, d: d(spot), key: st.id,
+        make: () => task('reclaim', st.id, [walk(spot), atLeg(work(spot, 1, 'reclaim', item, Math.min(st.delivered[item], BUILDER_CARRY)), st.id)]) });
+      continue;
+    }
+    if (st.state !== 'approved') continue;
+    if (free(st.id, JOB_WORKERS)) {
+      const avail = (b: BuildSite, k: string) => (b.reserved[k] ?? 0) - pending(h, v, (t, l) => l.effect === 'fetch' && l.item === k && legAt(t, l) === b.id);
+      const item = Object.keys(st.reserved).sort().find((k) => avail(st, k) > 0);
+      if (item) {
+        push({ cls: order, own, since, d: d(spot), key: st.id, make: () => {
+          const src = fetchSource(world, h, st, item);
+          const a = Math.max(1, Math.min(avail(st, item), BUILDER_CARRY, src.have));
+          const legs: Leg[] = [walk(src), atLeg(work(src, 1, 'fetch', item, a), st.id)];
+          const tail: Leg[] = [walk(spot), atLeg(work(spot, 1, 'deliver'), st.id)];
+          // One trip for two sites: the rest of the load is taken for a second site that needs the same item from the same store.
+          if (a < BUILDER_CARRY && src.have > a) {
+            for (const b of sites) {
+              if (b === st || b.state !== 'approved' || !free(b.id, JOB_WORKERS) || avail(b, item) <= 0) continue;
+              const sb = fetchSource(world, h, b, item);
+              if (sb.x !== src.x || sb.z !== src.z) continue;
+              const n = Math.min(avail(b, item), BUILDER_CARRY - a, src.have - a);
+              if (n <= 0) continue;
+              legs.push(atLeg(work(src, 1, 'fetch', item, n), b.id));
+              tail.push(walk(siteSpot(b)), atLeg(work(siteSpot(b), 1, 'deliver'), b.id));
+              break;
+            }
+          }
+          return task('haul', st.id, [...legs, ...tail]);
+        } });
+      } else if (siteWorkAllowed(st) - st.work - pending(h, v, (t, l) => l.effect === 'build' && legAt(t, l) === st.id, true) > 0) {
+        push({ cls: order, own, since, d: d(spot), key: st.id, make: () => task('build', st.id, [walk(spot), atLeg(work(spot, BUILD_STINT, 'build'), st.id)]) });
+      }
+    }
+    const short = (siteShortfall(h, st).wood ?? 0) - pending(h, v, (t, l) => t.kind === 'chop' && l.effect === 'chop'
+      && t.legs.some((x) => x.effect === 'deliver' && x.at === st.id) && !h.villagers.some((o) => o.task === t && o.carry?.site === st.id));
+    if (short > 0 && isWoodlandHomestead(h)) {
+      push({ cls: order, own: v.role === 'woodcutter', since, d: d(spot), key: `fell:${st.id}`, make: () => {
+        const r = planFelling(world, h, v, keySet(), budget, { id: st.id, x: spot.x, z: spot.z }, Math.min(WOOD_CARRY, short), short);
+        return r === 'busy' ? 'busy' : typeof r === 'string' ? null : r;
+      } });
+    }
+  }
+  // ---- P1 owner orders: fields the owner marked (until sown) or put on the priority list ----
+  const sowJob = (p: Plot, cls: number, since: number, key: string) => {
+    const left = sowLeft(p);
+    if (left <= 0 || !free(p.id, cap(p))) return;
+    if (seedFree > 0) {
+      push({ cls, own: v.role === 'farmer', since, d: d(STOCK), key, make: () => {
+        const n = Math.min(left, seedFree, Math.max(SOW_CHUNK, Math.ceil(units(p) / 2)));
+        const spot = fieldSpot(p, units(p) - left);
+        return task('sow', p.id, [walk(STOCK), work(STOCK, 1, 'take', 'seed', n), walk(spot), atLeg(work(spot, 1 + n, 'sow', undefined, n), p.id)]);
+      } });
+    } else if (fiberFree >= RECIPES.seed.input.fiber! && free('thresh:store')) {
+      push({ cls, own: v.role === 'farmer', since, d: d(STOCK), key: 'thresh:store', make: () => task('thresh', 'thresh:store', [walk(STOCK), work(STOCK, 4, 'thresh')]) });
+    }
+  };
+  const waterJob = (p: Plot, cls: number, since: number, key: string, own: boolean) => {
+    if (!free(p.id)) return;
+    push({ cls, own, since, d: d(fieldCentre(p)), key, make: () => {
+      const at = fieldCentre(p), w = wellFor(h, at);
+      const legs: Leg[] = [walk(w), work(w, 2, 'draw', undefined, CAN_WATERINGS), walk(at), atLeg(work(at, 1, 'water_plot'), p.id)];
+      // A can holds 3 waterings: what this field leaves goes on the next thirsty field.
+      const used = Math.ceil(((MOISTURE_MAX - p.moisture) * units(p)) / MOISTURE_MAX);
+      if (used < CAN_WATERINGS) {
+        const next = plots.filter((q) => q !== p && q.state === 'growing' && q.moisture < MOISTURE_MAX - 3 && free(q.id))
+          .sort((a, b) => a.moisture - b.moisture || d2(at, fieldCentre(a)) - d2(at, fieldCentre(b)) || a.id.localeCompare(b.id))[0];
+        if (next) legs.push(walk(fieldCentre(next)), atLeg(work(fieldCentre(next), 1, 'water_plot'), next.id));
+      }
+      return task('water', p.id, legs);
+    } });
+  };
+  const harvestJob = (p: Plot, cls: number, since: number, key: string, own: boolean) => {
+    if (!free(p.id)) return;
+    const at = fieldCentre(p);
+    push({ cls, own, since, d: d(at), key, make: () => task('harvest', p.id, [walk(at), atLeg(work(at, 1 + 2 * units(p), 'reap'), p.id), walk(STOCK), work(STOCK, 1, 'store')]) });
+  };
+  for (const p of plots) {
+    if (!isOrder(p)) continue;
+    const since = p.order ?? -1, own = v.role === 'farmer';
+    // The next unit of a field the villager stands in keeps it there (ahead of overdue routine work).
+    const order = insideRect(fieldRect(p), v.x, v.z) ? PRIORITY.onJob : PRIORITY.order;
+    if (p.state === 'wild') {
+      if (tillLeft(p) <= 0 || !free(p.id, cap(p))) continue;
+      const need = sowLeft(p);
+      if ((taken.get(p.id) ?? 0) > 0 && need > 0 && seedFree > 0) {
+        // The second worker brings the seed while the first digs, then digs or sows with it.
+        push({ cls: order, own, since, d: d(STOCK), key: p.id, make: () => {
+          const n = Math.min(need, seedFree), spot = fieldCorner(p);
+          return task('sow', p.id, [walk(STOCK), work(STOCK, 1, 'take', 'seed', n), walk(spot), atLeg(work(spot, 1, 'none'), p.id)]);
+        } });
+      } else push({ cls: order, own, since, d: d(fieldCentre(p)), key: p.id, make: () => tillTask(p) });
+    } else if (p.state === 'tilled') sowJob(p, order, since, p.id);
+    else if (p.state === 'growing' && p.moisture < MOISTURE_MAX - 3) waterJob(p, order, since, p.id, own);
+    else if (p.state === 'ripe' && fits(Object.values(CROP_RULES[p.crop].yield).reduce((n, a) => n + a, 0) * units(p))) harvestJob(p, order, since, p.id, own);
+  }
+
+  // ---- P2/P3 upkeep and routine work, aged ----
+  for (const j of dueWork(world, h)) {
+    // Age in steps of AGE_STEP daytime ticks, so that among work of about the same age the nearest goes first.
+    const since = Math.floor(daylight(h.due?.[j.key] ?? tick) / AGE_STEP), cls = dueClass(h, j, tick, v.role);
+    const own = j.role === null || j.role === v.role;
+    if (cls === PRIORITY.routine && !own) continue;
+    const p = j.kind === 'water' || j.kind === 'harvest' || j.kind === 'sow' || j.kind === 'till' ? plots.find((q) => q.id === j.target)! : null;
+    if (j.kind === 'water') waterJob(p!, cls, since, j.key, own);
+    else if (j.kind === 'harvest') harvestJob(p!, cls, since, j.key, own);
+    else if (j.kind === 'sow') sowJob(p!, cls, since, j.key);
+    else if (j.kind === 'till') { if (free(p!.id, cap(p!))) push({ cls, own, since, d: d(fieldCentre(p!)), key: j.key, make: () => tillTask(p!) }); }
+    else if (j.kind === 'stray') {
+      const id = j.target as EnclosureId;
+      if (!free(`stray:${id}`)) continue;
+      const g = penGate(h, id), hold = { x: g.hold[0] * DM + 5, z: g.hold[1] * DM + 5 };
+      push({ cls, own, since, d: d(hold), key: j.key, make: () => {
+        const loose = straysOf(h, id).find((a) => a.go !== 'home');
+        const fetch = loose ? [walk({ x: loose.x, z: loose.z }), work({ x: loose.x, z: loose.z }, 1, 'herd')] : [];
+        return task('round_up', `stray:${id}`, [...fetch, walk(hold), work(hold, HOLD_GATE_TICKS, 'hold_gate')]);
+      } });
+    } else if (j.kind === 'trough') {
+      const id = j.target as EnclosureId;
+      if (!free(`water:${id}`)) continue;
+      const t = byId.get(id)!.trough!;
+      push({ cls, own, since, d: d(t), key: j.key, make: () => {
+        // A bucket for each trough on the way that can take one (up to three); the coop's goes last so the eggs come along on the way back.
+        const others = h.enclosures.filter((e) => e.id !== id && e.water <= TROUGH_MAX - BUCKET && free(`water:${e.id}`)
+          && h.animals.some((a) => SPECIES_RULES[a.species].enclosure === e.id))
+          .sort((a, b) => a.water - b.water || d2(t, byId.get(a.id)!.trough!) - d2(t, byId.get(b.id)!.trough!) || a.id.localeCompare(b.id)).slice(0, 2);
+        const stops = [id, ...others.map((e) => e.id)].sort((a, b) => Number(a === 'coop') - Number(b === 'coop'));
+        const w = wellFor(h, t);
+        const legs: Leg[] = [walk(w), work(w, 2, 'draw', undefined, stops.length)];
+        for (const e of stops) { const p2 = byId.get(e)!.trough!; legs.push(walk(p2), atLeg(work(p2, 1, 'water_trough'), `water:${e}`)); }
+        const coop = h.enclosures.find((e) => e.id === 'coop')!;
+        if (stops.includes('coop') && coop.eggs > 0 && free('eggs:coop') && fits(coop.eggs)) {
+          const c = nestSpot(h);
+          legs.push(walk(c), atLeg(work(c, 2, 'gather_eggs'), 'eggs:coop'), walk(STOCK), work(STOCK, 1, 'store'));
+        }
+        return task('water_trough', `water:${id}`, legs);
+      } });
+    } else if (j.kind === 'feed') {
+      const id = j.target as EnclosureId, e = h.enclosures.find((x) => x.id === id)!;
+      if (!free(`feed:${id}`)) continue;
+      const t = byId.get(id)!.trough!;
+      const amount = Math.min(6, fiberFree, TROUGH_MAX - e.feed);
+      if (amount > 0) push({ cls, own, since, d: d(STOCK), key: j.key, make: () => task('feed', `feed:${id}`, [walk(STOCK), work(STOCK, 1, 'take', 'fiber', amount), walk(t), work(t, 2, 'fill_feed')]) });
+    } else if (j.kind === 'eggs') {
+      if (!free('eggs:coop')) continue;
+      const c = nestSpot(h);
+      push({ cls, own, since, d: d(c), key: j.key, make: () => task('collect', 'eggs:coop', [walk(c), work(c, 2, 'gather_eggs'), walk(STOCK), work(STOCK, 1, 'store')]) });
+    } else if (j.kind === 'product') {
+      const a = h.animals.find((x) => x.id === j.target)!;
+      if (!free(a.id)) continue;
+      const pr = SPECIES_RULES[a.species].product!;
+      push({ cls, own, since, d: d(a), key: j.key, make: () => {
+        const eff: Effect = pr.resource === 'wool' ? 'shear' : 'milk', ticks = pr.resource === 'wool' ? 4 : 3;
+        const legs: Leg[] = [walk({ x: a.x, z: a.z }), atLeg(work({ x: a.x, z: a.z }, ticks, eff), a.id)];
+        // Up to three animals ready with the same product nearby: one trip, one load.
+        const more = [...h.animals].filter((b) => b !== a && free(b.id) && SPECIES_RULES[b.species].product?.resource === pr.resource
+          && b.product >= SPECIES_RULES[b.species].product!.every && len2(b.x - a.x, b.z - a.z) <= 150)
+          .sort((x, y) => d2(a, x) - d2(a, y) || x.id.localeCompare(y.id)).slice(0, 2);
+        let carried = pr.amount;
+        for (const b of more) {
+          if (!fits(carried + SPECIES_RULES[b.species].product!.amount)) break;
+          legs.push(walk({ x: b.x, z: b.z }), atLeg(work({ x: b.x, z: b.z }, ticks, eff), b.id));
+          carried += SPECIES_RULES[b.species].product!.amount;
+        }
+        return task(eff, a.id, [...legs, walk(STOCK), work(STOCK, 1, 'store')]);
+      } });
+    } else if (j.kind === 'restock') {
+      if (!free('overflow:store')) continue;
+      const loose = Object.keys(h.overflow).sort()[0];
+      const n = Math.min(h.overflow[loose], room.capacity - total(room.inventory), 10);
+      push({ cls, own, since, d: d(STOCK), key: j.key, make: () => task('restock', 'overflow:store', [walk(STOCK), work(STOCK, 2, 'restock', loose, n)]) });
+    }
+  }
+  // ---- P3 the woodcutter's own work: replanting, then felling for stock ----
+  if (v.role === 'woodcutter' && isWoodlandHomestead(h)) {
+    push({ cls: PRIORITY.routine, own: true, since: tick, d: 0, key: 'woodcutter', make: () => {
+      const r = planWoodcutter(world, h, v, keySet(), budget);
+      return r === 'busy' ? 'busy' : typeof r === 'string' ? null : r;
+    } });
+  }
+
+  jobs.sort((a, b) => a.cls - b.cls || Number(b.own) - Number(a.own) || a.since - b.since || a.d - b.d || a.key.localeCompare(b.key));
+  for (const j of jobs) {
+    const t = j.make();
+    if (t === 'busy') return null;
+    if (!t) continue;
+    // Near dusk, routine work that would run into the night waits for the morning.
+    if (j.cls >= PRIORITY.routine && dayT + taskTicks(v, t) > NIGHT_START) continue;
+    return t;
+  }
+  if (probe) return null;
+  // Nothing to do: idle near home for a while (any job that comes up interrupts it).
+  const ox = Math.floor(rnd(h) * 60) - 30, oz = Math.floor(rnd(h) * 40) - 20;
+  return task('idle', `idle:${v.id}`, [walk({ x: home.x + ox, z: home.z + oz + 30 }), work({ x: home.x + ox, z: home.z + oz + 30 }, 8, 'none')]);
+}
+
+/** v7 safety: a load in hand goes where it is for before anything else (a site load to its site, seed into a field, water on a crop or trough). */
+function carryTaskV7(world: World, h: HomesteadState, v: Villager, tick: number, budget: { left: number }, free: (k: string, cap?: number) => boolean,
+  cap: (p: Plot) => number, sowLeft: (p: Plot) => number, tillLeft: (p: Plot) => number, tillTask: (p: Plot) => Task | null,
+  isOrder: (p: Plot) => boolean, plots: Plot[], sites: BuildSite[], byId: Map<string, Facility>): Task | 'busy' | null {
+  const task = (kind: string, target: string, legs: Leg[]): Task => ({ kind, target, legs, leg: 0, progress: 0 });
+  const c = v.carry!;
+  if (c.site) {
+    const st = sites.find((x) => x.id === c.site && x.state === 'approved');
+    if (st) {
+      const legs: Leg[] = [walk(siteSpot(st)), { ...work(siteSpot(st), 1, 'deliver'), at: st.id }];
+      const b = c.also && sites.find((x) => x.id === c.also!.site && x.state === 'approved');
+      if (b) legs.push(walk(siteSpot(b)), { ...work(siteSpot(b), 1, 'deliver'), at: b.id });
+      return task('haul', st.id, legs);
+    }
+    v.carry = { item: c.item, amount: c.amount };
+  }
+  const load = v.carry!;
+  if (load.item === 'water') {
+    const dry = plots.filter((p) => p.state === 'growing' && p.moisture < MOISTURE_MAX - 3 && free(p.id))
+      .sort((a, b) => a.moisture - b.moisture || a.id.localeCompare(b.id))[0];
+    if (dry) return task('water', dry.id, [walk(fieldCentre(dry)), { ...work(fieldCentre(dry), 1, 'water_plot'), at: dry.id }]);
+    const tr = [...h.enclosures].filter((e) => e.water <= TROUGH_MAX - BUCKET && free(`water:${e.id}`) && h.animals.some((a) => SPECIES_RULES[a.species].enclosure === e.id))
+      .sort((a, b) => a.water - b.water || a.id.localeCompare(b.id))[0];
+    if (tr) { const t = byId.get(tr.id)!.trough!; return task('water_trough', `water:${tr.id}`, [walk(t), { ...work(t, 1, 'water_trough'), at: `water:${tr.id}` }]); }
+    v.carry = null; // the well is endless: what is left is poured out
+    return null;
+  }
+  if (load.item === 'seed') {
+    // Owner orders first: sow a dug one, or dig one still being dug with the seed in hand (or wait a moment beside the digger); then any dug field.
+    // (Waiting with seed beside a field takes no worker's place, so a full field still counts.)
+    const ranked = plots.filter((p) => (p.state === 'tilled' ? sowLeft(p) > 0 && free(p.id, cap(p)) : p.state === 'wild' && isOrder(p) && free(p.id, 99)))
+      .sort((a, b) => Number(!isOrder(a)) - Number(!isOrder(b)) || d2(v, fieldCentre(a)) - d2(v, fieldCentre(b)) || a.id.localeCompare(b.id));
+    for (const p of ranked) {
+      if (p.state === 'tilled') {
+        const n = Math.min(load.amount, sowLeft(p)), spot = fieldSpot(p, unitsOf(p) - sowLeft(p));
+        return task('sow', p.id, [walk(spot), { ...work(spot, 1 + n, 'sow', undefined, n), at: p.id }]);
+      }
+      // Sow the units already dug, then dig, then wait.
+      const ready = Math.min(load.amount, sowable(p) - (p.sown ?? 0) - pending(h, v, (tk, l) => l.effect === 'sow' && legAt(tk, l) === p.id));
+      if (ready > 0) {
+        const spot = fieldSpot(p, p.sown ?? 0);
+        return task('sow', p.id, [walk(spot), { ...work(spot, 1 + ready, 'sow', undefined, ready), at: p.id }]);
+      }
+      const t = free(p.id, cap(p)) ? tillTask(p) : null;
+      if (t) return t;
+      if (h.villagers.some((o) => o !== v && o.task && touches(o.task, p.id) && o.task.legs.some((l) => l.effect === 'till'))) {
+        const spot = fieldCorner(p);
+        return task('sow', p.id, [walk(spot), { ...work(spot, 2, 'none'), at: p.id }]);
+      }
+    }
+  }
+  if (load.item === 'fiber' && !load.site) {
+    const hungry = [...h.enclosures].filter((e) => e.feed <= 8 && free(`feed:${e.id}`)
+      && h.animals.some((a) => SPECIES_RULES[a.species].enclosure === e.id && e.grass < SPECIES_RULES[a.species].graze * 3))
+      .sort((a, b) => a.feed - b.feed || a.id.localeCompare(b.id))[0];
+    if (hungry) { const t = byId.get(hungry.id)!.trough!; return task('feed', `feed:${hungry.id}`, [walk(t), work(t, 2, 'fill_feed')]); }
+  }
+  if (load.item.startsWith('sapling:')) {
+    if (v.role !== 'woodcutter') { v.carry = null; return null; }
+    const r = planWoodcutter(world, h, v, new Set([...h.villagers].filter((o) => o !== v && o.task).map((o) => o.task!.target)), budget);
+    return r === 'busy' ? 'busy' : typeof r === 'string' ? null : r;
+  }
+  // Wood in hand goes to an approved site that is still short of it (the shortfall counts what is reserved and carried, so nothing is counted twice).
+  if (load.item === 'wood') {
+    const st = sites.find((x) => x.state === 'approved' && (siteShortfall(h, x).wood ?? 0) > 0);
+    if (st) {
+      v.carry = { item: 'wood', amount: load.amount, site: st.id };
+      return task('haul', st.id, [walk(siteSpot(st)), { ...work(siteSpot(st), 1, 'deliver'), at: st.id }]);
+    }
+  }
+  if (!free(`carry:${v.id}`)) return null;
+  const drop = load.item === 'wood' ? woodDropOff(h, v.x, v.z) : null;
+  if (drop?.effect === 'stow') return task('store', `carry:${v.id}`, [walk(drop), work(drop, 1, 'stow')]);
+  return task('store', `carry:${v.id}`, [walk(STOCK), work(STOCK, 1, 'store')]);
+}
+
 // ---------- applying effects ----------
 
 interface Events { log: string[] }
@@ -1540,8 +2127,12 @@ const PICKUP = new Set<Effect>(['take', 'draw', 'reap', 'gather_eggs', 'shear', 
 
 function applyEffect(world: World, h: HomesteadState, v: Villager, leg: Leg, task: Task, ev: Events): boolean {
   const s = stock(world);
-  // One load at a time: nothing is ever dropped to make room for another.
-  if (PICKUP.has(leg.effect) && v.carry && !(leg.effect === 'draw' && v.carry.item === 'water')) return false;
+  // v7: a batched leg names what it works on; otherwise it is the task's target.
+  const target = leg.at ?? task.target;
+  const v7 = isHerdHomestead(h);
+  // One load at a time: nothing is ever dropped to make room for another (v7: a second site's share, or more of the same product, joins the load).
+  if (PICKUP.has(leg.effect) && v.carry && !(leg.effect === 'draw' && v.carry.item === 'water') && !(v7 && stacks(v.carry, leg, target))) return false;
+  if (v7) { const r = applyEffectV7(world, h, v, leg, target, ev); if (r !== undefined) return r; }
   switch (leg.effect) {
     case 'none': return true;
     case 'take': {
@@ -1745,6 +2336,156 @@ function applyEffect(world: World, h: HomesteadState, v: Villager, leg: Leg, tas
     }
   }
   return true;
+}
+
+/** v7: may this pickup join the load in hand? A second site's share of the same item, or more of the same animal product. */
+function stacks(c: NonNullable<Carry>, leg: Leg, target: string): boolean {
+  if (leg.effect === 'fetch') return !!c.site && !c.also && c.item === leg.item && c.site !== target;
+  if (leg.effect === 'milk' || leg.effect === 'shear') return !c.site && c.item === (leg.effect === 'milk' ? 'milk' : 'wool');
+  return false;
+}
+
+/** v7 effects that differ from earlier rules (undefined: the shared code applies). */
+function applyEffectV7(world: World, h: HomesteadState, v: Villager, leg: Leg, target: string, ev: Events): boolean | undefined {
+  const s = stock(world);
+  switch (leg.effect) {
+    case 'draw': {
+      // A farmer's can holds 3 waterings; a bucket trip for troughs carries one bucket per trough on the way.
+      const n = leg.amount ?? (v.role === 'farmer' ? CAN_WATERINGS : 1);
+      v.carry = { item: 'water', amount: Math.max(n, v.carry?.item === 'water' ? v.carry.amount : 0) };
+      return true;
+    }
+    case 'till': {
+      // One unit at a time (the work leg's ticks), so priorities, night and a second digger take effect between units.
+      const p = h.plots.find((x) => x.id === target);
+      if (!p || p.state !== 'wild') return false;
+      const need = TILL_PER_UNIT * unitsOf(p);
+      p.tilled = Math.min(need, p.tilled + leg.ticks);
+      if (p.tilled >= need) {
+        p.state = 'tilled'; p.tilled = 0;
+        ev.log.push(`${v.name} dug over the ${CROP_RULES[p.crop].label.toLowerCase()} field`);
+      }
+      return true;
+    }
+    case 'sow': {
+      // As much as the seed in hand and the leg allow; the field grows once every unit is sown.
+      // Units already dug of a field still being dug may be sown too.
+      const p = h.plots.find((x) => x.id === target);
+      if (!p || (p.state !== 'tilled' && p.state !== 'wild') || v.carry?.item !== 'seed') return false;
+      const units = unitsOf(p), done = p.sown ?? 0;
+      const n = Math.min(v.carry.amount, sowable(p) - done, leg.amount ?? units);
+      if (n <= 0) return false;
+      v.carry = v.carry.amount > n ? { item: 'seed', amount: v.carry.amount - n } : null;
+      if (done + n >= units && p.state === 'tilled') {
+        delete p.sown; delete p.order;
+        Object.assign(p, { state: 'growing', growth: 0, moisture: 0, dry: 0 });
+        ev.log.push(`${v.name} sowed ${CROP_RULES[p.crop].label.toLowerCase()} (${units} seed)`);
+      } else {
+        p.sown = done + n;
+        ev.log.push(`${v.name} sowed ${p.sown} of ${units} units of ${CROP_RULES[p.crop].label.toLowerCase()}`);
+      }
+      return true;
+    }
+    case 'water_plot': {
+      const p = h.plots.find((x) => x.id === target);
+      if (!p || v.carry?.item !== 'water' || (p.state !== 'growing' && p.state !== 'tilled')) return false;
+      const used = Math.min(v.carry.amount, Math.ceil(((MOISTURE_MAX - p.moisture) * unitsOf(p)) / MOISTURE_MAX));
+      if (used <= 0) return true;
+      v.carry = v.carry.amount > used ? { item: 'water', amount: v.carry.amount - used } : null;
+      p.moisture = Math.min(MOISTURE_MAX, p.moisture + Math.ceil((used * MOISTURE_MAX) / unitsOf(p))); p.dry = 0;
+      return true;
+    }
+    case 'reap': {
+      const p = h.plots.find((x) => x.id === target);
+      if (!p || p.state !== 'ripe') return false;
+      v.carry = { item: `harvest:${p.crop}`, amount: unitsOf(p) };
+      Object.assign(p, { state: 'tilled', growth: 0, moisture: Math.max(0, p.moisture - 4), dry: 0 });
+      ev.log.push(`${v.name} harvested the ${CROP_RULES[p.crop].label.toLowerCase()}`);
+      return true;
+    }
+    case 'water_trough': {
+      // One bucket per trough.
+      const e = h.enclosures.find((x) => `water:${x.id}` === target);
+      if (!e || v.carry?.item !== 'water') return false;
+      v.carry = v.carry.amount > 1 ? { item: 'water', amount: v.carry.amount - 1 } : null;
+      e.water = Math.min(TROUGH_MAX, e.water + BUCKET);
+      return true;
+    }
+    case 'fetch': {
+      const st = h.sites?.find((x) => x.id === target);
+      const item = leg.item!;
+      if (!st || st.state !== 'approved') return false;
+      const src = storeAt(h, leg.x, leg.z);
+      const bag = src ? src.stock! : s.inventory;
+      const n = Math.min(leg.amount ?? 0, st.reserved[item] ?? 0, bag[item] ?? 0);
+      if (n <= 0) return v.carry !== null; // a second site's share that is gone: the first site's load goes on
+      st.reserved[item] -= n;
+      if (st.reserved[item] === 0) delete st.reserved[item];
+      takeFrom(bag, item, n);
+      v.carry = v.carry ? { item, amount: v.carry.amount + n, site: v.carry.site, also: { site: st.id, amount: n } } : { item, amount: n, site: st.id };
+      ev.log.push(`${v.name} took ${n} reserved ${item} for the ${SITE_RULES[st.kind].label.toLowerCase()}`);
+      world.revision++;
+      return true;
+    }
+    case 'deliver': {
+      // The site's share of the load (never more than it still needs); a second site's share stays in hand for it.
+      const st = h.sites?.find((x) => x.id === target);
+      const c = v.carry;
+      if (!st || st.state !== 'approved' || !c || c.site !== st.id) return false;
+      const forNext = c.also?.amount ?? 0;
+      const want = (SITE_RULES[st.kind].cost[c.item] ?? 0) - (st.delivered[c.item] ?? 0);
+      const n = Math.max(0, Math.min(c.amount - forNext, want));
+      if (n > 0) {
+        st.delivered[c.item] = (st.delivered[c.item] ?? 0) + n;
+        st.delivered = Object.fromEntries(Object.entries(st.delivered).sort(([a], [b]) => a.localeCompare(b)));
+        ev.log.push(`${v.name} delivered ${n} ${c.item} to the ${SITE_RULES[st.kind].label.toLowerCase()}`);
+      }
+      const left = c.amount - n;
+      v.carry = left <= 0 ? null : c.also ? { item: c.item, amount: left, site: c.also.site } : { item: c.item, amount: left };
+      world.revision++;
+      return true;
+    }
+    case 'build': {
+      const st = h.sites?.find((x) => x.id === target);
+      if (!st || st.state !== 'approved') return false;
+      const rule = SITE_RULES[st.kind];
+      const add = Math.min(leg.ticks, siteWorkAllowed(st) - st.work);
+      if (add <= 0) return false;
+      st.work += add;
+      if (st.work >= rule.work && Object.entries(rule.cost).every(([k, n]) => (st.delivered[k] ?? 0) >= n)) {
+        st.state = 'done';
+        st.reserved = {};
+        if (rule.store) st.stock = {};
+        ev.log.push(`${v.name} finished the ${rule.label.toLowerCase()}`);
+      }
+      world.revision++;
+      return true;
+    }
+    case 'reclaim': {
+      const st = h.sites?.find((x) => x.id === target);
+      const item = leg.item!;
+      if (!st || st.state !== 'cancelled') return false;
+      const n = Math.min(leg.amount ?? 0, st.delivered[item] ?? 0);
+      if (n <= 0) return false;
+      st.delivered[item] -= n;
+      if (st.delivered[item] === 0) delete st.delivered[item];
+      v.carry = { item, amount: n };
+      ev.log.push(`${v.name} picked up ${n} ${item} from the cancelled ${SITE_RULES[st.kind].label.toLowerCase()}`);
+      if (!bagTotal(st.delivered)) h.sites = h.sites!.filter((x) => x.id !== st.id);
+      world.revision++;
+      return true;
+    }
+    case 'shear': case 'milk': {
+      const a = h.animals.find((x) => x.id === target);
+      const p = a && SPECIES_RULES[a.species].product;
+      if (!a || !p || a.product < p.every) return v.carry !== null; // the second animal was milked already: the load goes on
+      v.carry = { item: p.resource, amount: (v.carry?.amount ?? 0) + p.amount };
+      a.product = 0;
+      ev.log.push(`${v.name} ${leg.effect === 'shear' ? 'sheared' : 'milked'} ${a.id}`);
+      return true;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -2020,9 +2761,13 @@ function footprint(g: NavGrid, v: Villager): number[] {
 }
 
 function stepVillager(world: World, h: HomesteadState, v: Villager, tick: number, ev: Events, budget: { left: number }, occupied?: Map<number, string>, again = false): void {
-  if (tick % 2 === 0 && !again) v.hunger = Math.min(100, v.hunger + 1);
+  // STAB-002 S3 (v7): hunger rises a third as fast while asleep.
+  const asleep = isHerdHomestead(h) && v.task?.kind === 'rest' && v.task.legs[v.task.leg]?.op === 'work';
+  if (tick % (asleep ? SLEEP_HUNGER_EVERY : 2) === 0 && !again) v.hunger = Math.min(100, v.hunger + 1);
   const starving = v.hunger >= 100;
   if (v.avoid) { v.avoid = v.avoid.filter((a) => a.until > tick); if (!v.avoid.length) delete v.avoid; }
+  // STAB-002 S3 (v7): idling, or routine work not yet begun, gives way to more important work, only with empty hands.
+  if (v.task && isHerdHomestead(h) && !again) preempt(world, h, v, tick, budget);
   if (!v.task) v.task = plan(world, h, v, tick, budget);
   const t = v.task;
   // STAB-002 S2: a villager with nothing to do, or only strolling, steps out of the founder's way.
@@ -2053,7 +2798,7 @@ function stepVillager(world: World, h: HomesteadState, v: Villager, tick: number
       }
       if (leg.effect === 'chop') {
         // v4: one cut per stint, until the load is full or the tree is down.
-        const r = chop(world, h, v, t, ev);
+        const r = chop(world, h, v, t, ev, leg);
         t.progress = 0;
         // Nightfall ends the felling: the load in hand goes to the store, then home to bed.
         if (r === 'again' && !isNight(tick)) return;
@@ -2076,6 +2821,22 @@ function stepVillager(world: World, h: HomesteadState, v: Villager, tick: number
     }
   }
   if (t.leg >= t.legs.length) v.task = null;
+}
+
+/**
+ * v7 pre-emption: an idle villager takes any job that comes up; one still on
+ * the first walk of a routine task takes safety or overdue work. Never with
+ * something in hand, never while opening or holding a gate.
+ */
+function preempt(world: World, h: HomesteadState, v: Villager, tick: number, budget: { left: number }): void {
+  const t = v.task!;
+  if (v.carry || v.nav?.opening !== undefined || v.nav?.opened !== undefined) return;
+  let below = 0;
+  if (t.kind === 'idle') below = PRIORITY.idle;
+  else if (ROUTINE_KINDS.has(t.kind) && t.leg === 0 && t.legs[0].op === 'walk' && t.progress === 0) below = taskClass(world, h, t, tick, v.role);
+  if (below <= PRIORITY.order) return;
+  const next = planV7(world, h, v, tick, budget, below);
+  if (next) v.task = next;
 }
 
 // ---------- animals ----------
@@ -2724,6 +3485,8 @@ function stepHomesteadTick(world: World, h: HomesteadState, tick: number): strin
   spoil(world, h, tick);
   stepPlots(h, tick, ev);
   stepAnimals(world, h, tick);
+  // STAB-002 S3 (v7): when each piece of upkeep and routine work became due (its age raises its priority).
+  if (isHerdHomestead(h)) updateDue(world, h, tick);
   const t0 = isNavHomestead(h) ? performance.now() : 0;
   const budget = { left: NAV_TICK_BUDGET };
   const order = [...h.villagers].sort((a, b) => a.id.localeCompare(b.id));
@@ -2789,7 +3552,7 @@ export function homesteadAct(world: World, action: HomesteadAction, target: stri
   const plot = h.plots.find((p) => p.id === target);
   const encl = h.enclosures.find((e) => e.id === target);
   const animal = h.animals.find((a) => a.id === target);
-  const busy = h.villagers.some((v) => v.task?.target === target || v.task?.target === `water:${target}` || v.task?.target === `feed:${target}`);
+  const busy = h.villagers.some((v) => v.task && (touches(v.task, target) || touches(v.task, `water:${target}`) || touches(v.task, `feed:${target}`)));
   if (busy && action !== 'draw_water') return fail('busy', 'a villager is already working on that');
   switch (action) {
     case 'draw_water':
@@ -2806,9 +3569,11 @@ export function homesteadAct(world: World, action: HomesteadAction, target: stri
     }
     case 'sow': {
       if (!plot || plot.state !== 'tilled') return fail('invalid_target', 'sow into a dug field');
-      const n = unitsOf(plot);
+      // v7: what villagers sowed already is not sown twice.
+      const n = unitsOf(plot) - (plot.sown ?? 0);
       if (!spend('seed', n)) return fail('insufficient_resources', `this field needs ${n} seed (1 per 9 m²); you have ${bag.seed ?? 0}`);
       Object.assign(plot, { state: 'growing', growth: 0, moisture: 0, dry: 0 });
+      delete plot.sown; delete plot.order;
       break;
     }
     case 'water':
@@ -2931,7 +3696,9 @@ export function markField(world: World, spec: FieldSpec, payFrom: 'bag' | 'store
   if (payFrom === 'store' && isBuildHomestead(h)) takeStoreStock(world, h, 'wood', wood);
   else takeFrom(bag, 'wood', wood);
   const id = `field:${h.nextId++}`;
-  h.plots.push({ id, x: spec.x, z: spec.z, w: spec.w, d: spec.d, crop: spec.crop, state: 'wild', growth: 0, moisture: 0, dry: 0, tilled: 0 });
+  h.plots.push({ id, x: spec.x, z: spec.z, w: spec.w, d: spec.d, crop: spec.crop, state: 'wild', growth: 0, moisture: 0, dry: 0, tilled: 0,
+    // v7: a field the owner marks is an owner order until it is sown.
+    ...(isHerdHomestead(h) && payFrom === 'bag' ? { order: lifeState(world).tick } : {}) });
   h.plots.sort((a, b) => a.id.localeCompare(b.id));
   // v5: the field's ground is cleared of stumps, and empty spots in it stay empty.
   if (isWoodlandHomestead(h)) clearGround(world, h, spec.x - 1, spec.z - 1, spec.x + spec.w + 1, spec.z + spec.d + 1);
@@ -2956,7 +3723,7 @@ export function setFieldCrop(world: World, fieldId: string, crop: CropKind): Lif
 export function removeField(world: World, fieldId: string): LifeResult<{ fieldId: string }> {
   const h = world.homestead;
   if (!h || !h.plots.some((q) => q.id === fieldId)) return fail('invalid_target', 'no such field');
-  if (h.villagers.some((v) => v.task?.target === fieldId)) return fail('busy', 'a villager is working this field');
+  if (h.villagers.some((v) => v.task && touches(v.task, fieldId))) return fail('busy', 'a villager is working this field');
   h.plots = h.plots.filter((q) => q.id !== fieldId);
   world.revision++;
   return { ok: true, value: { fieldId } };
@@ -2986,7 +3753,7 @@ export function expandField(world: World): LifeResult<{ plotId: string; wood: nu
   return r.ok ? { ok: true, value: { plotId: r.value.fieldId, wood: r.value.wood } } : r;
 }
 
-export function assignRole(world: World, villagerId: string, role: Role): LifeResult<{ villagerId: string; role: Role }> {
+export function assignRole(world: World, villagerId: string, role: Role, actor: Actor = 'player'): LifeResult<{ villagerId: string; role: Role }> {
   const h = world.homestead;
   if (!h) return fail('no_homestead', 'found the homestead first');
   const v = h.villagers.find((x) => x.id === villagerId);
@@ -2995,9 +3762,31 @@ export function assignRole(world: World, villagerId: string, role: Role): LifeRe
   if (WORK_ROLES.includes(role) && !isWorkHomestead(h)) return fail('needs_rules', `${role}s need settlement rules v4`);
   v.role = role;
   // The current errand is dropped (its claim released); whatever is carried is kept and stored next.
-  if (v.task && v.task.kind !== 'rest') v.task = null;
+  // v7: a villager with a load in hand finishes that delivery first (any role may carry it).
+  if (v.task && v.task.kind !== 'rest' && !(isHerdHomestead(h) && v.carry)) v.task = null;
+  // v7: the steward's cooldown is world state (saved and hashed), so a reload never changes what it does next.
+  if (isHerdHomestead(h) && actor === 'steward') h.steward.lastAssign = lifeState(world).tick;
   world.revision++;
   return { ok: true, value: { villagerId, role } };
+}
+
+/**
+ * STAB-002 S3 (rules v7): the owner puts a field, an enclosure or a building
+ * site on the priority list (or takes it off). All its work then counts as an
+ * owner order: ahead of upkeep and routine work, and anyone may do it.
+ */
+export function setPriority(world: World, target: string, on: boolean): LifeResult<{ target: string; on: boolean }> {
+  const h = world.homestead;
+  if (!h) return fail('no_homestead', 'found the homestead first');
+  if (!isHerdHomestead(h)) return fail('needs_rules', 'work priorities need settlement rules v7');
+  if (!PRIORITY_TARGET.test(target) || !priorityTargetValid(h, target)) return fail('invalid_target', 'prioritize a field, an enclosure or a building site that is not finished');
+  const list = h.priority ?? [];
+  if (list.includes(target) === on) return fail('unchanged', on ? 'this is already a priority' : 'this is not a priority');
+  if (on && list.length >= MAX_PRIORITY) return fail('limit', `at most ${MAX_PRIORITY} priorities`);
+  const next = on ? [...list, target].sort() : list.filter((t) => t !== target);
+  if (next.length) h.priority = next; else delete h.priority;
+  world.revision++;
+  return { ok: true, value: { target, on } };
 }
 
 /** Actions the player could take near (x, z) metres, nearest first. Presentation helper; the command validates. */
@@ -3081,6 +3870,7 @@ export function propose(world: World, action: StewardAction, reason: string, vil
     ...(villagerId ? { villagerId } : {}), ...(role ? { role } : {}),
   };
   h.steward.proposals.push(proposal);
+  if (isHerdHomestead(h) && action === 'assign_role') h.steward.lastAssign = proposal.tick;
   world.revision++;
   return { ok: true, value: proposal };
 }
@@ -3111,15 +3901,18 @@ export function homesteadSnapshot(h: HomesteadState): HomesteadState {
     version: h.version, anchorX: h.anchorX, anchorZ: h.anchorZ, rng: h.rng, nextId: h.nextId,
     villagers: [...h.villagers].sort((a, b) => a.id.localeCompare(b.id)).map((v) => ({
       id: v.id, name: v.name, role: v.role, x: v.x, z: v.z, energy: v.energy, hunger: v.hunger,
-      carry: v.carry ? { item: v.carry.item, amount: v.carry.amount, ...(v.carry.site !== undefined ? { site: v.carry.site } : {}) } : null,
+      carry: v.carry ? { item: v.carry.item, amount: v.carry.amount, ...(v.carry.site !== undefined ? { site: v.carry.site } : {}),
+        ...(v.carry.also !== undefined ? { also: { site: v.carry.also.site, amount: v.carry.also.amount } } : {}) } : null,
       task: v.task ? { kind: v.task.kind, target: v.task.target, leg: v.task.leg, progress: v.task.progress,
         legs: v.task.legs.map((l) => ({ op: l.op, x: l.x, z: l.z, ticks: l.ticks, effect: l.effect,
-          ...(l.item !== undefined ? { item: l.item } : {}), ...(l.amount !== undefined ? { amount: l.amount } : {}) })) } : null,
+          ...(l.item !== undefined ? { item: l.item } : {}), ...(l.amount !== undefined ? { amount: l.amount } : {}),
+          ...(l.at !== undefined ? { at: l.at } : {}) })) } : null,
       ...(v.nav ? { nav: navSnapshot(v.nav) } : {}),
       ...(v.avoid?.length ? { avoid: v.avoid.map((a) => ({ target: a.target, until: a.until, reason: a.reason, by: a.by })) } : {}),
     })),
     plots: [...h.plots].sort((a, b) => a.id.localeCompare(b.id)).map((p) => ({ id: p.id, x: p.x, z: p.z, w: p.w, d: p.d, crop: p.crop,
-      state: p.state, growth: p.growth, moisture: p.moisture, dry: p.dry, tilled: p.tilled })),
+      state: p.state, growth: p.growth, moisture: p.moisture, dry: p.dry, tilled: p.tilled,
+      ...(p.sown !== undefined ? { sown: p.sown } : {}), ...(p.order !== undefined ? { order: p.order } : {}) })),
     enclosures: [...h.enclosures].sort((a, b) => a.id.localeCompare(b.id)).map((e) => ({ id: e.id, grass: e.grass, feed: e.feed, water: e.water, eggs: e.eggs })),
     animals: [...h.animals].sort((a, b) => a.id.localeCompare(b.id)).map((a) => ({
       id: a.id, species: a.species, sex: a.sex, born: a.born, x: a.x, z: a.z, tx: a.tx, tz: a.tz,
@@ -3135,6 +3928,7 @@ export function homesteadSnapshot(h: HomesteadState): HomesteadState {
         ...(p.villagerId !== undefined ? { villagerId: p.villagerId } : {}), ...(p.role !== undefined ? { role: p.role } : {}),
         reason: p.reason, tick: p.tick })),
       nextProposal: h.steward.nextProposal,
+      ...(h.steward.lastAssign !== undefined ? { lastAssign: h.steward.lastAssign } : {}),
     },
     ...(h.gates ? { gates: [...h.gates].sort((a, b) => a.id.localeCompare(b.id)).map((g) => ({ id: g.id, state: g.state })) } : {}),
     ...(h.sites ? { sites: [...h.sites].sort((a, b) => a.id.localeCompare(b.id)).map((st) => ({ id: st.id, kind: st.kind, x: st.x, z: st.z, state: st.state,
@@ -3142,6 +3936,9 @@ export function homesteadSnapshot(h: HomesteadState): HomesteadState {
       // v6 only (absent from v4/v5 snapshots, so their bytes and hashes are unchanged).
       ...(st.rot !== undefined ? { rot: st.rot } : {}), ...(st.stock !== undefined ? { stock: sortedPositive(st.stock) } : {}) })) } : {}),
     ...(h.woodland ? { woodland: woodlandSnapshot(h.woodland) } : {}),
+    // v7 only (absent below v7, so older snapshots keep their bytes and hashes).
+    ...(h.due ? { due: Object.fromEntries(Object.entries(h.due).sort(([a], [b]) => a.localeCompare(b))) } : {}),
+    ...(h.priority ? { priority: [...h.priority].sort() } : {}),
   };
 }
 const sortedPositive = (b: Record<string, number>) => Object.fromEntries(Object.entries(b).filter(([, n]) => n > 0).sort(([a], [c]) => a.localeCompare(c)));
@@ -3167,6 +3964,8 @@ const V5_EFFECTS = new Set<Effect>(['lift', 'plant']);
 const V6_EFFECTS = new Set<Effect>(['stow', 'reclaim']);
 const GATE_ID_SET = new Set<string>(GATE_IDS);
 const TARGET = /^[a-z_]+:[a-z0-9:]{1,24}$/;
+const DUE_KEY = /^[a-z_]+:[a-z0-9:]{1,32}$/;
+export const PRIORITY_TARGET = /^(?:field:\d{1,6}|site:\d{1,6}|coop|paddock|pen|sty)$/;
 const BY = /^[A-Za-z0-9_:,.-]{1,96}$/;
 const text160 = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 160 && /^[\x20-\x7e]+$/.test(v);
 
@@ -3202,6 +4001,7 @@ const isSapling = (item: unknown) => typeof item === 'string' && item.startsWith
 
 /** Strict validation: unknown fields, ranges and references are rejected. */
 export function validateHomestead(raw: unknown, tick: number): HomesteadState {
+  const v7 = isObj(raw) && (raw.version as number) >= HOMESTEAD_HERD_VERSION;
   if (!isObj(raw) || !HOMESTEAD_VERSIONS.includes(raw.version as HomesteadVersion) || !int(raw.anchorX, -1000, 1000) || !int(raw.anchorZ, -1000, 1000)
     || !int(raw.rng, 1, 0xffffffff) || !int(raw.nextId, 0, 1_000_000)
     || !Array.isArray(raw.villagers) || raw.villagers.length > MAX_VILLAGERS
@@ -3217,14 +4017,18 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
     if (v.carry !== null) {
       if (!isObj(v.carry) || !str(v.carry.item, ITEMS) || !int(v.carry.amount, 1, 100)
         || isSapling(v.carry.item) && ((raw.version as number) < HOMESTEAD_WOODLAND_VERSION || v.carry.amount !== 1)
-        || v.carry.site !== undefined && ((raw.version as number) < HOMESTEAD_WORK_VERSION || !str(v.carry.site, /^site:\d{1,6}$/))) throw new Error('invalid villager load');
-      carry = { item: v.carry.item, amount: v.carry.amount, ...(v.carry.site !== undefined ? { site: v.carry.site as string } : {}) };
+        || v.carry.site !== undefined && ((raw.version as number) < HOMESTEAD_WORK_VERSION || !str(v.carry.site, /^site:\d{1,6}$/))
+        // v7: a second site's share of a site load.
+        || v.carry.also !== undefined && (!v7 || v.carry.site === undefined || !isObj(v.carry.also) || Object.keys(v.carry.also).join() !== 'site,amount'
+          || !str(v.carry.also.site, /^site:\d{1,6}$/) || v.carry.also.site === v.carry.site || !int(v.carry.also.amount, 1, v.carry.amount - 1))) throw new Error('invalid villager load');
+      const also = isObj(v.carry.also) ? { site: v.carry.also.site as string, amount: v.carry.also.amount as number } : undefined;
+      carry = { item: v.carry.item, amount: v.carry.amount, ...(v.carry.site !== undefined ? { site: v.carry.site as string } : {}), ...(also ? { also } : {}) };
     }
     let task: Task | null = null;
     if (v.task !== null) {
       const t = v.task;
       if (!isObj(t) || !str(t.kind, /^[a-z_]{1,16}$/) || !str(t.target, /^[a-z_]+:[a-z0-9:]{1,24}$/)
-        || !Array.isArray(t.legs) || t.legs.length < 1 || t.legs.length > 8 || !int(t.leg, 0, t.legs.length - 1) || !int(t.progress, 0, 10_000)) {
+        || !Array.isArray(t.legs) || t.legs.length < 1 || t.legs.length > (v7 ? MAX_LEGS_V7 : 8) || !int(t.leg, 0, t.legs.length - 1) || !int(t.progress, 0, 10_000)) {
         throw new Error('invalid villager task');
       }
       const legs: Leg[] = t.legs.map((l: unknown) => {
@@ -3232,9 +4036,11 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
           || !int(l.ticks, 0, 1000) || !EFFECTS.has(l.effect as Effect) || V5_EFFECTS.has(l.effect as Effect) && (raw.version as number) < HOMESTEAD_WOODLAND_VERSION
           || V6_EFFECTS.has(l.effect as Effect) && (raw.version as number) < HOMESTEAD_BUILD_VERSION
           || isSapling(l.item) && (raw.version as number) < HOMESTEAD_WOODLAND_VERSION
-          || l.item !== undefined && !str(l.item, ITEMS) || l.amount !== undefined && !int(l.amount, 1, 100)) throw new Error('invalid task leg');
+          || l.item !== undefined && !str(l.item, ITEMS) || l.amount !== undefined && !int(l.amount, 1, 100)
+          || l.at !== undefined && (!v7 || !str(l.at, TARGET))) throw new Error('invalid task leg');
         return { op: l.op, x: l.x, z: l.z, ticks: l.ticks, effect: l.effect as Effect,
-          ...(l.item !== undefined ? { item: l.item as string } : {}), ...(l.amount !== undefined ? { amount: l.amount as number } : {}) };
+          ...(l.item !== undefined ? { item: l.item as string } : {}), ...(l.amount !== undefined ? { amount: l.amount as number } : {}),
+          ...(l.at !== undefined ? { at: l.at as string } : {}) };
       });
       task = { kind: t.kind, target: t.target, legs, leg: t.leg, progress: t.progress };
     }
@@ -3258,12 +4064,17 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
       || !int(p.x, -1000, 1000) || !int(p.z, -1000, 1000) || !int(p.w, FIELD_MIN, FIELD_MAX) || !int(p.d, FIELD_MIN, FIELD_MAX)
       || !['wild', 'tilled', 'growing', 'ripe'].includes(String(p.state))
       || !int(p.growth, 0, CROP_RULES[p.crop as CropKind].growTicks) || !int(p.moisture, 0, MOISTURE_MAX)
-      || !int(p.dry, 0, WITHER_TICKS) || !int(p.tilled, 0, TILL_PER_UNIT * fieldUnits(p.w, p.d))) {
+      || !int(p.dry, 0, WITHER_TICKS) || !int(p.tilled, 0, TILL_PER_UNIT * fieldUnits(p.w, p.d))
+      // v7: units sown so far (only while dug and not yet growing), and the owner's order tick.
+      || p.sown !== undefined && (!v7 || !int(p.sown, 1, fieldUnits(p.w as number, p.d as number) - 1)
+        || (p.state !== 'tilled' && (p.state !== 'wild' || (p.sown as number) > Math.floor((p.tilled as number) / TILL_PER_UNIT))))
+      || p.order !== undefined && (!v7 || (p.state !== 'wild' && p.state !== 'tilled') || !int(p.order, 0, tick))) {
       throw new Error('snapshot has an invalid field');
     }
     fieldIds.add(p.id);
     return { id: p.id, x: p.x, z: p.z, w: p.w, d: p.d, crop: p.crop as CropKind, state: p.state as PlotState,
-      growth: p.growth, moisture: p.moisture, dry: p.dry, tilled: p.tilled };
+      growth: p.growth, moisture: p.moisture, dry: p.dry, tilled: p.tilled,
+      ...(p.sown !== undefined ? { sown: p.sown as number } : {}), ...(p.order !== undefined ? { order: p.order as number } : {}) };
   });
   const enclosureIds: EnclosureId[] = ['coop', 'paddock', 'pen', 'sty'];
   const enclosures: Enclosure[] = raw.enclosures.map((e: unknown, i: number) => {
@@ -3298,7 +4109,8 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
   const policies = new Set(['auto', 'approve', 'off']);
   if (!isObj(st) || typeof st.enabled !== 'boolean' || !isObj(st.policy) || !policies.has(String(st.policy.assign_role))
     || !policies.has(String(st.policy.expand_field)) || !Array.isArray(st.proposals) || st.proposals.length > MAX_PROPOSALS
-    || !int(st.nextProposal, 0, 1_000_000)) throw new Error('snapshot has an invalid steward');
+    || !int(st.nextProposal, 0, 1_000_000)
+    || st.lastAssign !== undefined && (!v7 || !int(st.lastAssign, 0, tick))) throw new Error('snapshot has an invalid steward');
   const proposals: Proposal[] = st.proposals.map((p: unknown) => {
     if (!isObj(p) || !str(p.id, /^proposal:\d{1,6}$/) || !STEWARD_ACTIONS.includes(p.action as StewardAction)
       || p.villagerId !== undefined && !str(p.villagerId, /^villager:\d{1,3}$/) || p.role !== undefined && !ROLES.includes(p.role as Role)
@@ -3307,7 +4119,7 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
       ...(p.role !== undefined ? { role: p.role as Role } : {}), reason: p.reason, tick: p.tick };
   });
   const steward: Steward = { enabled: st.enabled, policy: { assign_role: st.policy.assign_role as Policy, expand_field: st.policy.expand_field as Policy },
-    proposals, nextProposal: st.nextProposal };
+    proposals, nextProposal: st.nextProposal, ...(st.lastAssign !== undefined ? { lastAssign: st.lastAssign as number } : {}) };
   let gates: GateRecord[] | undefined;
   if (raw.version !== HOMESTEAD_VERSION) {
     if (!Array.isArray(raw.gates) || raw.gates.length !== GATE_IDS.length) throw new Error('snapshot has invalid gates');
@@ -3353,8 +4165,23 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
   let woodland: WoodlandState | undefined;
   if ((raw.version as number) >= HOMESTEAD_WOODLAND_VERSION) woodland = validateWoodland(raw.woodland, tick);
   else if (raw.woodland !== undefined) throw new Error('only settlement rules v5 have a woodland');
+  // v7: due work (key -> tick it became due) and the owner's priority list.
+  let due: Record<string, number> | undefined;
+  if (raw.due !== undefined) {
+    if (!v7 || !isObj(raw.due) || Object.keys(raw.due).length > MAX_DUE) throw new Error('snapshot has invalid due work');
+    due = {};
+    for (const [k, n] of Object.entries(raw.due)) { if (!str(k, DUE_KEY) || !int(n, 0, tick)) throw new Error('snapshot has invalid due work'); due[k] = n; }
+  }
+  let priority: string[] | undefined;
+  if (raw.priority !== undefined) {
+    if (!v7 || !Array.isArray(raw.priority) || raw.priority.length < 1 || raw.priority.length > MAX_PRIORITY
+      || !raw.priority.every((t) => str(t, PRIORITY_TARGET)) || new Set(raw.priority).size !== raw.priority.length) throw new Error('snapshot has an invalid priority list');
+    priority = raw.priority as string[];
+  }
+  for (const v of villagers) if (v.carry?.also && !sites?.some((st) => st.id === v.carry!.also!.site)) throw new Error('a villager carries for an unknown site');
   const h: HomesteadState = { version: raw.version as HomesteadVersion, anchorX: raw.anchorX, anchorZ: raw.anchorZ, rng: raw.rng, nextId: raw.nextId,
-    villagers, plots, enclosures, animals, overflow, steward, ...(gates ? { gates } : {}), ...(sites ? { sites } : {}), ...(woodland ? { woodland } : {}) };
+    villagers, plots, enclosures, animals, overflow, steward, ...(gates ? { gates } : {}), ...(sites ? { sites } : {}), ...(woodland ? { woodland } : {}),
+    ...(due ? { due } : {}), ...(priority ? { priority } : {}) };
   const canonical = homesteadSnapshot(h);
   if (JSON.stringify(canonical) !== JSON.stringify(raw)) throw new Error('snapshot homestead is not canonical');
   return canonical;

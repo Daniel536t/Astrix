@@ -212,7 +212,11 @@ export function turnHeading(from: number, to: number, seconds: number, rate: num
 }
 
 /** ph: heading shown when the tick arrived; heading: the direction of the last move (the turn's target). */
-interface Track { px: number; pz: number; x: number; z: number; ph: number; heading: number; step: number; rate: number }
+interface Track { px: number; pz: number; x: number; z: number; ph: number; heading: number; step: number; rate: number;
+  /** STAB-002 S3: the capsule last handed out (it never moves deeper into the founder than this). */
+  last?: DynamicBody }
+/** STAB-002 S3: fastest a capsule closes on the founder (m/s): the founder's push-out speed (CONTACT_PUSH_SPEED). */
+const CLOSE_SPEED = 1.5;
 /** Same as the renderer's snap distance: a jump this long (load, teleport) is not blended. */
 const SNAP = 6;
 
@@ -232,6 +236,7 @@ export class HomesteadBodies {
   private readonly tracks = new Map<string, Track>();
   private tick = -1;
   private at = 0;
+  private lastCollect = 0;
   constructor(private readonly tickSeconds: number) {}
 
   /** Record a new tick's positions (call every frame; only a new tick changes anything). */
@@ -266,13 +271,19 @@ export class HomesteadBodies {
    * gives the feet height at a point; `adultAge` the species' adult age.
    */
   collect(h: HomesteadLike, tick: number, nowMs: number, x: number, z: number, range: number,
-    ground: (x: number, z: number) => number, adultAge: (s: Species) => number, out: DynamicBody[]): void {
+    ground: (x: number, z: number) => number, adultAge: (s: Species) => number, out: DynamicBody[], founderR?: number): void {
+    // STAB-002 S3: with the founder's radius, capsules close on the founder's disc at (x, z) no faster than the
+    // founder is pushed out (CONTACT_PUSH_SPEED, 1.5 m/s), and not at all while two bodies overlap the founder (a
+    // pinch, where pushing out of one goes into the other). Between two ticks the founder is not where the sim's
+    // presence was, so two bodies stepping aside could otherwise close on the founder from both sides.
+    const start = out.length, tracks: Track[] = [];
+    const hold = (t: Track, b: DynamicBody): DynamicBody => { tracks.push(t); return b; };
     const alpha = Math.min(1, Math.max(0, (nowMs - this.at) / (this.tickSeconds * 1000)));
     for (const a of h.animals) {
       const t = this.tracks.get(a.id);
       if (!t) continue;
       const bx = t.px + (t.x - t.px) * alpha, bz = t.pz + (t.z - t.pz) * alpha;
-      if (Math.abs(bx - x) > range || Math.abs(bz - z) > range) continue;
+      if (Math.abs(bx - x) > range || Math.abs(bz - z) > range) { t.last = undefined; continue; }
       const size = FARM_BODIES[a.species], k = tick - a.born < adultAge(a.species) ? youngScale(a.species) : 1;
       const heading = turnHeading(t.ph, t.heading, (nowMs - this.at) / 1000, t.rate);
       const ux = Math.sin(heading), uz = Math.cos(heading);
@@ -280,17 +291,36 @@ export class HomesteadBodies {
       // Feet at the lowest ground under the whole capsule, top above the highest: an animal across a 1 m step
       // (the coop's) is on both levels, and never rises a metre into the founder in one frame as its centre crosses.
       const { lo, hi } = groundSpan(ground, cx, cz, Math.abs(ux) * hl + r, Math.abs(uz) * hl + r);
-      out.push({ id: a.id, x: cx, z: cz, y: lo, h: size.h * k + (hi - lo), r, hl, heading });
+      out.push(hold(t, { id: a.id, x: cx, z: cz, y: lo, h: size.h * k + (hi - lo), r, hl, heading }));
     }
     for (const v of h.villagers) {
       const t = this.tracks.get(v.id);
       if (!t) continue;
       // Indoors at night (the renderer hides a resting villager that is not walking).
-      if (v.task?.kind === 'rest' && t.step < 0.05) continue;
+      if (v.task?.kind === 'rest' && t.step < 0.05) { t.last = undefined; continue; }
       const bx = t.px + (t.x - t.px) * alpha, bz = t.pz + (t.z - t.pz) * alpha;
-      if (Math.abs(bx - x) > range || Math.abs(bz - z) > range) continue;
+      if (Math.abs(bx - x) > range || Math.abs(bz - z) > range) { t.last = undefined; continue; }
       const { lo, hi } = groundSpan(ground, bx, bz, PERSON_BODY.r, PERSON_BODY.r);
-      out.push({ id: v.id, x: bx, z: bz, y: lo, h: PERSON_BODY.h + (hi - lo), r: PERSON_BODY.r, hl: 0, heading: t.heading });
+      out.push(hold(t, { id: v.id, x: bx, z: bz, y: lo, h: PERSON_BODY.h + (hi - lo), r: PERSON_BODY.r, hl: 0, heading: t.heading }));
+    }
+    const dt = Math.min(0.1, Math.max(0, (nowMs - this.lastCollect) / 1000));
+    this.lastCollect = nowMs;
+    if (founderR === undefined) return;
+    const deep = out.slice(start).map((b) => penetration(b, x, z, founderR));
+    const pinched = deep.filter((p) => p > 0).length >= 2;
+    for (let i = 0; i < tracks.length; i++) {
+      const t = tracks[i], b = out[start + i], last = t.last;
+      if (last && deep[i] > 0) {
+        const limit = penetration(last, x, z, founderR) + (pinched ? 0 : CLOSE_SPEED * dt);
+        if (deep[i] > limit + 1e-6) {
+          // The point on the way from last frame's capsule to this one where it is no deeper than allowed.
+          let lo = 0, hi = 1;
+          const at = (f: number): DynamicBody => ({ ...b, x: last.x + (b.x - last.x) * f, z: last.z + (b.z - last.z) * f });
+          for (let k = 0; k < 12; k++) { const mid = (lo + hi) / 2; if (penetration(at(mid), x, z, founderR) <= limit + 1e-6) lo = mid; else hi = mid; }
+          out[start + i] = at(lo);
+        }
+      }
+      t.last = out[start + i];
     }
   }
 }

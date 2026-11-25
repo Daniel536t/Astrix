@@ -90,7 +90,7 @@ export class Walk {
     const h = this.s.world.homestead!, tick = this.s.world.life!.tick, now = this.t * 1000;
     const out: DynamicBody[] = [];
     this.bodies.observe(h, tick, now);
-    this.bodies.collect(h, tick, now, this.ch.x, this.ch.z, 8, ground(this.s.world), adultAge, out);
+    this.bodies.collect(h, tick, now, this.ch.x, this.ch.z, 8, ground(this.s.world), adultAge, out, CHARACTER_RADIUS);
     return [...out, ...this.extra];
   }
   frame(input: Partial<CharacterInput>, dt = 1 / 60): void {

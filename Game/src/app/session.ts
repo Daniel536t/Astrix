@@ -22,7 +22,7 @@ import {
   Actor, CROPS, CropKind, FIELD_MAX, FIELD_MIN, HOMESTEAD_ACTIONS, HomesteadAction, Policy, ROLES, Role, STEWARD_ACTIONS, StewardAction,
   assignRole, expandField, foundHomestead, homesteadAct, markField, permitted, propose, removeField, resolveProposal, seedReserve,
   setFieldCrop, setStewardPolicy, stepHomestead, FOUNDING_SUPPLIES, GATE_IDS, HOMESTEAD_NAV_VERSION, HOMESTEAD_VERSION, HOMESTEAD_LIVING_VERSION,
-  setGate, upgradeHomestead, HOMESTEAD_WORK_VERSION, SITE_KINDS, SiteKind, placeSite, approveSite, cancelSite, freeInStore, treeTarget,
+  setGate, setPriority, PRIORITY_TARGET, upgradeHomestead, HOMESTEAD_WORK_VERSION, SITE_KINDS, SiteKind, placeSite, approveSite, cancelSite, freeInStore, treeTarget,
 } from '../sim/homestead';
 import { GATE_STATES, GateState } from '../sim/nav';
 import { PRESENCE_KEYS, PRESENCE_POS, Presence } from '../sim/bodies';
@@ -42,7 +42,9 @@ export type HomesteadCommand = FoundHomesteadCommand | HomesteadActCommand | Ass
   | ExpandFieldCommand | StewardProposeCommand | ResolveProposalCommand | StewardPolicyCommand
   | MarkFieldCommand | SetCropCommand | RemoveFieldCommand | SetGateCommand | UpgradeHomesteadCommand
   | PlaceSiteCommand | ApproveSiteCommand | CancelSiteCommand
-  | PlantTreeCommand | ProtectTreeCommand | ProtectZoneCommand | RemoveZoneCommand | WoodlandPolicyCommand;
+  | PlantTreeCommand | ProtectTreeCommand | ProtectZoneCommand | RemoveZoneCommand | WoodlandPolicyCommand | SetPriorityCommand;
+/** STAB-002 S3 (rules v7): the owner puts a field, enclosure or building site on the work priority list, or takes it off. */
+export interface SetPriorityCommand extends CommandEnvelope { type: 'set_priority'; target: string; on: boolean }
 type RulesVersion = typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION | typeof HOMESTEAD_HERD_VERSION;
 /** M013 (rules v5): the owner plants a wildling sapling at a cell (whole metres), lifted from a seed parent within 20 m (of `species`, when given). */
 export interface PlantTreeCommand extends CommandEnvelope { type: 'plant_tree'; x: number; z: number; species?: TreeSpecies }
@@ -148,7 +150,8 @@ export type HomesteadOutcome =
   | { type: 'protect_tree'; entityId: string; protect: boolean }
   | { type: 'protect_zone'; zoneId: string; x: number; z: number; r: number }
   | { type: 'remove_zone'; zoneId: string }
-  | ({ type: 'woodland_policy' } & WoodPolicy);
+  | ({ type: 'woodland_policy' } & WoodPolicy)
+  | { type: 'set_priority'; target: string; on: boolean };
 export interface TransferOutcome {
   type: 'deposit' | 'withdraw'; stockpileId: typeof FOUNDER_STOCKPILE_ID;
   resources: Partial<Record<LifeResource, number>>;
@@ -308,6 +311,9 @@ function validateHomesteadCommand(value: Record<string, unknown>, base: { schema
     case 'remove_zone':
       if (typeof value.zoneId !== 'string' || !ZONE_ID.test(value.zoneId)) return null;
       return { ...base, type: 'remove_zone', zoneId: value.zoneId };
+    case 'set_priority':
+      if (typeof value.target !== 'string' || !PRIORITY_TARGET.test(value.target) || typeof value.on !== 'boolean') return null;
+      return { ...base, type: 'set_priority', target: value.target, on: value.on };
     case 'woodland_policy': {
       const p = policyOf(value);
       return p ? { ...base, type: 'woodland_policy', ...p } : null;
@@ -404,6 +410,9 @@ function validateHomesteadOutcome(value: Record<string, unknown>): CommandOutcom
     case 'remove_zone':
       if (typeof value.zoneId !== 'string' || !ZONE_ID.test(value.zoneId)) return null;
       return { type: 'remove_zone', zoneId: value.zoneId };
+    case 'set_priority':
+      if (typeof value.target !== 'string' || !PRIORITY_TARGET.test(value.target) || typeof value.on !== 'boolean') return null;
+      return { type: 'set_priority', target: value.target, on: value.on };
     case 'woodland_policy': {
       const p = policyOf(value);
       return p ? { type: 'woodland_policy', ...p } : null;
@@ -639,6 +648,8 @@ export function validateJournal(value: unknown): CommandJournal {
       && (entry.command.type !== 'place_site' ? entry.command.siteId !== entry.outcome.siteId
         : entry.outcome.type === 'place_site' && (entry.command.kind !== entry.outcome.kind || entry.command.x !== entry.outcome.x || entry.command.z !== entry.outcome.z
           || entry.command.rot !== entry.outcome.rot))
+      || entry.command.type === 'set_priority' && entry.outcome.type === 'set_priority'
+      && (entry.command.target !== entry.outcome.target || entry.command.on !== entry.outcome.on)
       || entry.command.type === 'set_gate' && entry.outcome.type === 'set_gate'
       && (entry.command.gateId !== entry.outcome.gateId || entry.command.state !== entry.outcome.state)
       || entry.command.type === 'steward_policy' && entry.outcome.type === 'steward_policy'
@@ -1018,7 +1029,7 @@ export class GameSession {
       case 'assign_role': {
         const h = world.homestead;
         if (h) { const gate = permitted(h, command.actor, 'assign_role'); if (!gate.ok) return gate; }
-        const r = assignRole(world, command.villagerId, command.role);
+        const r = assignRole(world, command.villagerId, command.role, command.actor);
         return r.ok ? { ok: true, value: { type: 'assign_role', villagerId: command.villagerId, role: command.role, actor: command.actor } } : r;
       }
       case 'expand_field': {
@@ -1046,6 +1057,10 @@ export class GameSession {
       case 'remove_field': {
         const r = removeField(world, command.fieldId);
         return r.ok ? { ok: true, value: { type: 'remove_field', fieldId: command.fieldId } } : r;
+      }
+      case 'set_priority': {
+        const r = setPriority(world, command.target, command.on);
+        return r.ok ? { ok: true, value: { type: 'set_priority', target: command.target, on: command.on } } : r;
       }
       case 'set_gate': {
         const r = setGate(world, command.gateId, command.state);

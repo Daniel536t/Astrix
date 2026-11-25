@@ -504,11 +504,11 @@ export function lifeGoal(world: World, e: Entity): NavGoal {
 }
 
 /** Why the woodcutter would not start a new tree now (null: it may), from the policy, the canopy minimum, the quota and demand. */
-export function fellingHold(world: World, h: HomesteadState, lot: ManagedWoodland, starting: number): string | null {
+export function fellingHold(world: World, h: HomesteadState, lot: ManagedWoodland, starting: number, borrow = 0): string | null {
   const w = h.woodland!;
   if (w.policy.harvest === 'paused') return 'felling is paused by the woodland policy';
   if (lot.standing - 1 < w.policy.minStanding) return `only ${lot.standing} mature trees stand in the woodland (the policy keeps ${w.policy.minStanding})`;
-  if (w.policy.harvest === 'sustainable' && w.quota - starting * QUOTA_TREE < QUOTA_TREE) {
+  if (w.policy.harvest === 'sustainable' && w.quota + borrow - starting * QUOTA_TREE < QUOTA_TREE) {
     const perDay = w.rate * WOOD_DAY / QUOTA_TREE;
     const wait = w.rate > 0 ? Math.ceil((QUOTA_TREE * (starting + 1) - w.quota) / w.rate) : null;
     return `sustainable quota reached: the woodland regrows about ${perDay.toFixed(1)} trees a day${wait !== null ? `; next tree in about ${wait} ticks` : ''}`;
@@ -585,6 +585,39 @@ export function planWoodcutter(world: World, h: HomesteadState, v: Villager, tak
   // v6: the load goes to the nearest woodshed or log store with room, or the store when that is nearer (below v6 always the store).
   const drop = woodDropOff(h, Math.round(e.x * DM), Math.round(e.z * DM));
   return mkTask('chop', treeTarget(e.id)!, [walkLeg(g.x, g.z), workLeg(g.x, g.z, 4, 'chop'), walkLeg(drop.x, drop.z), workLeg(drop.x, drop.z, 1, drop.effect)]);
+}
+
+/**
+ * STAB-002 S3 (rules v7): fell for an approved site that is short of wood and
+ * carry the cut straight to it. Anyone may do this owner-ordered work. The
+ * same woodland rules hold as for the woodcutter (policy, protection, the
+ * canopy minimum and the sustainable quota); a started tree is finished
+ * first. `amount` (at most a load) is how much the site still needs: the cut
+ * stops there, and the load is tagged for the site when it is cut.
+ */
+export function planFelling(world: World, h: HomesteadState, v: Villager, taken: Set<string>, budget: { left: number }, site: { id: string; x: number; z: number }, amount: number, wanted = amount): Task | 'busy' | string {
+  if (v.carry) return 'carrying';
+  const lot = managedWoodland(world, h);
+  const open = lot.trees.filter((e) => !taken.has(treeTarget(e.id)!));
+  let pool = open.filter((e) => e.harvestedOnce);
+  if (!pool.length) {
+    // An approved building may borrow one tree against the woodland's regrowth (the quota goes at most one tree below zero,
+    // and the woodcutter's own felling waits until it has grown back).
+    const hold = fellingHold(world, h, lot, startingFellings(world, h, v), QUOTA_TREE);
+    if (hold) return hold;
+    // A tree that covers all the wood still wanted, when there is one (fewer trees from the quota).
+    const enough = open.filter((e) => { const l = treeLife(world, e); return (l ? timberOf(l.species, l.stage)?.total ?? 0 : e.remaining) >= wanted; });
+    pool = enough.length ? enough : open;
+  }
+  if (!pool.length) return 'no tree may be felled here: the rest are protected, too young or taken';
+  if (budget.left <= 0) return 'busy';
+  const grid = homesteadNav(world, h);
+  const res = findNearest(world, grid, v, pool.map((e) => ({ ...lifeGoal(world, e), id: e.id })), { maxExpansions: Math.min(budget.left, 15_000) });
+  budget.left -= res.expanded;
+  if (!res.ok) return res.code === 'budget' ? 'busy' : 'no fellable tree can be reached';
+  const e = world.entities.get(res.id)!;
+  const g = lifeGoal(world, e);
+  return mkTask('chop', treeTarget(e.id)!, [walkLeg(g.x, g.z), { ...workLeg(g.x, g.z, 4, 'chop'), amount }, walkLeg(site.x, site.z), { ...workLeg(site.x, site.z, 1, 'deliver'), at: site.id }]);
 }
 
 /** What an idle v5 woodcutter is waiting for (for the Farm panel; derived, never saved). */
