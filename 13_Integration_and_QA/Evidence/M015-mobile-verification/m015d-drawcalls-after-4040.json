@@ -1,0 +1,203 @@
+{
+ "emulated": "Playwright Chromium 1365x709, hasTouch, isMobile false (desktop-site mode), dpr 1, software GL (SwiftShader): NOT a real device",
+ "tag": "after-4040",
+ "seconds": 582,
+ "results": {
+  "low@-40,40": {
+   "worst": {
+    "calls": 57,
+    "tris": 127278,
+    "est": 57,
+    "dist": 8.4,
+    "scene": null,
+    "chainState": "{\"live\":{\"owner\":\"GVbuuocW6hzMcsCAsvX6AAJnGDo3VZHwTmSLGhkZSw32\",\"worldSeed\":1337,\"generator\":2,\"tick\":66995,\"lastTickTs\":1795619004,\"tickIntervalS\":2,\"stock\":{\"",
+    "at": [
+     -39,
+     41
+    ],
+    "owners": {
+     "voxel_world": "30+0s",
+     "homestead": "11+0s",
+     "magicblock_settlement": "3+0s",
+     "fauna": "3+0s",
+     "noxel_sites": "2+0s",
+     "styl_nature": "2+0s",
+     "life_state": "2+0s",
+     "ground_cover": "1+0s",
+     "sky_dome": "1+0s",
+     "character": "1+0s",
+     "banners": "1+0s"
+    },
+    "top": [
+     "voxel_world/voxel_chunk_#_# Mesh 22+0s 43266t",
+     "voxel_world/near_water_region_#_# Mesh 4+0s 10500t",
+     "voxel_world/macro_lod_tile_#_# Mesh 3+0s 32548t",
+     "magicblock_settlement/magicblock_props_merged_# Mesh 3+0s 7752t",
+     "homestead/character_body Mesh 3+0s 1068t",
+     "noxel_sites/noxel_sites_merged_merged_# Mesh 2+0s 276t",
+     "fauna/fauna_rabbit InstancedMesh 1+0s 9792t",
+     "homestead/homestead_statics Mesh 1+0s 4680t",
+     "ground_cover/ground_cover_batch Mesh 1+0s 3420t",
+     "fauna/fauna_deer InstancedMesh 1+0s 3264t",
+     "homestead/herd_sheep InstancedMesh 1+0s 2448t",
+     "voxel_world/water_surface Mesh 1+0s 1152t",
+     "sky_dome/sky_dome Mesh 1+0s 960t",
+     "homestead/herd_chicken InstancedMesh 1+0s 960t"
+    ],
+    "pitch": -70,
+    "h": 0
+   },
+   "callsByView": [
+    57,
+    49,
+    47,
+    45,
+    44,
+    42,
+    37,
+    36,
+    35,
+    34,
+    33,
+    33,
+    33,
+    32,
+    30,
+    30
+   ],
+   "trisMax": 127278,
+   "quality": "low"
+  },
+  "high@-40,40": {
+   "worst": {
+    "calls": 82,
+    "tris": 173866,
+    "est": 82,
+    "dist": 8.4,
+    "scene": null,
+    "chainState": "{\"live\":{\"owner\":\"GVbuuocW6hzMcsCAsvX6AAJnGDo3VZHwTmSLGhkZSw32\",\"worldSeed\":1337,\"generator\":2,\"tick\":67033,\"lastTickTs\":1795619080,\"tickIntervalS\":2,\"stock\":{\"",
+    "at": [
+     -39,
+     41
+    ],
+    "owners": {
+     "voxel_world": "30+0s",
+     "homestead": "11+11s",
+     "fauna": "3+4s",
+     "magicblock_settlement": "3+3s",
+     "noxel_sites": "2+2s",
+     "life_state": "2+2s",
+     "styl_nature": "2+1s",
+     "character": "1+1s",
+     "banners": "1+1s",
+     "ground_cover": "1+0s",
+     "sky_dome": "1+0s"
+    },
+    "top": [
+     "voxel_world/voxel_chunk_#_# Mesh 22+0s 43266t",
+     "magicblock_settlement/magicblock_props_merged_# Mesh 3+3s 15504t",
+     "homestead/character_body Mesh 3+3s 2136t",
+     "voxel_world/near_water_region_#_# Mesh 4+0s 10500t",
+     "noxel_sites/noxel_sites_merged_merged_# Mesh 2+2s 552t",
+     "voxel_world/macro_lod_tile_#_# Mesh 3+0s 32548t",
+     "fauna/fauna_rabbit InstancedMesh 1+1s 19584t",
+     "homestead/homestead_statics Mesh 1+1s 9360t",
+     "fauna/fauna_deer InstancedMesh 1+1s 6528t",
+     "styl_nature/styl_nature_batch BatchedMesh 1+1s 5482t",
+     "homestead/herd_sheep InstancedMesh 1+1s 4896t",
+     "homestead/herd_chicken InstancedMesh 1+1s 1920t",
+     "homestead/homestead_troughs Mesh 1+1s 1512t",
+     "homestead/herd_goat InstancedMesh 1+1s 1392t"
+    ],
+    "pitch": -70,
+    "h": 0
+   },
+   "callsByView": [
+    82,
+    74,
+    72,
+    70,
+    69,
+    67,
+    59,
+    58,
+    57,
+    56,
+    55,
+    55,
+    55,
+    55,
+    55,
+    54
+   ],
+   "trisMax": 173866,
+   "quality": "high"
+  },
+  "medium@-40,40": {
+   "worst": {
+    "calls": 82,
+    "tris": 167388,
+    "est": 82,
+    "dist": 8.4,
+    "scene": null,
+    "chainState": "{\"live\":{\"owner\":\"GVbuuocW6hzMcsCAsvX6AAJnGDo3VZHwTmSLGhkZSw32\",\"worldSeed\":1337,\"generator\":2,\"tick\":67043,\"lastTickTs\":1795619100,\"tickIntervalS\":2,\"stock\":{\"",
+    "at": [
+     -39,
+     41
+    ],
+    "owners": {
+     "voxel_world": "30+0s",
+     "homestead": "11+11s",
+     "fauna": "3+4s",
+     "magicblock_settlement": "3+3s",
+     "noxel_sites": "2+2s",
+     "life_state": "2+2s",
+     "styl_nature": "2+1s",
+     "character": "1+1s",
+     "banners": "1+1s",
+     "ground_cover": "1+0s",
+     "sky_dome": "1+0s"
+    },
+    "top": [
+     "voxel_world/voxel_chunk_#_# Mesh 22+0s 43266t",
+     "magicblock_settlement/magicblock_props_merged_# Mesh 3+3s 15504t",
+     "homestead/character_body Mesh 3+3s 2136t",
+     "voxel_world/near_water_region_#_# Mesh 4+0s 10500t",
+     "noxel_sites/noxel_sites_merged_merged_# Mesh 2+2s 552t",
+     "voxel_world/macro_lod_tile_#_# Mesh 3+0s 32548t",
+     "fauna/fauna_rabbit InstancedMesh 1+1s 19584t",
+     "homestead/homestead_statics Mesh 1+1s 9360t",
+     "fauna/fauna_deer InstancedMesh 1+1s 6528t",
+     "homestead/herd_sheep InstancedMesh 1+1s 4896t",
+     "styl_nature/styl_nature_batch BatchedMesh 1+1s 3280t",
+     "homestead/herd_chicken InstancedMesh 1+1s 1920t",
+     "homestead/homestead_troughs Mesh 1+1s 1512t",
+     "homestead/herd_goat InstancedMesh 1+1s 1392t"
+    ],
+    "pitch": -70,
+    "h": 0
+   },
+   "callsByView": [
+    82,
+    74,
+    72,
+    70,
+    69,
+    67,
+    59,
+    58,
+    57,
+    56,
+    55,
+    55,
+    55,
+    55,
+    55,
+    54
+   ],
+   "trisMax": 167388,
+   "quality": "medium"
+  }
+ },
+ "errs": []
+}

@@ -1,0 +1,287 @@
+{
+ "summaryText": "ASTrix perf report v1 · build 17d0735+dirty (index-C6I1I-a_.js)\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36\nGPU: Adreno (TM) 710 · cores 8 · memory 32 GB · screen 1365x709 @1x · viewport 1365x709\nRender: multi-draw · quality medium (auto: touch device) · pixel ratio 1 · canvas 1365x709 · frame cap 30 fps (saved)\nSession: 3.1 min · 7 buckets (4 visible)\nFPS: median 0.6 · worst bucket 0.5 · p5 0.5 · frame p50 >= 1000 ms · p95 >= 1000 ms · frames > 50 ms: 26\nDraw calls max 72 · triangles max 143914\nHeap MB first/last/max: 40/48/51 · battery 100% → 100% (charging)\nThermal: unknown · no baseline yet: the first two minutes are the baseline\nChecks: median fps FAIL · p95 frame FAIL · drift n/a · length FAIL\nEvents: 0s start quality medium · multi-draw · cap unlimited · 65s hidden · 65s reload quality medium · multi-draw · cap unlimited · 162s cap 30 fps",
+ "kind": "astrix-perf-report",
+ "version": 1,
+ "build": {
+  "commit": "17d0735",
+  "dirty": true,
+  "bundle": "index-C6I1I-a_.js",
+  "url": "https://astrix.local/?chain=0&perf=1&metrics=1"
+ },
+ "createdAt": "2026-11-25T16:33:23.481Z",
+ "startedAt": "2026-11-25T16:29:27.309Z",
+ "durationS": 186.4,
+ "device": {
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+  "platform": "Linux",
+  "screen": {
+   "width": 1365,
+   "height": 709,
+   "availWidth": 1365,
+   "availHeight": 709,
+   "orientation": "landscape-primary"
+  },
+  "viewport": {
+   "width": 1365,
+   "height": 709
+  },
+  "dpr": 1,
+  "hardwareConcurrency": 8,
+  "deviceMemory": 32,
+  "gpu": "Adreno (TM) 710",
+  "gpuVendor": "Qualcomm",
+  "webgl2": true,
+  "multiDrawSupported": true,
+  "maxTextureSize": 8192,
+  "touch": true,
+  "maxTouchPoints": 1,
+  "anyCoarse": true
+ },
+ "render": {
+  "path": "multi-draw",
+  "quality": "medium",
+  "qualitySource": "auto",
+  "qualityReasons": [
+   "touch device"
+  ],
+  "pixelRatio": 1,
+  "canvas": {
+   "width": 1365,
+   "height": 709
+  },
+  "frameCap": 30,
+  "frameCapSource": "saved"
+ },
+ "summary": {
+  "buckets": 7,
+  "visibleBuckets": 4,
+  "medianFps": 0.6,
+  "minBucketFps": 0.5,
+  "fpsP5Median": 0.5,
+  "frameP50Ms": 1001,
+  "frameP95Ms": 1001,
+  "longFrames50": 26,
+  "maxCalls": 72,
+  "maxTriangles": 143914,
+  "heapMB": {
+   "first": 40,
+   "last": 48,
+   "max": 51
+  },
+  "battery": {
+   "first": 1,
+   "last": 1,
+   "charging": true,
+   "dropPctPerHour": null
+  }
+ },
+ "thermal": {
+  "status": "unknown",
+  "scene": null,
+  "baselineFps": null,
+  "laterFps": null,
+  "driftPct": null,
+  "baselineBuckets": 0,
+  "laterBuckets": 4,
+  "note": "no baseline yet: the first two minutes are the baseline"
+ },
+ "checks": {
+  "medianFps": {
+   "ok": false,
+   "value": 0.6,
+   "threshold": ">= 28.5 fps (frame cap 30)"
+  },
+  "frameP95": {
+   "ok": false,
+   "value": 1001,
+   "threshold": "<= 50 ms"
+  },
+  "thermalDrift": {
+   "ok": null,
+   "value": null,
+   "threshold": "<= 25 % fps loss vs the first 2 min (same scene)"
+  },
+  "sessionLength": {
+   "ok": false,
+   "value": 3.1,
+   "threshold": ">= 20 min for the thermal check"
+  }
+ },
+ "events": [
+  {
+   "t": 0,
+   "kind": "start",
+   "detail": "quality medium · multi-draw · cap unlimited"
+  },
+  {
+   "t": 65.3,
+   "kind": "hidden"
+  },
+  {
+   "t": 65.3,
+   "kind": "reload",
+   "detail": "quality medium · multi-draw · cap unlimited"
+  },
+  {
+   "t": 162.3,
+   "kind": "cap",
+   "detail": "30 fps"
+  }
+ ],
+ "buckets": [
+  {
+   "i": 0,
+   "t": 0,
+   "dur": 58.6,
+   "visible": 1,
+   "frames": 0,
+   "fps": 0,
+   "fpsP5": 0,
+   "p50Ms": 0,
+   "p95Ms": 0,
+   "maxMs": 0,
+   "long50": 0,
+   "scene": "walk:-1,-1:close",
+   "calls": 69,
+   "triangles": 116970,
+   "heapMB": 40,
+   "battery": 1,
+   "charging": true,
+   "quality": "medium",
+   "path": "multi-draw",
+   "cap": 0
+  },
+  {
+   "i": 1,
+   "t": 65.3,
+   "dur": 56.7,
+   "visible": 1,
+   "frames": 0,
+   "fps": 0,
+   "fpsP5": 0,
+   "p50Ms": 0,
+   "p95Ms": 0,
+   "maxMs": 0,
+   "long50": 0,
+   "scene": "walk:-1,-1:close",
+   "calls": 69,
+   "triangles": 116970,
+   "heapMB": 44,
+   "battery": 1,
+   "charging": true,
+   "quality": "medium",
+   "path": "multi-draw",
+   "cap": 0
+  },
+  {
+   "i": 2,
+   "t": 122,
+   "dur": 20.1,
+   "visible": 1,
+   "frames": 0,
+   "fps": 0,
+   "fpsP5": 0,
+   "p50Ms": 0,
+   "p95Ms": 0,
+   "maxMs": 0,
+   "long50": 0,
+   "scene": "walk:-1,-1:close",
+   "calls": 69,
+   "triangles": 116970,
+   "heapMB": 44,
+   "battery": 1,
+   "charging": true,
+   "quality": "medium",
+   "path": "multi-draw",
+   "cap": 0
+  },
+  {
+   "i": 3,
+   "t": 142.1,
+   "dur": 11.3,
+   "visible": 1,
+   "frames": 7,
+   "fps": 0.6,
+   "fpsP5": 0.4,
+   "p50Ms": 1692.8,
+   "p95Ms": 2343,
+   "maxMs": 2343,
+   "long50": 7,
+   "scene": "walk:-1,-1:close",
+   "calls": 70,
+   "triangles": 129642,
+   "heapMB": 48,
+   "battery": 1,
+   "charging": true,
+   "quality": "medium",
+   "path": "multi-draw",
+   "cap": 0
+  },
+  {
+   "i": 4,
+   "t": 153.4,
+   "dur": 10,
+   "visible": 1,
+   "frames": 5,
+   "fps": 0.5,
+   "fpsP5": 0.4,
+   "p50Ms": 1859.8,
+   "p95Ms": 2690.9,
+   "maxMs": 2690.9,
+   "long50": 5,
+   "scene": "walk:-1,-1:close",
+   "calls": 71,
+   "triangles": 133458,
+   "heapMB": 49,
+   "battery": 1,
+   "charging": true,
+   "quality": "medium",
+   "path": "multi-draw",
+   "cap": 30
+  },
+  {
+   "i": 5,
+   "t": 163.5,
+   "dur": 11.6,
+   "visible": 1,
+   "frames": 7,
+   "fps": 0.6,
+   "fpsP5": 0.5,
+   "p50Ms": 1771.9,
+   "p95Ms": 2177.1,
+   "maxMs": 2177.1,
+   "long50": 7,
+   "scene": "walk:-1,-1:close",
+   "calls": 72,
+   "triangles": 140006,
+   "heapMB": 51,
+   "battery": 1,
+   "charging": true,
+   "quality": "medium",
+   "path": "multi-draw",
+   "cap": 30
+  },
+  {
+   "i": 6,
+   "t": 175,
+   "dur": 11.4,
+   "visible": 1,
+   "frames": 7,
+   "fps": 0.6,
+   "fpsP5": 0.5,
+   "p50Ms": 1752.6,
+   "p95Ms": 2099.9,
+   "maxMs": 2099.9,
+   "long50": 7,
+   "scene": "walk:-1,-1:close",
+   "calls": 72,
+   "triangles": 143914,
+   "heapMB": 48,
+   "battery": 1,
+   "charging": true,
+   "quality": "medium",
+   "path": "multi-draw",
+   "cap": 30
+  }
+ ]
+}

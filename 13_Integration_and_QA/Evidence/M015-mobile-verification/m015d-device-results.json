@@ -1,0 +1,123 @@
+{
+ "emulated": "Playwright Chromium 1365x709, hasTouch, isMobile false, the owner's desktop-site user agent, WebGL renderer string patched to Adreno (TM) 710, software GL: NOT a real device",
+ "loads": [
+  {
+   "quality": {
+    "level": "medium",
+    "source": "auto",
+    "reasons": [
+     "touch device"
+    ],
+    "pixelRatio": 1,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "firstFrame": "medium",
+   "frameCap": {
+    "cap": 0,
+    "source": "default"
+   },
+   "coarse": true,
+   "anyCoarse": true,
+   "maxTouchPoints": 1,
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+   "platform": "Linux x86_64"
+  },
+  {
+   "quality": {
+    "level": "medium",
+    "source": "auto",
+    "reasons": [
+     "touch device"
+    ],
+    "pixelRatio": 1,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "firstFrame": "medium",
+   "frameCap": {
+    "cap": 0,
+    "source": "default"
+   },
+   "coarse": true,
+   "anyCoarse": true,
+   "maxTouchPoints": 1,
+   "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+   "platform": "Linux x86_64"
+  }
+ ],
+ "errs": [],
+ "finePointerLoad": {
+  "before": {
+   "quality": {
+    "level": "high",
+    "source": "auto",
+    "reasons": [
+     "fine pointer (desktop)"
+    ],
+    "pixelRatio": 1,
+    "shadows": true,
+    "shadowMapSize": 2048,
+    "antialias": true,
+    "natureNear": 90,
+    "groundCoverRadius": 52
+   },
+   "coarse": false,
+   "maxTouchPoints": 1
+  },
+  "after": {
+   "quality": {
+    "level": "medium",
+    "source": "auto",
+    "reasons": [
+     "touch screen with a mobile GPU (Adreno (TM) 710)"
+    ],
+    "pixelRatio": 1,
+    "shadows": true,
+    "shadowMapSize": 1024,
+    "antialias": true,
+    "natureNear": 70,
+    "groundCoverRadius": 40
+   },
+   "coarse": false,
+   "maxTouchPoints": 1
+  }
+ },
+ "afterCap": {
+  "frameCap": {
+   "cap": 30,
+   "source": "saved"
+  },
+  "saved": "30"
+ },
+ "copy": {
+  "chars": 1268,
+  "status": "Copied the report (1 KB, summary and bucket table): paste it into the chat. Download report has the full JSON.",
+  "head": [
+   "ASTrix perf report v1 · build 17d0735+dirty (index-C6I1I-a_.js)",
+   "Device: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+   "GPU: Adreno (TM) 710 · cores 8 · memory 32 GB · screen 1365x709 @1x · viewport 1365x709",
+   "Render: multi-draw · quality medium (auto: touch device) · pixel ratio 1 · canvas 1365x709 · frame cap 30 fps (saved)"
+  ],
+  "render": "Render: multi-draw · quality medium (auto: touch device) · pixel ratio 1 · canvas 1365x709 · frame cap 30 fps (saved)",
+  "events": "Events: 0s start quality medium · multi-draw · cap unlimited · 65s hidden · 65s reload quality medium · multi-draw · cap unlimited · 162s cap 30 fps",
+  "tableHeader": "Buckets (one line per 10 s): i t(s) fps/p5 p95ms >50ms calls ktris [v<visible] bat% quality(H/M/L, f=fallback, cap) scene (\"=\" same)",
+  "tableLines": [
+   "0 0 0/0 0 0 69 117 100c M walk:-1,-1:close",
+   "1 65 0/0 0 0 69 117 100c M =",
+   "2 122 0/0 0 0 69 117 100c M =",
+   "3 142 0.6/0 2343 7 70 130 100c M =",
+   "4 153 0.5/0 2691 5 71 133 100c M30 =",
+   "5 164 0.6/1 2177 7 72 140 100c M30 ="
+  ]
+ },
+ "download": {
+  "file": "m015d-device-report.json"
+ }
+}

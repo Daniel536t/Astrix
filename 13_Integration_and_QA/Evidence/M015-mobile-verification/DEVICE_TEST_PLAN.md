@@ -14,8 +14,8 @@ This is the part of M015 that only a real device can do. Everything here runs in
 
 `?perf=1` shows a small pill with **fps** and the **p95 frame time** (bottom centre; on a portrait phone it sits just under the health bar). Tap it to open the details and the buttons:
 
-- **Copy report**: copies a short summary and the full JSON. Paste it into the chat.
-- **Download report**: saves `astrix-perf-<time>.json` to Downloads.
+- **Copy report**: copies the summary and a short table (one line per 10 s, or per minute in long sessions), under 8 KB so the chat does not cut it. Paste it into the chat.
+- **Download report**: saves the full JSON with every bucket as `astrix-perf-<time>.json` in Downloads. Attach it if the chat accepts files.
 - **Share…**: Android's share sheet, if Chrome offers it.
 - **Mark**: puts a timestamp in the log. Tap it when something feels wrong (stutter, heat, a missed tap).
 - **New session**: starts the log again.
@@ -23,6 +23,8 @@ This is the part of M015 that only a real device can do. Everything here runs in
 The log keeps going if the tab reloads. Leave `?perf=1` in the address the whole time.
 
 The quality level is picked automatically: **medium** on phones and tablets, **low** on weak ones. The report says which level ran and why. Use **⚙ Settings** (beside Farm) to change it. A change reloads the page; the world is saved first.
+
+**⚙ Settings → Frame rate** offers Unlimited (the default), 60 and 30 (battery saver). It applies at once, without a reload; the report records which cap was in force.
 
 ## Steps
 
@@ -72,3 +74,16 @@ Write a line for each in the chat with the report:
 - **Events:** start, reloads, hidden or visible, orientation changes, charging changes and your Marks.
 
 The report contains no wallet keys and no world save.
+
+## Device run 2 (after device report 1)
+
+Report 1 (2026-11-25, Android tablet with an Adreno 710) passed fps and p95 but found too many draw calls at the farm, stutter when walking into new ground, high quality on the first load and medium after a reload, and a paste cut off in chat. The fixes are described in REPORT.md, "Device report 1 and fixes". Please repeat the same steps once more on the same tablet, with these additions:
+
+- Desktop-site mode may stay on, as in run 1. The first line of the report must show the new build.
+- Step 1: check the first `Events:` entry reads `start quality medium`, then reload once and check the `reload` entry is also `medium`.
+- Step 3: include a walk of at least 2 minutes away from the farm into ground you have not visited (as in run 1, west past the river).
+- Stand at the farm in walk mode for a minute (the scene of the draw-call problem).
+- After step 9, if you have time: ⚙ Settings → Frame rate → 30 (battery saver), play 10 more minutes unplugged, then Copy report again. This gives the battery drain at 30 fps beside the 60 fps figure.
+- Copy report should now paste whole (it is under 8 KB). Download report keeps the full JSON.
+
+What the review will check: draw calls under 100 in every bucket, fewer frames over 50 ms in the walking buckets than run 1 (10-17 per 10 s), the same quality on every load, and the battery drain with and without the cap.

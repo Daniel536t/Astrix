@@ -1,0 +1,203 @@
+{
+ "emulated": "Playwright Chromium 1365x709, hasTouch, isMobile false (desktop-site mode), dpr 1, software GL (SwiftShader): NOT a real device",
+ "tag": "before-1230",
+ "seconds": 553,
+ "results": {
+  "low@-12,30": {
+   "worst": {
+    "calls": 90,
+    "tris": 125242,
+    "est": 90,
+    "dist": 8.4,
+    "scene": null,
+    "chainState": "{\"live\":{\"owner\":\"GVbuuocW6hzMcsCAsvX6AAJnGDo3VZHwTmSLGhkZSw32\",\"worldSeed\":1337,\"generator\":2,\"tick\":66362,\"lastTickTs\":1795617738,\"tickIntervalS\":2,\"stock\":{\"",
+    "at": [
+     -11,
+     31
+    ],
+    "owners": {
+     "voxel_world": "34+0s",
+     "magicblock_settlement": "30+0s",
+     "homestead": "11+0s",
+     "fauna": "4+0s",
+     "noxel_sites": "4+0s",
+     "styl_nature": "2+0s",
+     "ground_cover": "1+0s",
+     "sky_dome": "1+0s",
+     "character": "1+0s",
+     "life_state": "1+0s",
+     "banners": "1+0s"
+    },
+    "top": [
+     "voxel_world/voxel_chunk_#_# Mesh 26+0s 47468t",
+     "magicblock_settlement/village_crate_body Mesh 12+0s 864t",
+     "magicblock_settlement/character_body Mesh 10+0s 3240t",
+     "voxel_world/water_chunk_#_# Mesh 4+0s 3104t",
+     "magicblock_settlement/village_woodpile_body Mesh 4+0s 960t",
+     "voxel_world/macro_lod_tile_#_# Mesh 3+0s 34258t",
+     "homestead/character_body Mesh 3+0s 1068t",
+     "magicblock_settlement/village_cottage_body Mesh 2+0s 2592t",
+     "fauna/fauna_rabbit InstancedMesh 1+0s 9792t",
+     "homestead/homestead_statics Mesh 1+0s 4680t",
+     "ground_cover/ground_cover_batch Mesh 1+0s 4070t",
+     "homestead/herd_sheep InstancedMesh 1+0s 2448t",
+     "voxel_world/water_surface Mesh 1+0s 1152t",
+     "fauna/fauna_trout InstancedMesh 1+0s 1020t"
+    ],
+    "pitch": -70,
+    "h": 0
+   },
+   "callsByView": [
+    90,
+    80,
+    79,
+    60,
+    57,
+    57,
+    43,
+    41,
+    40,
+    37,
+    36,
+    33,
+    29,
+    28,
+    26,
+    26
+   ],
+   "trisMax": 130812,
+   "quality": "low"
+  },
+  "medium@-12,30": {
+   "worst": {
+    "calls": 144,
+    "tris": 164626,
+    "est": 144,
+    "dist": 8.4,
+    "scene": null,
+    "chainState": "{\"live\":{\"owner\":\"GVbuuocW6hzMcsCAsvX6AAJnGDo3VZHwTmSLGhkZSw32\",\"worldSeed\":1337,\"generator\":2,\"tick\":66400,\"lastTickTs\":1795617814,\"tickIntervalS\":2,\"stock\":{\"",
+    "at": [
+     -11,
+     31
+    ],
+    "owners": {
+     "magicblock_settlement": "30+30s",
+     "voxel_world": "34+0s",
+     "homestead": "11+11s",
+     "fauna": "4+4s",
+     "noxel_sites": "4+4s",
+     "styl_nature": "2+1s",
+     "life_state": "1+2s",
+     "character": "1+1s",
+     "banners": "1+1s",
+     "ground_cover": "1+0s",
+     "sky_dome": "1+0s"
+    },
+    "top": [
+     "voxel_world/voxel_chunk_#_# Mesh 26+0s 47468t",
+     "magicblock_settlement/village_crate_body Mesh 12+12s 1728t",
+     "magicblock_settlement/character_body Mesh 10+10s 6480t",
+     "magicblock_settlement/village_woodpile_body Mesh 4+4s 1920t",
+     "homestead/character_body Mesh 3+3s 2136t",
+     "magicblock_settlement/village_cottage_body Mesh 2+2s 5184t",
+     "voxel_world/water_chunk_#_# Mesh 4+0s 3104t",
+     "voxel_world/macro_lod_tile_#_# Mesh 3+0s 34258t",
+     "fauna/fauna_rabbit InstancedMesh 1+1s 19584t",
+     "homestead/homestead_statics Mesh 1+1s 9360t",
+     "homestead/herd_sheep InstancedMesh 1+1s 4896t",
+     "styl_nature/styl_nature_batch BatchedMesh 1+1s 4212t",
+     "fauna/fauna_trout InstancedMesh 1+1s 2040t",
+     "homestead/herd_chicken InstancedMesh 1+1s 1920t"
+    ],
+    "pitch": -70,
+    "h": 0
+   },
+   "callsByView": [
+    144,
+    134,
+    133,
+    114,
+    110,
+    110,
+    97,
+    87,
+    83,
+    82,
+    70,
+    68,
+    65,
+    64,
+    61,
+    60
+   ],
+   "trisMax": 170600,
+   "quality": "medium"
+  },
+  "high@-12,30": {
+   "worst": {
+    "calls": 144,
+    "tris": 170886,
+    "est": 144,
+    "dist": 8.4,
+    "scene": null,
+    "chainState": "{\"live\":{\"owner\":\"GVbuuocW6hzMcsCAsvX6AAJnGDo3VZHwTmSLGhkZSw32\",\"worldSeed\":1337,\"generator\":2,\"tick\":66409,\"lastTickTs\":1795617832,\"tickIntervalS\":2,\"stock\":{\"",
+    "at": [
+     -11,
+     31
+    ],
+    "owners": {
+     "magicblock_settlement": "30+30s",
+     "voxel_world": "34+0s",
+     "homestead": "11+11s",
+     "fauna": "4+4s",
+     "noxel_sites": "4+4s",
+     "styl_nature": "2+1s",
+     "life_state": "1+2s",
+     "character": "1+1s",
+     "banners": "1+1s",
+     "ground_cover": "1+0s",
+     "sky_dome": "1+0s"
+    },
+    "top": [
+     "voxel_world/voxel_chunk_#_# Mesh 26+0s 47468t",
+     "magicblock_settlement/village_crate_body Mesh 12+12s 1728t",
+     "magicblock_settlement/character_body Mesh 10+10s 6480t",
+     "magicblock_settlement/village_woodpile_body Mesh 4+4s 1920t",
+     "homestead/character_body Mesh 3+3s 2136t",
+     "magicblock_settlement/village_cottage_body Mesh 2+2s 5184t",
+     "voxel_world/water_chunk_#_# Mesh 4+0s 3104t",
+     "voxel_world/macro_lod_tile_#_# Mesh 3+0s 34258t",
+     "fauna/fauna_rabbit InstancedMesh 1+1s 19584t",
+     "homestead/homestead_statics Mesh 1+1s 9360t",
+     "styl_nature/styl_nature_batch BatchedMesh 1+1s 5820t",
+     "homestead/herd_sheep InstancedMesh 1+1s 4896t",
+     "fauna/fauna_trout InstancedMesh 1+1s 2040t",
+     "homestead/herd_chicken InstancedMesh 1+1s 1920t"
+    ],
+    "pitch": -70,
+    "h": 0
+   },
+   "callsByView": [
+    144,
+    134,
+    133,
+    114,
+    110,
+    110,
+    97,
+    88,
+    83,
+    82,
+    70,
+    69,
+    65,
+    64,
+    61,
+    60
+   ],
+   "trisMax": 176656,
+   "quality": "high"
+  }
+ },
+ "errs": []
+}

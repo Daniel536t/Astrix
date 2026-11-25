@@ -1,6 +1,6 @@
 # M015 — Mobile verification (final gate)
 
-**Status: NOT complete.** The build, the device test kit and the emulated checks are ready. M015 is complete only after the owner runs [DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md) on their own phone or tablet and the report is reviewed. No result in this file comes from a real device. Every browser run below is Playwright Chromium with mobile emulation (`isMobile`, `hasTouch`, touch through CDP) and software GL (SwiftShader).
+**Status: NOT complete.** The owner's first device run (device report 1, 2026-11-25) found five problems; they are fixed in emulation (see [Device report 1 and fixes](#device-report-1-and-fixes)). M015 stays open until a second device run confirms the fixes. The owner's report is the only real-device evidence in this file; every other result is emulated. Every browser run below is Playwright Chromium with mobile emulation (`isMobile`, `hasTouch`, touch through CDP) and software GL (SwiftShader).
 
 **Deployed vs merged:** committed locally on `deploy/boxd`. Not pushed, not deployed, not merged to `main`. The live site (https://astrix.nyc.boxd.sh) still runs the M014 release.
 
@@ -269,3 +269,116 @@ Release `20261125T114310Z-b235406` was deployed to https://astrix.nyc.boxd.sh. I
 A fresh emulated phone context (390x844, touch, dpr 2, software GL) opened `https://astrix.nyc.boxd.sh/?perf=1` with no page errors. The entry screen appeared over the world, as it does for every new browser. The quality level was chosen automatically as `low`, because the emulator's GPU is SwiftShader: pixel ratio 1, no shadows, trees at full detail to 50 m, ground cover to 30 m. The perf monitor was present. The renderer drew 46 calls and 86,760 triangles. Screenshot: `live-phone-perf.png`.
 
 This is emulation, not a device. **M015 remains open** until the owner's device report from `DEVICE_TEST_PLAN.md` is received and reviewed. Birds stay blocked until then.
+
+## Device report 1 and fixes
+
+### The owner's numbers (real device, the only real-device evidence)
+
+Source: `device/owner-report-2026-11-25-summary.txt`, pasted by the owner in chat. The JSON arrived cut off after bucket 62 (t = 620 s); the summary and buckets 0-61 are what was received.
+
+- **Device:** Android tablet, Adreno (TM) 710, 8 cores, 8 GB, screen 1366×854 @1.875, viewport 1365×709, Chrome 142 in desktop-site mode (user agent "X11; Linux x86_64"), touch. Build `b235406`.
+- **Render:** multi-draw. Quality **high** from 0 s, **medium** after a reload at 751 s.
+- **Frame rate:** median 59.5 fps, worst bucket 43.2, p5 56.8, frame p50 17 ms, p95 19 ms. Checks: median fps PASS, p95 PASS, drift PASS (0 %), length FAIL (17.9 min).
+- **Long frames:** 265 frames over 50 ms in the session. Buckets 9-11 and 16-25 (walking west into new ground, 48 m cells -3 to -8) dropped to 43-47 fps with p5 20-26 fps and 10-17 frames over 50 ms per 10 s.
+- **Draw calls:** 121-143 in buckets 42-61 (scene `walk:-1,0:mid`, walk mode beside the farm at the default walk zoom, quality high); triangles up to 194,094.
+- **Battery:** 72 % → 63 %, 30.5 %/h at 60 fps. Heap 136/61/212 MB.
+
+### What each problem was, and the fix
+
+All before/after numbers below are **emulated** (Playwright Chromium, software GL, not a phone). "Before" is build `17d0735`: `b235406` plus measurement counters only, with the same rendering and streaming. "After" is the fix commit.
+
+**1. Draw calls over 120 at the farm.** Reproduced at the owner's scene: viewport 1365×709, touch, desktop-site mode, walk mode in cell (-1,0) at the default walk zoom, MagicBlock chain on. The founder stood at three spots, (-28, 10), (-12, 30) and (-40, 40). At each spot the camera turned through 8 headings at 2 pitches, and `__renderBreakdown()` was read for every view. The worst view at high was **143 calls, the owner's maximum exactly**.
+
+- **The cause:** the MagicBlock settlement (the on-chain outpost east of the farm) drew every crate, woodpile, cottage, crop row and settler as its own mesh, all casting shadows: **30 main + 30 shadow calls**. Second was near water: one mesh per chunk, and its transparent double-sided material costs 2 calls per mesh (up to 18 calls). Then 4 + 4 calls for the Noxel waystones.
+- **The fixes:**
+  - The settlement props are baked into one mesh per material (`render/static-merge.ts`): 3 + 3 calls. Shapes, colours and shadows are unchanged, and none of them move.
+  - Near water is merged per 4×4-chunk region (one mesh per region with water).
+  - The waystones and markers are one mesh, except with `?inspect=1`.
+  - Animals, villagers, the founder and quality levels are unchanged (owner rule).
+
+Worst view per spot (calls), emulated:
+
+| Spot | high before → after | medium before → after | low before → after |
+|---|---|---|---|
+| (-28, 10) | 143 → **83** | 143 → **83** | 89 → 58 |
+| (-12, 30) | 144 → **89** | 144 → **89** | 90 → 64 |
+| (-40, 40) | 152 → **82** | 152 → **82** | 98 → 57 |
+
+- **Worst case:** 89 calls, 11 under the target of 100. The rest is mostly terrain chunks (up to 30, one per chunk in view) and the homestead (11 + 11).
+- **Triangles:** the worst view went from 176,656 to 181,184. Merged meshes are culled as one, so they rise a little; this is still under the 250k budget.
+- **Files:** `m015d-drawcalls.probe.js` and `m015d-drawcalls-{before,after}-{2810,1230,4040}.json`. Screenshots are `m015d-dc-*.png`.
+
+**2. Hitches when walking into new ground.** The emulated walk:
+
+- Spawn at (-150, 10), let the stream settle, then run west for 240 s with the CPU throttled 4× (about 100 m, 35 new chunks).
+- Half the owner's viewport (683×355). Software GL draws only about 0.6 fps here at any size, so every raw frame is over 50 ms.
+- The comparable measure is the **main-thread work per frame outside rendering**: the frame loop minus `renderer.render`, plus the worker callbacks between frames. It is recorded as the new `frameUpdate` metric and the new perf sections.
+
+The causes, by measured cost (4× throttle, before):
+
+- **The far landscape (macro LOD) was rebuilt on the main thread every 48 m:** 400-620 ms each time. This was the main hitch.
+- **Copying the padded volume for each worker mesh:** 13-15 ms per chunk, with up to 9 copies in one frame.
+- **Installing generated chunks:** about 9 ms each. Several could land between two frames, in message callbacks.
+- **Ground cover:** it re-indexed every entity whenever a chunk added entities, and merged with Matrix4 math.
+
+The fixes:
+
+- The macro LOD is built in a chunk worker (`buildMacroArrays`). The drawn tiles and their hole stay until the new ones arrive, and the chunks under the old hole are kept until then.
+- The padded volume is built from row copies; it is byte-identical to the old one (test).
+- Worker results (installs, mesh adoptions, macro tiles) are queued and applied in the frame within a 4 ms budget, at least one per frame. Mesh requests share the budget.
+- Ground cover places new chunks within 2 ms per frame. It reads trunk clearance live from the chunk entity index (same pieces, tested) and writes out the turn, scale and move per piece instead of using Matrix4.
+
+| Level | frames > 50 ms (work outside render) before → after | > 100 ms | worst frame (ms) | main-thread ms per 32 m walked |
+|---|---|---|---|---|
+| high | 5 → **2** | 5 → 1 | 515 → **116** | 769 → **442** |
+| medium | 6 → **2** | 5 → 0 | 622 → **55** | 951 → **435** |
+| low | 6 → **4** | 6 → 0 | 610 → **76** | 874 → **473** |
+
+- **Macro rebuild on the main thread:** 821-1136 ms over the walk before, 0-5 ms after.
+- **Biggest remaining cost:** the ground-cover merge every 6 m (193-455 ms over the walk at 4× throttle).
+- **Files:** `m015d-walk.probe.js` and `m015d-walk-{before,after}-{high,medium,low}.json`; screenshots are `m015d-walk-*.png`.
+- **What this does not show:** how many frames over 50 ms the tablet will see. It shows the size and spread of the CPU work that caused them.
+
+**3. Auto quality was high on the first load and medium after a reload.**
+
+- **The cause:** auto only asked `(pointer: coarse)`. In desktop-site mode Chrome answered "fine" on the first load and "coarse" after the reload.
+- **The fix:**
+  - A device is a phone or tablet if its primary pointer is coarse, or if it has a touch screen (`maxTouchPoints > 0` or `any-pointer: coarse`) and either a mobile GPU (Adreno, Mali, PowerVR, Apple GPU, Xclipse, Immortalis) or an ARM platform.
+  - The GPU is now probed on any touch screen. The decision is still made before the renderer is created, so the first frame uses it, and it reads only signals that do not change between loads.
+- **Emulated check** (`m015d-device.probe.js`, `m015d-device-results.json`): the owner's user agent, the WebGL renderer string patched to "Adreno (TM) 710", and the pointer queries forced to "fine". Before: `high (fine pointer (desktop))`. After: `medium (touch screen with a mobile GPU (Adreno (TM) 710))`. Two further loads with a coarse pointer were medium on the first frame and after a reload.
+- **Tests** cover this device's values in every pointer combination, plus desktops (a touch laptop with an Intel GPU, a Mac) staying high.
+
+**4. Battery 30.5 %/h at 60 fps.**
+
+- **Frame-rate cap:** ⚙ Settings → Frame rate offers Unlimited (default, unchanged), 60 and 30 "battery saver". `?fps=0|30|60` sets it for one load.
+- **The limiter** (`app/frame-cap.ts`) keeps requestAnimationFrame running and skips whole frames: no step and no render until 1/cap s has passed. On a 60 Hz screen, 30 draws every second frame; on 120 Hz, 60 does. Tests cover 60, 90 and 120 Hz and rAF jitter.
+- **It applies at once,** without a reload.
+- **The report records the cap:** the `Render:` line (`frame cap 30 fps (saved)`), a `cap` event, `cap` on every bucket, and `render.frameCap`. At a 30 cap the median-fps check passes from 28.5 fps (95 % of the cap); otherwise it is unchanged at 30.
+- **Default:** I kept Unlimited, because a 60 default would change the behaviour on 90/120 Hz screens. On this 60 Hz tablet, 60 is the same as Unlimited.
+- **Not measured:** the battery saving needs a device run; emulation cannot measure it.
+
+**5. The pasted report was cut off; the session was too short.**
+
+- **The cause:** Copy report pasted the summary plus the full JSON (about 30 KB for 107 buckets).
+- **The fix:** Copy now gives the summary, every event, and one short line per 10 s bucket (`i t fps/p5 p95 >50ms calls ktris bat quality+cap scene`, with "=" for a repeated scene). Long sessions fold into 1, 5 or 10-minute lines, so the paste stays under 8,000 characters. Download (and the Share file) keep the full JSON.
+- **Sizes (tests):** the owner's 107-bucket session gives all 107 lines under 8 KB. 360, 1,200 and 4,000 buckets also fit.
+- **In the browser:** the emulated paste was 1.3 KB with the cap shown (`m015d-perf-copy.png`).
+- **Session length:** the check failed at 17.9 min against 20 min. The threshold is unchanged. The thermal drift was still computed (0 %) from 6 recent buckets, so the session was long enough for a first reading; run 2 should go past 20 minutes.
+
+### Tests and commits
+
+- **Tests:** `npx tsc --noEmit`, `npm test` (**348 pass**: 335 before, plus 13 in `tests/m015.device1.test.ts`) and `npm run build` succeed.
+- **Commits (on `deploy/boxd`, local only):**
+  - `17d0735`: perf sections and the per-frame work counter (instrumentation).
+  - `090cab6`: the fixes and their tests.
+  - Then this evidence commit, with `Game/dist` rebuilt from `090cab6`.
+- **Not pushed, not deployed.**
+
+### Still open
+
+- A **second device run** on the same tablet ([DEVICE_TEST_PLAN.md](DEVICE_TEST_PLAN.md), "Device run 2") must confirm:
+  - draw calls under 100;
+  - fewer long frames when walking into new ground;
+  - the same quality on every load;
+  - the battery drain with and without the 30 fps cap.
+- Everything above except the owner's numbers is emulated. **M015 stays open** until that run is reviewed.
