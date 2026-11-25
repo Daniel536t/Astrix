@@ -1108,6 +1108,7 @@ body.clean #perf-overlay { display: none; }
 /* 360 px phones: the pill starts right of the Settings button. */
 @media (pointer: coarse) and (max-width: 380px) and (orientation: portrait) {
   body:not(.building):not(.planning-field) #perf-overlay { left: 136px; transform: none; align-items: flex-start; }
+  body:not(.building):not(.planning-field) #perf-overlay.open { left: 50%; transform: translateX(-50%); align-items: center; }
 }
 /* Builder view on landscape phones and tablets: the milestone panel ends above the perf pill. */
 @media (pointer: coarse) and (min-width: 761px) {
