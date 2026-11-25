@@ -318,7 +318,7 @@ Screenshots in `s2/`, 1200×700: `stab002-s2-{chain0,chainon}-{cow,horse,pen,vil
 
 ### Not met, or open
 
-- **Chicken overlap in the coop (browser only).** Both browser runs recorded one episode with a chicken, 0.14 m (`chain=0`) and **0.40 m** (chain-on). Each time the founder's feet were 0.32 m above the chicken's ground (y 12.32 against 12.0). The headless coop runs show nothing like it, and the terrain there is flat at y 12. **Cause not found.**
+- ~~Chicken overlap in the coop (browser only).~~ **Fixed**, see "Fix: bodies below the feet (coop chicken overlap)" below. Both browser runs had recorded one episode with a chicken, 0.14 m (`chain=0`) and 0.40 m (chain-on), each with the founder's feet 0.32 m above the chicken's ground.
 - **Squeeze is a deviation from "refuse moves that go deeper".** After 2.5 s of pressing, the founder may go 0.12 m into a body. It never passes through one, and centre distance stays ≥ the sum of radii − 0.12 m.
 - **Drawn villager figures lead their capsules** by up to 0.17 m for about a second after a tick that comes early (the clock catching up). The median is 0.00–0.02 m. Animals did not show this.
 - **Animal–animal separation is not part of S2.** Shared cells are 598 per 600 ticks without the founder and 1,113 with the founder standing in the paddock, against 1,106 in STAB-001.
@@ -327,9 +327,75 @@ Screenshots in `s2/`, 1200×700: `stab002-s2-{chain0,chainon}-{cow,horse,pen,vil
 - **Presence is sent with every tick,** not only when it changes. That adds about 1.3 KB/min. Search expansions are +23 % when the founder walks the pens.
 - **Not tested in the browser:** standing in a gate, and villagers queueing at the door. Both are covered headless only. No real device was used.
 
+### Fix: bodies below the feet (coop chicken overlap)
+
+Not pushed or deployed. Base commit `863f0f7`.
+
+**Cause (real, not a probe artefact).** The coop has a 1 m terrain step inside it: the cells at x ≥ −33 (z ≤ −1) are at ground 13, the rest at 12. The earlier headless coop runs used a flat stretch, so they never crossed it. The contact rule tested a body only while it shared height with the founder's feet (`bodyLevel`: feet below the body's top). Three things followed:
+- A founder on the upper level (feet 13.0) is above a hen's top (12.75). The hen at the foot of the step was ignored, and the founder walked out over it.
+- The fall off the step was never tested against bodies. The founder dropped straight into the hen and became "level" with it part-way down. That is the recorded episode: feet 12.32 against the hen's ground 12.0, 0.14 m and 0.40 m deep, then pushed out at 1.5 m/s.
+- A capsule's height came from the ground under its centre only. A hen whose centre crossed the step rose by 1 m in one frame, and a founder above it was suddenly inside it.
+
+The probe's nearest-instance matching was not the cause. The recorded overlap comes from the founder's own sim-derived capsules (`__metrics.explore.contact`), and it reproduces headless (below).
+
+**Fix (player-local physics only; no sim, rules or hash change).** `sim/character.ts` and `sim/bodies.ts`:
+1. A standing founder whose feet are above a body's top by less than an animal's 1 m step (`MAX_STEP`) collides with it as if level (`bodyUnderStep`). The animal could step up into the founder in one move, so the founder does not stand over it either. Push-out and the squeeze timer use the same test.
+2. A horizontal move without support under it (off a step or a ledge, or in the air) is also tested against the bodies below the feet that the founder would come down into, down to the landing height (`supported`, `landingY`). From a ledge the drop waits until the body is clear. In the air, or standing on a body, an existing overlap may only shrink.
+3. A fall onto a body the feet were above rests on its top (`landingOnBody`). It never sinks into it. Push-out then slides the founder off.
+4. Capsules from sim state span the ground under the whole capsule (`groundSpan`): feet at the lowest column, top at the highest plus the body's height. An animal across the step is on both levels. Villagers use the same span.
+5. The founder still passes over an animal while the feet stay at least 1 m above its top, for example along a 2 m ledge (tested).
+6. Metrics: `__metrics.explore.contact.minGapById` (smallest gap per body over all frames) and `squeezeGapById` (the same, for frames after 2.5 s of pressing, when the squeeze is allowed).
+
+**Headless.**
+- `s2/s2fix-step-repro.ts` (output `s2/s2fix-step-repro.txt`): the founder on the coop's step walks off it at a hen at its foot, 60 fps and fixed 1/30 s.
+  - Worst overlap before: 0.16–0.48 m, at feet 12.63–12.73.
+  - After: 0.000–0.004 m. The founder stops on the step.
+  - One run shows 0.114 m. That run presses for 3 s, so it is the squeeze.
+
+Scratch chase (not kept), every animal of each species for 10 s, walking and jumping, both step modes. Worst overlap outside the squeeze:
+
+| | walking, before → after | jumping, before → after |
+|---|---|---|
+| chicken (coop) | 0.475–0.500 → 0.013–0.026 m | 0.474–0.476 → 0.027 m |
+| sheep, goat, horse | ≤ 0.012 → unchanged | 0.04–0.68 → ≤ 0.018 m |
+
+Cattle and pig runs in this chase are dominated by the squeeze (0.12 m) and, for cattle, a start placed inside a horse. They are not used as evidence.
+
+Tests: new `Game/tests/stab002.s2-step.test.ts` (4 tests):
+
+- walking off a 1 m step onto nine short bodies at three positions and three headings, walking and running, both step modes;
+- passing over a hen along a 2 m ledge, and not dropping onto it;
+- jumping at or dropping onto short bodies;
+- the coop reproduction with sim-derived capsules, and `groundSpan`.
+
+Three of them fail on `863f0f7`.
+
+`npx tsc --noEmit` is clean, **385 tests pass** (381 + 4), and the build is OK. The v1–v6 hash pins, the v7-without-presence pins and the v6 save fixture tests are unchanged and pass. Contact cost stays within the existing test's bound.
+
+**Browser** (emulated desktop Chromium, not a phone). Fresh storage, `Game/dist` served as `https://astrix.local/`. The script is `s2/stab002-s2fix-probe.template.js` and the results are `s2/stab002-s2fix-{chain0,chainon}.result.json`.
+- The founder steers at each animal's **sim position matched by its sim id** (`__metrics.homestead.herd`), not at the nearest drawn instance.
+- The run chases a cow and a horse, a sheep and a goat, a pig in the sty, and then each of the four hens in the coop, across the step. Feet ranged over y 12–14.9.
+- The overlap is the worst over **all frames** per body (`minGapById`), grouped by species.
+
+| species | `?chain=0`: max overlap | chain-on: max overlap |
+|---|---|---|
+| cattle | 0.000 m | 0.000 m |
+| horse | 0.000 | 0.000 |
+| sheep | 0.000 | 0.000 |
+| goat | 0.000 | 0.000 |
+| pig | 0.000 | 0.000 |
+| chicken | 0.000 | 0.000 |
+| while squeezing (after 2.5 s of pressing) | pig 0.12, chicken 0.12 | none |
+
+- The squeeze rows are the documented squeeze deviation (below). The chain-on run never squeezed.
+- In a first `chain=0` run, before the squeeze frames were separated, the worst values were horse 0.007 m, goat 0.018 m and chicken 0.12 m. The chicken value was a squeeze: pressing 3.3 s, feet 13.0 against a hen across the step.
+- No page errors. Contact cost per frame: building the capsules 0.044–0.047 ms; fixed steps including contact 0.12–0.13 ms.
+- Screenshots: `s2/stab002-s2fix-{chain0,chainon}-coop.png`.
+
 ### Reproduce
 
 From `Game/`:
 - `npm test`
 - `npx esbuild ../13_Integration_and_QA/Evidence/STAB-002-stabilization/s2/s2-repro.ts --bundle --platform=node --format=esm --external:three --outfile=tests/.s2-repro.tmp.mjs && node tests/.s2-repro.tmp.mjs`, then delete the `.tmp.mjs` file.
 - Browser: copy `s2/stab002-s2-chain0.js` (or `-chainon.js`) under `.kiro/artifacts/screenshots/` and run it with Playwright `browser_run_code_unsafe { filename }`.
+- Coop step fix: `s2/s2fix-step-repro.ts` as in its header; browser: `s2/stab002-s2fix-probe.template.js` with `__VARIANT__` set to `chain0` or `chainon`, run the same way.

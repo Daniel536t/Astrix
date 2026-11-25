@@ -22,7 +22,7 @@ import { OBSTRUCTION_RADIUS } from './terrain';
 import { LIFE_TRUNK, TreeStage, treeLife } from './woodland';
 // M012: the settlement's structure layer (fence and gate edges, buildings) is the one villagers and animals route on.
 import { settlementCollision } from './homestead';
-import { structureHits } from './nav';
+import { MAX_STEP, structureHits } from './nav';
 import { DynamicBody, penetration, pushNormal } from './bodies';
 
 export const CHARACTER_RADIUS = 0.3;
@@ -329,11 +329,57 @@ const CONTACT_BROAD = 1.2;
 export function bodyLevel(b: DynamicBody, y: number): boolean {
   return y < b.y + b.h - 0.05 && y + CHARACTER_HEIGHT > b.y + 0.02;
 }
+/**
+ * STAB-002 S2: a body the character is above at feet y (feet at or over its
+ * top) but would share height with on landing at feet `landY`. The character
+ * passes over an animal only while the feet stay above its top.
+ */
+function bodyBelow(b: DynamicBody, y: number, landY: number): boolean {
+  const top = b.y + b.h - 0.05;
+  return y >= top && landY < top;
+}
+/** Feet height at which a character coming down from y to ny at (x, z) rests on a body it overlaps in plan (-Infinity: none). */
+function landingOnBody(bodies: ReadonlyArray<DynamicBody>, x: number, y: number, ny: number, z: number, allow: number): number {
+  let best = -Infinity;
+  for (const b of bodies) {
+    if (!bodyBelow(b, y, ny) || penetration(b, x, z, CHARACTER_RADIUS) <= allow + 1e-4) continue;
+    const top = b.y + b.h - 0.05;
+    if (top > best) best = top;
+  }
+  return best;
+}
+/**
+ * STAB-002 S2: a standing character whose feet are at or above a body's top
+ * by less than an animal's step (`MAX_STEP`, 1 m): the animal can step up
+ * onto the character's level in one move (the coop's 1 m step), so the
+ * character does not stand over it either.
+ */
+function bodyUnderStep(b: DynamicBody, y: number): boolean {
+  const top = b.y + b.h - 0.05;
+  return y >= top && y - top < MAX_STEP;
+}
+/** Bodies the character's horizontal moves and push-out are tested against at feet y. */
+function inContact(b: DynamicBody, y: number, grounded: boolean): boolean {
+  return bodyLevel(b, y) || (grounded && bodyUnderStep(b, y));
+}
+/** Is there support (terrain or a structure top) right under the feet at (x, y, z)? */
+function supported(world: World, x: number, y: number, z: number): boolean {
+  return overlaps(world, x, y - 0.05, z) || structureFloor(world, x, y + 0.02, z) > y - 0.06;
+}
+/** Feet height the character would land at falling from (x, y, z): the first support below (up to 8 m; lower counts as 8 m). */
+function landingY(world: World, x: number, y: number, z: number): number {
+  const structTop = structureFloor(world, x, y + 0.02, z);
+  for (let fy = Math.floor(y - 1e-3); fy > y - 8; fy--) {
+    if (fy <= structTop) return structTop;
+    if (overlaps(world, x, fy - 0.05, z)) return fy;
+  }
+  return Math.max(structTop, y - 8);
+}
 /** The deepest overlap with any body at (x, z), and the body. */
-function deepest(bodies: ReadonlyArray<DynamicBody>, x: number, y: number, z: number): number {
+function deepest(bodies: ReadonlyArray<DynamicBody>, x: number, y: number, z: number, grounded = false): number {
   let worst = 0;
   for (const b of bodies) {
-    if (!bodyLevel(b, y)) continue;
+    if (!inContact(b, y, grounded)) continue;
     const p = penetration(b, x, z, CHARACTER_RADIUS);
     if (p > worst) worst = p;
   }
@@ -355,13 +401,20 @@ function nearBodies(bodies: ReadonlyArray<DynamicBody> | undefined, x: number, z
  * a straight move is convex, so a bisection on the first deepening finds
  * the contact point.
  */
-function bodyFraction(bodies: ReadonlyArray<DynamicBody>, x: number, y: number, z: number, dx: number, dz: number, allow = 0): number {
+function bodyFraction(bodies: ReadonlyArray<DynamicBody>, x: number, y: number, z: number, dx: number, dz: number, allow = 0,
+  grounded = false, landY = y, loose = false): number {
   let t = 1;
   for (const b of bodies) {
-    if (!bodyLevel(b, y)) continue;
+    // Level with the feet; or (standing) just above its top, where it can step up into the character; or
+    // below the feet, above where this move would bring the character down (off a step or a ledge, or in the air).
+    const level = inContact(b, y, grounded);
+    const drop = !level && landY < y && bodyBelow(b, y, landY);
+    if (!level && !drop) continue;
     const p0 = penetration(b, x, z, CHARACTER_RADIUS);
     // Deeper at the end: find the last point that is not deeper than the start (or than contact, or the squeeze depth).
-    const limit = Math.max(allow, p0);
+    // Dropping onto a body the feet overhang by p0 waits until it is clear (else the character would land in it),
+    // unless the character is in the air or standing on bodies (`loose`), where an overlap from above may only shrink.
+    const limit = level || loose ? Math.max(allow, p0) : allow;
     const p1 = penetration(b, x + dx * t, z + dz * t, CHARACTER_RADIUS);
     if (p1 <= limit + 1e-6) continue;
     let lo = 0, hi = t;
@@ -382,7 +435,7 @@ function bodyFraction(bodies: ReadonlyArray<DynamicBody>, x: number, y: number, 
  */
 function separateBodies(world: World, s: CharacterState, near: ReadonlyArray<DynamicBody>, dt: number, allow = 0): void {
   for (const b of near) {
-    if (!bodyLevel(b, s.y)) continue;
+    if (!inContact(b, s.y, s.grounded)) continue;
     const p = penetration(b, s.x, s.z, CHARACTER_RADIUS) - allow;
     if (p <= 1e-4) continue;
     const { nx, nz } = pushNormal(b, s.x, s.z);
@@ -391,11 +444,11 @@ function separateBodies(world: World, s: CharacterState, near: ReadonlyArray<Dyn
     // The whole push, else its x or z part alone (against a wall the founder slides along it, as when walking).
     // Accepted when it lowers the deepest overlap with any body: pinched between two bodies, the founder
     // settles between them instead of being held deep inside one.
-    const before = deepest(near, s.x, s.y, s.z);
+    const before = deepest(near, s.x, s.y, s.z, s.grounded);
     for (const [px, pz] of [[nx * step, nz * step], [nx * step / 2, nz * step / 2], [nx * step, 0], [0, nz * step]]) {
       if (Math.abs(px) + Math.abs(pz) < 1e-6) continue;
       const tx = s.x + px, tz = s.z + pz;
-      if (deepest(near, tx, s.y, tz) < before - 1e-6 && clear(world, tx, s.y, tz, base)) { s.x = tx; s.z = tz; break; }
+      if (deepest(near, tx, s.y, tz, s.grounded) < before - 1e-6 && clear(world, tx, s.y, tz, base)) { s.x = tx; s.z = tz; break; }
     }
   }
 }
@@ -508,7 +561,14 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
     if (delta === 0) continue;
     // A move into a body stops at the contact point (it never goes deeper); the velocity on that axis ends there.
     if (near.length) {
-      const f = bodyFraction(near, s.x, s.y, s.z, axis === 'x' ? delta : 0, axis === 'z' ? delta : 0, squeezing ? CONTACT_SQUEEZE_DEPTH : 0);
+      // STAB-002 S2: a move without support under it (off a step or a ledge, or in the air) is also tested against
+      // the bodies below the feet that the character would come down into (it used to pass over a hen and fall into it).
+      const ex = axis === 'x' ? s.x + delta : s.x, ez = axis === 'z' ? s.z + delta : s.z;
+      const landY = !swimming && !supported(world, ex, s.y, ez) ? landingY(world, ex, s.y, ez) : s.y;
+      // In the air or standing on bodies, an overlap from above may stay (never deepen); from a ledge the drop waits until clear.
+      const loose = landY < s.y && (!wasGrounded || !supported(world, s.x, s.y, s.z));
+      const f = bodyFraction(near, s.x, s.y, s.z, axis === 'x' ? delta : 0, axis === 'z' ? delta : 0, squeezing ? CONTACT_SQUEEZE_DEPTH : 0,
+        wasGrounded && !swimming, landY, loose);
       if (f < 1) {
         delta *= f;
         if (axis === 'x') s.vx = 0; else s.vz = 0;
@@ -546,7 +606,11 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
 
   // Vertical.
   const ny = s.y + s.vy * dt;
-  if (!overlaps(world, s.x, ny, s.z)) {
+  // STAB-002 S2: coming down onto a body the feet were above (a jump, a fall) rests on its top instead of sinking into it.
+  const bodyTop = near.length && s.vy < 0 ? landingOnBody(near, s.x, s.y, ny, s.z, squeezing ? CONTACT_SQUEEZE_DEPTH : 0) : -Infinity;
+  if (bodyTop > ny && !overlaps(world, s.x, bodyTop, s.z)) {
+    s.y = bodyTop; s.vy = 0; s.grounded = true;
+  } else if (!overlaps(world, s.x, ny, s.z)) {
     s.y = ny;
     s.grounded = false;
   } else if (s.vy <= 0) {
@@ -572,7 +636,7 @@ export function stepCharacter(world: World, prev: CharacterState, input: Charact
     // While squeezing past, only overlap beyond the squeeze depth is pushed out (a body walking into a squeezing founder still moves them).
     separateBodies(world, s, near, dt, squeezing ? CONTACT_SQUEEZE_DEPTH : 0);
     // Pressing against a body without getting anywhere (this is what lets a founder squeeze past a cornered animal).
-    const touching = near.some((b) => bodyLevel(b, s.y) && penetration(b, s.x, s.z, CHARACTER_RADIUS) > -0.02);
+    const touching = near.some((b) => inContact(b, s.y, s.grounded) && penetration(b, s.x, s.z, CHARACTER_RADIUS) > -0.02);
     const progress = Math.hypot(s.x - prev.x, s.z - prev.z) / dt;
     s.pressing = pushing && touching && progress < 0.3 ? (s.pressing ?? 0) + dt : squeezing && pushing && touching ? s.pressing : 0;
   } else if (s.pressing !== undefined) delete s.pressing;

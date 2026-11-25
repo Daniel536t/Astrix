@@ -276,7 +276,11 @@ export class HomesteadBodies {
       const size = FARM_BODIES[a.species], k = tick - a.born < adultAge(a.species) ? youngScale(a.species) : 1;
       const heading = turnHeading(t.ph, t.heading, (nowMs - this.at) / 1000, t.rate);
       const ux = Math.sin(heading), uz = Math.cos(heading);
-      out.push({ id: a.id, x: bx + ux * size.off * k, z: bz + uz * size.off * k, y: ground(bx, bz), h: size.h * k, r: size.r * k, hl: size.hl * k, heading });
+      const cx = bx + ux * size.off * k, cz = bz + uz * size.off * k, r = size.r * k, hl = size.hl * k;
+      // Feet at the lowest ground under the whole capsule, top above the highest: an animal across a 1 m step
+      // (the coop's) is on both levels, and never rises a metre into the founder in one frame as its centre crosses.
+      const { lo, hi } = groundSpan(ground, cx, cz, Math.abs(ux) * hl + r, Math.abs(uz) * hl + r);
+      out.push({ id: a.id, x: cx, z: cz, y: lo, h: size.h * k + (hi - lo), r, hl, heading });
     }
     for (const v of h.villagers) {
       const t = this.tracks.get(v.id);
@@ -285,9 +289,23 @@ export class HomesteadBodies {
       if (v.task?.kind === 'rest' && t.step < 0.05) continue;
       const bx = t.px + (t.x - t.px) * alpha, bz = t.pz + (t.z - t.pz) * alpha;
       if (Math.abs(bx - x) > range || Math.abs(bz - z) > range) continue;
-      out.push({ id: v.id, x: bx, z: bz, y: ground(bx, bz), h: PERSON_BODY.h, r: PERSON_BODY.r, hl: 0, heading: t.heading });
+      const { lo, hi } = groundSpan(ground, bx, bz, PERSON_BODY.r, PERSON_BODY.r);
+      out.push({ id: v.id, x: bx, z: bz, y: lo, h: PERSON_BODY.h + (hi - lo), r: PERSON_BODY.r, hl: 0, heading: t.heading });
     }
   }
+}
+
+/** Lowest and highest ground (m) over the 1 m columns a box of half-extents (ex, ez) at (x, z) covers. */
+export function groundSpan(ground: (x: number, z: number) => number, x: number, z: number, ex: number, ez: number): { lo: number; hi: number } {
+  let lo = Infinity, hi = -Infinity;
+  for (let cz = Math.floor(z - ez); cz <= Math.floor(z + ez); cz++) {
+    for (let cx = Math.floor(x - ex); cx <= Math.floor(x + ex); cx++) {
+      const g = ground(cx + 0.5, cz + 0.5);
+      if (g < lo) lo = g;
+      if (g > hi) hi = g;
+    }
+  }
+  return { lo, hi };
 }
 
 /** A wildlife creature's capsule from its sim record (trout are not bodies: they are in the water). */

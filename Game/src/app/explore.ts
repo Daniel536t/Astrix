@@ -9,7 +9,7 @@
 // position only decides *which* resource is in reach.
 import * as THREE from 'three';
 import {
-  CHARACTER_RADIUS, CharacterState, FIXED_STEP, bodyLevel, MAX_HEALTH, createCharacter, findStandingY, respawnCharacter, stepCharacter,
+  CHARACTER_RADIUS, CONTACT_SQUEEZE_AFTER, CharacterState, FIXED_STEP, bodyLevel, MAX_HEALTH, createCharacter, findStandingY, respawnCharacter, stepCharacter,
 } from '../sim/character';
 import { Entity, World, isSolid, residentVoxelAt, nearestHarvestable } from '../sim/world';
 import { OrbitRig } from '../render/camera';
@@ -409,6 +409,12 @@ export class ExploreController {
 
   /** STAB-002 S2 contact metrics (presentation only). */
   private contact = { frames: 0, steps: 0, bodies: 0, ms: 0, maxMs: 0, collectMs: 0, maxCollectMs: 0, nearest: null as null | { id: string; gap: number; x: number; z: number }, minGap: Infinity, minAt: null as null | { id: string; x: number; z: number; y: number; bodyY: number; pressing: number }, held: 0, maxHeld: 0 };
+  /**
+   * STAB-002 S2: the smallest gap (m) per body id over all frames (bodies that came within 0.1 m), apart
+   * from frames where the founder has pressed for CONTACT_SQUEEZE_AFTER and may squeeze (`squeezeById`).
+   */
+  private minById = new Map<string, number>();
+  private squeezeById = new Map<string, number>();
   /** collect: building the capsules from sim state; step: the frame's fixed steps (all of stepCharacter, contact included). */
   private noteContact(bodies: ReadonlyArray<DynamicBody>, steps: number, collect: number, ms: number, pushing: boolean, frameDt: number): void {
     const c = this.contact, s = this.state!;
@@ -420,6 +426,9 @@ export class ExploreController {
       if (!bodyLevel(b, s.y)) continue;
       const gap = -penetration(b, s.x, s.z, CHARACTER_RADIUS);
       if (!best || gap < best.gap) best = { id: b.id, gap, x: b.x, z: b.z, y: b.y };
+      // Closest each body came (every frame, not swimming), for per-species evidence.
+      const byId = (s.pressing ?? 0) >= CONTACT_SQUEEZE_AFTER ? this.squeezeById : this.minById;
+      if (gap < 0.1 && s.mode !== 'swim' && gap < (byId.get(b.id) ?? Infinity)) byId.set(b.id, gap);
     }
     c.nearest = best ? { id: best.id, gap: Math.round(best.gap * 1000) / 1000, x: Math.round(best.x * 100) / 100, z: Math.round(best.z * 100) / 100 } : null;
     if (best && s.mode !== 'swim' && best.gap < c.minGap) { c.minGap = best.gap; c.minAt = { id: best.id, x: Math.round(s.x * 100) / 100, z: Math.round(s.z * 100) / 100, y: Math.round(s.y * 100) / 100, bodyY: Math.round(best.y * 100) / 100, pressing: Math.round((s.pressing ?? 0) * 10) / 10 }; }
@@ -430,7 +439,8 @@ export class ExploreController {
     const c = this.contact;
     return { frames: c.frames, steps: c.steps, bodies: c.bodies, stepMsPerFrame: c.frames ? Math.round((c.ms / c.frames) * 1000) / 1000 : 0, maxStepMs: Math.round(c.maxMs * 1000) / 1000,
       collectMsPerFrame: c.frames ? Math.round((c.collectMs / c.frames) * 10000) / 10000 : 0, maxCollectMs: Math.round(c.maxCollectMs * 1000) / 1000,
-      nearest: c.nearest, minAt: c.minAt, minGap: Number.isFinite(c.minGap) ? Math.round(c.minGap * 1000) / 1000 : null, heldS: Math.round(c.held * 100) / 100, maxHeldS: Math.round(c.maxHeld * 100) / 100 };
+      nearest: c.nearest, minAt: c.minAt, minGapById: Object.fromEntries([...this.minById].map(([id, g]) => [id, Math.round(g * 1000) / 1000])),
+      squeezeGapById: Object.fromEntries([...this.squeezeById].map(([id, g]) => [id, Math.round(g * 1000) / 1000])), minGap: Number.isFinite(c.minGap) ? Math.round(c.minGap * 1000) / 1000 : null, heldS: Math.round(c.held * 100) / 100, maxHeldS: Math.round(c.maxHeld * 100) / 100 };
   }
 
   metrics(): Record<string, unknown> | null {
