@@ -517,6 +517,8 @@ export interface SearchOptions {
   openGatesOnly?: boolean;
   /** M012 villagers: cells another walker stands on (never the start cell); also never chosen as the goal. */
   avoid?: (cell: number) => boolean;
+  /** STAB-002 rules v7 animals: blocked cells walkable for this move (an animal walking out of a shelter footprint it is trapped in). */
+  pass?: (cell: number) => boolean;
   maxExpansions: number;
 }
 
@@ -524,7 +526,7 @@ const natureBlock = (b: number) => b === BLOCK.tree || b === BLOCK.rock;
 
 function free(g: NavGrid, i: number, o: SearchOptions): boolean {
   const b = g.block[i];
-  return (b === BLOCK.none || (!!o.ignoreNature && natureBlock(b))) && !o.avoid?.(i);
+  return (b === BLOCK.none || (!!o.ignoreNature && natureBlock(b)) || (!!o.pass && o.pass(i))) && !o.avoid?.(i);
 }
 
 /** Wall state of an orthogonal edge: 0 open, 1 gate (passable), 2 blocked. */

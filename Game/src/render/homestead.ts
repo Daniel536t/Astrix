@@ -10,6 +10,7 @@ import { residentSurfaceAt, surfaceAt } from '../sim/world';
 import {
   CROP_RULES, DM, Facility, HomesteadState, MOISTURE_MAX, Plot, SPECIES, Species, TROUGH_MAX, cropStage, fieldRect,
   dayTime, homesteadLayout, SPECIES_RULES, unitsOf, fieldOpening, homesteadGates, BuildSite, SITE_RULES, Role, siteCells,
+  isHerdHomestead,
 } from '../sim/homestead';
 import type { GateState } from '../sim/nav';
 import { AnimalBatch } from './animal-kit';
@@ -364,9 +365,14 @@ class Herd {
       const heading = s.shown ?? s.heading;
       s.phase += dt * (walking ? 2.5 + s.speed * 3.2 : 0);
       s.swing += ((walking ? Math.min(0.75, 0.3 + s.speed * 0.2) : 0) - s.swing) * (1 - Math.exp(-dt * 8));
-      const eating = now < s.eatUntil;
+      // Rules v7: the pose is the sim's own state (head down while a grazing
+      // bout or a drink runs, lying while resting). Older rules have no state,
+      // so their poses stay as M012 drew them (head down for a meal, lying at night).
+      const herd = isHerdHomestead(h);
+      const bout = herd && (a.act === 'graze' || a.act === 'drink') && (a.until ?? 0) > 0;
+      const eating = herd ? bout && !walking : now < s.eatUntil;
       const young = tick - a.born < rule.adultAge;
-      const lying = night && !walking && !eating;
+      const lying = herd ? a.act === 'rest' && !walking : night && !walking && !eating;
       let head = 0;
       if (eating) head = a.species === 'chicken' ? 0.35 + Math.max(0, Math.sin(now * 14)) * 0.6 : 0.85;
       else if (lying) head = 0.3;

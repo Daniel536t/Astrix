@@ -25,7 +25,7 @@ import {
   setGate, upgradeHomestead, HOMESTEAD_WORK_VERSION, SITE_KINDS, SiteKind, placeSite, approveSite, cancelSite, freeInStore, treeTarget,
 } from '../sim/homestead';
 import { GATE_STATES, GateState } from '../sim/nav';
-import { HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, BUILD_KINDS } from '../sim/homestead';
+import { HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, HOMESTEAD_HERD_VERSION, BUILD_KINDS } from '../sim/homestead';
 import { HARVEST_MODES, HarvestMode, POLICY_LIMITS, WoodPolicy, speciesFromText } from '../sim/woodland';
 import type { TreeSpecies } from '../sim/vegetation';
 import { plantTree, protectTree, protectZone, removeZone, setWoodlandPolicy } from '../sim/forestry';
@@ -42,7 +42,7 @@ export type HomesteadCommand = FoundHomesteadCommand | HomesteadActCommand | Ass
   | MarkFieldCommand | SetCropCommand | RemoveFieldCommand | SetGateCommand | UpgradeHomesteadCommand
   | PlaceSiteCommand | ApproveSiteCommand | CancelSiteCommand
   | PlantTreeCommand | ProtectTreeCommand | ProtectZoneCommand | RemoveZoneCommand | WoodlandPolicyCommand;
-type RulesVersion = typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION;
+type RulesVersion = typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION | typeof HOMESTEAD_HERD_VERSION;
 /** M013 (rules v5): the owner plants a wildling sapling at a cell (whole metres), lifted from a seed parent within 20 m (of `species`, when given). */
 export interface PlantTreeCommand extends CommandEnvelope { type: 'plant_tree'; x: number; z: number; species?: TreeSpecies }
 /** M013: the owner marks or unmarks a tree protected. */
@@ -61,8 +61,9 @@ export interface SetGateCommand extends CommandEnvelope { type: 'set_gate'; gate
 /**
  * M010: a legacy (v1) homestead switches to settlement rules v2 (navigation, gates, stage timber).
  * M012: `rules: 3` switches a v1 or v2 homestead to settlement rules v3 (animals on the grid, villager avoidance).
+ * STAB-002: `rules: 7` switches any homestead to settlement rules v7 (animals walk out of blocked cells; graze, drink and rest states).
  */
-export interface UpgradeHomesteadCommand extends CommandEnvelope { type: 'upgrade_homestead'; rules?: typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION }
+export interface UpgradeHomesteadCommand extends CommandEnvelope { type: 'upgrade_homestead'; rules?: typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION | typeof HOMESTEAD_HERD_VERSION }
 /** The player lays out a field: where (metres, min corner), how big, and what to grow. */
 export interface MarkFieldCommand extends CommandEnvelope { type: 'mark_field'; x: number; z: number; w: number; d: number; crop: CropKind }
 export interface SetCropCommand extends CommandEnvelope { type: 'set_crop'; fieldId: string; crop: CropKind }
@@ -262,7 +263,7 @@ function policyOf(value: Record<string, unknown>): WoodPolicy | null {
   return { harvest: value.harvest as HarvestMode, minStage: value.minStage, keepVeterans: value.keepVeterans, snags: value.snags,
     buffer: value.buffer, waterBuffer: value.waterBuffer, minStanding: value.minStanding, replant: value.replant };
 }
-const RULES: readonly number[] = [HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION];
+const RULES: readonly number[] = [HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, HOMESTEAD_HERD_VERSION];
 const rotOf = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 && v <= 3;
 
 function validateHomesteadCommand(value: Record<string, unknown>, base: { schema: typeof CURRENT_JOURNAL_SCHEMA; id: string; expectedRevision: number }): Command | null {
@@ -275,7 +276,7 @@ function validateHomesteadCommand(value: Record<string, unknown>, base: { schema
       return { ...base, type: 'set_gate', gateId: value.gateId as string, state: value.state as GateState };
     case 'upgrade_homestead':
       if (value.rules === undefined) return { ...base, type: 'upgrade_homestead' };
-      return value.rules === HOMESTEAD_LIVING_VERSION || value.rules === HOMESTEAD_WORK_VERSION || value.rules === HOMESTEAD_WOODLAND_VERSION || value.rules === HOMESTEAD_BUILD_VERSION ? { ...base, type: 'upgrade_homestead', rules: value.rules } : null;
+      return value.rules === HOMESTEAD_LIVING_VERSION || value.rules === HOMESTEAD_WORK_VERSION || value.rules === HOMESTEAD_WOODLAND_VERSION || value.rules === HOMESTEAD_BUILD_VERSION || value.rules === HOMESTEAD_HERD_VERSION ? { ...base, type: 'upgrade_homestead', rules: value.rules } : null;
     case 'plant_tree': {
       if (!cell(value.x) || !cell(value.z) || value.species !== undefined && !speciesFromText(value.species)) return null;
       return { ...base, type: 'plant_tree', x: value.x, z: value.z, ...(value.species !== undefined ? { species: value.species as TreeSpecies } : {}) };

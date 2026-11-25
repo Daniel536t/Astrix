@@ -473,7 +473,7 @@ test('genesis is unchanged; v3 commands and fields are strictly validated', () =
   assert.equal(GameSession.genesis(1337).stateHash, 'e659504b056654dc');
   const s = founded(2);
   const hash = s.stateHash;
-  for (const bad of [{ type: 'upgrade_homestead', rules: 2 }, { type: 'upgrade_homestead', rules: 7 }, { type: 'found_homestead', rules: 7 }]) { // Stage B made rules 4 valid, M013 made 5 valid, M014 made 6 valid
+  for (const bad of [{ type: 'upgrade_homestead', rules: 2 }, { type: 'upgrade_homestead', rules: 8 }, { type: 'found_homestead', rules: 8 }]) { // Stage B made rules 4 valid, M013 made 5 valid, M014 made 6 valid, STAB-002 made 7 valid
     const r = send(s, bad);
     assert.ok(!r.ok && r.code === 'invalid_command', JSON.stringify(bad));
   }

@@ -12,7 +12,7 @@
 //    except by an explicit biological source (crop growth, animal products,
 //    births), and those are rule-driven, not presentation.
 import type { World } from './world';
-import { MAT, chunkKey, cutEntity, editVersion, worldToChunkX, worldToChunkZ, getVoxel, removeEntity, surfaceAt, waterDepthAt } from './world';
+import { MAT, chunkKey, cutEntity, editVersion, worldToChunkX, worldToChunkZ, getVoxel, removeEntity, surfaceAt, topMaterialAtWorld, waterDepthAt } from './world';
 import type { Entity } from './world';
 import { STAGE_FOOTPRINT, growthStage, treeTimber, treeSpecies } from './vegetation';
 import type { TreeSpecies } from './vegetation';
@@ -22,8 +22,9 @@ import {
 } from './forestry';
 import {
   GATE_STATES, GateState, NavFeatures, NavGate, NavGoal, NavGrid, NavRegion, NavState, emptyFeatures, gateLabel, navGrid, navStats, navStep,
-  expandPath, findPath, findNearest,
+  expandPath, findPath, findNearest, canMove, BLOCK,
 } from './nav';
+import type { SearchOptions } from './nav';
 import {
   CARRIED_CAPACITY, FOUNDER_STOCKPILE, FOUNDER_STOCKPILE_ID, LifeResult, RECIPES, total, lifeState,
 } from './economy';
@@ -78,8 +79,22 @@ export const HOMESTEAD_WOODLAND_VERSION = 5 as const;
  * `upgrade_homestead { rules: 6 }`.
  */
 export const HOMESTEAD_BUILD_VERSION = 6 as const;
-export type HomesteadVersion = typeof HOMESTEAD_VERSION | typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION;
-export const HOMESTEAD_VERSIONS: readonly HomesteadVersion[] = [HOMESTEAD_VERSION, HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION];
+/**
+ * Settlement rules v7 (STAB-002 S1, "animal unstick"): founding animals,
+ * newborns and every wander, graze and herding target sit on free walk cells
+ * of the main walkable area inside their enclosure; an animal whose cell is
+ * blocked or cut off from that area walks out, cell by cell (never a jump);
+ * an empty route is an arrival (one radius: the goal's own reach); and farm
+ * animals have visible behaviour states (`act`: wander, graze, drink, rest)
+ * with an end tick, which the renderer draws as the pose. Founded with
+ * `found_homestead { rules: 7 }` or switched by `upgrade_homestead { rules: 7 }`,
+ * which keeps every animal where it stands.
+ */
+export const HOMESTEAD_HERD_VERSION = 7 as const;
+/** The rules new homesteads are founded with and old ones are upgraded to on load. */
+export const HOMESTEAD_LATEST_VERSION = HOMESTEAD_HERD_VERSION;
+export type HomesteadVersion = typeof HOMESTEAD_VERSION | typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION | typeof HOMESTEAD_HERD_VERSION;
+export const HOMESTEAD_VERSIONS: readonly HomesteadVersion[] = [HOMESTEAD_VERSION, HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, HOMESTEAD_HERD_VERSION];
 /** Decimetres per metre: sim positions are integer decimetres. */
 export const DM = 10;
 /** One in-game day: 300 ticks of 2 s = 10 minutes, matching the sky's day length. */
@@ -207,7 +222,17 @@ export interface Animal {
   hunger: number; starving: number; product: number; pregnantUntil: number;
   /** v3: heading out through its open gate, or home through it (on its own or driven by the herder). */
   go?: 'out' | 'home';
+  /** v7: what the animal is doing (always set under v7). */
+  act?: AnimalAct;
+  /**
+   * v7: for graze and drink, 0 while walking to the spot, then the tick the
+   * bout ends; for rest, the tick it gets up; for wander, the tick the state began.
+   */
+  until?: number;
 }
+/** v7 behaviour states, drawn as poses: walking or standing, head down at grass, head down at the trough, lying. */
+export type AnimalAct = 'wander' | 'graze' | 'drink' | 'rest';
+export const ANIMAL_ACTS: readonly AnimalAct[] = ['drink', 'graze', 'rest', 'wander'];
 // ---- governance: the steward (AI agent) acts only through these permissions ----
 export type Policy = 'auto' | 'approve' | 'off';
 export type StewardAction = 'assign_role' | 'expand_field';
@@ -295,6 +320,7 @@ export const MAX_SITES = 8;
 /** v6: sites (planned, building, finished) a homestead may hold. */
 export const MAX_SITES_V6 = 16;
 export const isBuildHomestead = (h: Pick<HomesteadState, 'version'>) => h.version >= HOMESTEAD_BUILD_VERSION;
+export const isHerdHomestead = (h: Pick<HomesteadState, 'version'>) => h.version >= HOMESTEAD_HERD_VERSION;
 /** Barn capacity (in addition to the 200 of the founder store). */
 export const OVERFLOW_CAPACITY = 300;
 
@@ -644,8 +670,10 @@ export function foundHomestead(world: World, version: HomesteadVersion = HOMESTE
   for (const id of ['coop', 'paddock', 'pen', 'sty'] as EnclosureId[]) {
     h.enclosures.push({ id, grass: GRASS_MAX, feed: id === 'coop' || id === 'sty' ? 10 : 0, water: TROUGH_MAX, eggs: 0 });
   }
+  const herd = version >= HOMESTEAD_HERD_VERSION;
   for (const [species, sex] of STARTER_HERD) {
-    const pos = randomPointIn(h, enclosureRect(h, SPECIES_RULES[species].enclosure));
+    // v7 places the herd after the plots are cleared (below), on free walk cells only.
+    const pos = herd ? { x: 0, z: 0 } : randomPointIn(h, enclosureRect(h, SPECIES_RULES[species].enclosure));
     h.animals.push({
       id: `animal:${String(h.nextId++).padStart(3, '0')}`, species, sex,
       born: life.tick - SPECIES_RULES[species].adultAge, x: pos.x, z: pos.z, tx: pos.x, tz: pos.z,
@@ -676,6 +704,15 @@ export function foundHomestead(world: World, version: HomesteadVersion = HOMESTE
   // The settlers arrive with seed, straw for the troughs and a little food.
   for (const [item, amount] of Object.entries(FOUNDING_SUPPLIES)) {
     if (!putInto(s.inventory, item, amount, s.capacity)) return { ok: false, code: 'capacity_exceeded', reasons: ['the founder stockpile is too full to receive the settlers\' supplies'] };
+  }
+  if (herd) {
+    // v7: every starter stands on a random free cell of its enclosure's main walkable area.
+    const g = homesteadNav(world, h);
+    for (const a of h.animals) {
+      const p = penPoint(world, h, g, SPECIES_RULES[a.species].enclosure);
+      a.x = a.tx = p.x; a.z = a.tz = p.z;
+      a.act = 'wander'; a.until = life.tick;
+    }
   }
   world.homestead = h;
   if (version >= HOMESTEAD_WORK_VERSION) settlerArrives(world, h);
@@ -713,18 +750,32 @@ function settlerArrives(world: World, h: HomesteadState): void {
  * `to: 3` switches a v1 or v2 homestead to v3 (gates keep their state; a
  * legacy one gets closed gates).
  */
-export function upgradeHomestead(world: World, to: typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION = HOMESTEAD_NAV_VERSION): LifeResult<{ version: HomesteadVersion }> {
+export function upgradeHomestead(world: World, to: typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION | typeof HOMESTEAD_HERD_VERSION = HOMESTEAD_NAV_VERSION): LifeResult<{ version: HomesteadVersion }> {
   const h = world.homestead;
   if (!h) return fail('no_homestead', 'found the homestead first');
   if (h.version >= to) return fail('unchanged', `the homestead already uses settlement rules v${h.version}`);
   const from = h.version;
+  // Upgrades to v2..v6 run exactly as their journals recorded them; v7 applies
+  // each earlier step only when the homestead has not had it yet, so a v6 farm
+  // keeps its rotations, its timber store stock and its settlers.
+  const recorded = to <= HOMESTEAD_BUILD_VERSION;
   h.version = to;
   h.gates ??= GATE_IDS.map((id) => ({ id, state: 'closed' as GateState }));
-  if (to >= HOMESTEAD_WORK_VERSION) { h.sites ??= []; settlerArrives(world, h); }
+  if (to >= HOMESTEAD_WORK_VERSION && (recorded || from < HOMESTEAD_WORK_VERSION)) { h.sites ??= []; settlerArrives(world, h); }
   // v5: the woodland clock starts now; every tree keeps the stage it is drawn in (a v5 woodland carries on unchanged).
   if (to >= HOMESTEAD_WOODLAND_VERSION && from < HOMESTEAD_WOODLAND_VERSION) startWoodland(world, h);
   // v6: every site keeps its place and faces the way it was built (rotation 0); finished woodsheds become (empty) timber stores.
-  if (to >= HOMESTEAD_BUILD_VERSION) for (const st of h.sites ?? []) { st.rot = 0; if (st.state === 'done' && SITE_RULES[st.kind].store) st.stock = {}; }
+  if (to >= HOMESTEAD_BUILD_VERSION && (recorded || from < HOMESTEAD_BUILD_VERSION)) for (const st of h.sites ?? []) { st.rot = 0; if (st.state === 'done' && SITE_RULES[st.kind].store) st.stock = {}; }
+  // v7: every animal stays exactly where it is and starts wandering; one that
+  // stands on a blocked or cut-off cell walks out on the following ticks.
+  // Animals heading out or being driven home keep their way.
+  if (to >= HOMESTEAD_HERD_VERSION) {
+    const tick = lifeState(world).tick;
+    for (const a of h.animals) {
+      if (!a.go) { a.tx = a.x; a.tz = a.z; }
+      a.act = 'wander'; a.until = tick;
+    }
+  }
   world.revision++;
   return { ok: true, value: { version: to } };
 }
@@ -744,6 +795,80 @@ export function setGate(world: World, gateId: string, state: GateState): LifeRes
 
 function enclosureRect(h: HomesteadState, id: EnclosureId): Rect {
   return facility(h, id)!.rect;
+}
+
+// ---------- settlement rules v7: where animals can stand ----------
+
+/**
+ * The free walk cells of one enclosure: every cell whose centre lies inside
+ * the fence and which nothing blocks, split into areas an animal can walk
+ * between without leaving the enclosure. `main` is the largest area (ties:
+ * the one holding the smallest cell index); `list` its cells in index order;
+ * `grass` those of them with grass on top (all of `list` when none have).
+ * Cached per grid object: a grid is rebuilt as a new object whenever any cell,
+ * wall or footprint changes, so the cache never outlives what it describes.
+ */
+export interface PenCells { main: Set<number>; list: number[]; grass: number[]; all: Set<number> }
+const penCache = new WeakMap<NavGrid, Map<string, PenCells>>();
+const ANIMAL_MOVE: SearchOptions = { openGatesOnly: true, maxExpansions: 0 };
+const DIRS8: ReadonlyArray<[number, number]> = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
+const cellIn = (r: Rect, x: number, z: number) => x * DM + 5 >= r.x0 && x * DM + 5 < r.x1 && z * DM + 5 >= r.z0 && z * DM + 5 < r.z1;
+
+export function penCells(world: World, h: HomesteadState, g: NavGrid, id: EnclosureId): PenCells {
+  let byPen = penCache.get(g);
+  if (!byPen) { byPen = new Map(); penCache.set(g, byPen); }
+  const r = facility(h, id)!.rect;
+  const key = `${id}:${r.x0},${r.z0},${r.x1},${r.z1}`;
+  const hit = byPen.get(key);
+  if (hit) return hit;
+  const all = new Set<number>();
+  const x0 = Math.floor(r.x0 / DM), z0 = Math.floor(r.z0 / DM), x1 = Math.ceil(r.x1 / DM), z1 = Math.ceil(r.z1 / DM);
+  for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) if (g.inside(x, z) && cellIn(r, x, z)) all.add(g.index(x, z));
+  const seen = new Set<number>();
+  let best: number[] = [];
+  for (const start of [...all].sort((a, b) => a - b)) {
+    if (seen.has(start) || g.block[start] !== BLOCK.none) continue;
+    const area = [start];
+    seen.add(start);
+    for (let k = 0; k < area.length; k++) {
+      const i = area[k], x = g.cellX(i), z = g.cellZ(i);
+      for (const [dx, dz] of DIRS8) {
+        if (!g.inside(x + dx, z + dz)) continue;
+        const j = g.index(x + dx, z + dz);
+        if (seen.has(j) || !all.has(j) || g.block[j] !== BLOCK.none || !canMove(g, x, z, x + dx, z + dz, ANIMAL_MOVE)) continue;
+        seen.add(j); area.push(j);
+      }
+    }
+    if (area.length > best.length) best = area;
+  }
+  const list = best.sort((a, b) => a - b);
+  const grassy = list.filter((i) => topMaterialAtWorld(world, g.cellX(i), g.cellZ(i)) === MAT.GRASS);
+  const out: PenCells = { main: new Set(list), list, grass: grassy.length ? grassy : list, all };
+  byPen.set(key, out);
+  return out;
+}
+
+const cellCentre = (g: NavGrid, i: number) => ({ x: g.cellX(i) * DM + 5, z: g.cellZ(i) * DM + 5 });
+
+/** v7: a random free cell centre (dm) of an enclosure's main area (one `rnd` draw); the old padded rectangle point if it has none. */
+function penPoint(world: World, h: HomesteadState, g: NavGrid, id: EnclosureId, grass = false): { x: number; z: number } {
+  const pen = penCells(world, h, g, id);
+  const cells = grass ? pen.grass : pen.list;
+  if (!cells.length) return randomPointIn(h, enclosureRect(h, id));
+  return cellCentre(g, cells[Math.floor(rnd(h) * cells.length)]);
+}
+
+/** v7: the cell of `cells` nearest (x, z) dm, ring by ring in a fixed order; null if none within `range` cells. */
+function nearestCell(g: NavGrid, x: number, z: number, ok: (i: number) => boolean, range = 24): number | null {
+  const cx = Math.floor(x / DM), cz = Math.floor(z / DM);
+  for (let r = 0; r <= range; r++) {
+    for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dz)) !== r || !g.inside(cx + dx, cz + dz)) continue;
+      const i = g.index(cx + dx, cz + dz);
+      if (ok(i)) return i;
+    }
+  }
+  return null;
 }
 
 function randomPointIn(h: HomesteadState, r: Rect): { x: number; z: number } {
@@ -1528,8 +1653,9 @@ function applyEffect(world: World, h: HomesteadState, v: Villager, leg: Leg, tas
       const r = facility(h, id)!.rect;
       for (const a of straysOf(h, id)) {
         if (a.go === 'home' || len2(a.x - v.x, a.z - v.z) > HERD_REACH) continue;
-        const p = randomPointIn(h, r);
+        const p = isHerdHomestead(h) ? penPoint(world, h, homesteadNav(world, h), id) : randomPointIn(h, r);
         a.go = 'home'; a.tx = p.x; a.tz = p.z;
+        if (isHerdHomestead(h)) { a.act = 'wander'; a.until = lifeState(world).tick; }
         ev.log.push(`${v.name} is driving ${a.id} back to the ${id}`);
       }
       return true;
@@ -1867,7 +1993,8 @@ function stepAnimals(world: World, h: HomesteadState, tick: number): void {
     const adult = tick - a.born >= rule.adultAge;
     // Animals get hungry every other tick by day and every fourth tick while they sleep.
     if (tick % (isNight(tick) ? 4 : 2) === 0) a.hunger = Math.min(100, a.hunger + 1);
-    if (living) liveAnimal(world, h, a, fac, encl, living);
+    if (living && isHerdHomestead(h)) herdAnimal(world, h, a, fac, encl, living, tick);
+    else if (living) liveAnimal(world, h, a, fac, encl, living);
     else {
       // Eat: graze the pasture if there is grass, else the trough; water is always from the trough.
       let target = { x: a.tx, z: a.tz };
@@ -1913,8 +2040,10 @@ function stepAnimals(world: World, h: HomesteadState, tick: number): void {
       a.pregnantUntil = 0;
       for (let i = 0; i < rule.litter; i++) {
         if (herd.length + births.length >= (fac.capacity ?? 0) || h.animals.length + births.length >= MAX_ANIMALS) break;
+        const at = living && isHerdHomestead(h) ? birthSpot(world, h, living.grid, a) : { x: a.x, z: a.z };
         births.push({ id: `animal:${String(h.nextId++).padStart(3, '0')}`, species: a.species, sex: rnd(h) < 0.5 ? 'f' : 'm',
-          born: tick, x: a.x, z: a.z, tx: a.x, tz: a.z, hunger: 20, starving: 0, product: 0, pregnantUntil: 0 });
+          born: tick, x: at.x, z: at.z, tx: at.x, tz: at.z, hunger: 20, starving: 0, product: 0, pregnantUntil: 0,
+          ...(isHerdHomestead(h) ? { act: 'wander' as AnimalAct, until: tick } : {}) });
       }
     } else if (a.sex === 'f' && adult && a.pregnantUntil === 0 && a.hunger < 50
       && herd.length < (fac.capacity ?? 0)
@@ -2012,6 +2141,267 @@ function liveAnimal(world: World, h: HomesteadState, a: Animal, fac: Facility, e
     if (a.go === 'out') delete a.go;
     a.tx = a.x; a.tz = a.z;
   }
+}
+
+// ---------- animals under settlement rules v7 ----------
+
+/** v7 behaviour timing (ticks of 2 s). Grazing bouts and drinks hold the head down; rests lie down. */
+export const HERD_RULES = {
+  /** Chance per idle tick by day: walk to a new spot, start a casual grazing bout, lie down for a short rest. */
+  dayWander: 0.25, dayGraze: 0.08, dayRest: 0.03,
+  /** By night most idle ticks end in a long rest; a few in a short walk. */
+  nightRest: 0.45, nightWander: 0.1,
+  graze: [6, 14] as const, drink: [2, 4] as const, dayRestTicks: [10, 25] as const, nightRestTicks: [60, 110] as const,
+  /**
+   * An animal goes for a meal from this hunger on (a meal still takes 60):
+   * walking to the grass and grazing take time, so it sets off a little
+   * before v3's instant meal at 60 and eats about as often.
+   */
+  hungry: HUNGER_MEAL - 10,
+  /** A resting animal gets up to eat once its hunger reaches this. */
+  wake: HUNGER_MEAL + 10,
+};
+/** v7: one arrival radius for spot targets, the search's goal reach (cell centres, so only the target cell counts). */
+export const ANIMAL_REACH = ANIMAL_SPEED;
+/** v7: the trough's reach (a trough cell is blocked: the animal drinks from a neighbouring cell). */
+export const TROUGH_REACH = 12;
+const span = (h: HomesteadState, [lo, hi]: readonly [number, number]) => lo + Math.floor(rnd(h) * (hi - lo + 1));
+
+/** v7: where a newborn starts: its mother's spot if that cell is a free cell of the main area, else the nearest such cell (fixed ring order). */
+function birthSpot(world: World, h: HomesteadState, g: NavGrid, mother: Animal): { x: number; z: number } {
+  const id = SPECIES_RULES[mother.species].enclosure;
+  const fac = facility(h, id)!;
+  const cx = Math.floor(mother.x / DM), cz = Math.floor(mother.z / DM);
+  if (!g.inside(cx, cz)) return { x: mother.x, z: mother.z };
+  const here = g.index(cx, cz);
+  if (insideRect(fac.rect, mother.x, mother.z)) {
+    const pen = penCells(world, h, g, id);
+    if (pen.main.has(here) || !pen.list.length) return { x: mother.x, z: mother.z };
+    const i = nearestCell(g, mother.x, mother.z, (c) => pen.main.has(c));
+    return i === null ? { x: mother.x, z: mother.z } : cellCentre(g, i);
+  }
+  if (g.block[here] === BLOCK.none) return { x: mother.x, z: mother.z };
+  const i = nearestCell(g, mother.x, mother.z, (c) => g.block[c] === BLOCK.none);
+  return i === null ? { x: mother.x, z: mother.z } : cellCentre(g, i);
+}
+
+/**
+ * v7: an animal whose cell is blocked, or cut off from its enclosure's main
+ * area, walks out. The route is a breadth-first search from its cell (fixed
+ * neighbour order) to the nearest cell it should be on, by the animals' own
+ * moves (fences and closed gates always hold). If no such route exists, the
+ * minimal correction is applied, in this order, until one does: (1) cells of
+ * the footprint the animal stands in and of its enclosure's shelters and
+ * trough count as walkable (an animal can walk out from under a shelter roof);
+ * (2) any blocked cell inside its own enclosure counts as walkable. The animal
+ * then steps along that route at walking speed, one neighbour cell centre at
+ * a time. Returns the route's cells, or null when there is nothing to escape
+ * or no route at all.
+ */
+export function escapeRoute(world: World, h: HomesteadState, g: NavGrid, a: Animal): number[] | null {
+  const id = SPECIES_RULES[a.species].enclosure;
+  const fac = facility(h, id)!;
+  const cx = Math.floor(a.x / DM), cz = Math.floor(a.z / DM);
+  if (!g.inside(cx, cz)) return null;
+  const start = g.index(cx, cz);
+  const inside = insideRect(fac.rect, a.x, a.z);
+  const pen = inside ? penCells(world, h, g, id) : null;
+  if (pen ? pen.main.has(start) || !pen.list.length : g.block[start] === BLOCK.none) return null;
+  const target = (i: number) => pen ? pen.main.has(i) : g.block[i] === BLOCK.none;
+  const within = (i: number) => pen ? pen.all.has(i) : Math.max(Math.abs(g.cellX(i) - cx), Math.abs(g.cellZ(i) - cz)) <= 8;
+  const own = g.blockId.get(start);
+  const furniture = (i: number) => g.block[i] !== BLOCK.none && (g.blockId.get(i) === own
+    || !!pen && pen.all.has(i) && /^(?:shelter|trough):/.test(g.blockId.get(i) ?? ''));
+  const tiers: Array<SearchOptions> = [ANIMAL_MOVE, { ...ANIMAL_MOVE, pass: furniture }];
+  if (pen) tiers.push({ ...ANIMAL_MOVE, pass: (i) => pen.all.has(i) && g.block[i] !== BLOCK.deep_water && g.block[i] !== BLOCK.outside });
+  for (const o of tiers) {
+    const parent = new Map<number, number>([[start, -1]]);
+    const queue = [start];
+    for (let k = 0; k < queue.length; k++) {
+      const i = queue[k], x = g.cellX(i), z = g.cellZ(i);
+      if (i !== start && target(i)) {
+        const path: number[] = [];
+        for (let c = i; c !== start; c = parent.get(c)!) path.push(c);
+        return path.reverse();
+      }
+      for (const [dx, dz] of DIRS8) {
+        if (!g.inside(x + dx, z + dz)) continue;
+        const j = g.index(x + dx, z + dz);
+        if (parent.has(j) || !within(j) || !canMove(g, x, z, x + dx, z + dz, o)) continue;
+        parent.set(j, i); queue.push(j);
+      }
+    }
+  }
+  return null;
+}
+
+/** v7: walk up to `speed` dm along cells (centres in turn). */
+function stepAlong(g: NavGrid, a: Animal, cells: readonly number[], speed: number): void {
+  let budget = speed;
+  for (const i of cells) {
+    const { x: tx, z: tz } = cellCentre(g, i);
+    const d = len2(tx - a.x, tz - a.z);
+    if (d <= budget) { a.x = tx; a.z = tz; budget -= d; continue; }
+    a.x += Math.round(((tx - a.x) / d) * budget); a.z += Math.round(((tz - a.z) / d) * budget);
+    break;
+  }
+}
+
+/**
+ * v7: walk toward a goal. 'arrived' when the route is empty (the cell the
+ * animal stands in satisfies the goal's reach; it then steps onto the goal
+ * point if that lies in its cell): the one arrival rule. 'walking' after a
+ * step, 'wait' when this tick's search budget is spent, 'fail' without a route.
+ */
+function walkTo(world: World, nav: AnimalNav, a: Animal, goal: NavGoal, speed: number): 'arrived' | 'walking' | 'wait' | 'fail' {
+  const g = nav.grid;
+  const cx = Math.floor(a.x / DM), cz = Math.floor(a.z / DM);
+  if (!g.inside(cx, cz)) return 'fail';
+  if (nav.budget.left <= 0) return 'wait';
+  const res = findPath(world, g, a, goal, { openGatesOnly: true, maxExpansions: Math.min(ANIMAL_SEARCH, nav.budget.left) });
+  nav.budget.left -= res.expanded;
+  if (!res.ok) return res.code === 'budget' ? 'wait' : 'fail';
+  if (!res.cells.length) {
+    if (Math.floor(goal.x / DM) === cx && Math.floor(goal.z / DM) === cz) {
+      const d = len2(goal.x - a.x, goal.z - a.z);
+      if (d <= speed) { a.x = goal.x; a.z = goal.z; }
+      else { a.x += Math.round(((goal.x - a.x) / d) * speed); a.z += Math.round(((goal.z - a.z) / d) * speed); }
+    }
+    return 'arrived';
+  }
+  const pts: Array<[number, number]> = [];
+  for (let k = 0; k < res.cells.length; k += 2) pts.push([res.cells[k] * DM + 5, res.cells[k + 1] * DM + 5]);
+  const [lx, lz] = [res.cells[res.cells.length - 2], res.cells[res.cells.length - 1]];
+  if (Math.floor(goal.x / DM) === lx && Math.floor(goal.z / DM) === lz) pts[pts.length - 1] = [goal.x, goal.z];
+  let budget = speed;
+  for (const [tx, tz] of pts) {
+    const d = len2(tx - a.x, tz - a.z);
+    if (d <= budget) { a.x = tx; a.z = tz; budget -= d; continue; }
+    a.x += Math.round(((tx - a.x) / d) * budget); a.z += Math.round(((tz - a.z) / d) * budget);
+    break;
+  }
+  return 'walking';
+}
+
+/**
+ * One v7 animal tick. Order: (1) an animal standing on a blocked or cut-off
+ * cell walks out (`escapeRoute`); (2) a gate run or a drive home as under v3;
+ * (3) the current state carries on: rest until it gets up, walk to and then
+ * graze or drink for the bout, or walk to a wander spot; (4) an idle animal
+ * chooses: a meal when hungry (graze the pasture, then drink at the trough;
+ * or eat and drink at the trough when the pasture is bare), else by day a
+ * walk, a casual grazing bout or a short rest, by night mostly a long rest.
+ * Needs and supplies are those of v3: a meal is 60 hunger, `graze` grass or
+ * `feed` feed, and one water. Deterministic: integers and `rnd` only.
+ */
+function herdAnimal(world: World, h: HomesteadState, a: Animal, fac: Facility, encl: Enclosure, nav: AnimalNav, tick: number): void {
+  const rule = SPECIES_RULES[a.species];
+  const g = nav.grid;
+  const inside = insideRect(fac.rect, a.x, a.z);
+  const gate = penGate(h, rule.enclosure);
+  const st = gateStateOf(h, gate.id);
+  const idle = () => { a.act = 'wander'; a.until = tick; a.tx = a.x; a.tz = a.z; };
+  if (!a.act) idle();
+  // (1) Walk out of a blocked or cut-off cell.
+  const out = escapeRoute(world, h, g, a);
+  if (out && out.length) {
+    stepAlong(g, a, out, a.go === 'home' ? DRIVEN_SPEED : ANIMAL_SPEED);
+    if (a.act !== 'wander') { a.act = 'wander'; a.until = tick; }
+    if (!a.go) { a.tx = a.x; a.tz = a.z; }
+    return;
+  }
+  // (2) Gate runs and drives home, as under v3.
+  if (a.go === 'out' && (!inside || st !== 'open')) { delete a.go; idle(); }
+  if (a.go === 'home' && inside) { delete a.go; idle(); }
+  const centre = (c: readonly [number, number]) => ({ x: c[0] * DM + 5, z: c[1] * DM + 5 });
+  if (a.go === 'home') {
+    a.act = 'wander';
+    const goal = st === 'open' ? { x: a.tx, z: a.tz, reach: ANIMAL_REACH } : { ...centre(gate.outside), reach: ANIMAL_REACH };
+    walkTo(world, nav, a, goal, DRIVEN_SPEED);
+    return;
+  }
+  if (a.go === 'out') {
+    if (walkTo(world, nav, a, { x: a.tx, z: a.tz, reach: ANIMAL_REACH }, ANIMAL_SPEED) === 'fail' || (a.x === a.tx && a.z === a.tz)) { if (inside) delete a.go; idle(); }
+    return;
+  }
+  const trough = fac.trough!;
+  const hungry = a.hunger >= HERD_RULES.hungry;
+  const pasture = inside && rule.graze > 0 && encl.grass >= rule.graze;
+  // (3) Carry on with the current state.
+  if (a.act === 'rest') {
+    // Up at the rest's end, or earlier when hunger wakes it.
+    if (tick < a.until! && a.hunger < HERD_RULES.wake) return;
+    idle();
+  } else if (a.act === 'graze' || a.act === 'drink') {
+    const drink = a.act === 'drink';
+    if (a.until! > 0) {
+      if (tick < a.until!) return;
+      // The bout is over: the meal it was for, if any.
+      if (drink) {
+        if (encl.water > 0) {
+          encl.water -= 1;
+          if (hungry && encl.feed >= rule.feed) { encl.feed -= rule.feed; a.hunger = Math.max(0, a.hunger - HUNGER_MEAL); }
+        }
+        idle();
+      } else if (hungry && (!inside || pasture)) {
+        if (inside) encl.grass -= rule.graze;
+        a.hunger = Math.max(0, a.hunger - HUNGER_MEAL);
+        if (inside && encl.water > 0) { a.act = 'drink'; a.until = 0; a.tx = trough.x; a.tz = trough.z; }
+        else idle();
+      } else idle();
+      if ((a.act as AnimalAct) === 'wander') return;
+    }
+    const goal = a.act === 'drink' ? { x: trough.x, z: trough.z, reach: TROUGH_REACH } : { x: a.tx, z: a.tz, reach: ANIMAL_REACH };
+    const r = walkTo(world, nav, a, goal, ANIMAL_SPEED);
+    if (r === 'fail') { idle(); return; }
+    if (r === 'arrived') a.until = tick + span(h, a.act === 'drink' ? HERD_RULES.drink : HERD_RULES.graze);
+    return;
+  } else if (a.tx !== a.x || a.tz !== a.z) {
+    const r = walkTo(world, nav, a, { x: a.tx, z: a.tz, reach: ANIMAL_REACH }, ANIMAL_SPEED);
+    if (r === 'arrived' || r === 'fail') idle();
+    return;
+  }
+  // (4) Idle: choose what to do next.
+  if (hungry && (!inside || encl.water > 0 && (pasture || encl.feed >= rule.feed))) {
+    if (!inside) { a.act = 'graze'; a.until = tick + span(h, HERD_RULES.graze); return; } // a stray grazes the wild grass where it stands
+    if (pasture) { const p = penPoint(world, h, g, rule.enclosure, true); a.act = 'graze'; a.until = 0; a.tx = p.x; a.tz = p.z; }
+    else { a.act = 'drink'; a.until = 0; a.tx = trough.x; a.tz = trough.z; }
+    return;
+  }
+  const night = isNight(tick);
+  const roll = rnd(h);
+  const R = HERD_RULES;
+  if (night ? roll < R.nightRest : roll >= R.dayWander + R.dayGraze && roll < R.dayWander + R.dayGraze + R.dayRest) {
+    // A night rest ends by dawn at the latest.
+    const dawn = tick - (tick % DAY_TICKS) + NIGHT_END;
+    a.act = 'rest'; a.until = night ? Math.min(dawn, tick + span(h, R.nightRestTicks)) : tick + span(h, R.dayRestTicks);
+    return;
+  }
+  if (!night && roll >= R.dayWander && roll < R.dayWander + R.dayGraze) {
+    // A casual grazing bout (no meal unless hungry when it ends): at a grass cell inside, where it stands outside.
+    if (inside) { const p = penPoint(world, h, g, rule.enclosure, true); a.act = 'graze'; a.until = 0; a.tx = p.x; a.tz = p.z; }
+    else { a.act = 'graze'; a.until = tick + span(h, R.graze); }
+    return;
+  }
+  if (night ? roll >= R.nightRest + R.nightWander : roll >= R.dayWander) return; // stands a moment
+  // A walk: inside to a free cell of the main area (or out through an open gate), outside near its gate (or home).
+  let p: { x: number; z: number };
+  if (inside) {
+    if (st === 'open' && !gateHeld(h, gate.id) && rnd(h) < ESCAPE_CHANCE) {
+      a.go = 'out';
+      p = strayCell(h, g, gate.outside[0] + Math.floor(rnd(h) * 7) - 3, gate.outside[1] - Math.floor(rnd(h) * 4), gate.outside) ?? centre(gate.outside);
+    } else p = penPoint(world, h, g, rule.enclosure);
+  } else if (st === 'open' && rnd(h) < RETURN_CHANCE) {
+    a.go = 'home';
+    p = penPoint(world, h, g, rule.enclosure);
+  } else {
+    const cx = Math.floor(a.x / DM), cz = Math.floor(a.z / DM);
+    p = strayCell(h, g, cx + Math.floor(rnd(h) * 7) - 3, cz + Math.floor(rnd(h) * 7) - 3, gate.outside) ?? { x: a.x, z: a.z };
+  }
+  a.act = 'wander'; a.until = tick; a.tx = p.x; a.tz = p.z;
+  // Start walking this tick.
+  const r = walkTo(world, nav, a, { x: a.tx, z: a.tz, reach: ANIMAL_REACH }, a.go === 'home' ? DRIVEN_SPEED : ANIMAL_SPEED);
+  if (r === 'fail' || (r === 'arrived' && !a.go)) { if (a.go === 'out') delete a.go; a.tx = a.x; a.tz = a.z; }
 }
 
 /** A free cell centre (dm) for a stray near (x, z), kept within range of its gate and outside every pen; null if none. */
@@ -2493,6 +2883,7 @@ export function homesteadSnapshot(h: HomesteadState): HomesteadState {
       id: a.id, species: a.species, sex: a.sex, born: a.born, x: a.x, z: a.z, tx: a.tx, tz: a.tz,
       hunger: a.hunger, starving: a.starving, product: a.product, pregnantUntil: a.pregnantUntil,
       ...(a.go ? { go: a.go } : {}),
+      ...(a.act ? { act: a.act, until: a.until ?? 0 } : {}),
     })),
     overflow: Object.fromEntries(Object.entries(h.overflow).filter(([, n]) => n > 0).sort(([a], [b]) => a.localeCompare(b))),
     steward: {
@@ -2643,10 +3034,14 @@ export function validateHomestead(raw: unknown, tick: number): HomesteadState {
       || (a.sex !== 'f' && a.sex !== 'm') || !int(a.born, -10_000, tick) || !int(a.x, -POS, POS) || !int(a.z, -POS, POS)
       || !int(a.tx, -POS, POS) || !int(a.tz, -POS, POS) || !int(a.hunger, 0, 100) || !int(a.starving, 0, STARVING_DEATH_TICKS)
       || !int(a.product, 0, 1000) || !int(a.pregnantUntil, 0, Number.MAX_SAFE_INTEGER)
-      || a.go !== undefined && ((raw.version as number) < HOMESTEAD_LIVING_VERSION || (a.go !== 'out' && a.go !== 'home'))) throw new Error('snapshot has an invalid animal');
+      || a.go !== undefined && ((raw.version as number) < HOMESTEAD_LIVING_VERSION || (a.go !== 'out' && a.go !== 'home'))
+      // v7 only: the behaviour state and its tick (always together).
+      || (a.act !== undefined || a.until !== undefined) && ((raw.version as number) < HOMESTEAD_HERD_VERSION
+        || !ANIMAL_ACTS.includes(a.act as AnimalAct) || !int(a.until, 0, Number.MAX_SAFE_INTEGER))) throw new Error('snapshot has an invalid animal');
     ids.add(a.id);
     return { id: a.id, species: a.species as Species, sex: a.sex, born: a.born, x: a.x, z: a.z, tx: a.tx, tz: a.tz,
-      hunger: a.hunger, starving: a.starving, product: a.product, pregnantUntil: a.pregnantUntil, ...(a.go ? { go: a.go as 'out' | 'home' } : {}) };
+      hunger: a.hunger, starving: a.starving, product: a.product, pregnantUntil: a.pregnantUntil, ...(a.go ? { go: a.go as 'out' | 'home' } : {}),
+      ...(a.act !== undefined ? { act: a.act as AnimalAct, until: a.until as number } : {}) };
   });
   if (!isObj(raw.overflow)) throw new Error('snapshot has an invalid overflow pile');
   const overflow: Record<string, number> = {};

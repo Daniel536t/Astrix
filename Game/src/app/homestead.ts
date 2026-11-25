@@ -6,6 +6,7 @@
 // only issue commands tagged `actor: 'steward'`, and the simulation enforces
 // its permissions (auto / ask first / never) per action. Anything set to
 // "ask first" becomes a proposal that only the owner can approve.
+import { HerdTime } from './herd-time';
 import * as THREE from 'three';
 import { GameSession, Command } from './session';
 import { BrowserSaveStore } from './persistence';
@@ -14,7 +15,7 @@ import {
   checkField, cropStage, fenceCost, fieldUnits, homesteadLayout, nearbyActions, recentHomesteadEvents, unitsOf, findFieldSpot,
   dayTime, OVERFLOW_CAPACITY, homesteadGates, isNavHomestead, isLivingHomestead, nearbyGate, straysOf,
   HOMESTEAD_WORK_VERSION, isWorkHomestead, ROLES, SITE_RULES, findSiteSpot, reservations, siteProgress, siteStatus, woodlot, MIN_STANDING_TREES,
-  treeEntityId, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, isBuildHomestead, timberStores, storeRoom, siteEntrance,
+  treeEntityId, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, HOMESTEAD_LATEST_VERSION, isBuildHomestead, timberStores, storeRoom, siteEntrance,
 } from '../sim/homestead';
 import { DOOR_FACING, findBuildingSpot } from '../sim/buildings';
 import { BuildMode } from './build-mode';
@@ -72,6 +73,8 @@ export class HomesteadGame {
   private lastAssignTick = -1000;
   private eventsSeen = 0;
   private lastEvents: string[] | undefined;
+  /** STAB-002: time per animal behaviour state, for __metrics (presentation only). */
+  private readonly herdTime = new HerdTime();
 
   constructor(private readonly o: HomesteadGameOptions) {
     this.view = new HomesteadView(o.session.world, TICK_SECONDS);
@@ -131,20 +134,21 @@ export class HomesteadGame {
   private ensureFounded(): void {
     if (!this.available) return;
     if (!this.world.homestead) {
-      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_BUILD_VERSION });
+      const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_LATEST_VERSION });
       if (r.ok) this.o.toast('Settlers arrived: Ada the farmer, Bram the herder and Cora, with animals and supplies. Open Farm to plan a field, give Cora work, or Build (G) a woodshed where you choose.', 'good');
       return;
     }
-    if (this.world.homestead.version < HOMESTEAD_BUILD_VERSION) {
-      // M012-M014: one journaled upgrade to settlement rules v6 (from v1-v5); the saved hash loads first, unchanged.
+    if (this.world.homestead.version < HOMESTEAD_LATEST_VERSION) {
+      // M012-M014, STAB-002: one journaled upgrade to the latest settlement rules (v7, from v1-v6); the saved hash loads first, unchanged.
       const was = this.world.homestead.version;
-      const r = this.send({ type: 'upgrade_homestead', rules: HOMESTEAD_BUILD_VERSION });
+      const r = this.send({ type: 'upgrade_homestead', rules: HOMESTEAD_LATEST_VERSION });
       const cora = was < 4 ? ' Cora has joined the homestead: make her a woodcutter or a builder in Farm.' : '';
       const wood = was < 5 ? ' The woodland is alive now: trees grow, age and regrow; set how it is harvested in Farm.' : '';
-      const build = ' You can now choose where to build and which way it faces: Build (G, or Farm → Build). Finished woodsheds store timber for the woodcutter.';
-      if (r.ok) this.o.toast((was < 2 ? 'The homestead now has gates and doors: villagers and animals walk real routes around fences, buildings and trees.'
+      const build = was < HOMESTEAD_BUILD_VERSION ? ' You can now choose where to build and which way it faces: Build (G, or Farm → Build). Finished woodsheds store timber for the woodcutter.' : '';
+      const herd = ' The animals graze, drink at the trough and lie down to rest, and none stays stuck under a shelter.';
+      if (r.ok) this.o.toast(((was < 2 ? 'The homestead now has gates and doors: villagers and animals walk real routes around fences, buildings and trees.'
         : was < 3 ? 'The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use.'
-          : was < 4 ? 'Villagers can now fell trees and build.' : '') + cora + wood + build, 'good');
+          : was < 4 ? 'Villagers can now fell trees and build.' : '') + cora + wood + build + herd).trim(), 'good');
     }
   }
 
@@ -608,6 +612,7 @@ export class HomesteadGame {
   update(frameDt: number): void {
     if (!this.available) return;
     this.view.update(frameDt);
+    this.herdTime.observe(this.world.homestead, this.world.life?.tick ?? 0);
     this.build.update();
     this.updatePlanner();
     this.runSteward();
@@ -654,7 +659,8 @@ export class HomesteadGame {
       gates: (h.gates ?? []).map((g) => ({ ...g })),
       navStats: { ...navStats(this.world) },
       animals: Object.fromEntries(SPECIES.map((sp) => [sp, h.animals.filter((a) => a.species === sp).length])),
-      herd: h.animals.map((a) => ({ id: a.id, species: a.species, x: a.x / DM, z: a.z / DM, go: a.go ?? null })),
+      herd: h.animals.map((a) => ({ id: a.id, species: a.species, x: a.x / DM, z: a.z / DM, go: a.go ?? null, act: a.act ?? null, until: a.until ?? null })),
+      herdTime: this.herdTime.metrics(),
       strays: Object.fromEntries(h.enclosures.map((e) => [e.id, straysOf(h, e.id as EnclosureId).map((a) => a.id)])),
       enclosures: h.enclosures.map((e) => ({ ...e })),
       overflow: { ...h.overflow },
