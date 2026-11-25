@@ -328,3 +328,19 @@ node gen-woodland.mjs https://astrix.nyc.boxd.sh/ /projects/sandbox/.kiro/artifa
   - the `woodlandStats` API used from M014 (M014 does not exist yet).
 - **Not deployed**, so no live-site run. **Not merged.**
 - Owner reference images for trees are not in the repo (see REF-006).
+
+## Live deployment check
+
+Release `20261125T075450Z-637069b` was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd` but not merged to `main`. The served bundle matches the local build (`assets/index-BBfdvX-z.js`).
+
+The life probe was generated with `node gen-woodland.mjs https://astrix.nyc.boxd.sh/ <out> live life` and run against the live site in a fresh headless Chromium context (software GL, empty storage, ×20 time-lapse). The run took 190.5 s and covered ticks 3 to 1,201. There were no page errors, and **all 12 checks passed**. Results are in `m013-live-life-results.json`, and screenshots in `live-*.png`.
+
+- **Felling:** 4 trees felled, leaving 4 stumps. 2 stumps resprouted.
+- **Replanting:** 4 saplings planted.
+- **Growth and seeding:** 12 stage changes, and 8 trees seeded themselves.
+- **Protected oak `e:29,33:0`:** never cut. It grew from mature to old.
+- **Woodcutter idle reasons:** "sustainable quota reached: the woodland regrows about 1.4 trees a day" and "the store has 47 wood and no site needs more".
+- **Reload at tick 302:** state hash `1fc5aa9c3dc72aca` before and after, with the woodland identical.
+- **Render:** at most 94 draw calls and 147,754 triangles during the run.
+
+The views phase (farm, forest, zoomed-out and `multidraw=0` views) was measured on the local build only. No real phone was used.
