@@ -1098,3 +1098,7 @@ body.clean #perf-overlay { display: none; }
 }
 #settings-button { display: inline-grid; place-items: center; }
 @media (pointer: coarse) { #perf-overlay .perf-pill { min-height: 40px; } }
+/* Portrait phones in build mode or the field planner: the bar takes the top, so the perf pill moves to the bottom centre. */
+@media (pointer: coarse) and (max-width: 760px) and (orientation: portrait) {
+  body.building #perf-overlay, body.planning-field #perf-overlay { top: auto; bottom: max(4px, env(safe-area-inset-bottom)); flex-direction: column; }
+}
