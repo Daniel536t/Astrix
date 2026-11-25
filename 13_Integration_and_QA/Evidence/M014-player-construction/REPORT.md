@@ -341,3 +341,18 @@ node gen-construction.mjs https://astrix.nyc.boxd.sh/ /projects/sandbox/.kiro/ar
 - **Trees can grow up beside a building.** Untouched natural trees just outside a footprint keep their own lifecycle. One grew to claim an edge cell of a finished building in a test (harmless: the cell was blocked either way). A tree could, in principle, later grow onto a door step. The villager would then report the obstruction and give up, as M012 does; this has not been seen.
 - **Preview cost.** Up to about 30–39 ms per preview, throttled to once every 180 ms while the ghost moves.
 - **Not seen in the browser:** cancelling after delivery, the log store, a full woodshed overflowing to the store, and builders fetching from a woodshed. These are covered by tests only.
+
+## Live deployment check
+
+Release `20261125T084321Z-d73c1ea` was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd` but not merged to `main`. The served bundle matches the local build (`assets/index-Bpr8TR4w.js`).
+
+The build probe was generated with `node gen-construction.mjs https://astrix.nyc.boxd.sh/ <out> live build` and run against the live site in a fresh headless Chromium context (desktop 1000x600, software GL). The run took 306.7 s. There were no page errors, and **all 11 checks passed**. Results are in `m014-live-build-results.json`, and screenshots in `live-*.png`.
+
+- **Invalid spot:** the red ghost over the farmhouse gave "too close to the farmhouse, the well or a pen" and "a fence runs here".
+- **Woodshed:** placed at (-32, 20) with the door facing east. The preview said: 2 trees within 30 m (1 may be felled, 1 protected, 1 regrowing), a 5.8 m haul against 64 m to the store, and the woodland 8 tree spots short of the planned demand.
+- **Well:** placed at (0, 8) with the door facing north. The probe's preferred well spots were all refused; this is a known issue.
+- **Construction:** the woodshed finished at tick 352 and the well at tick 479. The woodcutter stowed wood in the woodshed, which ended holding 6 wood.
+- **Reloads:** a reload mid-construction at tick 83 gave hash `f587f94276c7d1fa` before and after. A reload after completion gave `49bc9f0611a1d4bd` before and after.
+- **Render:** at most 90 draw calls and 218,740 triangles. The peak was on the `multidraw=0` forest pan.
+
+The phone placement flow was run only in emulation, against the local build. No real phone was used.
