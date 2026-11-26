@@ -380,3 +380,18 @@ Nothing was committed, staged, pushed or deployed. The backup `.tools/backups/w4
 - **Both runs:** 0 page or console errors, 0 failed requests, 0 HTTP ≥ 400 responses, 0 console warnings.
 
 **Not done:** no real phone was used, and nothing ran against the live site. Nothing was committed, staged, pushed or deployed. W5 was not started.
+
+### Candidate redeploy for owner phone report 1
+
+- **Commit:** `0e41531dfa268d9b97ad8f2296790692dd0b2bcc`, confirmed on the remote by fetch and by the GitHub API before deploying.
+- **Deploy:** exit 0. Tests run inside the deploy passed 488 of 488.
+- **Release:** `20261126T105209Z-0e41531`. The server's `current` points to it, and the root filesystem is mounted `rw`.
+- **Bundle:** `assets/index-Bz63E2dC.js`, build stamp `commit:"0e41531", dirty:false`.
+- **Live check** (fresh headless Chromium, desktop 1000x600, software GL, new wilderness world):
+  - wilderness content 5;
+  - HUD shows "bag 0/60";
+  - 54 draw calls, 151,852 triangles;
+  - 0 page errors, 0 console errors, 0 failed requests, 0 HTTP ≥ 400 responses.
+- **Not checked live:** the owner's stuck-campfire save. It was verified on the local build of the same code. The owner's own save upgrades on their next load.
+
+W4 remains a **candidate, not accepted**.
