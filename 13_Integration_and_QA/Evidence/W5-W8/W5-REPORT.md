@@ -308,3 +308,25 @@ These are independent full-suite runs on the final W5 working tree. The sub-agen
   - The test is a wall-clock timing check, and both versions sit at its limit on this host.
   - W5 does refactor `computeBaseColumns`, but no regression from it is shown at this noise level.
 - **Not changed:** the threshold was **not** relaxed. The failure is recorded here and stays open.
+
+## Deployment (recorded after the results were read)
+
+**Commit:** `5917608204260d2fb07c7bf920e6b06e8829fe81`, confirmed on the remote by fetch and by the GitHub API before deploying.
+
+**Deploy:** the script exited 0. Its own full-suite run gave **507 / 507** (fail 0), with host load average about 14. The timing test passed in this run, which is consistent with it being host-load sensitive.
+
+**What is live:**
+- release `20261126T131223Z-5917608`;
+- the server's `current` points to that release;
+- bundle `assets/index-BO7OAFQ3.js`, stamped `commit:"5917608", dirty:false`.
+
+**Live check** (fresh headless Chromium, desktop 1000x600, software GL, new wilderness world, 45 s at spawn):
+- wilderness content **6**;
+- the minimap is present;
+- map state shows 29 explored cells, no discovered places, no deposits and no waypoints, so nothing was revealed before exploring;
+- 54 draw calls, 151,916 triangles;
+- 0 page errors, 0 console errors, 0 failed requests and 0 HTTP ≥ 400 responses.
+
+**NOT VERIFIED on the live site:** routing, discovery while walking, and waypoints. These were verified on local builds only, as described above.
+
+**Status:** W5 is implemented and deployed. It is **not owner-accepted**.
