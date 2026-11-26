@@ -153,3 +153,19 @@ All are under the 120 calls / 250k triangles budget.
 - Tree felling with the axe is W3; mining needs a later pickaxe.
 - Reach trusts the client-reported position, as `harvest` already does.
 - Drawn pickups use the resident terrain height. Pickups are not obstacles, so the player walks through them.
+
+## Live deployment check
+
+Release `20261126T024301Z-6b0c06d` was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd` but not merged to `main`. The served bundle matches the local build (`assets/index-BPPsHnyr.js`).
+
+The check used a fresh headless Chromium (software GL, 1000x600) with an active wilderness world seeded in storage. There were no page errors.
+
+- **World state on load:**
+  - wilderness content v2;
+  - 18 pickups in range (3 branch, 4 stone, 4 fibre, 4 grass, 3 berry);
+  - empty bag;
+  - no tools.
+- **Render cost:** 54 draw calls and 151,568 triangles.
+- **UI:** the Bag button is present.
+
+I did not run the full collect-and-craft flow on the live site. That flow was verified on the local build of the same commit.
