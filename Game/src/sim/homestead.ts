@@ -29,6 +29,8 @@ import {
   CARRIED_CAPACITY, FOUNDER_STOCKPILE, FOUNDER_STOCKPILE_ID, LifeResult, RECIPES, total, lifeState,
 } from './economy';
 import { placeBuilding } from './buildings';
+import { footprintCells, footprintEntrance, footprintSize } from './placement';
+import { freeOf, planReservation, reservedTotal, reservedTotals } from './reservation';
 import { Presence, VILLAGER_KEEP_DM, clipApproach, keepDm, passDm, presenceCells, quantisePresence, ringDm, sideDm, targetClearDm } from './bodies';
 
 /** Legacy homestead rules (M006–M009): villagers walk straight lines, nothing collides. */
@@ -530,26 +532,23 @@ const BED_CELLS: ReadonlyArray<[number, number]> = [[-11, -8], [-9, -8], [-10, -
 const BED_CELLS_V4: ReadonlyArray<[number, number]> = [[-11, -9], [-9, -9], [-10, -10]];
 const HALL_V4: [number, number] = [-10, -9];
 /** A footprint's size (whole metres) after rotation. */
+// W4: the footprint geometry is the scenario-neutral one in sim/placement.ts (the same arithmetic, moved).
 export function siteSize(kind: SiteKind, rot = 0): { w: number; d: number } {
   const r = SITE_RULES[kind];
-  return rot % 2 ? { w: r.d, d: r.w } : { w: r.w, d: r.d };
+  return footprintSize(r.w, r.d, rot);
 }
 /** A site's footprint in whole-metre cells (min corner x, z; v6 rotation swaps the sides). */
 export function siteCells(st: Pick<BuildSite, 'x' | 'z' | 'kind'> & { rot?: number }): { x0: number; z0: number; x1: number; z1: number } {
-  const s = siteSize(st.kind, st.rot ?? 0);
-  return { x0: st.x, z0: st.z, x1: st.x + s.w, z1: st.z + s.d };
+  const r = SITE_RULES[st.kind];
+  return footprintCells(r.w, r.d, st.x, st.z, st.rot ?? 0);
 }
 /**
  * The cell in front of a site's door (whole metres): outside the middle of its
  * front. Rotation 0 is the +z side (the M012 spot); 1 faces +x, 2 -z, 3 -x.
  */
 export function siteEntrance(st: Pick<BuildSite, 'x' | 'z' | 'kind'> & { rot?: number }): { x: number; z: number } {
-  const r = SITE_RULES[st.kind], rot = st.rot ?? 0;
-  const dc = Math.floor(r.w / 2);
-  if (rot === 1) return { x: st.x + r.d, z: st.z + r.w - dc - 1 };
-  if (rot === 2) return { x: st.x + r.w - dc - 1, z: st.z - 1 };
-  if (rot === 3) return { x: st.x - 1, z: st.z + dc };
-  return { x: st.x + dc, z: st.z + r.d };
+  const r = SITE_RULES[st.kind];
+  return footprintEntrance(r.w, r.d, st.x, st.z, st.rot ?? 0);
 }
 /** Where a builder stands to work on a site (dm): the centre of its entrance cell. */
 export function siteSpot(st: Pick<BuildSite, 'x' | 'z' | 'kind'> & { rot?: number }): { x: number; z: number } {
@@ -961,22 +960,22 @@ export function seedReserve(h: HomesteadState): number {
 
 /** Store stock held for approved building sites (still physically in the store). */
 export function reservedOf(h: HomesteadState, item: string): number {
-  let n = 0;
-  for (const st of h.sites ?? []) if (st.state === 'approved') n += st.reserved[item] ?? 0;
-  return n;
+  return reservedTotal(approvedReservations(h), item);
+}
+/** The reservations of approved sites (the shared ledger's input; sim/reservation.ts). */
+function approvedReservations(h: HomesteadState): Array<Record<string, number>> {
+  return (h.sites ?? []).filter((st) => st.state === 'approved').map((st) => st.reserved);
 }
 /** All reservations by item (sorted). */
 export function reservations(h: HomesteadState): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const st of h.sites ?? []) if (st.state === 'approved') for (const [k, n] of Object.entries(st.reserved)) out[k] = (out[k] ?? 0) + n;
-  return Object.fromEntries(Object.entries(out).filter(([, n]) => n > 0).sort(([a], [b]) => a.localeCompare(b)));
+  return reservedTotals(approvedReservations(h));
 }
 /** What anyone but the site's builder may take from the store: stock minus reservations. */
 export function freeInStore(world: World, item: string): number {
   const h = world.homestead;
   // v6: timber stacked in finished woodsheds and log stores is store stock too.
   const have = (lifeState(world).stockpiles.get(FOUNDER_STOCKPILE_ID)?.inventory[item] ?? 0) + (h ? storedIn(h, item) : 0);
-  return Math.max(0, have - (h ? reservedOf(h, item) : 0));
+  return freeOf(have, h ? reservedOf(h, item) : 0);
 }
 
 // ---------- settlement rules v6: timber stores and wells ----------
@@ -1089,9 +1088,9 @@ function reserveSites(world: World, h: HomesteadState): boolean {
   let changed = false;
   for (const st of [...(h.sites ?? [])].sort((a, b) => a.id.localeCompare(b.id))) {
     if (st.state !== 'approved') continue;
-    for (const [item, need] of Object.entries(siteShortfall(h, st))) {
-      const n = Math.min(need, freeInStore(world, item));
-      if (n <= 0) continue;
+    // One source (the store); a partial plan is kept: the site reserves what is free now and the rest later.
+    const plan = planReservation(siteShortfall(h, st), [{ id: 'store', free: (item) => freeInStore(world, item) }]);
+    for (const [item, n] of Object.entries(plan.take.store ?? {})) {
       st.reserved[item] = (st.reserved[item] ?? 0) + n;
       changed = true;
     }

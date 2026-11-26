@@ -6,11 +6,19 @@
 // is one journaled `chop`, applied at once. The felled tree leaves a stump
 // and a trunk; swings along the trunk (`cut_log`) make logs; logs are picked
 // up and delivered by dropping them at a stockpile marked from the bag.
+// W4: build anywhere (app/wild-build-ui.ts): the Build menu and ghost, and
+// at a site E / Use delivers what it needs from the bag, then each press (or
+// hold) is one swing of construction work. Finished buildings have panels
+// (claim the lean-to, fuel and cook at the fire, craft at the workbench,
+// store and take). A death (drowning) is journaled as `died` (carried items
+// drop at the last dry spot); after the death screen a journaled `respawn`
+// wakes the player at the claimed lean-to, or (refused, visibly) at the spawn
+// banner; the character lands exactly where the outcome says.
 import * as THREE from 'three';
 import type { GameSession } from './session';
 import type { ExploreController } from './explore';
 import {
-  CARRY_CAPACITY, FOOD_VALUE, ITEM_LABEL, ITEM_WEIGHT, LivePickup, PICKUP_LABEL, PICKUP_REACH, STONE_AXE_DURABILITY, WILD_CONTENT_V3,
+  CARRY_CAPACITY, FOOD_VALUE, ITEM_LABEL, ITEM_WEIGHT, LivePickup, PICKUP_LABEL, PICKUP_REACH, TOOL_DURABILITY, WILD_CONTENT_V4,
   WILD_RECIPES, WildItem, carriedWeight, equippedTool, pickupsNear,
 } from '../sim/gathering';
 import {
@@ -19,6 +27,9 @@ import {
 } from '../sim/felling';
 import { PickupView, buildHeldAxe } from '../render/pickups';
 import { FellingView, NatureHider } from '../render/felling';
+import { WildBuildUI } from './wild-build-ui';
+import { SITE_REACH, WildSite, buildingsNear, deliverable, freeIn, homeShelter, reservationsInSource, reservedTotalsIn, siteSpotOf, stageNeeds, stationNear } from '../sim/wild-build';
+import { buildingDef } from '../sim/catalogue';
 
 export interface WildGameOptions {
   session: GameSession;
@@ -46,6 +57,9 @@ const SELECT_KEEP = 25;
 const EVENT_LABEL: Record<FellEvent, string> = {
   CHOP_STARTED: 'chop started', TREE_DAMAGED: 'tree damaged', TREE_FELLED: 'tree felled', TRUNK_CREATED: 'trunk on the ground',
   LOGS_CREATED: 'log cut', LOGS_COLLECTED: 'log picked up', LOGS_DELIVERED: 'logs delivered', STOCKPILE_MARKED: 'stockpile marked',
+  SITE_PLACED: 'site placed', MATERIALS_DELIVERED: 'materials delivered', CONSTRUCTION_PROGRESS: 'construction', BUILDING_COMPLETED: 'building completed',
+  SITE_CANCELLED: 'site cancelled', SHELTER_CLAIMED: 'shelter claimed', FIRE_FUELED: 'fire fuelled', FOOD_COOKED: 'food cooked',
+  ITEMS_STORED: 'items stored', ITEMS_TAKEN: 'items taken', RESPAWNED: 'respawned', DIED: 'died',
 };
 
 type Action =
@@ -53,11 +67,15 @@ type Action =
   | { kind: 'pickup'; p: LivePickup }
   | { kind: 'chop'; tree: NearTree }
   | { kind: 'cut'; trunk: Trunk }
-  | { kind: 'deliver'; stockpileId: string; n: number };
+  | { kind: 'deliver'; stockpileId: string; n: number }
+  | { kind: 'site_deliver'; s: WildSite; need: Record<string, number> }
+  | { kind: 'site_work'; s: WildSite };
 
 export class WildGame {
   readonly view = new PickupView();
   readonly felling = new FellingView();
+  /** W4: the Build menu, ghost, construction and building panels. */
+  readonly build: WildBuildUI;
   private readonly axe = buildHeldAxe();
   private readonly toastEl: HTMLElement;
   private toastTimer = 0;
@@ -82,7 +100,9 @@ export class WildGame {
   private panelKey = '';
   private feedKey = '';
   /** Felling evidence: accepted swings and refusals, first chop and fall times. */
-  readonly stats = { chops: 0, cuts: 0, refused: 0, fells: 0, firstChopMs: null as number | null, lastFellMs: null as number | null, lastRefusal: '' };
+  readonly stats = { chops: 0, cuts: 0, refused: 0, fells: 0, firstChopMs: null as number | null, lastFellMs: null as number | null, lastRefusal: '',
+    works: 0, deaths: 0, lastDeath: null as null | { dropped: Record<string, number>; piles: number } | { refused: string },
+    lastRespawn: null as null | { point: string; x: number; z: number; refused: string[] } };
 
   constructor(private readonly o: WildGameOptions) {
     o.scene.add(this.view.group, this.felling.group);
@@ -120,21 +140,85 @@ export class WildGame {
         if (!down) return;
         const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t;
         down = null;
-        if (moved < 10 && dt < 450) this.pick(e.clientX, e.clientY);
+        if (moved < 10 && dt < 450 && !this.build?.mode.active) this.pick(e.clientX, e.clientY);
       });
     }
+    this.build = new WildBuildUI({
+      world: () => this.world, send: (c, t, quiet) => { const r = this.send(c, t, quiet); return r && r.ok ? { ok: true, outcome: r.outcome as never } : null; },
+      toast: (m, k) => this.toast(m, k), at: () => this.at(),
+      player: () => { const c = o.explore()?.character; return c && !c.dead ? { x: c.x, z: c.z, heading: c.heading } : null; },
+      scene: o.scene, ...(o.camera ? { camera: o.camera } : {}), ...(o.canvas ? { canvas: o.canvas } : {}),
+    });
+    this.build.onWork = (s) => { if (performance.now() - this.lastSwing >= SWING_COOLDOWN_MS) { this.lastSwing = performance.now(); this.work(s); } };
+    this.build.onCraft = (r) => this.craft(r);
     this.ensureContent();
+    // W4: the claimed lean-to is the Home return target and the respawn point.
+    const ex = o.explore();
+    if (ex) {
+      ex.homeOverride = () => { const h = homeShelter(this.world); return h ? { ...siteSpotOf(h), name: 'lean-to' } : null; };
+      ex.respawnAt = () => this.respawn();
+      ex.onDeath = (cause) => this.died(cause);
+    }
+  }
+
+  /** The character died: journal it (carried items drop at the last dry spot; nothing is restored). */
+  private died(cause: string): void {
+    const ch = this.o.explore()?.character;
+    if (!ch || !this.world.wild?.build) return;
+    const safe = ch.safe ?? ch;
+    this.stats.deaths++;
+    const s = this.o.session;
+    const r = s.dispatch({ schema: 3, id: s.commandId('died' as never, 'death'), expectedRevision: s.world.revision, type: 'died', cause: cause === 'drowned' ? 'drowned' : cause,
+      at: { x: Math.round(safe.x * 10), z: Math.round(safe.z * 10) } });
+    if (!r.ok) {
+      // Shown, never hidden: the world could not record this death, so nothing is dropped.
+      this.stats.lastDeath = { refused: r.reasons.join('; ') };
+      this.toast(`You drowned, but the death could not be recorded (${r.reasons.join('; ')}). You keep what you carry and wake where you last stood on dry ground.`, 'bad');
+      return;
+    }
+    this.version++; this.o.onChanged();
+    if (r.outcome.type !== 'died') return;
+    const o = r.outcome;
+    this.stats.lastDeath = { dropped: { ...o.dropped }, piles: o.piles.length };
+    const what = Object.entries(o.dropped).map(([k, n]) => `${n} ${ITEM_LABEL[k as WildItem] ?? k}`).join(', ');
+    this.toast(`You drowned. ${what ? `Your ${what} lie where you last stood on dry ground.` : 'You carried nothing.'} Tools stay with you.`, 'bad');
+  }
+
+  /**
+   * After the death screen: wake at the claimed lean-to (journaled); if that is
+   * refused, say why and wake at the spawn banner (a distinct journaled
+   * outcome). Returns the exact landing point, or null when no death was
+   * recorded (the explore controller then wakes at the last dry spot).
+   */
+  private respawn(): { x: number; z: number } | null {
+    const b = this.world.wild?.build;
+    if (!b?.death) return null;
+    const s = this.o.session;
+    const go = (to: string) => s.dispatch({ schema: 3, id: s.commandId('respawn' as never, to), expectedRevision: s.world.revision, type: 'respawn', to });
+    const refused: string[] = [];
+    let r = b.home ? go(b.home) : null;
+    if (r && !r.ok) refused.push(...r.reasons);
+    if (!r || !r.ok) r = go('spawn');
+    if (!r.ok || r.outcome.type !== 'respawn') { this.toast(`could not wake: ${r.ok ? '' : r.reasons.join('; ')}`, 'bad'); return null; }
+    this.version++; this.o.onChanged();
+    const o = r.outcome;
+    this.stats.lastRespawn = { point: o.point, x: o.x, z: o.z, refused };
+    this.toast(o.point === 'spawn'
+      ? `${refused.length ? `You cannot wake at your lean-to: ${refused.join('; ')}. ` : b.home ? '' : 'You have no claimed lean-to. '}You wake at the spawn banner.`
+      : 'You wake at your lean-to.', refused.length ? 'warn' : 'good');
+    return { x: o.x / 10, z: o.z / 10 };
   }
 
   private get world() { return this.o.session.world; }
 
   /** A W1 (content v1) or W2 (content v2) world gains the latest wilderness content through one journaled command. */
   private ensureContent(): void {
-    if (this.world.wild?.fell) return;
-    const had = !!this.world.wild;
-    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V3 }, 'v3');
-    if (r) this.toast(had ? 'Trees can now be felled: craft a stone axe, walk up to a tree and swing.'
-      : 'The land around you now has loose branches, stones and plants to gather, and trees to fell.', 'good');
+    if (this.world.wild?.build) return;
+    const had = !!this.world.wild, fell = !!this.world.wild?.fell;
+    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V4 }, 'v4');
+    if (r) this.toast(fell ? 'You can now build anywhere: open Build (G) for a shelter, a fire, a workbench and storage.'
+      : had ? 'Trees can now be felled and you can build: craft a stone axe, fell a tree, then open Build (G).'
+        : 'The land around you now has loose branches, stones and plants to gather, trees to fell and room to build.', 'good');
   }
 
   private send(c: Record<string, unknown>, target: string, quiet = false): ReturnType<GameSession['dispatch']> | null {
@@ -168,7 +252,7 @@ export class WildGame {
   /** Press: act now; while held, swings repeat at the swing pace. */
   holdStart(): void {
     // Only a press that swings keeps swinging: holding after a pickup or delivery must not start chopping.
-    this.held = this.action.kind === 'chop' || this.action.kind === 'cut';
+    this.held = this.action.kind === 'chop' || this.action.kind === 'cut' || this.action.kind === 'site_work';
     this.act(false);
   }
   holdEnd(): void { this.held = false; }
@@ -180,9 +264,11 @@ export class WildGame {
     if (a.kind === 'none') { if (!repeat) this.toast(a.hint || 'nothing to do within reach: walk up to a tree, a trunk or something to pick up', 'warn'); return; }
     if (a.kind === 'pickup') { if (!repeat) this.pickup(a.p); return; }
     if (a.kind === 'deliver') { if (!repeat) this.deliver(a.n); return; }
+    if (a.kind === 'site_deliver') { if (!repeat) this.build.deliverAll(a.s); return; }
     if (performance.now() - this.lastSwing < SWING_COOLDOWN_MS) return;
     this.lastSwing = performance.now();
     if (a.kind === 'chop') this.chop(a.tree);
+    else if (a.kind === 'site_work') this.work(a.s);
     else this.cut(a.trunk);
   }
 
@@ -216,7 +302,32 @@ export class WildGame {
       this.toast(`The ${t.sp} falls! Swing along the trunk to cut it into ${trunk.logs} log${trunk.logs === 1 ? '' : 's'}.${o.branchPile ? ' Branches fell from the crown.' : ''}`, 'good');
     } else {
       this.felling.hit(t.e.id, 200);
-      this.toast(`${o.events.includes('CHOP_STARTED') ? 'chop started · ' : ''}${t.sp} (${t.stage}) ${o.hp}/${o.max} · axe ${o.durability}/${STONE_AXE_DURABILITY}`);
+      this.toast(`${o.events.includes('CHOP_STARTED') ? 'chop started · ' : ''}${t.sp} (${t.stage}) ${o.hp}/${o.max} · axe ${o.durability}/${TOOL_DURABILITY.stone_axe}`);
+    }
+  }
+
+  /** One swing of construction work on a site. */
+  private work(site: WildSite): void {
+    const at = this.at();
+    if (!at) return;
+    const s = this.o.session;
+    const r = s.dispatch({ schema: 3, id: s.commandId('build_work' as never, site.id), expectedRevision: s.world.revision, type: 'build_work', siteId: site.id, at });
+    const d = buildingDef(site.kind)!;
+    if (!r.ok) { this.refused(r, ''); this.toast(`can't build: ${r.reasons.join('; ')}`, 'warn'); this.held = r.code === 'too_fast' && this.held; return; }
+    this.version++;
+    this.o.onChanged();
+    this.stats.works++;
+    const c = siteSpotOf(site);
+    this.o.explore()?.swing(c.x, c.z);
+    const o = r.outcome;
+    if (o.type !== 'build_work') return;
+    if (o.events.includes('BUILDING_COMPLETED')) {
+      this.held = false;
+      this.toast(`${d.label} finished! ${d.function.summary}`, 'good');
+    } else {
+      const left = stageNeeds(site);
+      this.toast(`${d.label}: ${d.stages[Math.min(site.stage, d.stages.length - 1)].label}${Object.keys(left).length ? ` · deliver ${Object.entries(left).map(([k, n]) => `${n} ${ITEM_LABEL[k as WildItem] ?? k}`).join(', ')}` : ''}`);
+      if (Object.keys(left).length) this.held = false;
     }
   }
 
@@ -236,15 +347,18 @@ export class WildGame {
     if (o.pileId) {
       if (o.left === 0) { this.selected = null; this.held = false; }
       this.toast(o.left ? `a log comes off · ${o.left} left in the trunk · pick it up (E / Pick up)` : 'the last log: the trunk is cut up · pick the logs up and carry them to a stockpile');
-    } else this.toast(`cutting… · axe ${o.durability}/${STONE_AXE_DURABILITY}`);
+    } else this.toast(`cutting… · axe ${o.durability}/${TOOL_DURABILITY.stone_axe}`);
   }
 
   private pickup(p: LivePickup): void {
     const w = this.world.wild!;
     const before = w.items[p.item] ?? 0;
     const at = this.at();
-    if (!at || !this.send({ type: 'pickup', entityId: p.id, at }, p.id)) return;
+    // A pile whose units are all reserved is picked up for its site (they stay reserved for it, in the bag).
+    const forSite = p.kind === 'pile' && w.build && freeIn(this.world, p.id, p.item) <= 0 ? reservationsInSource(this.world, p.id)[0]?.siteId : undefined;
+    if (!at || !this.send({ type: 'pickup', entityId: p.id, at, ...(forSite ? { forSite } : {}) }, p.id)) return;
     const got = (w.items[p.item] ?? 0) - before;
+    if (forSite) { this.toast(`picked up ${got} ${ITEM_LABEL[p.item]} reserved for your ${buildingDef(w.build!.sites.get(forSite)!.kind)!.label.toLowerCase()} · bag ${carriedWeight(w)}/${CARRY_CAPACITY}`); return; }
     const room = Math.floor((CARRY_CAPACITY - carriedWeight(w)) / ITEM_WEIGHT.log);
     this.toast(`picked up ${got} ${ITEM_LABEL[p.item]}${got > 1 && p.item === 'log' ? 's' : ''} · bag ${carriedWeight(w)}/${CARRY_CAPACITY}`
       + (p.item === 'log' ? (w.fell?.stockpiles.size ? ` · room for ${room} more · carry them to your stockpile` : ' · mark a stockpile (Bag) and carry them there') : ''));
@@ -267,13 +381,15 @@ export class WildGame {
 
   craft(recipe: string): void {
     const r = WILD_RECIPES.find((x) => x.id === recipe);
-    if (!r || !this.send({ type: 'craft', recipe }, recipe)) return;
+    const at = r && r.station !== 'hand' ? this.at() : null;
+    if (r && r.station !== 'hand' && !at) { this.toast('walk up to a workbench to make that', 'warn'); return; }
+    if (!r || !this.send({ type: 'craft', recipe, ...(at ? { at } : {}) }, recipe)) return;
     if (r.output.tool === 'stone_axe' && this.firstAxeMs === null) this.firstAxeMs = Math.round(performance.now() - this.startedAt);
     this.toast(r.output.tool ? `You made a ${ITEM_LABEL[r.output.tool]}! Equip it from the bag.` : `made ${r.label.toLowerCase()}`);
   }
 
-  equip(item: 'stone_axe' | 'hands'): void {
-    if (this.send({ type: 'equip', item }, item)) this.toast(item === 'hands' ? 'bare hands' : 'stone axe in hand: walk up to a tree and swing (E / Chop)');
+  equip(item: string): void {
+    if (this.send({ type: 'equip', item }, item)) this.toast(item === 'hands' ? 'bare hands' : item === 'stone_axe' ? 'stone axe in hand: walk up to a tree and swing (E / Chop)' : `${ITEM_LABEL[item as WildItem] ?? item} in hand`);
   }
 
   eat(item: WildItem): void {
@@ -303,7 +419,7 @@ export class WildGame {
     else if (d.craft) this.craft(d.craft);
     else if (d.eat) this.eat(d.eat as WildItem);
     else if (d.drop) this.drop(d.drop as WildItem);
-    else if (d.equip) this.equip(d.equip as 'stone_axe' | 'hands');
+    else if (d.equip) this.equip(d.equip);
     else if (d.stockpile !== undefined) this.markStockpile();
   }
 
@@ -346,6 +462,16 @@ export class WildGame {
     const carrying = w.items.log ?? 0;
     const sp = f && carrying ? stockpileAt(this.world, ch.x, ch.z) : null;
     if (sp) return { kind: 'deliver', stockpileId: sp.id, n: carrying };
+    // W4: at an unfinished site, deliver what it needs from the bag, then work on it.
+    if (w.build) {
+      const site = buildingsNear(this.world, ch.x, ch.z, SITE_REACH - 0.3).find(({ s }) => s.state !== 'done')?.s;
+      if (site) {
+        const need: Record<string, number> = {};
+        for (const d of deliverable(this.world, site, this.at())) need[d.item] = (need[d.item] ?? 0) + d.n;
+        if (Object.keys(need).length) return { kind: 'site_deliver', s: site, need };
+        if (!Object.keys(stageNeeds(site)).length) return { kind: 'site_work', s: site };
+      }
+    }
     const room = CARRY_CAPACITY - carriedWeight(w);
     const near = pickupsNear(this.world, ch.x, ch.z, PROMPT_REACH);
     const fits = near.find((p) => ITEM_WEIGHT[p.item] <= room) ?? null;
@@ -387,14 +513,37 @@ export class WildGame {
     return { kind: 'none', hint: carrying ? (f?.stockpiles.size ? 'carry the logs to your stockpile and press E there' : 'mark a log stockpile from the Bag, then drop the logs there') : '' };
   }
 
+  /** A recorded landing a living character still has to be put at (a reload during a pending death). */
+  private wake: { x: number; z: number } | null = null;
+
+  /** Frames since the HUD's height was last published (layout). */
+  private hudFrames = 0;
+  private hudBottom = -1;
+  /**
+   * Layout: publish where the HUD text ends (--hud-bottom, CSS px) so the
+   * phone sheets and the event feed start below it instead of covering it.
+   * The HUD's height changes with its text, so it is read a few times a second.
+   */
+  private publishHudBottom(): void {
+    if (this.hudFrames++ % 12 !== 0 || typeof document === 'undefined' || typeof getComputedStyle !== 'function') return;
+    const hud = document.getElementById('hud');
+    const r = hud && getComputedStyle(hud).display !== 'none' ? hud.getBoundingClientRect() : null;
+    const bottom = r && r.height > 0 && r.top < window.innerHeight / 2 ? Math.ceil(r.bottom) : 0;
+    if (bottom !== this.hudBottom) { this.hudBottom = bottom; document.documentElement.style.setProperty('--hud-bottom', `${bottom}px`); }
+  }
+
   update(): void {
+    this.publishHudBottom();
     const w = this.world.wild;
     const ex = this.o.explore();
     const ch = ex?.active ? ex.character : null;
     if (!w) return;
+    // A death recorded before a reload: the character is alive again on this page, so the respawn is journaled now.
+    if (w.build?.death && ch && !ch.dead) this.wake = this.respawn();
+    if (this.wake && ex?.wakeAt(this.wake)) this.wake = null;
     this.action = this.decide();
     this.target = this.action.kind === 'pickup' ? this.action.p : null;
-    if (this.held && (this.action.kind === 'chop' || this.action.kind === 'cut')) this.act(true);
+    if (this.held && (this.action.kind === 'chop' || this.action.kind === 'cut' || this.action.kind === 'site_work')) this.act(true);
     // The drawn set follows the player (or the camera target in the overview) and every accepted command.
     const fx = ch ? ch.x : this.drawn.x, fz = ch ? ch.z : this.drawn.z;
     if (Number.isFinite(fx) && (this.version !== this.drawn.version || Math.hypot(fx - this.drawn.x, fz - this.drawn.z) > 6)) {
@@ -406,6 +555,7 @@ export class WildGame {
     const hand = ex?.rightHand ?? null;
     if (hand && this.axeParent !== hand) { hand.add(this.axe); this.axeParent = hand; }
     this.axe.visible = equippedTool(this.world)?.kind === 'stone_axe';
+    this.build.update(performance.now() / 1000);
     this.renderPanel();
     this.renderFeed();
   }
@@ -421,6 +571,7 @@ export class WildGame {
       return { x: c.px, y: this.o.groundY(c.px, c.pz) ?? a.trunk.y, z: c.pz };
     }
     if (a.kind === 'deliver') { const s = this.world.wild?.fell?.stockpiles.get(a.stockpileId); return s ? { x: s.x, y: this.o.groundY(s.x, s.z) ?? s.y, z: s.z } : null; }
+    if (a.kind === 'site_deliver' || a.kind === 'site_work') { const p = siteSpotOf(a.s); return { x: p.x, y: this.o.groundY(p.x, p.z) ?? a.s.y, z: p.z }; }
     return null;
   };
 
@@ -429,7 +580,8 @@ export class WildGame {
     switch (this.action.kind) {
       case 'chop': return 'Chop';
       case 'cut': return 'Cut log';
-      case 'deliver': return 'Deliver';
+      case 'deliver': case 'site_deliver': return 'Deliver';
+      case 'site_work': return 'Build';
       default: return 'Pick up';
     }
   }
@@ -451,6 +603,8 @@ export class WildGame {
       }
       case 'cut': return `${k}cut log · ${a.trunk.left} left in the ${a.trunk.sp} trunk`;
       case 'deliver': return `${k}deliver ${a.n} log${a.n === 1 ? '' : 's'} to the stockpile`;
+      case 'site_deliver': return `${k}deliver ${Object.entries(a.need).map(([m, n]) => `${n} ${ITEM_LABEL[m as WildItem] ?? m}`).join(', ')} to the ${buildingDef(a.s.kind)!.label.toLowerCase()}`;
+      case 'site_work': { const d = buildingDef(a.s.kind)!; return `${k}build ${d.label.toLowerCase()} · ${d.stages[Math.min(a.s.stage, d.stages.length - 1)].label}${coarse ? '' : ' · hold to keep working'}`; }
       default: return a.hint;
     }
   }
@@ -462,7 +616,7 @@ export class WildGame {
     const items = Object.entries(w.items).filter(([, n]) => n > 0).map(([k, n]) => `${ITEM_LABEL[k as WildItem]} ${n}`);
     const tool = equippedTool(this.world);
     return `bag ${carriedWeight(w)}/${CARRY_CAPACITY}: ${items.length || w.tools.length ? [...items, ...w.tools.map((t) => ITEM_LABEL[t.kind])].join(', ') : 'empty'}`
-      + ` · ${tool ? `${ITEM_LABEL[tool.kind]} ${tool.durability}/${STONE_AXE_DURABILITY} in hand` : 'bare hands'} · hunger ${w.hunger}`;
+      + ` · ${tool ? `${ITEM_LABEL[tool.kind]} ${tool.durability}/${TOOL_DURABILITY[tool.kind]} in hand` : 'bare hands'} · hunger ${w.hunger}`;
   }
 
   private renderFeed(): void {
@@ -479,27 +633,44 @@ export class WildGame {
     if (this.panel.hidden) return;
     const w = this.world.wild;
     if (!w) return;
-    const key = JSON.stringify([w.items, w.tools, w.equipped, w.hunger, w.fell?.stockpiles.size]);
+    const at = this.at();
+    const bench = !!at && !!w.build && stationNear(this.world, 'workbench', at);
+    const reserved = w.build ? reservedTotalsIn(this.world, 'bag') : {};
+    const key = JSON.stringify([w.items, w.tools, w.equipped, w.hunger, w.fell?.stockpiles.size, bench, reserved]);
     if (key === this.panelKey) return;
     this.panelKey = key;
     const have = (k: string) => w.items[k] ?? 0;
     const items = Object.entries(w.items).filter(([, n]) => n > 0).sort(([a], [b]) => a.localeCompare(b));
-    const rows = items.length ? items.map(([k, n]) => `<li><span>${ITEM_LABEL[k as WildItem]} <b>×${n}</b></span>`
+    const rows = items.length ? items.map(([k, n]) => `<li><span>${ITEM_LABEL[k as WildItem]} <b>×${n}</b>${reserved[k] ? ` <span class="dim" data-bag-reserved="${k}">(${reserved[k]} reserved for a site)</span>` : ''}</span>`
       + (FOOD_VALUE[k as WildItem] ? `<button type="button" data-eat="${k}">Eat</button>` : '')
       + `<button type="button" data-drop="${k}" aria-label="Drop one ${ITEM_LABEL[k as WildItem]}">Drop 1</button></li>`).join('')
       : '<li class="dim">nothing yet: pick up branches, stones and plants (E or Pick up)</li>';
-    const tools = w.tools.length ? w.tools.map((t) => `<li><span>${ITEM_LABEL[t.kind]} <span class="dim">${t.durability ? `${t.durability}/${STONE_AXE_DURABILITY}` : 'broken'}</span>${w.equipped === t.id ? ' <b class="eq">in hand</b>' : ''}</span>`
+    const tools = w.tools.length ? w.tools.map((t) => `<li><span>${ITEM_LABEL[t.kind]} <span class="dim">${t.durability ? `${t.durability}/${TOOL_DURABILITY[t.kind]}` : 'broken'}</span>${w.equipped === t.id ? ' <b class="eq">in hand</b>' : ''}</span>`
       + (w.equipped === t.id ? '<button type="button" data-equip="hands">Put away</button>' : `<button type="button" data-equip="${t.kind}">Equip</button>`) + '</li>').join('')
       : '<li class="dim">no tools yet</li>';
-    const recipes = WILD_RECIPES.map((r) => {
+    const recipes = WILD_RECIPES.filter((r) => r.station === 'hand' || bench).map((r) => {
       const need = Object.entries(r.input).map(([k, n]) => `<span class="${have(k) >= (n ?? 0) ? 'ok' : 'miss'}">${ITEM_LABEL[k as WildItem]} ${Math.min(have(k), n ?? 0)}/${n}</span>`).join(' · ');
-      const ok = Object.entries(r.input).every(([k, n]) => have(k) >= (n ?? 0));
-      return `<li class="recipe"><div><b>${r.label}</b><br><small>${need}</small></div><button type="button" data-craft="${r.id}" ${ok ? '' : 'disabled aria-disabled="true"'}>Craft</button></li>`;
+      const toolOk = !r.tool || w.tools.some((t) => t.kind === r.tool && t.durability > 0);
+      const ok = toolOk && Object.entries(r.input).every(([k, n]) => have(k) >= (n ?? 0));
+      return `<li class="recipe" data-recipe="${r.id}"><div><b>${r.label}</b>${r.station !== 'hand' ? ' <span class="dim">(workbench)</span>' : ''}<br><small>${need}${r.tool ? ` · <span class="${toolOk ? 'ok' : 'miss'}">${ITEM_LABEL[r.tool]}</span>` : ''}</small>${r.note ? `<br><small class="dim" data-note>${r.note}</small>` : ''}</div><button type="button" data-craft="${r.id}" ${ok ? '' : 'disabled aria-disabled="true"'}>Craft</button></li>`;
     }).join('');
     const piles = w.fell ? `<h3>Logs</h3><ul><li><span class="dim">${w.fell.stockpiles.size ? `${w.fell.stockpiles.size} stockpile${w.fell.stockpiles.size === 1 ? '' : 's'} marked · drop logs at one to deliver` : 'no stockpile yet'}</span>`
       + `<button type="button" data-stockpile>Mark stockpile here</button></li></ul>` : '';
     this.panel.innerHTML = `<header><h2>Bag</h2><span class="dim">weight ${carriedWeight(w)}/${CARRY_CAPACITY} · hunger ${w.hunger}/100</span><button type="button" data-close aria-label="Close bag">×</button></header>`
-      + `<h3>Items</h3><ul>${rows}</ul><h3>Tools</h3><ul>${tools}</ul>${piles}<h3>Craft by hand</h3><ul>${recipes}</ul>`;
+      + `<h3>Items</h3><ul>${rows}</ul><h3>Tools</h3><ul>${tools}</ul>${piles}<h3>${bench ? 'Craft (by hand and at the workbench)' : 'Craft by hand'}</h3><ul>${recipes}</ul>${bench ? '' : '<p class="dim">Stand by a workbench for planks, pickaxe, hammer, knife and chest.</p>'}`;
+  }
+
+  /** Evidence (read-only, ?metrics=1): pickups, trees and trunks within r m of the player. */
+  scan(r = 30): Record<string, unknown> | null {
+    const ch = this.o.explore()?.character;
+    if (!ch || !this.world.wild) return null;
+    const round = (v: number) => Math.round(v * 100) / 100;
+    return {
+      x: round(ch.x), z: round(ch.z),
+      pickups: pickupsNear(this.world, ch.x, ch.z, r).slice(0, 80).map((p) => ({ id: p.id, kind: p.kind, item: p.item, qty: p.qty, x: round(p.x), z: round(p.z) })),
+      trees: treesNear(this.world, ch.x, ch.z, r).slice(0, 40).map((t) => ({ id: t.e.id, sp: t.sp, stage: t.stage, x: round(t.e.x), z: round(t.e.z) })),
+      trunks: trunksNear(this.world, ch.x, ch.z, r).map(({ t }) => ({ id: t.id, x: round(t.x), z: round(t.z), left: t.left })),
+    };
   }
 
   metrics(): Record<string, unknown> {
@@ -513,7 +684,8 @@ export class WildGame {
       firstAxeMs: this.firstAxeMs, axeVisible: this.axe.visible,
       action: a.kind === 'chop' ? { kind: 'chop', id: a.tree.e.id, sp: a.tree.sp, stage: a.tree.stage, x: a.tree.e.x, z: a.tree.e.z }
         : a.kind === 'cut' ? { kind: 'cut', id: a.trunk.id, left: a.trunk.left } : a.kind === 'pickup' ? { kind: 'pickup', id: a.p.id, item: a.p.item }
-          : a.kind === 'deliver' ? { kind: 'deliver', id: a.stockpileId, n: a.n } : { kind: 'none', hint: a.hint },
+          : a.kind === 'deliver' ? { kind: 'deliver', id: a.stockpileId, n: a.n }
+            : a.kind === 'site_deliver' ? { kind: 'site_deliver', id: a.s.id, need: a.need } : a.kind === 'site_work' ? { kind: 'site_work', id: a.s.id } : { kind: 'none', hint: a.hint },
       selected: this.selected,
       felling: f ? {
         damaged: [...f.chop.values()].map((c) => ({ ...c })),
@@ -525,6 +697,7 @@ export class WildGame {
         swingsDrawn: this.o.explore()?.swings ?? 0, swinging: this.o.explore()?.swinging ?? false,
       } : null,
       stats: { ...this.stats },
+      build: this.build.metrics(),
     };
   }
 }

@@ -21,6 +21,7 @@ import { OBSTRUCTION_RADIUS } from './terrain';
 // M010: a sapling's trunk is thinner than a mature tree's (the stage the renderer draws).
 import { LIFE_TRUNK, TreeStage, treeLife } from './woodland';
 import { blockingTrunks, trunkDistance } from './felling';
+import { buildingHits } from './wild-build';
 // M012: the settlement's structure layer (fence and gate edges, buildings) is the one villagers and animals route on.
 import { settlementCollision } from './homestead';
 import { MAX_STEP, structureHits } from './nav';
@@ -252,6 +253,8 @@ const NO_HITS: string[] = [];
  * animals use. Empty without a homestead (or before settlement rules v2).
  */
 export function settlementHits(world: World, x: number, y: number, z: number): string[] {
+  // W4: a wilderness world's finished buildings (no homestead there) collide through the same path.
+  if (world.wild?.build) return buildingHits(world, x, y, z, CHARACTER_RADIUS - 1e-4, CHARACTER_HEIGHT);
   const c = settlementCollision(world);
   if (!c) return NO_HITS;
   return structureHits(c.grid, c.gate, x, y, z, CHARACTER_RADIUS - 1e-4, CHARACTER_HEIGHT);
@@ -723,6 +726,12 @@ export function canStandAt(world: World, x: number, y: number, z: number): boole
   if (below === null || !isSolid(below)) return false;
   if (overlaps(world, x, y, z) || settlementHits(world, x, y, z).length) return false;
   for (let cy = fy; cy <= Math.floor(y + CHARACTER_HEIGHT - 1e-3); cy++) if (water(world, fx, cy, fz)) return false;
+  return !entityBlocks(world, x, y, z);
+}
+
+/** Trees, rocks and fallen trunks a character standing at (x, y, z) would be inside. */
+function entityBlocks(world: World, x: number, y: number, z: number): boolean {
+  const fx = Math.floor(x), fz = Math.floor(z);
   const cx = worldToChunkX(fx), cz = worldToChunkZ(fz);
   for (let dz = -1; dz <= 1; dz++) {
     for (let dx = -1; dx <= 1; dx++) {
@@ -736,15 +745,116 @@ export function canStandAt(world: World, x: number, y: number, z: number): boole
         if (y > e.y + 3 || y + CHARACTER_HEIGHT < e.y) continue;
         const body = life ? LIFE_TRUNK[life.stage as TreeStage] * e.scale
           : (OBSTRUCTION_RADIUS[e.kind as ActiveEntityKind] ?? 0.5) * 0.75 * e.scale;
-        if (Math.hypot(x - e.x, z - e.z) < body + CHARACTER_RADIUS + 0.1) return false;
+        if (Math.hypot(x - e.x, z - e.z) < body + CHARACTER_RADIUS + 0.1) return true;
       }
     }
   }
   for (const t of blockingTrunks(world, x, z, 2)) {
     if (y >= t.y + (t.r * 2) / 100 - 0.05 || y + CHARACTER_HEIGHT < t.y) continue;
-    if (trunkDistance(t, x, z).d < t.r / 100 + CHARACTER_RADIUS + 0.1) return false;
+    if (trunkDistance(t, x, z).d < t.r / 100 + CHARACTER_RADIUS + 0.1) return true;
   }
-  return true;
+  return false;
+}
+
+// ---------- standing spots for a loaded or respawning character (player-local) ----------
+
+/** Why a character cannot stand at (x, y, z), or null when it can ('pending': its terrain is not resident). */
+export type StandProblem = 'pending' | 'no_ground' | 'terrain' | 'water' | 'building' | 'obstacle';
+
+/** The box's voxel columns at (x, z). */
+function boxColumns(x: number, z: number): Array<[number, number]> {
+  const r = CHARACTER_RADIUS - 1e-4;
+  const out: Array<[number, number]> = [];
+  for (let cz = Math.floor(z - r); cz <= Math.floor(z + r); cz++) for (let cx = Math.floor(x - r); cx <= Math.floor(x + r); cx++) out.push([cx, cz]);
+  return out;
+}
+
+/**
+ * Can a character stand still at (x, y, z), the way the movement rules let it
+ * stand? Unlike canStandAt (a banner landing, which wants ground under the
+ * centre), the box may rest on any of its voxel columns, as it does on a shore
+ * edge whose centre is over a water cell. The box must be clear of voxels,
+ * buildings, structures, trees, rocks and trunks, and no water may be in any
+ * of its feet or head cells.
+ */
+export function standProblemAt(world: World, x: number, y: number, z: number): StandProblem | null {
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return 'no_ground';
+  const cols = boxColumns(x, z);
+  const fy = Math.floor(y + 1e-3), top = Math.floor(y + CHARACTER_HEIGHT - 1e-3);
+  for (const [cx, cz] of cols) if (residentVoxelAt(world, cx, fy, cz) === null) return 'pending';
+  for (const [cx, cz] of cols) for (let cy = fy; cy <= top; cy++) if (water(world, cx, cy, cz)) return 'water';
+  if (overlaps(world, x, y, z)) return 'terrain';
+  if (!cols.some(([cx, cz]) => { const m = residentVoxelAt(world, cx, fy - 1, cz); return m !== null && isSolid(m); })) return 'no_ground';
+  if (settlementHits(world, x, y, z).length) return 'building';
+  if (entityBlocks(world, x, y, z)) return 'obstacle';
+  return null;
+}
+
+export type StandingSearch =
+  | { status: 'ok'; x: number; y: number; z: number; /** Horizontal distance (m) from the asked spot. */ moved: number; /** Why the asked spot itself was not used (null: it was). */ problem: StandProblem | null }
+  | { status: 'pending' }
+  | { status: 'none'; problem: StandProblem };
+
+/** Standable feet heights in the column at (x, z), highest first; null while the terrain there is not resident. */
+function standingLevels(world: World, x: number, z: number): number[] | null {
+  const out: number[] = [];
+  for (const [cx, cz] of boxColumns(x, z)) if (residentVoxelAt(world, cx, 0, cz) === null) return null;
+  for (let y = 110; y > Y_MIN; y--) {
+    // Resting: clear at y, touching solid one voxel lower somewhere under the box.
+    if (!overlapsTerrain(world, x, y, z) && overlapsTerrain(world, x, y - 1, z)) out.push(y);
+  }
+  return out;
+}
+
+/**
+ * The nearest spot within `radius` m of (x, z) where a character can stand
+ * (standProblemAt): first (x, z) itself, at the standable height nearest
+ * `yNear` (the highest when absent); then the middles of the cells around it,
+ * nearest first (ties: z, then x). 'pending' while any terrain it needs is not
+ * resident; 'none' when nothing in reach is standable. Deterministic.
+ */
+export function standingSpotNear(world: World, x: number, z: number, opts: { yNear?: number; radius: number }): StandingSearch {
+  const pick = (px: number, pz: number): { y: number | null; problem: StandProblem } | 'pending' => {
+    const levels = standingLevels(world, px, pz);
+    if (!levels) return 'pending';
+    const near = opts.yNear;
+    const order = near !== undefined && Number.isFinite(near) ? [...levels].sort((a, b) => Math.abs(a - near) - Math.abs(b - near) || b - a) : levels;
+    let problem: StandProblem = 'no_ground';
+    for (const y of order) {
+      const p = standProblemAt(world, px, y, pz);
+      if (p === 'pending') return 'pending';
+      if (p === null) return { y, problem };
+      problem = p;
+    }
+    return { y: null, problem };
+  };
+  const first = pick(x, z);
+  if (first === 'pending') return { status: 'pending' };
+  // The asked height itself: kept exactly when standable; otherwise say why it was not used.
+  const yNear = opts.yNear !== undefined && Number.isFinite(opts.yNear) ? opts.yNear : undefined;
+  const asked: StandProblem | null = yNear === undefined ? null : standProblemAt(world, x, yNear, z);
+  if (asked === 'pending') return { status: 'pending' };
+  if (yNear !== undefined && asked === null) return { status: 'ok', x, y: yNear, z, moved: 0, problem: null };
+  if (first.y !== null && yNear === undefined) return { status: 'ok', x, y: first.y, z, moved: 0, problem: null };
+  if (first.y !== null && asked !== 'water' && asked !== 'building' && asked !== 'obstacle') {
+    // Same column, another height (a saved height that is not ground): the ground there.
+    return { status: 'ok', x, y: first.y, z, moved: 0, problem: asked ?? 'no_ground' };
+  }
+  const problem: StandProblem = asked ?? first.problem;
+  const R = Math.max(0, Math.floor(opts.radius));
+  const cells: Array<{ x: number; z: number; d: number }> = [];
+  for (let dz = -R - 1; dz <= R + 1; dz++) for (let dx = -R - 1; dx <= R + 1; dx++) {
+    const px = Math.floor(x) + dx + 0.5, pz = Math.floor(z) + dz + 0.5;
+    const d = Math.hypot(px - x, pz - z);
+    if (d <= opts.radius && d > 1e-9) cells.push({ x: px, z: pz, d });
+  }
+  cells.sort((a, b) => a.d - b.d || a.z - b.z || a.x - b.x);
+  for (const c of cells) {
+    const r = pick(c.x, c.z);
+    if (r === 'pending') return { status: 'pending' };
+    if (r.y !== null) return { status: 'ok', x: c.x, y: r.y, z: c.z, moved: Math.round(c.d * 100) / 100, problem };
+  }
+  return { status: 'none', problem };
 }
 
 /** Highest standable feet position in a column near `yHint`, or null if not resident. */

@@ -1176,3 +1176,103 @@ body.clean #bag-button, body.kit #bag-button, body.map #bag-button, body.clean #
 body.clean #wild-events, body.kit #wild-events, body.map #wild-events { display: none; }
 /* Phones: the HUD text sits top-left, so the feed goes right, under the Builder view button. */
 @media (max-width: 760px) { #wild-events { left: auto; right: max(14px, env(safe-area-inset-right)); top: max(152px, calc(env(safe-area-inset-top) + 144px)); font-size: 10px; } }
+
+/* ---- W4 build anywhere: Build button, catalogue, site and building panels ---- */
+#build-menu-button {
+  position: fixed; z-index: 9; left: calc(max(14px, env(safe-area-inset-left)) + 140px); top: max(78px, calc(env(safe-area-inset-top) + 70px));
+  min-height: 36px; padding: 7px 14px; color: #1B202B; background: #E8C878; border: 1px solid #F6E6B4; border-radius: 7px;
+  font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; touch-action: manipulation;
+}
+#build-menu-button.on { background: #F6E6B4; }
+#build-menu-button[hidden] { display: none; }
+.wild-sheet {
+  position: fixed; z-index: 12; left: max(14px, env(safe-area-inset-left)); top: max(122px, calc(env(safe-area-inset-top) + 114px));
+  width: min(340px, calc(100vw - 28px)); max-height: calc(100dvh - 150px); overflow-y: auto; padding: 10px 12px;
+  color: #F4F0E4; background: rgba(20, 23, 34, 0.9); border: 1px solid rgba(240, 236, 220, 0.22); border-radius: 9px;
+  backdrop-filter: blur(9px); font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+}
+.wild-sheet[hidden] { display: none; }
+#wild-site-panel { left: auto; right: max(14px, env(safe-area-inset-right)); top: max(150px, calc(env(safe-area-inset-top) + 142px)); width: min(300px, calc(100vw - 28px)); z-index: 11; }
+.wild-sheet header { display: flex; align-items: center; gap: 8px; }
+.wild-sheet header h2 { margin: 0; font-size: 14px; color: #FFF3D6; }
+.wild-sheet header button { margin-left: auto; min-width: 32px; }
+.wild-sheet h3 { margin: 10px 0 4px; color: #7AD7E6; font-size: 11px; }
+.wild-sheet ul { list-style: none; margin: 0; padding: 0; }
+.wild-sheet li { display: flex; align-items: center; gap: 6px; padding: 3px 0; border-top: 1px solid rgba(240, 236, 220, 0.08); }
+.wild-sheet li > span, .wild-sheet li > div { flex: 1; }
+.wild-sheet li.locked b { color: rgba(240, 236, 220, 0.65); }
+.wild-sheet .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+.wild-sheet button { padding: 4px 9px; color: #1B202B; background: #D7C778; border: 1px solid #F4E8A4; border-radius: 6px; font: 600 11px/1.2 ui-sans-serif, system-ui, sans-serif; cursor: pointer; touch-action: manipulation; }
+.wild-sheet button.primary { background: #9EE2B8; border-color: #D4F5DF; }
+.wild-sheet button:disabled { color: #8D8A80; background: #3A3B40; border-color: #55565C; cursor: default; }
+.wild-sheet .dim { color: rgba(240, 236, 220, 0.6); }
+.wild-sheet .ok { color: #9EE2B8; }
+.wild-sheet .miss { color: #F2B35C; }
+.wild-sheet .bar { height: 7px; margin: 5px 0 3px; background: rgba(240, 236, 220, 0.14); border-radius: 4px; overflow: hidden; }
+.wild-sheet .bar i { display: block; height: 100%; background: #E8C878; }
+body.clean #build-menu-button, body.kit #build-menu-button, body.map #build-menu-button, body.clean .wild-sheet { display: none; }
+/* One sheet at a time beside the bag: the site panel steps aside while the bag or the catalogue is open. */
+body:has(#wild-panel:not([hidden])) #wild-site-panel, body:has(#wild-build-panel:not([hidden])) #wild-panel { display: none; }
+body:has(#wild-site-panel:not([hidden])) #wild-events { display: none; }
+@media (pointer: coarse) {
+  #build-menu-button { min-height: 44px; min-width: 64px; left: calc(max(14px, env(safe-area-inset-left)) + 146px); }
+  .wild-sheet button { min-height: 40px; padding: 8px 12px; }
+}
+/* Phones: sheets end well above the joystick and the Jump / Use buttons (bottom third). */
+@media (max-width: 760px) {
+  .wild-sheet { top: max(128px, calc(env(safe-area-inset-top) + 120px)); max-height: calc(100dvh - 128px - 250px); }
+  #wild-site-panel { top: max(128px, calc(env(safe-area-inset-top) + 120px)); width: min(230px, 58vw); max-height: calc(100dvh - 128px - 270px); font-size: 11px; padding: 8px 9px; }
+}
+
+/* ---- W4 follow-up: touch layout measured by element rectangles (REPORT §1 item 1) ----
+   No sheet covers the HUD text, the top buttons, the Builder view button, the right-hand
+   column (Home / To banner / Plant, zoom, Use, Jump), the joystick ring or another sheet.
+   --hud-bottom is where the HUD text ends (set by app/wild-game.ts; 0 when it is not at the top). */
+/* The top row: Farm, Settings, Bag, Build side by side (the Bag button covered the Settings button). */
+body.wilderness #bag-button { left: calc(max(14px, env(safe-area-inset-left)) + 120px); }
+body.wilderness #build-menu-button { left: calc(max(14px, env(safe-area-inset-left)) + 190px); }
+/* While placing a building on a touch screen, the build bar takes the HUD's place (the HUD steps aside). */
+@media (pointer: coarse) {
+  body.wilderness.building #hud, body.wilderness.building #wild-events { display: none !important; }
+  .wild-sheet header button, #wild-panel header button { min-width: 40px; min-height: 40px; }
+}
+/* Phones, portrait: sheets sit below the HUD text, left of the right-hand column, above the joystick ring. */
+@media (max-width: 760px) and (orientation: portrait) {
+  body.wilderness #mode-button { top: max(128px, calc(env(safe-area-inset-top) + 122px)); }
+  body.wilderness .wild-sheet, body.wilderness #wild-site-panel, body.wilderness #wild-panel {
+    left: max(8px, env(safe-area-inset-left)); right: auto;
+    top: max(128px, calc(var(--hud-bottom, 0px) + 8px));
+    width: calc(100vw - 120px); max-height: calc(100dvh - max(128px, calc(var(--hud-bottom, 0px) + 8px)) - 170px);
+  }
+  body.wilderness #build-bar {
+    left: max(8px, env(safe-area-inset-left)); transform: none; top: max(128px, calc(env(safe-area-inset-top) + 122px));
+    width: calc(100vw - 16px); max-height: 30vh;
+  }
+}
+/* Phones, landscape: sheets in the middle column, between the HUD text and the right-hand column. */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  body.wilderness .wild-sheet, body.wilderness #wild-site-panel, body.wilderness #wild-panel {
+    left: calc(max(12px, env(safe-area-inset-left)) + min(46vw, 380px) + 8px); right: auto; top: 82px;
+    width: calc(100vw - min(46vw, 380px) - 204px); max-height: calc(100dvh - 90px);
+  }
+  body.wilderness.building #mode-button { display: none; }
+  body.wilderness #build-bar { left: calc(max(14px, env(safe-area-inset-left)) + 262px); transform: none; top: max(8px, env(safe-area-inset-top)); width: calc(100vw - 460px); max-height: 46vh; }
+}
+/* Tablets in landscape: the bag and the catalogue start below the HUD text, above the joystick ring. */
+@media (pointer: coarse) and (orientation: landscape) and (min-height: 501px) {
+  body.wilderness #wild-build-panel, body.wilderness #wild-panel {
+    top: max(122px, calc(var(--hud-bottom, 0px) + 8px)); max-height: calc(100dvh - max(122px, calc(var(--hud-bottom, 0px) + 8px)) - 170px);
+  }
+}
+/* Wide screens: the event feed starts below the HUD text when the HUD is at the top (touch). */
+@media (min-width: 761px) {
+  body.wilderness #wild-events { top: max(122px, calc(var(--hud-bottom, 0px) + 8px)); }
+}
+/* One overlay at a time: the event feed steps aside while any sheet is open. */
+body:has(.wild-sheet:not([hidden])) #wild-events, body:has(#wild-panel:not([hidden])) #wild-events { display: none; }
+/* Desktop: the HUD text is bottom-left, so the bag and the catalogue open on the right (where the site panel shows; one at a time). */
+@media (min-width: 761px) and (pointer: fine) {
+  body.wilderness #wild-build-panel, body.wilderness #wild-panel { left: auto; right: max(14px, env(safe-area-inset-right)); top: 150px; max-height: calc(100dvh - 174px); }
+  /* The placement bar starts below the Farm / Settings / Bag / Build row. */
+  body.wilderness #build-bar { top: max(124px, calc(env(safe-area-inset-top) + 116px)); }
+}

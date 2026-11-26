@@ -4,7 +4,7 @@ import {
   ResourceType, World, createWorld, generateWorld, harvestEntity, placeAuthoredSites,
   retireStoneEntities, isRetiredStoneKind, GENERATOR_VERSION, GENERATOR_V2, WILDERNESS, Scenario, worldScenario,
 } from '../sim/world';
-import { WILDERNESS_STARTER_INVENTORY, wildernessAllows, wildernessRefusal } from '../sim/wilderness';
+import { WILDERNESS_STARTER_INVENTORY, wildernessAllowsCommand, wildernessRefusal } from '../sim/wilderness';
 import { M002_LAYOUT } from '../sim/m002';
 import { LocalAuthorizer } from '../sim/preparation';
 import { LocalStructureAuthorizer, FOUNDER_DESIGN_VERSION } from '../sim/structures';
@@ -33,7 +33,7 @@ import { HARVEST_MODES, HarvestMode, POLICY_LIMITS, WoodPolicy, speciesFromText 
 import type { TreeSpecies } from '../sim/vegetation';
 import { plantTree, protectTree, protectZone, removeZone, setWoodlandPolicy } from '../sim/forestry';
 import { LATEST_WILD_CONTENT, WILD_CONTENT_V1, WildContent, createWildState, isWildContent, stepWild } from '../sim/gathering';
-import { WildCommand, WildOutcome, dispatchWild, isWildCommandType, validateWildCommand, validateWildOutcome, wildAgrees } from './wild-commands';
+import { WildCommand, WildOutcome, dispatchWild, isWildCommandValue, validateWildCommand, validateWildOutcome, wildAgrees } from './wild-commands';
 
 export const JOURNAL_SCHEMA = 1 as const;
 export const DESIGN_JOURNAL_SCHEMA = 2 as const;
@@ -342,7 +342,7 @@ function validateHomesteadCommand(value: Record<string, unknown>, base: { schema
       return { ...base, type: 'place_site', kind: value.kind as SiteKind, x: value.x, z: value.z, ...(value.rot !== undefined ? { rot: value.rot as number } : {}) };
     case 'approve_site': case 'cancel_site':
       if (typeof value.siteId !== 'string' || !SITE_ID.test(value.siteId)) return null;
-      return { ...base, type: value.type, siteId: value.siteId };
+      return { ...base, type: value.type, siteId: value.siteId } as HomesteadCommand;
     case 'homestead_act':
       if (!HOMESTEAD_ACTIONS.includes(value.action as HomesteadAction) || typeof value.target !== 'string' || !HOMESTEAD_TARGET.test(value.target)) return null;
       return { ...base, type: 'homestead_act', action: value.action as HomesteadAction, target: value.target };
@@ -511,7 +511,7 @@ export function validateCommand(value: unknown): Command {
       command = { ...base, type: value.type, plotId: value.plotId };
     } else if (value.type === 'harvest_crop' && typeof value.plotId === 'string' && /^crop:[0-8]$/.test(value.plotId)) {
       command = { ...base, type: value.type, plotId: value.plotId };
-    } else if (isWildCommandType(value.type)) {
+    } else if (isWildCommandValue(value)) {
       command = validateWildCommand(value, base as { schema: typeof CURRENT_JOURNAL_SCHEMA; id: string; expectedRevision: number });
     } else {
       command = validateHomesteadCommand(value, base as { schema: typeof CURRENT_JOURNAL_SCHEMA; id: string; expectedRevision: number });
@@ -568,7 +568,7 @@ function validateOutcome(value: unknown): CommandOutcome {
     if (!value.readyCrops.every((plot) => typeof plot === 'string' && /^crop:[0-8]$/.test(plot))) throw new Error('invalid ready crops');
     outcome = { type: value.type, fromTick: value.fromTick, toTick: value.toTick,
       completedJobs, readyCrops: [...value.readyCrops] };
-  } else if (isWildCommandType(value.type)) {
+  } else if (isWildCommandValue(value)) {
     outcome = validateWildOutcome(value);
   } else {
     outcome = validateHomesteadOutcome(value);
@@ -666,14 +666,14 @@ export function validateJournal(value: unknown): CommandJournal {
     }
     if (JSON.stringify(entry) !== JSON.stringify(raw)) throw new Error('non-canonical journal entry');
     if (ids.has(entry.command.id)) throw new Error('duplicate journal command id');
-    if (scenario === WILDERNESS && !wildernessAllows(entry.command.type)) {
+    if (scenario === WILDERNESS && !wildernessAllowsCommand(entry.command.type, isWildCommandValue(entry.command))) {
       throw new Error(`a wilderness journal cannot contain ${entry.command.type}`);
     }
     // W2: gathering and crafting exist only in a wilderness world.
-    if (scenario !== WILDERNESS && isWildCommandType(entry.command.type)) {
+    if (scenario !== WILDERNESS && isWildCommandValue(entry.command)) {
       throw new Error(`a settlement journal cannot contain ${entry.command.type}`);
     }
-    if (isWildCommandType(entry.command.type) && !wildAgrees(entry.command as WildCommand, entry.outcome as WildOutcome)) {
+    if (isWildCommandValue(entry.command) && (!isWildCommandValue(entry.outcome) || !wildAgrees(entry.command as WildCommand, entry.outcome as WildOutcome))) {
       throw new Error('journal command and outcome disagree');
     }
     if (entry.command.type !== entry.outcome.type
@@ -974,10 +974,10 @@ export class GameSession {
       return this.reject(command.id, 'schema_mismatch', ['command schema does not match this world journal']);
     }
     // W1: a wilderness world has no settlement, founder stockpile or founder slice.
-    if (this.journal.scenario === WILDERNESS && !wildernessAllows(command.type)) {
+    if (this.journal.scenario === WILDERNESS && !wildernessAllowsCommand(command.type, isWildCommandValue(command))) {
       return this.reject(command.id, 'wilderness', [wildernessRefusal(command.type)]);
     }
-    if (this.journal.scenario !== WILDERNESS && isWildCommandType(command.type)) {
+    if (this.journal.scenario !== WILDERNESS && isWildCommandValue(command)) {
       return this.reject(command.id, 'not_wilderness', ['gathering and hand crafting exist only in a wilderness world']);
     }
     const prior = this.ids.get(command.id);
@@ -1070,7 +1070,7 @@ export class GameSession {
       const result = harvestCrop(this.world, command.plotId);
       if (!result.ok) return this.reject(command.id, result.code, result.reasons);
       outcome = { type: 'harvest_crop', plotId: command.plotId, resources: result.value };
-    } else if (isWildCommandType(command.type)) {
+    } else if (isWildCommandValue(command)) {
       const result = dispatchWild(this.world, command as WildCommand);
       if (!result.ok) {
         if (this.stateHash !== before) throw new Error('rejected wilderness command changed authoritative state');
@@ -1174,7 +1174,8 @@ export class GameSession {
         return r.ok ? { ok: true, value: { type: 'woodland_policy', ...r.value } } : r;
       }
       case 'place_site': {
-        const r = placeSite(world, command.kind, command.x, command.z, command.rot);
+        if (!('kind' in command) || 'at' in command) return { ok: false, code: 'invalid_command', reasons: ['not a settlement building'] };
+        const r = placeSite(world, command.kind as SiteKind, command.x, command.z, command.rot);
         return r.ok ? { ok: true, value: { type: 'place_site', siteId: r.value.siteId, kind: r.value.kind, x: r.value.x, z: r.value.z,
           ...(command.rot !== undefined ? { rot: command.rot } : {}) } } : r;
       }

@@ -9,8 +9,9 @@
 // position only decides *which* resource is in reach.
 import * as THREE from 'three';
 import {
-  CHARACTER_RADIUS, CONTACT_SQUEEZE_AFTER, CharacterState, FIXED_STEP, bodyLevel, MAX_HEALTH, createCharacter, findStandingY, respawnCharacter, stepCharacter,
+  CHARACTER_RADIUS, CONTACT_SQUEEZE_AFTER, CharacterState, FIXED_STEP, bodyLevel, MAX_HEALTH, createCharacter, stepCharacter,
 } from '../sim/character';
+import { LandingPlan, SpawnPlan, planAvatarSpawn, planLanding } from './avatar-spawn';
 import { Entity, World, isSolid, residentVoxelAt, nearestHarvestable } from '../sim/world';
 import { OrbitRig } from '../render/camera';
 import { Figure, buildFigure, animateFigure, placeFigure } from '../render/characters';
@@ -67,6 +68,16 @@ export class ExploreController {
   /** Called once when the character dies and once when it respawns. */
   onDeath: ((cause: string) => void) | null = null;
   onRespawn: (() => void) | null = null;
+  /** W4: journals the respawn and returns where the dead character lands (exactly), or null for the last dry spot (as before). */
+  respawnAt: (() => { x: number; z: number } | null) | null = null;
+  /** The recorded landing point while its terrain streams in ('none': no recorded respawn). */
+  private landing: { x: number; z: number } | 'none' | null = null;
+  /** W4: the Home return goes here instead of the home banner (a claimed lean-to), with its name. */
+  homeOverride: (() => { x: number; z: number; name: string } | null) | null = null;
+  private placeName(target: BannerTarget): string {
+    const o = target === 'home' ? this.homeOverride?.() : null;
+    return o ? o.name : BANNER_NAMES[target];
+  }
   private figure: Figure;
   private readonly marker: THREE.Mesh;
   private readonly smoothTarget = new THREE.Vector3();
@@ -179,7 +190,7 @@ export class ExploreController {
     if (target === 'field' && !this.banners.field) { this.onNotice?.('No field banner yet: plant one first (Plant banner, V)', 'warn'); return false; }
     if (this.channel.target === target) { this.cancelReturn('cancelled'); return false; }
     this.channel.start(target, performance.now());
-    this.onNotice?.(`Returning to your ${BANNER_NAMES[target]}: hold still…`);
+    this.onNotice?.(`Returning to your ${this.placeName(target)}: hold still…`);
     return true;
   }
 
@@ -208,13 +219,14 @@ export class ExploreController {
 
   /** Put the founder next to a banner (on safe ground), or wait for its terrain to stream in. */
   private arrive(target: BannerTarget, carry: CharacterState): boolean {
-    const b = target === 'home' ? { x: this.banners.home.x, y: this.homeY, z: this.banners.home.z } : this.banners.field;
+    const over = target === 'home' ? this.homeOverride?.() : null;
+    const b = over ? { x: over.x, y: null, z: over.z } : target === 'home' ? { x: this.banners.home.x, y: this.homeY, z: this.banners.home.z } : this.banners.field;
     if (!b) return false;
     const land = findLanding(this.o.world, b.x, b.z, target === 'field' ? b.y : null);
     if (!land.ok) {
       if (land.reason === 'blocked') {
         this.pendingReturn = null;
-        this.onNotice?.(`There is no safe ground beside your ${BANNER_NAMES[target]}`, 'warn');
+        this.onNotice?.(`There is no safe ground beside your ${this.placeName(target)}`, 'warn');
         if (!this.state) { this.state = carry; this.prev = { ...carry }; this.figure.root.visible = this.active; }
         return false;
       }
@@ -225,7 +237,7 @@ export class ExploreController {
         this.pendingReturn = null;
         this.state = carry; this.prev = { ...carry }; this.figure.root.visible = this.active;
         this.smoothTarget.set(carry.x, carry.y + 1.5, carry.z);
-        this.onNotice?.(`The land around your ${BANNER_NAMES[target]} did not load; try again`, 'warn');
+        this.onNotice?.(`The land around your ${this.placeName(target)} did not load; try again`, 'warn');
         return false;
       }
       this.pendingReturn = { target, carry, since };
@@ -248,7 +260,7 @@ export class ExploreController {
     this.figure.root.visible = this.active;
     this.returns++;
     this.persist();
-    this.onNotice?.(`Back at your ${BANNER_NAMES[target]}`, 'good');
+    this.onNotice?.(`Back at your ${this.placeName(target)}`, 'good');
     return true;
   }
 
@@ -277,13 +289,28 @@ export class ExploreController {
     this.marker.visible = false;
   }
 
+  /** Where the character last appeared and why (metrics): the saved spot, ground near it, or the spawn banner. */
+  placement: { kind: 'load' | 'respawn' | 'landing' | 'wake'; from: { x: number; y: number | null; z: number } | null; to: { x: number; y: number; z: number }; source: string; problem: string | null; moved: number; note: string | null } | null = null;
+  private placementNoted = '';
+  /** Say once (not silently) that the character was not put exactly where it was saved or recorded. */
+  private notePlacement(note: string | null, kind: 'warn' | 'good' = 'warn'): void {
+    if (!note || this.placementNoted === note) return;
+    this.placementNoted = note;
+    this.onNotice?.(note, kind);
+  }
+
   private trySpawn(): void {
     const saved = this.load();
-    const x = saved?.x ?? this.o.spawn.x + 0.5;
-    const z = saved?.z ?? this.o.spawn.z + 0.5;
-    const y = findStandingY(this.o.world, x, z, saved ? saved.y + 2 : 110);
-    if (y === null) { this.pendingSpawn = { x, z }; return; }
+    const plan: SpawnPlan = planAvatarSpawn(this.o.world, saved, this.o.spawn);
+    if (plan.status !== 'ok') {
+      this.pendingSpawn = { x: plan.x, z: plan.z };
+      if (plan.status === 'none') this.notePlacement(plan.note);
+      return;
+    }
+    const { x, y, z } = plan;
     this.pendingSpawn = null;
+    this.placement = { kind: 'load', from: saved ? { x: saved.x, y: saved.y, z: saved.z } : null, to: { x, y, z }, source: plan.source, problem: plan.problem, moved: plan.moved, note: plan.note };
+    this.notePlacement(plan.note);
     this.state = createCharacter(x, y, z, saved?.heading ?? Math.PI);
     if (saved) {
       if (Number.isFinite(saved.health)) this.state.health = Math.max(1, Math.min(MAX_HEALTH, saved.health!));
@@ -351,11 +378,25 @@ export class ExploreController {
     if (this.state!.dead) {
       this.deadFor += frameDt;
       if (this.deadFor >= RESPAWN_DELAY) {
-        this.state = respawnCharacter(this.o.world, this.state!);
-        this.prev = { ...this.state };
-        this.smoothTarget.set(this.state.x, this.state.y + 1.5, this.state.z);
-        this.persist();
-        this.onRespawn?.();
+        // W4: the journaled respawn names the landing point (the claimed lean-to's door step or the spawn banner's spot);
+        // the character lands exactly there, waiting for its terrain if needed. Without a recorded death: the last dry spot.
+        this.landing ??= this.respawnAt?.() ?? 'none';
+        const p = this.landing === 'none' ? null : this.landing;
+        const dead = this.state!;
+        // A recorded landing: exactly there (said when it cannot be). Otherwise the last dry spot, or ground near it, or the spawn banner.
+        const plan: LandingPlan | SpawnPlan = p ? planLanding(this.o.world, p, this.o.spawn) : planAvatarSpawn(this.o.world, dead.safe, this.o.spawn);
+        if (plan.status === 'none') this.notePlacement(plan.note);
+        if (plan.status === 'ok') {
+          this.landing = null;
+          this.placement = { kind: p ? 'landing' : 'respawn', from: p ? { x: p.x, y: null, z: p.z } : { ...dead.safe }, to: { x: plan.x, y: plan.y, z: plan.z },
+            source: 'exact' in plan ? (plan.exact ? 'recorded' : 'recorded_nearby') : plan.source, problem: plan.problem, moved: plan.moved, note: plan.note };
+          this.notePlacement(plan.note);
+          this.state = createCharacter(plan.x, plan.y, plan.z, dead.heading);
+          this.prev = { ...this.state };
+          this.smoothTarget.set(this.state.x, this.state.y + 1.5, this.state.z);
+          this.persist();
+          this.onRespawn?.();
+        }
       }
     }
     const s = this.state!, p = this.prev ?? s;
@@ -437,6 +478,23 @@ export class ExploreController {
   }
 
   get character(): CharacterState | null { return this.state; }
+  /**
+   * W4: put a living character exactly at a recorded respawn point (a page
+   * reloaded while its death was pending). False while the terrain there streams in.
+   */
+  wakeAt(p: { x: number; z: number }): boolean {
+    if (!this.state || this.state.dead) return false;
+    const plan = planLanding(this.o.world, p, this.o.spawn);
+    if (plan.status === 'none') this.notePlacement(plan.note);
+    if (plan.status !== 'ok') return false;
+    this.placement = { kind: 'wake', from: { x: p.x, y: null, z: p.z }, to: { x: plan.x, y: plan.y, z: plan.z }, source: plan.exact ? 'recorded' : 'recorded_nearby', problem: plan.problem, moved: plan.moved, note: plan.note };
+    this.notePlacement(plan.note);
+    this.state = createCharacter(plan.x, plan.y, plan.z, this.state.heading);
+    this.prev = { ...this.state };
+    this.smoothTarget.set(this.state.x, this.state.y + 1.5, this.state.z);
+    this.persist();
+    return true;
+  }
   /** STAB-002 S2: the move the founder last asked for (stick or keys), for the presence sent with a tick. */
   get intent(): { x: number; z: number } { return this.lastIntent; }
   private lastIntent = { x: 0, z: 0 };
@@ -492,7 +550,7 @@ export class ExploreController {
   }
 
   metrics(): Record<string, unknown> | null {
-    if (!this.state) return { active: this.active, spawned: false, banners: this.bannerMetrics() };
+    if (!this.state) return { active: this.active, spawned: false, pendingSpawn: this.pendingSpawn, placement: this.placement, banners: this.bannerMetrics() };
     const s = this.state;
     return {
       banners: this.bannerMetrics(),
@@ -506,6 +564,7 @@ export class ExploreController {
       vy: Math.round(s.vy * 100) / 100, dead: s.dead, deaths: this.deaths, waterSurface: Math.round(s.waterSurface * 100) / 100,
       vx: Math.round(s.vx * 100) / 100, vz: Math.round(s.vz * 100) / 100,
       contact: this.contactMetrics(),
+      placement: this.placement,
     };
   }
 

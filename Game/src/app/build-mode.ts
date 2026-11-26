@@ -11,11 +11,18 @@
 // the ghost starts in front of the founder; tap the ground to move it, drag
 // the ghost, and use the bar's Turn / Place / Close buttons. The bar sits at
 // the top of the screen, clear of the joystick and the Jump button.
+//
+// W4: the same mode serves the wilderness through a `BuildAdapter`: the
+// catalogue kinds, footprint sizes, the verdict (sim/wild-build.ts
+// `checkWildSite`, the function `place_site` runs) and the bar's text come
+// from the adapter; the ghost, its green/red footprint, door step and tree
+// marks, the pointer and touch handling and the rotation are shared.
 import * as THREE from 'three';
 import type { World } from '../sim/world';
 import { residentSurfaceAt } from '../sim/world';
 import { BUILD_KINDS, SITE_RULES, SiteKind, freeInStore, isBuildHomestead, siteSize } from '../sim/homestead';
 import { BuildPreview, DOOR_FACING, buildingPreview } from '../sim/buildings';
+import type { PlacementCheck } from '../sim/placement';
 import { B, boxes } from '../render/homestead';
 
 type Receipt = { ok: boolean; reasons?: string[]; outcome?: { type: string; siteId?: string; reserved?: Record<string, number> } };
@@ -30,20 +37,38 @@ export interface BuildModeOptions {
   player: () => { x: number; z: number; heading: number } | null;
   /** Called when the mode opens or closes (the HUD and panels react). */
   onChange?: (active: boolean) => void;
+  /** W4: another scenario's catalogue and validator (absent: the settlement's M014 one). */
+  adapter?: BuildAdapter;
 }
+
+/** What a scenario supplies to the shared build mode (W4 wilderness). */
+export interface BuildAdapter {
+  available(): boolean;
+  unavailable: string;
+  size(kind: string, rot: number): { w: number; d: number };
+  /** The validator's verdict (the same function the command runs). */
+  check(kind: string, x: number, z: number, rot: number): PlacementCheck;
+  /** Extra preview key (e.g. the player's position, which reach depends on). */
+  key(): string;
+  /** Place it; true when accepted. */
+  confirm(kind: string, x: number, z: number, rot: number): boolean;
+  /** The bar's content (kinds row, info, verdict, actions). */
+  bar(kind: string, rot: number, pinned: boolean, check: PlacementCheck | null): string;
+}
+type AnyPreview = BuildPreview | { check: PlacementCheck & { routeToStore?: number | null; routeToHome?: number | null }; woodland: null; viaStore: null };
 
 const GHOST_MAT = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false });
 const OK = '#7FE08A', BAD = '#F06A5E', DOOR = '#F4E8A4', FELL = '#6FD06F', KEEP = '#6FA8F0', CLEAR = '#E8A050', BLOCK = '#E04040', RING = '#D8E8F0';
 
 export class BuildMode {
   active = false;
-  kind: SiteKind = 'woodshed';
+  kind: string = 'woodshed';
   rot = 0;
   /** Footprint min corner (whole metres), or null before the first ground point. */
   pos: { x: number; z: number } | null = null;
   /** Pinned by a click or tap: hovering no longer moves it. */
   pinned = false;
-  preview: BuildPreview | null = null;
+  preview: AnyPreview | null = null;
   readonly ghost = new THREE.Group();
   private readonly bar: HTMLElement;
   private ghostKey = '';
@@ -83,10 +108,16 @@ export class BuildMode {
     }
   }
 
-  get available(): boolean { const h = this.o.world().homestead; return !!h && isBuildHomestead(h); }
+  get available(): boolean {
+    if (this.o.adapter) return this.o.adapter.available();
+    const h = this.o.world().homestead; return !!h && isBuildHomestead(h);
+  }
+  private sizeOf(kind: string, rot: number): { w: number; d: number } {
+    return this.o.adapter ? this.o.adapter.size(kind, rot) : siteSize(kind as SiteKind, rot);
+  }
 
-  open(kind: SiteKind = this.kind): void {
-    if (!this.available) { this.o.toast('Choosing where to build needs settlement rules v6.', 'warn'); return; }
+  open(kind: string = this.kind): void {
+    if (!this.available) { this.o.toast(this.o.adapter?.unavailable ?? 'Choosing where to build needs settlement rules v6.', 'warn'); return; }
     this.kind = kind;
     this.active = true;
     this.pinned = false;
@@ -110,9 +141,9 @@ export class BuildMode {
   }
 
   /** Choose another building; the ghost stays centred where it was. */
-  setKind(kind: SiteKind): void {
+  setKind(kind: string): void {
     if (this.pos) {
-      const a = siteSize(this.kind, this.rot);
+      const a = this.sizeOf(this.kind, this.rot);
       const cx = this.pos.x + a.w / 2, cz = this.pos.z + a.d / 2;
       this.kind = kind;
       this.pos = null;
@@ -125,7 +156,7 @@ export class BuildMode {
     this.rot = (this.rot + (dir > 0 ? 1 : 3)) % 4;
     // Keep the ghost centred where it was.
     if (this.pos) {
-      const a = siteSize(this.kind, (this.rot + 3) % 4), b = siteSize(this.kind, this.rot);
+      const a = this.sizeOf(this.kind, (this.rot + 3) % 4), b = this.sizeOf(this.kind, this.rot);
       this.pos = { x: this.pos.x + Math.floor(a.w / 2) - Math.floor(b.w / 2), z: this.pos.z + Math.floor(a.d / 2) - Math.floor(b.d / 2) };
     }
     this.previewKey = '';
@@ -133,7 +164,7 @@ export class BuildMode {
 
   /** Centre the footprint on a ground point (metres). */
   placeAt(x: number, z: number): void {
-    const s = siteSize(this.kind, this.rot);
+    const s = this.sizeOf(this.kind, this.rot);
     const next = { x: Math.floor(x - s.w / 2 + 0.5), z: Math.floor(z - s.d / 2 + 0.5) };
     if (!this.pos || next.x !== this.pos.x || next.z !== this.pos.z) { this.pos = next; this.previewKey = ''; }
   }
@@ -170,7 +201,7 @@ export class BuildMode {
     // A press on the ghost picks it up.
     const g = this.groundAt(e.clientX, e.clientY);
     if (g && this.pos && this.pinned) {
-      const s = siteSize(this.kind, this.rot);
+      const s = this.sizeOf(this.kind, this.rot);
       if (g.x >= this.pos.x - 1 && g.x <= this.pos.x + s.w + 1 && g.z >= this.pos.z - 1 && g.z <= this.pos.z + s.d + 1) {
         this.drag = e.pointerId;
         e.stopImmediatePropagation();
@@ -216,11 +247,17 @@ export class BuildMode {
   confirm(): boolean {
     if (!this.pos) return false;
     const { x, z } = this.pos;
+    if (this.o.adapter) {
+      const done = this.o.adapter.confirm(this.kind, x, z, this.rot);
+      this.pinned = false; this.previewKey = ''; this.barKey = '';
+      if (done) this.close();
+      return done;
+    }
     const r = this.o.send({ type: 'place_site', kind: this.kind, x, z, rot: this.rot }, `${this.kind}:${x},${z}`);
     if (!r.ok) { this.o.toast(`Cannot build here: ${(r.reasons ?? []).join('; ')}`, 'bad'); this.previewKey = ''; return false; }
     const id = r.outcome?.siteId ?? '';
     const a = this.o.send({ type: 'approve_site', siteId: id }, id);
-    const label = SITE_RULES[this.kind].label;
+    const label = SITE_RULES[this.kind as SiteKind].label;
     const held = a.ok && a.outcome?.reserved ? Object.entries(a.outcome.reserved).map(([k, n]) => `${n} ${k}`).join(', ') : '';
     this.o.toast(a.ok ? `${label} placed and approved: ${held || 'nothing'} reserved now; the rest as it comes in. A builder will put it up.`
       : `${label} marked out; approve it in Farm (${(a.reasons ?? []).join('; ')})`, a.ok ? 'good' : 'warn');
@@ -232,7 +269,7 @@ export class BuildMode {
   private onBar(e: Event): void {
     const b = (e.target as HTMLElement).closest('button');
     if (!b) return;
-    if (b.dataset.buildKind) this.setKind(b.dataset.buildKind as SiteKind);
+    if (b.dataset.buildKind) this.setKind(b.dataset.buildKind);
     if (b.hasAttribute('data-build-turn')) this.turn(1);
     if (b.hasAttribute('data-build-place')) this.confirm();
     if (b.hasAttribute('data-build-close')) this.close();
@@ -250,12 +287,14 @@ export class BuildMode {
     }
     if (!this.pos) return;
     const w = this.o.world();
-    const key = `${this.kind}:${this.pos.x},${this.pos.z}:${this.rot}:${w.revision}:${w.life?.tick ?? 0}`;
+    const key = `${this.kind}:${this.pos.x},${this.pos.z}:${this.rot}:${w.revision}:${w.life?.tick ?? 0}:${this.o.adapter?.key() ?? ''}`;
     const now = performance.now();
     if (key !== this.previewKey && (now - this.previewAt > 180 || !this.preview || this.preview.check.kind !== this.kind || this.preview.check.rot !== this.rot)) {
       this.previewKey = key; this.previewAt = now;
       const t0 = performance.now();
-      this.preview = buildingPreview(w, this.kind, this.pos.x, this.pos.z, this.rot);
+      const a = this.o.adapter;
+      this.preview = a ? { check: a.check(this.kind, this.pos.x, this.pos.z, this.rot), woodland: null, viaStore: null }
+        : buildingPreview(w, this.kind as SiteKind, this.pos.x, this.pos.z, this.rot);
       const ms = performance.now() - t0;
       this.stats.previews++; this.stats.previewMs += ms; this.stats.maxPreviewMs = Math.max(this.stats.maxPreviewMs, ms);
     }
@@ -309,11 +348,20 @@ export class BuildMode {
 
   private renderBar(): void {
     const p = this.preview, w = this.o.world();
+    if (this.o.adapter) {
+      // Redrawn only when what it shows changes (not every tick): a bar rebuilt under a finger loses the tap.
+      const f = (p?.check as { funding?: { short: unknown } | null } | undefined)?.funding;
+      const key = `${this.kind}:${this.rot}:${this.pinned}:${p ? `${p.check.x},${p.check.z}:${p.check.ok}:${p.check.reasons.join('|')}:${JSON.stringify(f?.short ?? null)}:${(p.check as { routeToPlayer?: number | null }).routeToPlayer ?? ''}` : ''}`;
+      if (key === this.barKey) return;
+      this.barKey = key;
+      this.bar.innerHTML = this.o.adapter.bar(this.kind, this.rot, this.pinned, p?.check ?? null);
+      return;
+    }
     const key = `${this.kind}:${this.rot}:${this.pinned}:${p ? `${p.check.x},${p.check.z}:${p.check.reasons.join('|')}:${p.woodland?.harvestable}:${p.woodland?.meanPathToStore}` : ''}:${freeInStore(w, 'wood')}:${freeInStore(w, 'fiber')}`;
     if (key === this.barKey) return;
     this.barKey = key;
-    const rule = SITE_RULES[this.kind];
-    const c = p?.check;
+    const rule = SITE_RULES[this.kind as SiteKind];
+    const c = p?.check as BuildPreview['check'] | undefined;
     const cost = Object.entries(rule.cost).map(([k, n]) => { const free = freeInStore(w, k); return `${n} ${k} <span class="${free >= n ? 'dim' : 'warn'}">(${free} free in store)</span>`; }).join(', ');
     const verdict = !c ? 'Point at the ground (or tap it) to choose where it goes.'
       : c.ok ? `<b>Good spot.</b> Door faces ${DOOR_FACING[c.rot]}${c.routeToStore !== null ? ` · ${c.routeToStore} m walk to the store` : ''}${c.clearText ? ` · clears ${c.clearText}` : ''}`
@@ -325,7 +373,7 @@ export class BuildMode {
       <br>Sustainable: ${wl.sustainableTreesPerDay} trees (${wl.sustainableWoodPerDay} wood) a day, ${wl.rotationDays}-day rotation · ${rule.demandPerDay} wood a day needs ${wl.spotsForDemand} managed tree spots${wl.regenerationShortfall ? `: <b class="warn">${wl.regenerationShortfall} short</b> (let it regrow or plant)` : ': enough'}</div>` : '';
     this.bar.innerHTML = `
       <div class="build-row kinds">${BUILD_KINDS.map((k) => `<button type="button" data-build-kind="${k}" class="${k === this.kind ? 'on' : ''}" aria-pressed="${k === this.kind}">${SITE_RULES[k].label}</button>`).join('')}</div>
-      <div class="build-info">${rule.label}: ${rule.role} · ${siteSize(this.kind, this.rot).w} × ${siteSize(this.kind, this.rot).d} m · ${cost} · ${rule.work} work ticks</div>
+      <div class="build-info">${rule.label}: ${rule.role} · ${this.sizeOf(this.kind, this.rot).w} × ${this.sizeOf(this.kind, this.rot).d} m · ${cost} · ${rule.work} work ticks</div>
       <div class="build-verdict ${c?.ok ? 'ok' : 'bad'}" data-build-verdict aria-live="polite">${verdict}</div>
       ${wood}
       <div class="build-row actions"><button type="button" data-build-turn aria-label="Turn the building a quarter">Turn 90°</button><button type="button" class="primary" data-build-place ${c?.ok ? '' : 'disabled'}>Place &amp; approve</button><button type="button" data-build-close>Close</button>
@@ -337,7 +385,7 @@ export class BuildMode {
     return {
       active: this.active, kind: this.kind, rot: this.rot, pos: this.pos, pinned: this.pinned,
       check: p ? { ok: p.check.ok, reasons: p.check.reasons, x: p.check.x, z: p.check.z, rot: p.check.rot, entrance: p.check.entrance, clears: p.check.clears.length,
-        clearText: p.check.clearText, blockers: p.check.blockers, routeToStore: p.check.routeToStore, routeToHome: p.check.routeToHome } : null,
+        clearText: p.check.clearText, blockers: p.check.blockers, routeToStore: p.check.routeToStore ?? null, routeToHome: p.check.routeToHome ?? null } : null,
       woodland: p?.woodland ? { ...p.woodland, harvestableIds: undefined, protectedIds: undefined } : null,
       viaStore: p?.viaStore ? { meanPathToStore: p.viaStore.meanPathToStore, harvestable: p.viaStore.harvestable } : null,
       ghost: { visible: this.ghost.visible, meshes: this.ghost.children.length, ...this.stats },

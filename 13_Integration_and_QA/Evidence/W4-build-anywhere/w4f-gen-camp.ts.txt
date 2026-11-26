@@ -1,0 +1,44 @@
+// Browser evidence save (outside the repo): a wilderness world (seed 1337, generator 2, w1) built by journaled commands only:
+// a finished workbench and log store, a hammer, the storage shed's planks and chest in piles by the camp, 2 logs piled,
+// 4 stones in the bag, and an unfinished campfire site (for the site panel). The shed itself is NOT placed: that is done in the browser.
+import { writeFileSync } from 'node:fs';
+import { BrowserSaveStore } from '/projects/sandbox/Astrix/Game/src/app/persistence';
+import { GENERATOR_V2, WILDERNESS } from '/projects/sandbox/Astrix/Game/src/sim/world';
+import { freeInBag, lockReasons, siteSpotOf } from '/projects/sandbox/Astrix/Game/src/sim/wild-build';
+import { buildingDef } from '/projects/sandbox/Astrix/Game/src/sim/catalogue';
+import { SPAWN, axe, build, dm, gather, load, logPiles, ok, placeAt, send, spot, stashLogs, takeLogs, unload, wild } from '/projects/sandbox/Astrix/Game/tests/w4-harness';
+const s = wild(); load(s); axe(s);
+const bench = build(s, 'workbench', SPAWN);
+const at = dm(siteSpotOf(s.world.wild!.build!.sites.get(bench)!));
+unload(s);
+gather(s, 'branch', 1); gather(s, 'loose_stone', 1); gather(s, 'fiber_plant', 2);
+ok(send(s, { type: 'craft', recipe: 'cord' })); ok(send(s, { type: 'craft', recipe: 'hammer', at }));
+const STASH = { x: SPAWN.x + 2.5, z: SPAWN.z - 4.5 };
+for (let i = 0; i < 5; i++) {
+  if (!takeLogs(s, 1, STASH)) { logPiles(s, 2); takeLogs(s, 1, STASH); }
+  ok(send(s, { type: 'craft', recipe: 'planks', at }));
+  if (i === 1) { gather(s, 'fiber_plant', 2); ok(send(s, { type: 'craft', recipe: 'cord' })); ok(send(s, { type: 'craft', recipe: 'wooden_chest', at })); ok(send(s, { type: 'drop', item: 'chest', n: 1, at: dm(STASH) })); }
+  if (i > 0 && freeInBag(s.world, 'plank')) ok(send(s, { type: 'drop', item: 'plank', n: freeInBag(s.world, 'plank'), at: dm(STASH) }));
+}
+unload(s);
+const store = build(s, 'log_store', SPAWN);
+unload(s);
+stashLogs(s, 2, SPAWN);
+unload(s);
+gather(s, 'loose_stone', 6); gather(s, 'branch', 3);
+const fire = placeAt(s, 'campfire', spot(s, 'campfire', SPAWN), 0, SPAWN);
+ok(send(s, { type: 'deliver_site', siteId: fire, item: 'stone', n: 6, at: dm(siteSpotOf(s.world.wild!.build!.sites.get(fire)!)) }));
+unload(s); console.error('bag', JSON.stringify(s.world.wild!.items), s.world.wild!.tools.map((t) => t.kind)); gather(s, 'loose_stone', 4);
+const mem = new Map<string, string>();
+const storage = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => { mem.set(k, v); }, removeItem: (k: string) => { mem.delete(k); } };
+const r = new BrowserSaveStore(storage, 1337, GENERATOR_V2, { scenario: WILDERNESS, id: 'w1' }).save(s);
+if (!r.ok) throw new Error(r.message);
+const [key, value] = [...mem.entries()][0];
+const w = s.world.wild!;
+const info = { key, bytes: value.length, hash: s.stateHash, entries: s.journal.entries.length, bench, store, fire,
+  sites: [...w.build!.sites.values()].map((x) => ({ id: x.id, kind: x.kind, x: x.x, z: x.z, rot: x.rot, state: x.state })),
+  piles: [...w.piles.values()].filter((p) => Math.hypot(p.x - SPAWN.x, p.z - SPAWN.z) < 24).map((p) => ({ id: p.id, item: p.item, qty: p.qty, x: p.x, z: p.z })),
+  bag: w.items, tools: w.tools.map((t) => t.kind), shedLocked: lockReasons(s.world, buildingDef('storage_shed')!) };
+writeFileSync('/projects/sandbox/.tools/scratch/w4-finish/camp-save.json', JSON.stringify({ key, value }));
+writeFileSync('/projects/sandbox/.kiro/artifacts/screenshots/probe/dist/camp-save.json', JSON.stringify({ key, value }));
+console.log(JSON.stringify(info, null, 1));

@@ -172,7 +172,8 @@ test('the first stone axe is reachable fast from the seed-1337 spawn: branch, st
 test('no axe without its materials: crafting refuses missing inputs and changes nothing', () => {
   const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2);
   const before = s.stateHash;
-  for (const recipe of WILD_RECIPES.map((r) => r.id)) {
+  // W4: the hand recipes (workbench recipes need a v4 world and a workbench; tests/w4.build.test.ts).
+  for (const recipe of WILD_RECIPES.filter((r) => r.station === 'hand').map((r) => r.id)) {
     const r = send(s, { type: 'craft', recipe });
     assert.equal(r.ok, false, recipe);
     assert.equal((r as { code: string }).code, 'missing');
@@ -231,8 +232,8 @@ test('pickup, drop, craft, equip and eat are journaled and replay; saves restore
   const loaded = store.load();
   assert.equal(loaded.status, 'new');
   const s = loaded.session;
-  // W3: a new world now starts with the latest content (v3); the W2 commands are unchanged there.
-  assert.equal(s.journal.wildContent, 3);
+  // W3: a new world now starts with the latest content (v4 since W4); the W2 commands are unchanged there.
+  assert.equal(s.journal.wildContent, 4);
   ticks(s, 3);
   const taken: string[] = [];
   for (const kind of ['branch', 'loose_stone', 'fiber_plant', 'fiber_plant', 'grass_tuft', 'grass_tuft', 'berry_bush']) {
@@ -270,7 +271,7 @@ test('pickup, drop, craft, equip and eat are journaled and replay; saves restore
     assert.equal((again as { code: string }).code, 'not_found');
   }
   s.compact();
-  assert.equal(s.journal.wildContent, 3);
+  assert.equal(s.journal.wildContent, 4);
   assert.equal(GameSession.restore(clone(s.snapshot), clone(s.journal)).stateHash, hash);
   // Tampering: a recorded outcome that disagrees, an item that does not exist, an overweight bag.
   const j = clone(s.journal.entries.length ? s.journal : mid.journal) as unknown as { entries: Array<{ command: Record<string, unknown>; outcome: Record<string, unknown> }> };

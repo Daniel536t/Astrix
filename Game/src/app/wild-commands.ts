@@ -5,6 +5,20 @@
 // (one per swing along a fallen trunk) and `mark_stockpile`; picking up a log
 // records LOGS_COLLECTED and dropping logs at a stockpile LOGS_DELIVERED.
 //
+// W4 (content v4): `place_site` (a catalogue building where the validator
+// allows it and its whole material list can be reserved), `deliver_site`
+// (reserved materials from the bag, or a pile or storage at the site),
+// `build_work` (one swing of construction work; a finished stage consumes its
+// materials), `cancel_site` (reservations released; delivered materials back
+// on the ground as piles), `claim_shelter`, `fuel_fire`, `cook`,
+// `store_items`, `take_items` (optionally `forSite`: reserved stock carried
+// for a site), `died` (a recorded drowning) and `respawn` (from a recorded
+// death, to the claimed lean-to or the spawn); `pickup` gains an optional
+// `forSite` and `craft` an optional `at` for workbench recipes. `place_site` and
+// `cancel_site` share their names with the settlement's M014 commands; a
+// wilderness one is told apart by its shape (a catalogue kind with `at`; a
+// `b:` site id), so neither journal can carry the other's.
+//
 // Reach: the avatar is player-local physics, so `pickup`, `drop`, `chop`,
 // `cut_log` and `mark_stockpile` carry the player's position (integer
 // decimetres) like the S2 tick presence, and the simulation checks reach
@@ -18,13 +32,19 @@ import {
   FELL_EVENTS, FellEvent, STOCKPILE_ID, TRUNK_ID, chopTree, cutLog, deliverLogs, isTreeEntityId, markStockpile, noteEvent, stockpileAt,
 } from '../sim/felling';
 import { PRESENCE_POS } from '../sim/bodies';
+import { isBuildingId } from '../sim/catalogue';
+import {
+  SITE_ID, SOURCE_ID, bagRefusal, cancelWildSite, claimShelter, cookAtFire, deliverToSite, fuelFire, placeWildSite, recordDeath, respawnPlayer, stationNear,
+  storeItems, takeItems, workOnSite,
+} from '../sim/wild-build';
+import { WILD_CONTENT_V4 } from '../sim/gathering';
 import type { World } from '../sim/world';
 
 interface Envelope { schema: 3; id: string; expectedRevision: number }
 export interface At { x: number; z: number }
-export interface PickupCommand extends Envelope { type: 'pickup'; entityId: string; at: At }
+export interface PickupCommand extends Envelope { type: 'pickup'; entityId: string; at: At; forSite?: string }
 export interface DropCommand extends Envelope { type: 'drop'; item: WildItem; n: number; at: At }
-export interface CraftCommand extends Envelope { type: 'craft'; recipe: string }
+export interface CraftCommand extends Envelope { type: 'craft'; recipe: string; at?: At }
 export interface EquipCommand extends Envelope { type: 'equip'; item: ToolKind | 'hands' }
 export interface EatCommand extends Envelope { type: 'eat'; item: WildItem }
 /** A W1 (content v1) world gains pickups, items and crafting (v2); a v1 or v2 world gains felling (v3). */
@@ -35,8 +55,27 @@ export interface ChopCommand extends Envelope { type: 'chop'; entityId: string; 
 export interface CutLogCommand extends Envelope { type: 'cut_log'; trunkId: string; at: At }
 /** W3: a log stockpile marker where the player stands. */
 export interface MarkStockpileCommand extends Envelope { type: 'mark_stockpile'; at: At }
+/** W4: mark out a catalogue building (the player's approval); its whole material list is reserved, or it is refused. */
+export interface WildPlaceSiteCommand extends Envelope { type: 'place_site'; kind: string; x: number; z: number; rot: number; at: At }
+/** W4: reserved materials into a site, from the bag (default) or a pile or storage within reach of it. */
+export interface DeliverSiteCommand extends Envelope { type: 'deliver_site'; siteId: string; item: WildItem; n: number; at: At; from?: string }
+/** W4: one swing of construction work. */
+export interface BuildWorkCommand extends Envelope { type: 'build_work'; siteId: string; at: At }
+/** W4: give up an unfinished site; its materials go back on the ground. */
+export interface WildCancelSiteCommand extends Envelope { type: 'cancel_site'; siteId: string; at: At }
+export interface ClaimShelterCommand extends Envelope { type: 'claim_shelter'; siteId: string; at: At }
+export interface FuelFireCommand extends Envelope { type: 'fuel_fire'; siteId: string; item: WildItem; n: number; at: At }
+export interface CookCommand extends Envelope { type: 'cook'; siteId: string; item: WildItem; at: At }
+export interface StoreItemsCommand extends Envelope { type: 'store_items'; siteId: string; item: WildItem; n: number; at: At }
+export interface TakeItemsCommand extends Envelope { type: 'take_items'; siteId: string; item: WildItem; n: number; at: At; forSite?: string }
+/** W4: the character drowned; `at` is where it last stood on dry ground (the simulation checks it). */
+export interface DiedCommand extends Envelope { type: 'died'; cause: 'drowned'; at: At }
+/** W4: wake from the recorded death at the claimed lean-to (its id) or the spawn ('spawn'). */
+export interface RespawnCommand extends Envelope { type: 'respawn'; to: string }
 export type WildCommand = PickupCommand | DropCommand | CraftCommand | EquipCommand | EatCommand | UpgradeWildernessCommand
-  | ChopCommand | CutLogCommand | MarkStockpileCommand;
+  | ChopCommand | CutLogCommand | MarkStockpileCommand
+  | WildPlaceSiteCommand | DeliverSiteCommand | BuildWorkCommand | WildCancelSiteCommand | ClaimShelterCommand | FuelFireCommand | CookCommand
+  | StoreItemsCommand | TakeItemsCommand | DiedCommand | RespawnCommand;
 
 export type WildOutcome =
   | { type: 'pickup'; entityId: string; item: WildItem; amount: number; events?: FellEvent[] }
@@ -47,10 +86,38 @@ export type WildOutcome =
   | { type: 'upgrade_wilderness'; content: WildContent }
   | { type: 'chop'; entityId: string; hp: number; max: number; durability: number; events: FellEvent[]; trunkId?: string; branchPile?: string }
   | { type: 'cut_log'; trunkId: string; left: number; work: number; durability: number; events: FellEvent[]; pileId?: string }
-  | { type: 'mark_stockpile'; stockpileId: string; events: FellEvent[] };
+  | { type: 'mark_stockpile'; stockpileId: string; events: FellEvent[] }
+  | { type: 'place_site'; siteId: string; kind: string; x: number; z: number; rot: number; cleared: number; reserved: Record<string, Record<string, number>>; events: FellEvent[] }
+  | { type: 'deliver_site'; siteId: string; item: WildItem; n: number; events: FellEvent[] }
+  | { type: 'build_work'; siteId: string; stage: number; work: number; durability?: number; events: FellEvent[] }
+  | { type: 'cancel_site'; siteId: string; piles: string[]; released: Record<string, number>; events: FellEvent[] }
+  | { type: 'claim_shelter'; siteId: string; events: FellEvent[] }
+  | { type: 'fuel_fire'; siteId: string; item: WildItem; n: number; fuel: number; events: FellEvent[] }
+  | { type: 'cook'; siteId: string; item: WildItem; made: WildItem; fuel: number; events: FellEvent[] }
+  | { type: 'store_items'; siteId: string; item: WildItem; n: number; events: FellEvent[] }
+  | { type: 'take_items'; siteId: string; item: WildItem; n: number; events: FellEvent[] }
+  | { type: 'died'; cause: 'drowned'; dropped: Record<string, number>; piles: string[]; events: FellEvent[] }
+  | { type: 'respawn'; point: string; x: number; z: number; events: FellEvent[] };
 
-export const WILD_COMMAND_TYPES: readonly string[] = ['pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness', 'chop', 'cut_log', 'mark_stockpile'];
+/** Commands only the wilderness has. */
+export const WILD_COMMAND_TYPES: readonly string[] = ['pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness', 'chop', 'cut_log', 'mark_stockpile',
+  'deliver_site', 'build_work', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn'];
+/** Command names shared with the settlement (M014): told apart by shape. */
+export const SHARED_COMMAND_TYPES: readonly string[] = ['place_site', 'cancel_site'];
 export const isWildCommandType = (t: unknown): boolean => WILD_COMMAND_TYPES.includes(String(t));
+const isObjLoose = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+/**
+ * Is this command (or outcome) value a wilderness one? A shared name is the
+ * wilderness's when it carries a catalogue kind (`place_site`) or a `b:` site
+ * id (`cancel_site`, and both outcomes).
+ */
+export function isWildCommandValue(v: unknown): boolean {
+  if (!isObjLoose(v)) return false;
+  if (isWildCommandType(v.type)) return true;
+  if (v.type === 'place_site') return typeof v.siteId === 'string' ? SITE_ID.test(v.siteId) : isBuildingId(v.kind);
+  if (v.type === 'cancel_site') return typeof v.siteId === 'string' && SITE_ID.test(v.siteId);
+  return false;
+}
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const uint = (v: unknown, max: number): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v >= 0 && v <= max;
@@ -71,6 +138,19 @@ function bagOf(v: unknown): Record<string, number> | null {
   }
   return out;
 }
+const siteIdOf = (v: unknown): v is string => typeof v === 'string' && SITE_ID.test(v);
+/** Reservations by source ({ 'bag' | 'd:N' | 'b:N': bag }), canonical (sorted, non-empty) or null. */
+function sourcesOf(v: unknown): Record<string, Record<string, number>> | null {
+  if (!isObj(v)) return null;
+  const out: Record<string, Record<string, number>> = {};
+  for (const k of Object.keys(v).sort()) {
+    const b = bagOf(v[k]);
+    if (!SOURCE_ID.test(k) || !b || !Object.keys(b).length) return null;
+    out[k] = b;
+  }
+  return out;
+}
+const pileIdOf = (v: unknown): v is string => typeof v === 'string' && PILE_ID.test(v);
 function eventsOf(v: unknown, max = 4): FellEvent[] | null {
   if (!Array.isArray(v) || v.length > max || !v.every((e) => FELL_EVENTS.includes(e as FellEvent))) return null;
   return [...v] as FellEvent[];
@@ -81,14 +161,20 @@ export function validateWildCommand(value: Record<string, unknown>, base: Envelo
   switch (value.type) {
     case 'pickup': {
       const at = atOf(value.at);
-      return pickupId(value.entityId) && at ? { ...base, type: 'pickup', entityId: value.entityId, at } : null;
+      if (!pickupId(value.entityId) || !at) return null;
+      if (value.forSite === undefined) return { ...base, type: 'pickup', entityId: value.entityId, at };
+      return siteIdOf(value.forSite) ? { ...base, type: 'pickup', entityId: value.entityId, at, forSite: value.forSite } : null;
     }
     case 'drop': {
       const at = atOf(value.at);
       return itemOf(value.item) && uint(value.n, 10_000) && value.n >= 1 && at ? { ...base, type: 'drop', item: value.item, n: value.n, at } : null;
     }
-    case 'craft':
-      return typeof value.recipe === 'string' && !!recipeById(value.recipe) ? { ...base, type: 'craft', recipe: value.recipe } : null;
+    case 'craft': {
+      if (typeof value.recipe !== 'string' || !recipeById(value.recipe)) return null;
+      if (value.at === undefined) return { ...base, type: 'craft', recipe: value.recipe };
+      const at = atOf(value.at);
+      return at ? { ...base, type: 'craft', recipe: value.recipe, at } : null;
+    }
     case 'equip':
       return value.item === 'hands' || TOOL_KINDS.includes(value.item as ToolKind) ? { ...base, type: 'equip', item: value.item as ToolKind | 'hands' } : null;
     case 'eat':
@@ -107,6 +193,33 @@ export function validateWildCommand(value: Record<string, unknown>, base: Envelo
       const at = atOf(value.at);
       return at ? { ...base, type: 'mark_stockpile', at } : null;
     }
+    case 'place_site': {
+      const at = atOf(value.at);
+      return isBuildingId(value.kind) && Number.isSafeInteger(value.x) && Math.abs(value.x as number) <= 2048 && Number.isSafeInteger(value.z) && Math.abs(value.z as number) <= 2048
+        && uint(value.rot, 3) && at ? { ...base, type: 'place_site', kind: value.kind, x: value.x as number, z: value.z as number, rot: value.rot, at } : null;
+    }
+    case 'deliver_site': case 'fuel_fire': case 'store_items': case 'take_items': {
+      const at = atOf(value.at);
+      if (!siteIdOf(value.siteId) || !itemOf(value.item) || !uint(value.n, 10_000) || value.n < 1 || !at) return null;
+      const c = { ...base, type: value.type, siteId: value.siteId, item: value.item, n: value.n, at } as WildCommand;
+      if (value.type === 'deliver_site' && value.from !== undefined) return typeof value.from === 'string' && SOURCE_ID.test(value.from) ? { ...c, from: value.from } as WildCommand : null;
+      if (value.type === 'take_items' && value.forSite !== undefined) return siteIdOf(value.forSite) ? { ...c, forSite: value.forSite } as WildCommand : null;
+      return value.from === undefined && value.forSite === undefined ? c : null;
+    }
+    case 'build_work': case 'cancel_site': case 'claim_shelter': {
+      const at = atOf(value.at);
+      return siteIdOf(value.siteId) && at ? { ...base, type: value.type, siteId: value.siteId, at } as WildCommand : null;
+    }
+    case 'cook': {
+      const at = atOf(value.at);
+      return siteIdOf(value.siteId) && itemOf(value.item) && at ? { ...base, type: 'cook', siteId: value.siteId, item: value.item, at } : null;
+    }
+    case 'died': {
+      const at = atOf(value.at);
+      return value.cause === 'drowned' && at ? { ...base, type: 'died', cause: 'drowned', at } : null;
+    }
+    case 'respawn':
+      return value.to === 'spawn' || siteIdOf(value.to) ? { ...base, type: 'respawn', to: value.to as string } : null;
   }
   return null;
 }
@@ -169,6 +282,51 @@ export function validateWildOutcome(value: Record<string, unknown>): WildOutcome
       return typeof value.stockpileId === 'string' && STOCKPILE_ID.test(value.stockpileId) && ev
         ? { type: 'mark_stockpile', stockpileId: value.stockpileId, events: ev } : null;
     }
+    case 'place_site': {
+      const ev = eventsOf(value.events, 1), reserved = sourcesOf(value.reserved);
+      return siteIdOf(value.siteId) && isBuildingId(value.kind) && Number.isSafeInteger(value.x) && Number.isSafeInteger(value.z) && uint(value.rot, 3)
+        && uint(value.cleared, 10_000) && reserved && ev ? { type: 'place_site', siteId: value.siteId, kind: value.kind, x: value.x as number, z: value.z as number, rot: value.rot,
+          cleared: value.cleared, reserved, events: ev } : null;
+    }
+    case 'deliver_site': case 'store_items': case 'take_items': {
+      const ev = eventsOf(value.events, 2);
+      return siteIdOf(value.siteId) && itemOf(value.item) && uint(value.n, 10_000) && value.n >= 1 && ev
+        ? { type: value.type, siteId: value.siteId, item: value.item, n: value.n, events: ev } as WildOutcome : null;
+    }
+    case 'build_work': {
+      const ev = eventsOf(value.events, 2);
+      if (!siteIdOf(value.siteId) || !uint(value.stage, 10) || !uint(value.work, 1000) || !ev || value.durability !== undefined && !uint(value.durability, 1000)) return null;
+      return { type: 'build_work', siteId: value.siteId, stage: value.stage, work: value.work, ...(value.durability !== undefined ? { durability: value.durability as number } : {}), events: ev };
+    }
+    case 'cancel_site': {
+      const ev = eventsOf(value.events, 1), released = bagOf(value.released);
+      return siteIdOf(value.siteId) && Array.isArray(value.piles) && value.piles.length <= 32 && value.piles.every(pileIdOf) && released && ev
+        ? { type: 'cancel_site', siteId: value.siteId, piles: [...value.piles] as string[], released, events: ev } : null;
+    }
+    case 'claim_shelter': {
+      const ev = eventsOf(value.events, 1);
+      return siteIdOf(value.siteId) && ev ? { type: 'claim_shelter', siteId: value.siteId, events: ev } : null;
+    }
+    case 'fuel_fire': {
+      const ev = eventsOf(value.events, 1);
+      return siteIdOf(value.siteId) && itemOf(value.item) && uint(value.n, 10_000) && value.n >= 1 && uint(value.fuel, 100_000) && ev
+        ? { type: 'fuel_fire', siteId: value.siteId, item: value.item, n: value.n, fuel: value.fuel, events: ev } : null;
+    }
+    case 'cook': {
+      const ev = eventsOf(value.events, 1);
+      return siteIdOf(value.siteId) && itemOf(value.item) && itemOf(value.made) && uint(value.fuel, 100_000) && ev
+        ? { type: 'cook', siteId: value.siteId, item: value.item, made: value.made, fuel: value.fuel, events: ev } : null;
+    }
+    case 'died': {
+      const ev = eventsOf(value.events, 1), dropped = bagOf(value.dropped);
+      return value.cause === 'drowned' && dropped && Array.isArray(value.piles) && value.piles.length <= 32 && value.piles.every(pileIdOf) && ev && ev[0] === 'DIED'
+        ? { type: 'died', cause: 'drowned', dropped, piles: [...value.piles] as string[], events: ev } : null;
+    }
+    case 'respawn': {
+      const ev = eventsOf(value.events, 1), pos = (n: unknown) => Number.isSafeInteger(n) && Math.abs(n as number) <= PRESENCE_POS;
+      return (value.point === 'spawn' || siteIdOf(value.point)) && pos(value.x) && pos(value.z) && ev && ev[0] === 'RESPAWNED'
+        ? { type: 'respawn', point: value.point as string, x: value.x as number, z: value.z as number, events: ev } : null;
+    }
   }
   return null;
 }
@@ -186,6 +344,14 @@ export function wildAgrees(c: WildCommand, o: WildOutcome): boolean {
     case 'chop': return o.type === 'chop' && o.entityId === c.entityId;
     case 'cut_log': return o.type === 'cut_log' && o.trunkId === c.trunkId;
     case 'mark_stockpile': return true;
+    case 'place_site': return o.type === 'place_site' && o.kind === c.kind && o.x === c.x && o.z === c.z && o.rot === c.rot;
+    case 'deliver_site': case 'store_items': case 'take_items': case 'fuel_fire':
+      return (o.type === 'deliver_site' || o.type === 'store_items' || o.type === 'take_items' || o.type === 'fuel_fire') && o.siteId === c.siteId && o.item === c.item && o.n === c.n;
+    case 'build_work': case 'cancel_site': case 'claim_shelter':
+      return (o.type === 'build_work' || o.type === 'cancel_site' || o.type === 'claim_shelter') && o.siteId === c.siteId;
+    case 'cook': return o.type === 'cook' && o.siteId === c.siteId && o.item === c.item;
+    case 'died': return o.type === 'died' && o.cause === c.cause;
+    case 'respawn': return o.type === 'respawn' && o.point === c.to;
   }
 }
 
@@ -199,17 +365,50 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
       return { ok: true, value: { type: 'upgrade_wilderness', content: c.content } };
     }
     if (world.wild.content >= c.content) return { ok: false, code: 'already_current', reasons: [`this world already has wilderness content v${world.wild.content}`] };
-    upgradeWildState(world.wild, world.seed, tick);
-    return { ok: true, value: { type: 'upgrade_wilderness', content: WILD_CONTENT_V3 } };
+    upgradeWildState(world.wild, world.seed, tick, c.content);
+    return { ok: true, value: { type: 'upgrade_wilderness', content: c.content } };
   }
   if (!world.wild) return { ok: false, code: 'wilderness', reasons: ['this world predates gathering (wilderness content v1); it needs upgrade_wilderness first'] };
   const felling = !!world.wild.fell;
   if ((c.type === 'chop' || c.type === 'cut_log' || c.type === 'mark_stockpile') && !felling) {
     return { ok: false, code: 'wilderness', reasons: ['this world predates tree felling (wilderness content v2); it needs upgrade_wilderness first'] };
   }
+  const building = !!world.wild.build;
+  const W4 = ['place_site', 'deliver_site', 'build_work', 'cancel_site', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn'];
+  if (W4.includes(c.type) && !building) {
+    return { ok: false, code: 'wilderness', reasons: ['this world predates building (wilderness content v3); it needs upgrade_wilderness first'] };
+  }
+  // A recorded death waits for its respawn: nothing else is done by a dead character.
+  if (world.wild.build?.death && c.type !== 'respawn' && c.type !== 'died') {
+    return { ok: false, code: 'dead', reasons: ['you are dead: wake first (respawn)'] };
+  }
+  const evOut = <T extends { events: FellEvent[] }>(r: { ok: true; value: T } | { ok: false; code: string; reasons: string[] }, f: (v: T) => WildOutcome): WildDispatch =>
+    r.ok ? { ok: true, value: f(r.value) } : r;
   switch (c.type) {
+    case 'place_site':
+      return evOut(placeWildSite(world, c.kind, c.x, c.z, c.rot, c.at), (v) => ({ type: 'place_site', siteId: v.siteId, kind: c.kind, x: c.x, z: c.z, rot: c.rot, cleared: v.cleared, reserved: v.reserved, events: v.events }));
+    case 'deliver_site':
+      return evOut(deliverToSite(world, c.siteId, c.item, c.n, c.at, c.from ?? 'bag'), (v) => ({ type: 'deliver_site', siteId: c.siteId, item: c.item, n: c.n, events: v.events }));
+    case 'build_work':
+      return evOut(workOnSite(world, c.siteId, c.at), (v) => ({ type: 'build_work', siteId: c.siteId, stage: v.stage, work: v.work, ...(v.durability !== undefined ? { durability: v.durability } : {}), events: v.events }));
+    case 'cancel_site':
+      return evOut(cancelWildSite(world, c.siteId, c.at), (v) => ({ type: 'cancel_site', siteId: c.siteId, piles: v.piles, released: v.released, events: v.events }));
+    case 'claim_shelter':
+      return evOut(claimShelter(world, c.siteId, c.at), (v) => ({ type: 'claim_shelter', siteId: c.siteId, events: v.events }));
+    case 'fuel_fire':
+      return evOut(fuelFire(world, c.siteId, c.item, c.n, c.at), (v) => ({ type: 'fuel_fire', siteId: c.siteId, item: c.item, n: c.n, fuel: v.fuel, events: v.events }));
+    case 'cook':
+      return evOut(cookAtFire(world, c.siteId, c.item, c.at), (v) => ({ type: 'cook', siteId: c.siteId, item: c.item, made: v.made, fuel: v.fuel, events: v.events }));
+    case 'store_items':
+      return evOut(storeItems(world, c.siteId, c.item, c.n, c.at), (v) => ({ type: 'store_items', siteId: c.siteId, item: c.item, n: c.n, events: v.events }));
+    case 'take_items':
+      return evOut(takeItems(world, c.siteId, c.item, c.n, c.at, c.forSite), (v) => ({ type: 'take_items', siteId: c.siteId, item: c.item, n: c.n, events: v.events }));
+    case 'died':
+      return evOut(recordDeath(world, c.cause, c.at), (v) => ({ type: 'died', cause: c.cause, dropped: v.dropped, piles: v.piles, events: v.events }));
+    case 'respawn':
+      return evOut(respawnPlayer(world, c.to), (v) => ({ type: 'respawn', point: v.point, x: v.x, z: v.z, events: v.events }));
     case 'pickup': {
-      const r = pickUp(world, c.entityId, c.at);
+      const r = pickUp(world, c.entityId, c.at, c.forSite);
       if (!r.ok) return r;
       const ev = felling && r.value.item === 'log' ? [noteEvent(world, 'LOGS_COLLECTED', c.entityId, r.value.amount)] : undefined;
       return { ok: true, value: pickupOutcome(c.entityId, r.value.item, r.value.amount, ev) };
@@ -219,6 +418,8 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
       const s = felling && c.item === 'log' ? stockpileAt(world, c.at.x / 10, c.at.z / 10) : null;
       if (s) {
         if ((world.wild.items.log ?? 0) < c.n) return { ok: false, code: 'missing', reasons: [`you carry ${world.wild.items.log ?? 0} log`] };
+        const held = building ? bagRefusal(world, 'log', c.n, 'drop them') : null;
+        if (held) return { ok: false, ...held };
         if (world.wild.piles.size >= 512) return { ok: false, code: 'too_many_piles', reasons: ['too many dropped piles in this world'] };
         const d = deliverLogs(world, s, c.n);
         return { ok: true, value: dropOutcome(d.pileId, c.item, c.n, s.id, d.events) };
@@ -227,7 +428,13 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
       return r.ok ? { ok: true, value: dropOutcome(r.value.pileId, c.item, c.n) } : r;
     }
     case 'craft': {
-      const r = craft(world, c.recipe);
+      // W4: a workbench recipe is made within reach of a finished workbench.
+      const recipe = recipeById(c.recipe)!;
+      if (recipe.station !== 'hand' && !building) return { ok: false, code: 'wilderness', reasons: ['this world predates building (wilderness content v3); it needs upgrade_wilderness first'] };
+      if (recipe.station !== 'hand' && !c.at) return { ok: false, code: 'station', reasons: [`${recipe.label} is made at a ${recipe.station}: stand by one`] };
+      const atStation = recipe.station !== 'hand' && !!c.at && stationNear(world, recipe.station, c.at);
+      if (recipe.station !== 'hand' && !atStation) return { ok: false, code: 'station', reasons: [`${recipe.label} is made at a ${recipe.station}: walk up to a finished one`] };
+      const r = craft(world, c.recipe, atStation);
       return r.ok ? { ok: true, value: { type: 'craft', recipe: c.recipe, spent: r.value.spent, made: r.value.made, ...(r.value.toolId ? { toolId: r.value.toolId } : {}) } } : r;
     }
     case 'equip': {
@@ -253,4 +460,4 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
   }
 }
 
-export { WILD_RECIPES, WILD_CONTENT_V2 };
+export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4 };

@@ -20,16 +20,16 @@
 //  - the entrance cell is walkable and reaches the store and the farmhouse on
 //    the walking grid with the new footprint treated as solid.
 import type { Entity, World } from './world';
-import { chunkKey, surfaceAt, touchNature, waterDepthAt, worldToChunkX, worldToChunkZ } from './world';
 import type { BuildSite, HomesteadState, Rect, SiteKind } from './homestead';
 import {
   BUILD_KINDS, DM, MAX_SITES_V6, RESERVED_SITES, SITE_RULES, STORE_SPOT, facility, fieldRect, homesteadLayout, homesteadNav,
   homesteadNavRegion, isBuildHomestead, siteCells, siteEntrance, siteSize, siteSpot,
 } from './homestead';
 import { FOUNDER_STOCKPILE, LifeResult } from './economy';
-import { BLOCK, distanceField } from './nav';
-import { dropRecord, noteTreeChange, recordOf, stageLabel, treeLife } from './woodland';
 import { WoodlandStats, windowTrees, woodlandStats } from './forestry';
+import {
+  PlacementCheck, checkEntranceOpen, checkFences, checkGround, checkNatural, checkTrees, clearGrowth, entranceRoutes,
+} from './placement';
 
 /** A building's centre must lie within this distance (m) of the farmhouse. */
 export const BUILD_RANGE = 55;
@@ -40,27 +40,12 @@ export const DOOR_FACING = ['south', 'east', 'north', 'west'] as const;
 const len2 = (a: number, b: number) => Math.sqrt(a * a + b * b);
 const rectDm = (c: { x0: number; z0: number; x1: number; z1: number }): Rect => ({ x0: c.x0 * DM, z0: c.z0 * DM, x1: c.x1 * DM, z1: c.z1 * DM });
 const overlaps = (a: Rect, b: Rect, gap = 0) => a.x0 < b.x1 + gap && a.x1 + gap > b.x0 && a.z0 < b.z1 + gap && a.z1 + gap > b.z0;
-const MATURE = new Set(['mature', 'old', 'dying', 'snag']);
 
-export interface BuildCheck {
-  ok: boolean;
-  /** Every reason the building cannot go here (empty: it can). */
-  reasons: string[];
-  kind: SiteKind; x: number; z: number; rot: number;
-  /** Footprint cells (whole metres, [x0, x1)) and the cell in front of the door. */
-  cells: { x0: number; z0: number; x1: number; z1: number };
-  entrance: { x: number; z: number };
-  /** Young growth, stumps and empty tree spots the construction clears (entity ids, sorted). */
-  clears: string[];
-  /** What is cleared, in words ("2 saplings, 1 stump"). */
-  clearText: string;
-  /** Trees that stop it (entity id and why). */
-  blockers: Array<{ id: string; why: string }>;
+export interface BuildCheck extends PlacementCheck {
+  kind: SiteKind;
   /** Walking route (m) from the entrance to the store and to the farmhouse door; null when unreachable or not measured. */
   routeToStore: number | null;
   routeToHome: number | null;
-  /** Lowest and highest ground in the footprint. */
-  ground: { lo: number; hi: number };
 }
 
 /** Is a tree protected by the owner (marked, or in a protected area), or the founders' grove? */
@@ -117,85 +102,16 @@ export function checkBuilding(world: World, kind: SiteKind, x: number, z: number
   for (const s of world.structures.values()) {
     if (s.modules.some((m) => m.x + m.w / 2 > cells.x0 && m.x - m.w / 2 < cells.x1 && m.z + m.d / 2 > cells.z0 && m.z - m.d / 2 < cells.z1)) { reasons.push('a built structure is here'); break; }
   }
-  // Ground: dry, level enough, a door step a walker can take.
-  let lo = Infinity, hi = -Infinity, wet = false;
-  for (let cz = cells.z0; cz < cells.z1; cz++) for (let cx = cells.x0; cx < cells.x1; cx++) {
-    const y = surfaceAt(world, cx, cz);
-    lo = Math.min(lo, y); hi = Math.max(hi, y);
-    if (waterDepthAt(world, cx, cz) > 0) wet = true;
-  }
-  out.ground = { lo, hi };
-  if (wet) reasons.push('there is water here');
-  if (hi - lo > rule.maxStep) reasons.push(`the ground is too steep (${hi - lo} m of slope; at most ${rule.maxStep} m)`);
-  const ey = surfaceAt(world, entrance.x, entrance.z);
-  if (waterDepthAt(world, entrance.x, entrance.z) > 0) reasons.push('the entrance would be in water');
-  else if (ey - hi > 1 || lo - ey > 1) reasons.push(`the door step is too high (${Math.max(ey - hi, lo - ey)} m)`);
-  // Fences on the walking grid.
+  // The scenario-neutral rules (sim/placement.ts): ground, fences, trees, bushes and rocks, the entrance.
+  checkGround(world, out, rule.maxStep);
   const g = homesteadNav(world, h);
-  let fence = false;
-  for (let cz = cells.z0; cz < cells.z1 && !fence; cz++) for (let cx = cells.x0; cx < cells.x1 && !fence; cx++) {
-    const i = g.index(cx, cz);
-    const west = g.inside(cx - 1, cz) ? g.walls[g.index(cx - 1, cz)] & 5 : 0, north = g.inside(cx, cz - 1) ? g.walls[g.index(cx, cz - 1)] & 10 : 0;
-    if (g.walls[i] & 15 || west || north) fence = true;
-  }
-  if (fence) reasons.push('a fence runs here');
-  // Trees: young growth is cleared, mature trees and protected trees block.
-  const inZone = (e: Entity) => (e.x >= cells.x0 - 0.3 && e.x < cells.x1 + 0.3 && e.z >= cells.z0 - 0.3 && e.z < cells.z1 + 0.3)
-    || (e.x >= entrance.x && e.x < entrance.x + 1 && e.z >= entrance.z && e.z < entrance.z + 1);
-  const counts: Record<string, number> = {};
-  const blockers = new Map<string, string>();
-  const trees = h.woodland ? windowTrees(world, h) : [];
-  for (const e of trees) {
-    if (!inZone(e)) continue;
-    const life = treeLife(world, e)!;
-    const prot = ownerProtected(h, e);
-    if (life.present && prot) { blockers.set(e.id, `${prot} (${stageLabel(life.stage)} ${life.species})`); continue; }
-    if (life.present && MATURE.has(life.stage)) { blockers.set(e.id, `a ${stageLabel(life.stage)} ${life.species} stands here (fell it first)`); continue; }
-    if (e.harvested && !recordOf(h.woodland!, e.id) && !life.present) continue; // nothing there, and nothing will regrow
-    out.clears.push(e.id);
-    const word = !life.present ? 'empty tree spot' : life.stage === 'stump' ? 'stump' : life.stage === 'sapling' ? 'sapling' : 'young tree';
-    counts[word] = (counts[word] ?? 0) + 1;
-  }
-  // Trees just outside whose trunk zone (the walking grid's claim) reaches into the footprint or onto the door step:
-  // big ones block, young growth is cleared with the rest.
-  const claimed = (cx: number, cz: number) => {
-    const i = g.index(cx, cz);
-    if (g.block[i] !== BLOCK.tree) return;
-    const id = g.blockId.get(i)!;
-    if (blockers.has(id) || out.clears.includes(id)) return;
-    const e = world.entities.get(id);
-    const life = e ? treeLife(world, e) : null;
-    if (!e || !life || !life.present) return;
-    const prot = ownerProtected(h, e);
-    if (prot) blockers.set(id, `${prot} (${stageLabel(life.stage)} ${life.species})`);
-    else if (MATURE.has(life.stage)) blockers.set(id, `a ${stageLabel(life.stage)} ${life.species} stands too close (fell it first)`);
-    else { out.clears.push(id); const word = life.stage === 'stump' ? 'stump' : life.stage === 'sapling' ? 'sapling' : 'young tree'; counts[word] = (counts[word] ?? 0) + 1; }
-  };
-  for (let cz = cells.z0; cz < cells.z1; cz++) for (let cx = cells.x0; cx < cells.x1; cx++) claimed(cx, cz);
-  if (g.inside(entrance.x, entrance.z)) claimed(entrance.x, entrance.z);
-  out.clears.sort();
-  out.clearText = Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)).map(([k, n]) => `${n} ${k}${n > 1 ? 's' : ''}`).join(', ');
-  out.blockers = [...blockers].sort(([a], [b]) => a.localeCompare(b)).map(([id, why]) => ({ id, why }));
-  for (const why of [...new Set(out.blockers.map((b) => b.why))].slice(0, 3)) reasons.push(why);
-  // Bushes, rocks and other natural things in the footprint are gathered first.
-  const keys: string[] = [];
-  for (let cz = worldToChunkZ(cells.z0); cz <= worldToChunkZ(cells.z1); cz++) for (let cx = worldToChunkX(cells.x0); cx <= worldToChunkX(cells.x1); cx++) keys.push(chunkKey(cx, cz));
-  const stuff = keys.flatMap((k) => world.entityChunks.get(k) ?? []).sort();
-  for (const id of stuff) {
-    const e = world.entities.get(id);
-    if (!e || e.kind.startsWith('styl_tree_') || e.kind === 'marker' || e.harvested || world.entityRemovals.has(id)) continue;
-    if (inZone(e)) { reasons.push('bushes or rocks are in the way (gather them first)'); break; }
-  }
-  // The entrance: open ground (once young growth is cleared) that reaches the store and the farmhouse.
-  if (g.inside(entrance.x, entrance.z)) {
-    const i = g.index(entrance.x, entrance.z), b = g.block[i];
-    const cleared = b === BLOCK.tree && out.clears.includes(g.blockId.get(i) ?? '');
-    if (b !== BLOCK.none && !cleared) reasons.push(`the entrance is blocked (${g.reason(entrance.x, entrance.z).replace('_', ' ')})`);
-  }
+  checkFences(g, out);
+  checkTrees(world, g, out, h.woodland ? windowTrees(world, h) : [], h.woodland ?? null, (e) => ownerProtected(h, e));
+  checkNatural(world, out);
+  checkEntranceOpen(g, out);
+  // Homestead-only: the entrance reaches the store and the farmhouse.
   if (!reasons.length) {
-    const inside = (i: number) => { const cx = g.cellX(i), cz = g.cellZ(i); return cx >= cells.x0 && cx < cells.x1 && cz >= cells.z0 && cz < cells.z1; };
-    const field = distanceField(g, { x: entrance.x * DM + 5, z: entrance.z * DM + 5 }, 40_000, inside);
-    const at = (p: { x: number; z: number }) => { const cx = Math.floor(p.x / DM), cz = Math.floor(p.z / DM); return g.inside(cx, cz) ? field[g.index(cx, cz)] : -1; };
+    const at = entranceRoutes(g, out);
     const ds = at(STORE_SPOT), dh = at(home);
     out.routeToStore = ds >= 0 ? ds / 10 : null;
     out.routeToHome = dh >= 0 ? dh / 10 : null;
@@ -204,20 +120,6 @@ export function checkBuilding(world: World, kind: SiteKind, x: number, z: number
   }
   out.ok = reasons.length === 0;
   return out;
-}
-
-/** The young growth a construction clears: grubbed out for good (no timber; it is brush). */
-function clearForBuilding(world: World, h: HomesteadState, ids: string[]): void {
-  const w = h.woodland;
-  for (const id of ids) {
-    const e = world.entities.get(id);
-    if (!e) continue;
-    e.harvested = true;
-    if (!e.authored) world.entityChanges.add(e.chunk);
-    if (w) dropRecord(w, id);
-    noteTreeChange(world, id);
-  }
-  if (ids.length) touchNature(world);
 }
 
 /** v6 `place_site`: the owner marks out a building of the catalogue at a place and rotation the validator accepts. */
@@ -229,7 +131,7 @@ export function placeBuilding(world: World, kind: SiteKind, x: number, z: number
   const id = `site:${h.nextId++}`;
   const site: BuildSite = { id, kind, x, z, state: 'planned', reserved: {}, delivered: {}, work: 0, rot };
   h.sites = [...(h.sites ?? []), site].sort((a, b) => a.id.localeCompare(b.id));
-  clearForBuilding(world, h, c.clears);
+  clearGrowth(world, h.woodland, c.clears);
   // Replanting orders inside the footprint or on the door step are dropped (nothing is planted under a building).
   if (h.woodland) {
     const inside = (ox: number, oz: number) => (ox >= c.cells.x0 && ox < c.cells.x1 && oz >= c.cells.z0 && oz < c.cells.z1) || (ox === c.entrance.x && oz === c.entrance.z);

@@ -32,7 +32,10 @@ import type { At, WildResult, WildState } from './gathering';
 
 export const WILD_CONTENT_V3 = 3 as const;
 
-export const FELL_EVENTS = ['CHOP_STARTED', 'TREE_DAMAGED', 'TREE_FELLED', 'TRUNK_CREATED', 'LOGS_CREATED', 'LOGS_COLLECTED', 'LOGS_DELIVERED', 'STOCKPILE_MARKED'] as const;
+export const FELL_EVENTS = ['CHOP_STARTED', 'TREE_DAMAGED', 'TREE_FELLED', 'TRUNK_CREATED', 'LOGS_CREATED', 'LOGS_COLLECTED', 'LOGS_DELIVERED', 'STOCKPILE_MARKED',
+  // W4 (content v4): construction and the functions of finished buildings, in the same bounded event list.
+  'SITE_PLACED', 'MATERIALS_DELIVERED', 'CONSTRUCTION_PROGRESS', 'BUILDING_COMPLETED', 'SITE_CANCELLED', 'SHELTER_CLAIMED', 'FIRE_FUELED', 'FOOD_COOKED',
+  'ITEMS_STORED', 'ITEMS_TAKEN', 'RESPAWNED', 'DIED'] as const;
 export type FellEvent = (typeof FELL_EVENTS)[number];
 
 /** Stages a tree can be chopped in (a stump or an empty spot cannot). */

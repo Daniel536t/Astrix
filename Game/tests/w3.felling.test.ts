@@ -88,7 +88,7 @@ test('tree hit points come from species and stage; logs from the M013 timber rul
 });
 
 test('content v3 genesis is pinned; settlement worlds keep their pins and refuse felling', () => {
-  const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 3);
   assert.equal(w.journal.wildContent, 3);
   assert.equal(w.stateHash, W3_GENESIS);
   assert.equal(GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2).stateHash, '3c3a0c8e4090efcf', 'W2 (v2) genesis unchanged');
@@ -105,7 +105,7 @@ test('content v3 genesis is pinned; settlement worlds keep their pins and refuse
 });
 
 test('chop validates the axe, its durability, reach, the tree and the swing rate; each swing costs 1 HP and 1 durability', () => {
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 3);
   load(s);
   const t = treesNear(s.world, SPAWN.x, SPAWN.z, 40).find((x) => x.stage === 'old')!;
   const at = standBy(t);
@@ -154,7 +154,7 @@ test('chop validates the axe, its durability, reach, the tree and the swing rate
 });
 
 test('felling leaves an M013 stump and a trunk lying away from the player; never inventory wood', () => {
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 3);
   load(s);
   axe(s);
   const t = treesNear(s.world, SPAWN.x, SPAWN.z, 40).find((x) => x.stage === 'old')!;
@@ -199,7 +199,7 @@ test('felling leaves an M013 stump and a trunk lying away from the player; never
 });
 
 test('cut_log turns the trunk into as many log piles as the timber rule gives; logs weigh 9, carried 1-3; delivered at a stockpile', () => {
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 3);
   load(s);
   axe(s);
   const t = treesNear(s.world, SPAWN.x, SPAWN.z, 40).find((x) => x.stage === 'old')!;
@@ -268,7 +268,7 @@ test('felling is journaled and deterministic: replay, reload mid-felling keeps H
   const storage = new MemoryStorage();
   const store = new BrowserSaveStore(storage, 1337, GENERATOR_V2, { scenario: WILDERNESS, id: 'w9' });
   const s = store.load().session;
-  assert.equal(s.journal.wildContent, 3);
+  assert.equal(s.journal.wildContent, 4);
   load(s);
   axe(s);
   const t = treesNear(s.world, SPAWN.x, SPAWN.z, 40).find((x) => x.stage === 'old')!;
@@ -312,7 +312,7 @@ test('felling is journaled and deterministic: replay, reload mid-felling keeps H
 });
 
 test('stumps follow the M013 lifecycle in the wilderness: coppice stumps resprout, others rot and the spot regrows', () => {
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 3);
   load(s);
   axe(s);
   const trees = treesNear(s.world, SPAWN.x, SPAWN.z, 40);

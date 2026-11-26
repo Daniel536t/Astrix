@@ -20,13 +20,33 @@ export const WILDERNESS_STARTER_INVENTORY: Readonly<Record<string, number>> = Ob
  * build and no crop plot. W2 adds gathering loose pickups, dropping, hand
  * crafting, equipping and eating (wilderness content v2; a v1 world accepts
  * them only after `upgrade_wilderness`). W3 (content v3) adds physical
- * felling: `chop`, `cut_log` and `mark_stockpile`. `harvest` stays refused:
- * a tree is never turned into wood in one step, and breaking rock needs a pickaxe.
+ * felling: `chop`, `cut_log` and `mark_stockpile`. W4 (content v4) adds
+ * building: `place_site`, `deliver_site`, `build_work`, `cancel_site`,
+ * `claim_shelter`, `fuel_fire`, `cook`, `store_items`, `take_items`, `died`
+ * and `respawn`. `harvest` stays refused: a tree is never turned into wood in
+ * one step, and breaking rock needs a pickaxe.
+ *
+ * This is the one allow-list. `place_site` and `cancel_site` share their
+ * names with the settlement's M014 commands: in a wilderness world they are
+ * accepted only in the wilderness shape (a catalogue kind with `at`; a `b:`
+ * site id), which the session checks with `wildernessAllowsCommand`.
  */
-export const WILDERNESS_COMMANDS: readonly string[] = ['tick', 'pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness', 'chop', 'cut_log', 'mark_stockpile'];
+export const WILDERNESS_COMMANDS: readonly string[] = ['tick', 'pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness', 'chop', 'cut_log', 'mark_stockpile',
+  'place_site', 'deliver_site', 'build_work', 'cancel_site', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn'];
+/** Commands a wilderness world shares with the settlement by name only. */
+export const SHARED_WITH_SETTLEMENT: readonly string[] = ['place_site', 'cancel_site'];
 
 export function wildernessAllows(type: string): boolean {
   return WILDERNESS_COMMANDS.includes(type);
+}
+
+/**
+ * A wilderness world accepts a command when its type is on the allow-list and
+ * it is the wilderness's own (time, or a command in the wilderness shape):
+ * a settlement-shaped `place_site` is refused like any settlement command.
+ */
+export function wildernessAllowsCommand(type: string, wildShaped: boolean): boolean {
+  return wildernessAllows(type) && (type === 'tick' || wildShaped);
 }
 
 export function wildernessRefusal(type: string): string {

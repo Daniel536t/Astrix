@@ -46,6 +46,7 @@ import { mountSettings } from './app/settings';
 import { mergeStaticGroup } from './render/static-merge';
 import { FRAME_CAP_STORAGE_KEY, FrameLimiter, resolveFrameCap } from './app/frame-cap';
 import { WildGame } from './app/wild-game';
+import { withinSceneBudget } from './render/wild-buildings';
 
 // A startup failure would otherwise leave a blank canvas with no explanation.
 window.addEventListener('error', (e) => {
@@ -680,6 +681,8 @@ function metrics() {
     perf: perfOverlay?.metrics() ?? null,
     rendererCalls: renderer.info.render.calls,
     rendererTriangles: renderer.info.render.triangles,
+    // W4: the frame against the scene budget (120 draw calls, 250k triangles).
+    sceneBudget: withinSceneBudget(renderer.info.render.calls, renderer.info.render.triangles),
     rendererGeometries: renderer.info.memory.geometries,
     rendererTextures: renderer.info.memory.textures,
     streamPerf: terrainView.streamPerf,
@@ -924,6 +927,8 @@ window.addEventListener('keydown', (e) => {
   }
   // M014 build mode takes Escape (close), X (turn) and Enter (place) while it is open.
   if (homesteadGame?.build.key(e)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  // W4: the wilderness Build menu (G) and its placement ghost (Escape, X, Enter).
+  if (wildGame && explore?.active && wildGame.build.key(e)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   // Key map (documented in 00_Project_Core/Controls.md): P pauses time; Space
   // is jump in explore mode (handled by the explore controller).
   if (e.key === 'p' || e.key === 'P') time.paused = !time.paused;
@@ -1055,6 +1060,8 @@ if (!isMap && !isKit) {
       camera: rig.camera, canvas: renderer.domElement, nature: () => natureView,
       onChanged: () => { const r = store.save(session); persistenceMessage = r.message; saveScheduler.saved(Date.now()); }, notice: (message) => { lastAction = message; } });
     explore.reachOverride = wildGame.reachTarget;
+    // Evidence harness (?metrics=1 only): a read-only scan of what lies around the player.
+    if (metricsEveryFrame) (window as unknown as { __wildNear?: (r?: number) => unknown }).__wildNear = (r?: number) => wildGame?.scan(r) ?? null;
   }
   const scripted = action !== '' || noUi || params.has('tx') || params.has('dist');
   const startMode = params.get('mode') ?? (scripted ? 'builder' : 'explore');
