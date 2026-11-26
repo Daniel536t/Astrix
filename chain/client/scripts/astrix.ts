@@ -15,7 +15,8 @@
 //   setup-passports <n>        one passport per slot, delegated (idempotent)
 //   link-passports <n>         copy owners of worlds claimed before passports existed
 //   setup-treasury <sol>       create, fund and delegate the checkpoint treasury
-//   schedule-worlds <task> <ms> <count> [from]   tick crank for up to 16 slots
+//   schedule-worlds <task> <ms> <count> [from] [iterations]   tick crank for up to 16 slots
+//   cancel-task <taskId>       cancel a scheduled task owned by this wallet (ER)
 //   schedule-checkpoints <from> <task> <ms>      checkpoint crank for 8 slots
 //   checkpoint <slot>          run a checkpoint now (no-op unless due)
 //   worlds <n> / passports <n> tables of world and passport state
@@ -122,9 +123,10 @@ if (cmd === 'setup-worlds') {
   }
   out({ registry: registryPda.toBase58(), slots: Array.from({ length: n }, (_, i) => slotPda(i).toBase58()), transactions: log.length });
 } else if (cmd === 'schedule-worlds') {
-  // schedule-worlds <taskId> <ms> <count> [from]: one crank ticks slots [from, from+count), count <= 16.
-  const n = Number(a3 ?? 16), from = Number(process.argv[6] ?? 0);
-  const ix = await program(er).methods.scheduleWorldTicks(new BN(a1 ?? 742101), new BN(a2 ?? 2000), new BN(200000))
+  // schedule-worlds <taskId> <ms> <count> [from] [iterations]: one crank ticks slots [from, from+count), count <= 16.
+  // Re-using an existing taskId replaces that crank (validator 2.x: cancel + create in one transaction).
+  const n = Number(a3 ?? 16), from = Number(process.argv[6] ?? 0), iterations = Number(process.argv[7] ?? 200000);
+  const ix = await program(er).methods.scheduleWorldTicks(new BN(a1 ?? 742101), new BN(a2 ?? 2000), new BN(iterations))
     .accountsPartial({ magicProgram: MAGIC_PROGRAM_ID, payer: owner.publicKey, registry: registryPda, program: PROGRAM_ID })
     .remainingAccounts(Array.from({ length: n }, (_, i) => ({ pubkey: slotPda(from + i), isSigner: false, isWritable: true }))).instruction();
   out(erTx(await erSend(ix)));
@@ -240,6 +242,13 @@ if (cmd === 'setup-worlds') {
     .accountsPartial({ magicProgram: MAGIC_PROGRAM_ID, payer: owner.publicKey, settlement, settlementInfo: settlement, program: PROGRAM_ID })
     .instruction();
   out(erTx(await erSend(ix)));
+} else if (cmd === 'cancel-task') {
+  // cancel-task <taskId>: Magic program CancelTask { task_id }, signed by the task authority (this wallet).
+  // Wire format: u32 LE variant 7 (CancelTask) + i64 LE task_id; account 0 = authority (signer). Asynchronous:
+  // the scheduler closes the crank after this transaction commits; verify with crank-inventory.ts.
+  const data = Buffer.alloc(12); data.writeUInt32LE(7, 0); data.writeBigInt64LE(BigInt(a1 ?? 'x'), 4);
+  const ix = new anchor.web3.TransactionInstruction({ programId: MAGIC_PROGRAM_ID, keys: [{ pubkey: owner.publicKey, isSigner: true, isWritable: true }], data });
+  out({ cancelled: Number(a1), ...erTx(await erSend(ix)) });
 } else if (cmd === 'prospect') {
   const ix = await program(er).methods.prospect(Math.floor(Math.random() * 255))
     .accountsPartial({ payer: owner.publicKey, settlement, oracleQueue: EPHEMERAL_QUEUE, programIdentity: PROGRAM_IDENTITY,

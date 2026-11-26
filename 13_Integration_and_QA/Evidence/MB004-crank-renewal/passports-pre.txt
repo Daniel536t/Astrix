@@ -1,0 +1,20 @@
+┌─────────┬────┬────────────┬──────┬─────────────┬──────────┬───────┬────────────────┬─────────────┐
+│ (index) │ i  │ owner      │ kind │ checkpoints │ lastTick │ due   │ hash           │ base        │
+├─────────┼────┼────────────┼──────┼─────────────┼──────────┼───────┼────────────────┼─────────────┤
+│ 0       │ 0  │ 'FWh6peoH' │ 0    │ 33          │ 64336    │ false │ '3d3b4ffb4d5b' │ 'delegated' │
+│ 1       │ 1  │ '5EBnU2XK' │ 0    │ 32          │ 62596    │ false │ '6471d3944b9e' │ 'delegated' │
+│ 2       │ 2  │ 'BreUFnfJ' │ 0    │ 32          │ 62548    │ false │ 'ad88816e9932' │ 'delegated' │
+│ 3       │ 3  │ 'G7LAdo6c' │ 0    │ 32          │ 62391    │ false │ '3a535c964daf' │ 'delegated' │
+│ 4       │ 4  │ 'D2JSk2Tb' │ 0    │ 32          │ 62342    │ false │ 'b14a03b20dfc' │ 'delegated' │
+│ 5       │ 5  │ '8NwXYhVD' │ 0    │ 32          │ 62294    │ false │ 'bd55abcfd5ed' │ 'delegated' │
+│ 6       │ 6  │ '3zeA5vJo' │ 0    │ 32          │ 62105    │ false │ 'dd98bd452d09' │ 'delegated' │
+│ 7       │ 7  │ '5djFy2T6' │ 0    │ 32          │ 56005    │ false │ 'e609317b9637' │ 'delegated' │
+│ 8       │ 8  │ '2U4irUTE' │ 1    │ 33          │ 57876    │ false │ 'ade36a27a70a' │ 'delegated' │
+│ 9       │ 9  │ '4tkXqGCo' │ 1    │ 33          │ 57875    │ false │ 'f5b21b87cc91' │ 'delegated' │
+│ 10      │ 10 │ 'Ud1inuqG' │ 2    │ 33          │ 56380    │ false │ 'aff07cc1c9ca' │ 'delegated' │
+│ 11      │ 11 │ 'HZmikXdk' │ 2    │ 33          │ 57832    │ false │ '1f402cddb8fe' │ 'delegated' │
+│ 12      │ 12 │ 'EaEtqNzY' │ 0    │ 31          │ 56016    │ false │ '3c0b5d9e00d9' │ 'delegated' │
+│ 13      │ 13 │ 'GVg2rCW5' │ 0    │ 30          │ 54235    │ false │ '283f0164e578' │ 'delegated' │
+│ 14      │ 14 │ '7JVdFkPm' │ 2    │ 0           │ 0        │ true  │ '000000000000' │ 'delegated' │
+│ 15      │ 15 │ '11111111' │ 0    │ 0           │ 0        │ false │ '000000000000' │ 'delegated' │
+└─────────┴────┴────────────┴──────┴─────────────┴──────────┴───────┴────────────────┴─────────────┘
