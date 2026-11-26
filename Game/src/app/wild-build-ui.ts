@@ -7,10 +7,10 @@ import * as THREE from 'three';
 import type { World } from '../sim/world';
 import { BUILD_CATALOGUE, BuildingDef, CATEGORY_LABEL, MATERIAL_LABEL, buildingDef } from '../sim/catalogue';
 import {
-  MAX_FUEL, RESERVE_REACH, SITE_REACH, WildSite, affordability, buildingsNear, checkWildSite, deliverable, freeIn, freeInBag, homeShelter, lockReasons,
-  reservationsInSource, reservedTotalsIn, siteNeeds, siteProgress, siteSizeOf, stageNeeds, stockWeight,
+  MAX_FUEL, RESERVE_REACH, SITE_REACH, WildSite, affordability, buildingsNear, canSwap, checkWildSite, deliverable, freeIn, freeInBag, homeShelter, lockReasons,
+  remoteReservations, reservationsInSource, reservedTotalsIn, siteNeeds, siteProgress, siteSizeOf, stageNeeds, stockWeight,
 } from '../sim/wild-build';
-import { CARRY_CAPACITY, ITEM_LABEL, ITEM_WEIGHT, WILD_RECIPES, WildItem, carriedWeight } from '../sim/gathering';
+import { ITEM_LABEL, ITEM_WEIGHT, PICKUP_REACH, WILD_RECIPES, WildItem, carriedWeight, carryCapacity } from '../sim/gathering';
 import { BuildMode } from './build-mode';
 import { DOOR_FACING } from '../sim/buildings';
 import { WildBuildingsView } from '../render/wild-buildings';
@@ -32,6 +32,12 @@ export interface WildBuildHost {
 
 const label = (k: string) => MATERIAL_LABEL[k] ?? ITEM_LABEL[k as WildItem] ?? k.replace(/_/g, ' ');
 const bagText = (b: Record<string, number>) => Object.entries(b).map(([k, n]) => `${n} ${label(k)}`).join(', ');
+/** Compass direction from (dx, dz) (m; +x east, +z south). */
+const COMPASS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
+export const compass = (dx: number, dz: number): string => COMPASS[((Math.round(Math.atan2(dz, dx) / (Math.PI / 4)) % 8) + 8) % 8];
+const siteCentre = (s: WildSite) => { const z = siteSizeOf(s.kind, s.rot); return { x: s.x + z.w / 2, z: s.z + z.d / 2 }; };
+/** A reserved pile within this distance of the player offers "Pick up for this site" (a little less than the pickup reach). */
+const PILE_PROMPT = PICKUP_REACH - 0.25;
 
 export class WildBuildUI {
   readonly view = new WildBuildingsView();
@@ -42,8 +48,10 @@ export class WildBuildUI {
   private menuKey = '';
   private siteKey = '';
   private cancelArmed: string | null = null;
-  /** The site or building whose panel shows (nearest within reach). */
+  /** The site or building whose panel shows (nearest within reach, or the site a reserved pile by the player belongs to). */
   near: WildSite | null = null;
+  /** A pile by the player (not at the site) holding materials reserved for `near`. */
+  nearPile: string | null = null;
   readonly stats = { placed: 0, refusedPlacements: 0, lastRefusal: '' };
 
   constructor(private readonly h: WildBuildHost) {
@@ -184,11 +192,22 @@ export class WildBuildUI {
       + `<button type="button" data-choose="${d.id}" ${locked.length ? 'disabled aria-disabled="true"' : ''}>${locked.length ? 'Locked' : 'Place'}</button></li>`;
   }
 
-  /** The unfinished site or finished building the player stands by. */
-  private nearest(): WildSite | null {
+  /** The unfinished site or finished building the player stands by; else the site a reserved pile by the player is held for. */
+  private nearest(): { s: WildSite | null; pile: string | null } {
     const at = this.h.at();
-    if (!at) return null;
-    return buildingsNear(this.world, at.x / 10, at.z / 10, SITE_REACH - 0.3)[0]?.s ?? null;
+    if (!at) return { s: null, pile: null };
+    const s = buildingsNear(this.world, at.x / 10, at.z / 10, SITE_REACH - 0.3)[0]?.s ?? null;
+    if (s) return { s, pile: null };
+    const w = this.world.wild;
+    if (!w?.build) return { s: null, pile: null };
+    const px = at.x / 10, pz = at.z / 10;
+    const piles = [...w.piles.values()].map((p) => ({ p, d: Math.hypot(p.x - px, p.z - pz) })).filter((x) => x.d <= PILE_PROMPT)
+      .sort((a, b) => a.d - b.d || a.p.id.localeCompare(b.p.id));
+    for (const { p } of piles) {
+      const r = reservationsInSource(this.world, p.id)[0];
+      if (r) return { s: w.build.sites.get(r.siteId) ?? null, pile: p.id };
+    }
+    return { s: null, pile: null };
   }
 
   private act(c: Record<string, unknown>, target: string, done?: (r: Receipt) => void): void {
@@ -201,14 +220,17 @@ export class WildBuildUI {
 
   /** Deliver every reserved material within reach (bag, and piles or storage at the site). */
   deliverAll(s: WildSite): number {
-    let n = 0;
+    let n = 0, swapped = 0;
     for (const d of deliverable(this.world, s, this.h.at())) {
-      this.act({ type: 'deliver_site', siteId: s.id, item: d.item, n: d.n, ...(d.from === 'bag' ? {} : { from: d.from }) }, `${s.id}:${d.from}:${d.item}`);
+      const before = JSON.stringify(s.delivered);
+      this.act({ type: 'deliver_site', siteId: s.id, item: d.item, n: d.n, ...(d.from === 'bag' ? {} : { from: d.from }), ...(d.swap ? { swap: true } : {}) }, `${s.id}:${d.from}:${d.item}`);
+      if (JSON.stringify(s.delivered) === before) continue;
       n += d.n;
+      if (d.swap) swapped += d.swap;
     }
     if (n) {
       const left = siteNeeds(s);
-      this.h.toast(`delivered ${n} · ${Object.keys(left).length ? `still needs ${bagText(left)}` : 'all materials delivered: work on it (E / Build)'}`, 'good');
+      this.h.toast(`delivered ${n}${swapped ? ` (${swapped} from your bag in place of the reserved piles, which are free again)` : ''} · ${Object.keys(left).length ? `still needs ${bagText(left)}` : 'all materials delivered: work on it (E / Build)'}`, 'good');
     }
     return n;
   }
@@ -219,7 +241,13 @@ export class WildBuildUI {
     const s = this.near;
     if (!s) return;
     const d = b.dataset;
-    if (d.deliver) this.act({ type: 'deliver_site', siteId: s.id, item: d.deliver, n: Number(d.n), ...(d.from && d.from !== 'bag' ? { from: d.from } : {}) }, `${s.id}:${d.from}:${d.deliver}`, () => this.h.toast(`delivered ${d.n} ${label(d.deliver!)}`));
+    if (d.deliver) this.act({ type: 'deliver_site', siteId: s.id, item: d.deliver, n: Number(d.n), ...(d.from && d.from !== 'bag' ? { from: d.from } : {}), ...(d.swap ? { swap: true } : {}) }, `${s.id}:${d.from}:${d.deliver}`,
+      () => this.h.toast(`delivered ${d.n} ${label(d.deliver!)}${d.swap ? ` (${d.swap} in place of reserved ones elsewhere: those are free again)` : ''}`));
+    else if (d.pickup) {
+      const pile = this.world.wild?.piles.get(d.pickup);
+      this.act({ type: 'pickup', entityId: d.pickup, forSite: s.id }, `${d.pickup}:${s.id}`,
+        () => this.h.toast(`picked up ${pile ? label(pile.item) : 'it'} for the ${buildingDef(s.kind)!.label.toLowerCase()} (still reserved for it) · carry it to the site and deliver (E)`, 'good'));
+    }
     else if (d.deliverAll !== undefined) this.deliverAll(s);
     else if (d.work !== undefined) this.onWork?.(s);
     else if (d.cancel !== undefined) {
@@ -241,8 +269,11 @@ export class WildBuildUI {
     const hide = !s || this.mode.active || !this.menu.hidden;
     if (hide) { if (!this.site.hidden) { this.site.hidden = true; this.siteKey = ''; } return; }
     const w = this.world.wild!;
+    const at = this.h.at();
+    const away = this.nearPile !== null;
     const key = JSON.stringify([s.id, s.state, s.stage, s.work, s.delivered, s.reserved, s.fuel ? Math.ceil(s.fuel / 15) : 0, s.stock, w.items, w.build?.home, this.cancelArmed,
-      [...(w.build?.sites.values() ?? [])].map((x) => x.reserved), this.h.at() ? deliverable(this.world, s, this.h.at()).length : 0]);
+      [...(w.build?.sites.values() ?? [])].map((x) => x.reserved), at ? deliverable(this.world, s, at).length : 0, this.nearPile, w.content,
+      s.state !== 'done' && at ? [Math.round(at.x / 10), Math.round(at.z / 10)] : null]);
     this.site.hidden = false;
     if (key === this.siteKey) return;
     this.siteKey = key;
@@ -251,20 +282,46 @@ export class WildBuildUI {
     if (s.state !== 'done') {
       const p = siteProgress(s);
       const missing = stageNeeds(s);
-      const can = deliverable(this.world, s, this.h.at());
-      const where = (k: string) => Object.entries(s.reserved).filter(([, b]) => b[k]).map(([src, b]) => `${b[k]} ${src === 'bag' ? 'in your bag' : src.startsWith('d:') ? 'in a pile' : 'in storage'}`).join(', ');
+      const can = deliverable(this.world, s, at);
+      const remote = remoteReservations(this.world, s, at);
+      // Where every reserved unit is: the bag, or a pile / store with its distance and direction from the player.
+      const spot = (r: (typeof remote)[number]) => r.inReach ? 'at the site'
+        : r.toPlayer !== null && at ? `${Math.max(1, Math.round(r.toPlayer))} m ${compass(r.x - at.x / 10, r.z - at.z / 10)} of you` : `${Math.round(r.toSite)} m from the site`;
+      const where = (k: string) => [
+        ...(s.reserved.bag?.[k] ? [`<span class="where" data-reserved-at="bag">${s.reserved.bag[k]} in your bag</span>`] : []),
+        ...remote.filter((r) => r.item === k).sort((a2, b2) => a2.from.localeCompare(b2.from))
+          .map((r) => `<span class="where" data-reserved-at="${r.from}">${r.n} in ${r.from.startsWith('d:') ? 'a pile' : 'storage'} ${spot(r)}</span>`),
+      ].join('');
       const rows = Object.entries(d.materials).map(([k, n]) => {
         const got = (s.delivered[k] ?? 0) + (s.consumed[k] ?? 0);
-        const btns = can.filter((c) => c.item === k).map((c) => `<button type="button" data-deliver="${k}" data-n="${c.n}" data-from="${c.from}">Deliver ${c.n}${c.from === 'bag' ? '' : c.from.startsWith('d:') ? ' from pile' : ' from store'}</button>`).join('');
-        return `<li><span>${label(k)} <b>${got}/${n}</b>${where(k) ? ` <span class="dim" data-reserved-${k}>(reserved: ${where(k)})</span>` : ''}</span>${btns}</li>`;
+        const btns = can.filter((c) => c.item === k).map((c) => `<button type="button" data-deliver="${k}" data-n="${c.n}" data-from="${c.from}"${c.swap ? ` data-swap="${c.swap}"` : ''}>Deliver ${c.n}${c.from === 'bag' ? (c.swap ? ' from bag' : '') : c.from.startsWith('d:') ? ' from pile' : ' from store'}</button>`).join('');
+        // Only in the bag: one short line; with piles or storage: one line per place (where it is).
+        const only = !remote.some((r) => r.item === k);
+        const res = only ? (s.reserved.bag?.[k] ? `(reserved: ${s.reserved.bag[k]} in your bag)` : '') : `reserved: ${where(k)}`;
+        return `<li><span>${label(k)} <b>${got}/${n}</b>${res ? ` <span class="dim" data-reserved-${k}>${res}</span>` : ''}</span>${btns}</li>`;
       }).join('');
+      // What to do about reservations too far from the site to deliver directly.
+      const far = remote.filter((r) => !r.inReach);
+      const swapping = can.some((c) => c.swap);
+      let help = '';
+      if (this.nearPile) {
+        const pile = w.piles.get(this.nearPile)!;
+        const mine = s.reserved[this.nearPile]?.[pile.item] ?? 0;
+        help = `<div class="row" data-pile-here><span>You are by ${mine} ${label(pile.item)} reserved for this ${d.label.toLowerCase()}.</span>`
+          + `<button type="button" class="primary" data-pickup="${this.nearPile}">Pick up for this site</button></div>`;
+      } else if (far.length && swapping) {
+        help = `<div class="dim" data-swap-help>Your bag has free ${[...new Set(can.filter((c) => c.swap).map((c) => label(c.item)))].join(', ')}: Deliver puts them in place of the reserved piles (those piles are free again).</div>`;
+      } else if (far.length) {
+        help = `<div class="dim" data-far-help>Walk to ${far.length === 1 ? 'the pile' : 'each pile'} (listed above) and pick it up for this site (E or the button there)${canSwap(this.world) ? `, or bring free ${[...new Set(far.map((r) => label(r.item)))].join(', ')} in your bag and deliver them here instead` : ''}.</div>`;
+      }
       const tool = d.tool === 'hands' ? 'by hand' : `needs a ${label(d.tool)}${w.tools.some((t) => t.kind === d.tool && t.durability > 0) ? '' : ' <span class="miss">(you have none)</span>'}`;
       body = `<div class="dim">Stage ${Math.min(s.stage + 1, d.stages.length)}/${d.stages.length}: ${p.stage} · ${tool}</div>`
         + `<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${p.total}" aria-valuenow="${p.done}"><i style="width:${Math.round(p.done / p.total * 100)}%"></i></div>`
         + `<div class="dim">${p.done}/${p.total} swings${Object.keys(missing).length ? ` · <span class="miss">this stage needs ${bagText(missing)}</span>` : ''}</div>`
-        + `<h3>Materials (at the site or built in / needed)</h3><ul>${rows}</ul>`
-        + `<div class="row"><button type="button" class="primary" data-work ${Object.keys(missing).length ? 'disabled' : ''}>Work (E)</button>`
-        + `<button type="button" data-cancel>${this.cancelArmed === s.id ? 'Confirm cancel' : 'Cancel site'}</button></div>`;
+        + `<h3>Materials (at the site or built in / needed)</h3><ul>${rows}</ul>${help}`
+        + (away ? `<div class="dim">The site is ${at ? `${Math.round(Math.hypot(siteCentre(s).x - at.x / 10, siteCentre(s).z - at.z / 10))} m ${compass(siteCentre(s).x - at.x / 10, siteCentre(s).z - at.z / 10)} of you` : 'nearby'}.</div>`
+          : `<div class="row"><button type="button" class="primary" data-work ${Object.keys(missing).length ? 'disabled' : ''}>Work (E)</button>`
+          + `<button type="button" data-cancel>${this.cancelArmed === s.id ? 'Confirm cancel' : 'Cancel site'}</button></div>`);
     } else {
       const fn = d.function;
       if (fn.kind === 'shelter') {
@@ -291,7 +348,7 @@ export class WildBuildUI {
       } else if (fn.kind === 'storage') {
         const stock = Object.entries(s.stock ?? {});
         const used = stockWeight(s.stock);
-        const fits = (k: string) => carriedWeight(w) + ITEM_WEIGHT[k as WildItem] <= CARRY_CAPACITY;
+        const fits = (k: string) => carriedWeight(w) + ITEM_WEIGHT[k as WildItem] <= carryCapacity(w);
         const held = reservationsInSource(this.world, s.id);
         const takeRows = stock.length ? stock.map(([k, n]) => {
           const free = freeIn(this.world, s.id, k);
@@ -309,7 +366,8 @@ export class WildBuildUI {
     this.view.sync(this.world);
     this.view.update(time);
     this.mode.update();
-    this.near = this.nearest();
+    const n = this.nearest();
+    this.near = n.s; this.nearPile = n.pile;
     if (this.near?.id !== this.cancelArmed) this.cancelArmed = this.near && this.cancelArmed === this.near.id ? this.cancelArmed : null;
     this.renderMenu();
     this.renderSite();
@@ -325,6 +383,7 @@ export class WildBuildUI {
       home: b?.home ?? null, homeSpot: (() => { const hs = homeShelter(this.world); return hs ? { id: hs.id } : null; })(), death: b?.death ?? null,
       reserved: reservedTotalsIn(this.world), reservedInBag: reservedTotalsIn(this.world, 'bag'),
       deliverable: this.near && at ? deliverable(this.world, this.near, at) : [],
+      remote: this.near && this.near.state !== 'done' ? remoteReservations(this.world, this.near, at) : [], nearPile: this.nearPile,
       near: this.near?.id ?? null, sitePanel: !this.site.hidden, menu: !this.menu.hidden,
       mode: this.mode.active ? { kind: this.mode.kind, rot: this.mode.rot, pos: this.mode.pos, ok: this.mode.preview?.check.ok ?? null,
         reasons: this.mode.preview?.check.reasons ?? [], bar: this.mode.metrics().bar } : null,

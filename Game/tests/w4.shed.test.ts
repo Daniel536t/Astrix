@@ -10,7 +10,7 @@ import { GameSession } from '../src/app/session';
 import { validateWorldSnapshot } from '../src/sim/snapshot';
 import { BrowserSaveStore, KeyValueStorage } from '../src/app/persistence';
 import { GENERATOR_V2, WILDERNESS } from '../src/sim/world';
-import { CARRY_CAPACITY, ITEM_WEIGHT, carriedWeight } from '../src/sim/gathering';
+import { ITEM_WEIGHT, carriedWeight, carryCapacity } from '../src/sim/gathering';
 import { buildingDef } from '../src/sim/catalogue';
 import { freeIn, freeInBag, lockReasons, siteSpotOf, stockWeight } from '../src/sim/wild-build';
 import {
@@ -122,7 +122,7 @@ test('the storage shed stores and returns items, holds exactly 300 weight, keeps
   // Fill it with stones and branches (2 weight each), a bag at a time, up to the capacity.
   let guard = 0;
   while (stockWeight(shed.stock) < cap - 1 && guard++ < 40) {
-    const room = Math.floor((CARRY_CAPACITY - carriedWeight(s.world.wild!)) / 2);
+    const room = Math.floor((carryCapacity(s.world.wild!) - carriedWeight(s.world.wild!)) / 2);
     const left = Math.floor((cap - stockWeight(shed.stock)) / 2);
     const n = Math.min(room, left);
     const kind = guard % 2 ? 'loose_stone' : 'branch', item = kind === 'branch' ? 'branch' : 'stone';
@@ -136,7 +136,8 @@ test('the storage shed stores and returns items, holds exactly 300 weight, keeps
   assert.match(reasons(full).join(';'), /storage shed is full \(300\/300\)/);
   assert.ok(stockWeight(shed.stock) <= cap);
   // The bag's own limit applies to withdrawals.
-  for (let i = 0; i < 20 && carriedWeight(s.world.wild!) + ITEM_WEIGHT.stone <= CARRY_CAPACITY; i++) gather(s, 'loose_stone', 1);
+  for (let i = 0; i < 40 && carriedWeight(s.world.wild!) + ITEM_WEIGHT.stone <= carryCapacity(s.world.wild!); i++) gather(s, 'loose_stone', 1);
+  assert.equal(carryCapacity(s.world.wild!), 60, 'the v5 bag');
   assert.equal(code(send(s, { type: 'take_items', siteId: id, item: 'stone', n: 1, at: sat })), 'capacity');
   unload(s);
   // Reservations held in the shed: a campfire placed by it reserves its 6 stones there (the bag is empty; no stone pile is near).
@@ -148,9 +149,9 @@ test('the storage shed stores and returns items, holds exactly 300 weight, keeps
   assert.equal(freeIn(s.world, id, 'stone'), stoneIn - 6);
   // Take every free stone; then a plain withdrawal of a reserved one is refused (it cannot be used for anything else).
   let taken = 0;
-  while (freeIn(s.world, id, 'stone') > 0 && carriedWeight(s.world.wild!) + 2 <= CARRY_CAPACITY) { ok(send(s, { type: 'take_items', siteId: id, item: 'stone', n: 1, at: sat })); taken++; }
+  while (freeIn(s.world, id, 'stone') > 0 && carriedWeight(s.world.wild!) + 2 <= carryCapacity(s.world.wild!)) { ok(send(s, { type: 'take_items', siteId: id, item: 'stone', n: 1, at: sat })); taken++; }
   unload(s);
-  while (freeIn(s.world, id, 'stone') > 0) { ok(send(s, { type: 'take_items', siteId: id, item: 'stone', n: 1, at: sat })); taken++; if (carriedWeight(s.world.wild!) + 2 > CARRY_CAPACITY) unload(s); }
+  while (freeIn(s.world, id, 'stone') > 0) { ok(send(s, { type: 'take_items', siteId: id, item: 'stone', n: 1, at: sat })); taken++; if (carriedWeight(s.world.wild!) + 2 > carryCapacity(s.world.wild!)) unload(s); }
   assert.equal(taken, stoneIn - 6);
   assert.deepEqual([shed.stock!.stone, freeIn(s.world, id, 'stone')], [6, 0]);
   const h1 = s.stateHash;

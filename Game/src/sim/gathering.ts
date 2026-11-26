@@ -27,15 +27,18 @@ import { BuildSnapshot, BuildState, bagRefusal, buildFromSnapshot, buildSnapshot
 /**
  * Wilderness content versions. v1 (W1): no pickups, items or crafting. v2 (W2): this file. v3 (W3): physical
  * tree felling (sim/felling.ts). v4 (W4): build anywhere (sim/catalogue.ts, sim/wild-build.ts), planks, chests,
- * cooked food, the pickaxe, hammer and knife, and workbench recipes.
+ * cooked food, the pickaxe, hammer and knife, and workbench recipes. v5 (W4 owner report 1): the bag carries
+ * CARRY_CAPACITY_V5 instead of CARRY_CAPACITY, and a site's reserved materials may be replaced by free ones of
+ * the same kind carried in the bag (`deliver_site` with `swap`). Structure and snapshot form are those of v4.
  */
 export const WILD_CONTENT_V1 = 1 as const;
 export const WILD_CONTENT_V2 = 2 as const;
 export { WILD_CONTENT_V3 };
 export const WILD_CONTENT_V4 = 4 as const;
-export const LATEST_WILD_CONTENT = 4 as const;
-export type WildContent = typeof WILD_CONTENT_V2 | typeof WILD_CONTENT_V3 | typeof WILD_CONTENT_V4;
-export const isWildContent = (v: unknown): v is WildContent => v === WILD_CONTENT_V2 || v === 3 || v === 4;
+export const WILD_CONTENT_V5 = 5 as const;
+export const LATEST_WILD_CONTENT = 5 as const;
+export type WildContent = typeof WILD_CONTENT_V2 | typeof WILD_CONTENT_V3 | typeof WILD_CONTENT_V4 | typeof WILD_CONTENT_V5;
+export const isWildContent = (v: unknown): v is WildContent => v === WILD_CONTENT_V2 || v === 3 || v === 4 || v === 5;
 
 export const PICKUP_KINDS = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom'] as const;
 export type PickupKind = (typeof PICKUP_KINDS)[number];
@@ -68,7 +71,16 @@ export const ITEM_WEIGHT: Record<WildItem | ToolKind, number> = {
   berries: 1, branch: 2, cord: 1, fiber: 1, grass: 1, log: 9, mushroom: 1, stone: 2, stone_axe: 3,
   chest: 8, cooked_mushroom: 1, plank: 3, hammer: 3, knife: 1, stone_pickaxe: 4,
 };
+/** Bag capacity (weight) in content v2-v4. Journals made then replay with it until their `upgrade_wilderness` to v5. */
 export const CARRY_CAPACITY = 30;
+/**
+ * Bag capacity from content v5 (owner phone report 1: "Increase the bag storage"). The early loop fits: axe 3 +
+ * 2 logs 18 + 6 stones 12 + 6 branches 12 + 4 fibre 4 = 49. Logs stay heavy: 6 logs (54) fill the bag, so a
+ * log store is still how many logs are kept.
+ */
+export const CARRY_CAPACITY_V5 = 60;
+/** What this bag holds (weight), by the world's wilderness content. */
+export const carryCapacity = (w: Pick<WildState, 'content'>): number => w.content >= WILD_CONTENT_V5 ? CARRY_CAPACITY_V5 : CARRY_CAPACITY;
 /** Reach from the player's reported position to a pickup (metres). */
 export const PICKUP_REACH = 3.5;
 /** A new stone axe's durability (uses). W2 has no use that wears it; W3 felling will. */
@@ -148,7 +160,7 @@ export function createWildState(content: WildContent = WILD_CONTENT_V2, seed = 0
     ...(content >= WILD_CONTENT_V3 ? { fell: createFell(seed, tick) } : {}), ...(content >= WILD_CONTENT_V4 ? { build: createBuild() } : {}) };
 }
 
-/** A content-v2 state gains W3 felling (v3), a v3 state W4 building (v4), through journaled `upgrade_wilderness`. */
+/** A content-v2 state gains W3 felling (v3), a v3 state W4 building (v4), a v4 state the v5 rules, through journaled `upgrade_wilderness`. */
 export function upgradeWildState(w: WildState, seed: number, tick: number, to: WildContent = WILD_CONTENT_V3): void {
   if (!w.fell && to >= WILD_CONTENT_V3) w.fell = createFell(seed, tick);
   if (!w.build && to >= WILD_CONTENT_V4) w.build = createBuild();
@@ -319,9 +331,10 @@ export function pickUp(world: World, id: string, at: At, forSite?: string): Wild
     if (!t.ok) return t;
     qty = t.n;
   } else if (forSite !== undefined) return fail('not_reserved', 'only a pile can hold materials reserved for a site');
-  const room = CARRY_CAPACITY - carriedWeight(w);
+  const cap = carryCapacity(w);
+  const room = cap - carriedWeight(w);
   const amount = Math.min(qty, Math.floor(room / ITEM_WEIGHT[p.item]));
-  if (amount <= 0) return fail('capacity', `your bag is full (${carriedWeight(w)}/${CARRY_CAPACITY})`);
+  if (amount <= 0) return fail('capacity', `your bag is full (${carriedWeight(w)}/${cap}; a ${ITEM_LABEL[p.item]} weighs ${ITEM_WEIGHT[p.item]})`);
   w.items[p.item] = (w.items[p.item] ?? 0) + amount;
   const rest = p.qty - amount;
   if (p.kind === 'pile') {
@@ -369,7 +382,7 @@ export function craft(world: World, recipeId: string, atStation = false): WildRe
   for (const [k, n] of Object.entries(r.input)) delta -= ITEM_WEIGHT[k as WildItem] * (n ?? 0);
   for (const [k, n] of Object.entries(r.output.items ?? {})) delta += ITEM_WEIGHT[k as WildItem] * (n ?? 0);
   if (r.output.tool) delta += ITEM_WEIGHT[r.output.tool];
-  if (carriedWeight(w) + delta > CARRY_CAPACITY) return fail('capacity', 'your bag cannot hold the result');
+  if (carriedWeight(w) + delta > carryCapacity(w)) return fail('capacity', 'your bag cannot hold the result');
   const spent: Record<string, number> = {};
   for (const [k, n] of Object.entries(r.input)) {
     w.items[k] -= n ?? 0;
@@ -465,7 +478,7 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
   const bad = (what: string): never => { throw new Error(`snapshot wilderness state: invalid ${what}`); };
   if (!isObj(value) || !isWildContent(value.content)) bad('content');
   const v = value as Record<string, unknown>;
-  const v3 = (v.content as number) >= WILD_CONTENT_V3, v4 = v.content === WILD_CONTENT_V4;
+  const v3 = (v.content as number) >= WILD_CONTENT_V3, v4 = (v.content as number) >= WILD_CONTENT_V4;
   if (v3 !== (v.fell !== undefined)) bad('felling block');
   if (v4 !== (v.build !== undefined)) bad('building block');
   // Logs exist only with felling (content v3); planks, chests and cooked food with building (v4).
@@ -521,7 +534,7 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
     hunger: v.hunger as number, items, left, nextId: v.nextId as number, piles, taken: taken as string[], tools,
   };
   const weight = carriedWeight(wildFromSnapshot(s));
-  if (weight > CARRY_CAPACITY) bad('carried weight');
+  if (weight > carryCapacity(s)) bad('carried weight');
   return s;
 }
 

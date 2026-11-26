@@ -319,3 +319,64 @@ Nothing was committed, staged, pushed or deployed. The backup `.tools/backups/w4
 - **Not tested live:** the build loop itself. It was verified on the local build of the same commit (§§ above). No real phone has been used.
 
 **Local `Game/dist` mismatch:** the committed `Game/dist` in `c01c774` carries an older build stamp (`86865c8`, dirty). The deploy rebuilds from source, so the served bundle is the `c01c774` build. The local rebuilt `Game/dist` is left uncommitted, so the candidate commit stays exactly as reviewed.
+
+## Owner phone report 1: stuck campfire and bag capacity
+
+**Report (live candidate `20261126T095429Z-c01c774`):** the campfire site panel showed "Stage 2/2: Kindling stack · 2/4 swings · branch 0/3 (reserved: 1 in a pile, 1 in a pile, 1 in a pile) · stone 6/6". The owner had more than 6 branches but could not finish. Second message: "Increase the bag storage."
+
+**Cause** (reproduced headless on the c01c774 code; the v4 fixture below is that state):
+- Placement already reserves the bag first, then piles nearest the site. But the owner's bag held no free branches when the campfire was placed. The Bag panel only offers "Drop 1", so branches dropped to make room in the 30-weight bag lie as one-branch piles. The 3 nearest ones (7.5, 12.3 and 12.5 m from the site) were reserved.
+- Delivery takes only the reserved units, from the bag or from a pile within 3.5 m of the site. The 8 branches picked up later were free, so they could not be delivered (`not_reserved`). Nothing could replace the reservations.
+- Picking a reserved pile up for the site was refused because the bag was full: 29/30 with the axe, a log and 8 branches, and a branch weighs 2 (`capacity`, "your bag is full").
+- The panel said only "in a pile", with no location. The pickup prompt did not say the pile was reserved for the campfire.
+
+**Fix (wilderness content v5):**
+- **Bag capacity 60** (was 30). The early loop fits: axe 3 + 2 logs 18 + 6 stones 12 + 6 branches 12 + 4 fibre 4 = 49. Logs stay heavy: with the axe, at most 6 logs (57). Weights are unchanged.
+  - The Bag panel shows a weight bar, "weight used/60", "Carries 60 weight, N free", the weight of each item kind, and each row's own weight (e.g. "branch ×6 · 2 each · 12"). Tools show their weight.
+- **Deliver from the bag in place of remote reservations.** `deliver_site` with `swap: true`, from the bag only. Free units of the same item stand in for the site's reservations elsewhere, and those reservations are released where the items lie, farthest from the site first.
+  - The swap is explicit and journaled: the outcome's `swapped` lists the released units per source (e.g. `{"d:10":1,"d:8":1,"d:9":1}`). A swap outcome without the command flag fails journal validation.
+  - Units reserved for another site are never used. Nothing moves except the delivered units, which go from the bag to the site. The released piles stay where they are, whole and free.
+  - The site panel and E/Deliver offer the swap automatically when the bag holds enough free units.
+- **The site panel says where each reserved unit is:** "1 in your bag", or "1 in a pile 13 m north of you" (or "at the site" when it is in delivery reach).
+  - Standing by a reserved pile away from the site shows that site's panel with "You are by 1 branch reserved for this campfire" and **Pick up for this site**, plus "The site is 8 m west of you". Work and Cancel are hidden there.
+  - A help line says what to do: walk to each pile, or bring free branches.
+- **The HUD pickup prompt for a reserved pile** reads "pick up 1 branch reserved for your campfire · carried for that site". A partly reserved pile reads "pick up N free branch (M more reserved for your campfire)".
+- **Owner rules kept:**
+  - Reserved items are still refused to crafting, other sites, dropping and plain pickups.
+  - Cancel still releases everything, and consumption still happens only by stage work.
+  - Placement still refuses an underfunded site.
+  - The snapshot check that reserved + delivered + consumed = the building's materials is unchanged and holds after every swap.
+
+**Versioning:**
+- v5 is the latest content, and new worlds start at v5. v5 genesis `9ddf941c10692096`; the v4 genesis pin `6d50f19f01f39eec` is unchanged.
+- On load, a v1-v4 world receives one journaled `upgrade_wilderness {content: 5}`. Its earlier journal replays under its own rules: capacity 30, no swap.
+- `swap` in a v4 world is refused (`not_supported`). A v4 snapshot carrying more than 30 weight is refused, and a v5 snapshot carrying more than 60.
+- Settlement genesis `e659504b056654dc`, v1..v8 and the v6/v7 fixtures are unchanged (all their tests pass).
+
+**v4 fixture:** `Game/tests/fixtures/w4-wilderness-save.json`, made by the c01c774 code in a temporary worktree under `.tools/scratch/` (removed afterwards; the generator is kept at `.tools/scratch/w4-stuck/fixture-gen.c01c774.ts`).
+- It holds the owner's state: campfire `b:12` with its ring built, branches reserved in `d:8`, `d:9`, `d:10` (1 each, 7.5-12.5 m away), 8 free branches and a log in a 29/30 bag. It has a short form (59 journal entries) and a compacted long form, hash `556848062811a0e3`.
+- `Game/tests/w4.owner-report1.test.ts` (10 tests) checks:
+  - Both forms load, are byte-identical and replay (short).
+  - Under v4 the site is still stuck: `not_reserved`, `source_out_of_reach`, `not_supported`, and `capacity` 29/30, with no state change.
+  - After the upgrade it is finished in two ways: the swap delivery, or picking the 3 piles up for the site (bag 35/60).
+  - Saved, reloaded and replayed.
+  - The swap rules, the 60 capacity and the snapshot weight checks.
+  - The site panel against a DOM stand-in.
+  - W1, W2, W3 and W4 fixtures upgrade straight to v5.
+
+**Tests:** before the change, `npm test` gave 478 tests, 478 pass. After: `npx tsc --noEmit` is clean, and `npm test` gives **488 tests, 488 pass, 0 fail**. `npm run build` succeeds (bundle `index-TmN1cSo4.js`).
+- Existing tests updated only where they asserted "a new world is the latest content (4)": now `LATEST_WILD_CONTENT` (5), with the v4 pin still asserted.
+- The shed test's bag-limit checks now use the world's own capacity, and its fill loop allows 40 steps instead of 20 for the bigger bag.
+
+**Browser** (local build at `https://astrix.local/`, Chromium software GL, localStorage seeded with the standard `w1` world plus the c01c774 v4 save):
+- **Desktop 1000×600** (`or1-desktop-1..4`):
+  - On load, content went from 4 to 5 and the toast said "Your bag now holds 60 weight (was 30)…". HUD "bag 29/60".
+  - The site panel listed "1 in a pile 13 m north / 11 m east / 12 m south-west of you" and "Deliver 3 from bag". Clicking it delivered 3, released all 3 piles (they stayed at their positions with qty 1) and left 5 branches in the bag. Holding E for 2 swings finished the campfire (consumed branch 3, stone 6).
+  - The Bag panel showed "weight 23/60 … Carries 60 weight, 37 free". After a reload, the save was intact (content 5, campfire done).
+  - This run used the build just before a markup-only fix that removed stray commas between the location lines.
+- **Phone 390×844, touch, DPR 2** (`or1-phone-1..5`, final build):
+  - Walked to pile `d:8`. The panel showed "You are by 1 branch reserved for this campfire · Pick up for this site · The site is 8 m west of you". Tapping it carried the branch for the site, giving a bag of 31/60, which would have been refused at 30.
+  - Back at the site: "reserved: 1 in your bag, 1 in a pile 15 m north of you, 1 in a pile 13 m south-west of you · Deliver 3 from bag". The tap delivered 3 (2 in place of the piles) and E finished the campfire. The Bag panel showed "weight 25/60".
+- **Both runs:** 0 page or console errors, 0 failed requests, 0 HTTP ≥ 400 responses, 0 console warnings.
+
+**Not done:** no real phone was used, and nothing ran against the live site. Nothing was committed, staged, pushed or deployed. W5 was not started.

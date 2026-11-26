@@ -21,7 +21,14 @@
 //
 // Delivery (`deliver_site`) moves reserved items from a source to the site:
 // from the bag, or from a pile or storage within SITE_REACH of the site; from
-// further away the player carries them (pick up / take "for" the site). The
+// further away the player carries them (pick up / take "for" the site).
+// Content v5 (owner phone report 1, a campfire stuck with its branches
+// reserved in three piles while the bag held eight free ones): a delivery
+// from the bag may name `swap`; then free units of the same item in the bag
+// are delivered in place of the site's reservations elsewhere, and those
+// reservations are released where the items lie (farthest from the site
+// first). The outcome records what was released, per source. Nothing moves
+// but the delivered units, from the bag to the site. The
 // player then does the work personally (`build_work`, one journaled swing at a
 // time, rate-limited with the axe swings, by hand or with the tool the
 // catalogue names). A stage's work needs that stage's materials delivered; when
@@ -68,7 +75,7 @@ import {
   footprintCells, footprintEntrance, footprintSize, inZoneOf,
 } from './placement';
 import type { At, WildItem, WildResult, WildState } from './gathering';
-import { CARRY_CAPACITY, ITEM_LABEL, ITEM_WEIGHT, MAX_PILES, carriedWeight, pickupsNear } from './gathering';
+import { ITEM_LABEL, ITEM_WEIGHT, MAX_PILES, carriedWeight, carryCapacity, pickupsNear } from './gathering';
 import type { FellEvent } from './felling';
 import { DIRS16, SWINGS_PER_TICK, noteEvent, trunkDistance } from './felling';
 import type { Bag, ReservationPlan, ReservationSource } from './reservation';
@@ -528,9 +535,32 @@ function sourceSpot(world: World, source: string): { x: number; z: number } | nu
   return st ? siteSpotOf(st) : null;
 }
 
-/** What can be delivered to a site now, standing at `at`: its reservations in the bag and in piles or storage within reach of it. */
-export function deliverable(world: World, s: WildSite, at: At | null): Array<{ from: string; item: string; n: number }> {
-  const out: Array<{ from: string; item: string; n: number }> = [];
+/** Content v5: the bag may stand in for a site's reservations elsewhere (`deliver_site` with `swap`). */
+export const canSwap = (world: World): boolean => (world.wild?.content ?? 0) >= 5;
+
+/** Where a site's reservations outside the bag lie: per source and item, with the distance (m) from the site and from `at` (dm). */
+export function remoteReservations(world: World, s: WildSite, at: At | null): Array<{ from: string; item: string; n: number; x: number; z: number; toSite: number; toPlayer: number | null; inReach: boolean }> {
+  const out: Array<{ from: string; item: string; n: number; x: number; z: number; toSite: number; toPlayer: number | null; inReach: boolean }> = [];
+  for (const [from, bag] of Object.entries(s.reserved)) {
+    if (from === 'bag') continue;
+    const p = sourceSpot(world, from);
+    if (!p) continue;
+    const toSite = rectDistance(siteCellsOf(s), p.x, p.z);
+    for (const [item, n] of Object.entries(bag)) {
+      out.push({ from, item, n, x: p.x, z: p.z, toSite, toPlayer: at ? Math.hypot(p.x - at.x / 10, p.z - at.z / 10) : null, inReach: toSite <= SITE_REACH });
+    }
+  }
+  return out.sort((a, b) => b.toSite - a.toSite || a.from.localeCompare(b.from) || a.item.localeCompare(b.item));
+}
+
+/**
+ * What can be delivered to a site now, standing at `at`: its reservations in
+ * the bag and in piles or storage within reach of it. Content v5: also free
+ * units of the same item in the bag in place of reservations too far from the
+ * site to deliver directly (`swap`: how many of `n` replace them).
+ */
+export function deliverable(world: World, s: WildSite, at: At | null): Array<{ from: string; item: string; n: number; swap?: number }> {
+  const out: Array<{ from: string; item: string; n: number; swap?: number }> = [];
   if (s.state === 'done' || !at || reach(s, at)) return out;
   for (const [from, bag] of Object.entries(s.reserved)) {
     if (from !== 'bag') {
@@ -539,24 +569,68 @@ export function deliverable(world: World, s: WildSite, at: At | null): Array<{ f
     }
     for (const [item, n] of Object.entries(bag)) out.push({ from, item, n: Math.min(n, heldIn(world, from, item)) });
   }
-  return out.filter((d) => d.n > 0);
+  if (canSwap(world)) {
+    const far: Record<string, number> = {};
+    for (const r of remoteReservations(world, s, at)) if (!r.inReach) far[r.item] = (far[r.item] ?? 0) + r.n;
+    for (const [item, n] of Object.entries(far).sort(([a], [b]) => a.localeCompare(b))) {
+      const k = Math.min(n, freeInBag(world, item));
+      if (k <= 0) continue;
+      const mine = out.find((d) => d.from === 'bag' && d.item === item);
+      if (mine) { mine.n += k; mine.swap = k; } else out.push({ from: 'bag', item, n: k, swap: k });
+    }
+  }
+  // The bag first: what it carries goes in before anything else.
+  return out.filter((d) => d.n > 0).sort((a, b) => (a.from === 'bag' ? 0 : 1) - (b.from === 'bag' ? 0 : 1) || a.from.localeCompare(b.from) || a.item.localeCompare(b.item));
 }
 
-export function deliverToSite(world: World, siteId: string, item: string, n: number, at: At, from = 'bag'): WildResult<{ events: FellEvent[] }> {
+/**
+ * Deliver `n` of an item to a site from a source. Content v5, from the bag
+ * with `swap`: units beyond the site's bag reservation come from the bag's
+ * free units, and as many of the site's reservations of that item elsewhere
+ * are released (farthest from the site first; `swapped` says which).
+ */
+export function deliverToSite(world: World, siteId: string, item: string, n: number, at: At, from = 'bag', swap = false): WildResult<{ events: FellEvent[]; swapped?: Record<string, number> }> {
   const w = world.wild!;
   const s = siteOf(world, siteId);
   if (!s) return fail('not_found', 'there is no building site there');
   if (s.state === 'done') return fail('done', 'it is already built');
+  if (swap && !canSwap(world)) return fail('not_supported', 'this world predates delivering free materials in place of reserved ones (wilderness content v5)');
+  if (swap && from !== 'bag') return fail('not_supported', 'only materials in your bag can stand in for reserved ones');
   const far = reach(s, at);
   if (far) return fail('out_of_reach', far);
   const need = siteNeeds(s)[item] ?? 0;
   if (need <= 0) return fail('not_needed', `the site needs no ${label(item)}`);
   const held = s.reserved[from]?.[item] ?? 0;
+  if (swap) {
+    if (n > need) return fail('too_many', `the site needs ${need} more ${label(item)}`);
+    const extra = n - Math.min(n, held);
+    const free = freeInBag(world, item);
+    if (extra > free) return fail('missing', `you carry ${free} free ${label(item)} (${held} more reserved for this site in your bag)`);
+    const remote = remoteReservations(world, s, null).filter((x) => x.item === item);
+    if (remote.reduce((a, r) => a + r.n, 0) < extra) return fail('not_reserved', 'nothing more is reserved for this site to replace');
+    const swapped: Record<string, number> = {};
+    let left = extra;
+    for (const r of remote) {
+      if (left <= 0) break;
+      const k = Math.min(left, r.n);
+      const src = s.reserved[r.from]!;
+      addToBag(src, item, -k);
+      if (!Object.keys(src).length) delete s.reserved[r.from];
+      swapped[r.from] = k;
+      left -= k;
+    }
+    // Free units join the site's bag reservation, then all n leave the bag together.
+    if (extra > 0) { const b = s.reserved.bag ?? {}; addToBag(b, item, extra); s.reserved.bag = b; }
+    s.reserved = sortSources(s.reserved);
+    const r = deliverToSite(world, siteId, item, n, at, 'bag');
+    if (!r.ok) throw new Error(`swap delivery failed: ${r.reasons.join('; ')}`);
+    return { ok: true, value: { events: r.value.events, ...(extra > 0 ? { swapped: Object.fromEntries(Object.entries(swapped).sort(([a], [b]) => a.localeCompare(b))) } : {}) } };
+  }
   if (held <= 0) {
     const where = Object.entries(s.reserved).filter(([, b]) => b[item]).map(([k]) => sourceLabel(world, k));
-    return fail('not_reserved', `the ${label(item)} reserved for this site ${where.length ? `are in ${where.join(' and ')}` : 'are not there'}: ${from === 'bag' ? 'carry them here (pick them up or take them for this site)' : 'deliver them from there'}`);
+    return fail('not_reserved', `the ${label(item)} reserved for this site ${where.length ? `are in ${where.join(' and ')}` : 'are not there'}: ${from === 'bag' ? `carry them here (pick them up or take them for this site)${canSwap(world) ? ', or deliver free ones from your bag in their place' : ''}` : 'deliver them from there'}`);
   }
-  if (n > held) return fail('too_many', `only ${held} ${label(item)} are reserved for this site in ${sourceLabel(world, from)}`);
+  if (n > held) return fail('too_many', `only ${held} ${label(item)} are reserved for this site in ${sourceLabel(world, from)}${from === 'bag' && canSwap(world) ? ': deliver free ones in place of the others (swap)' : ''}`);
   if (heldIn(world, from, item) < n) return fail('missing', `${sourceLabel(world, from)} holds ${heldIn(world, from, item)} ${label(item)}`);
   if (from !== 'bag') {
     const p = sourceSpot(world, from);
@@ -693,7 +767,7 @@ export function cookAtFire(world: World, siteId: string, item: string, at: At): 
   const no = bagRefusal(world, item, 1, 'cook');
   if (no) return { ok: false, ...no };
   if ((r.s.fuel ?? 0) < fn.cookFuel) return fail('not_lit', (r.s.fuel ?? 0) > 0 ? 'the fire is too low to cook: add fuel' : 'the fire is out: add branches or logs');
-  if (carriedWeight(w) - ITEM_WEIGHT[item as WildItem] + ITEM_WEIGHT[made] > CARRY_CAPACITY) return fail('capacity', 'your bag cannot hold the result');
+  if (carriedWeight(w) - ITEM_WEIGHT[item as WildItem] + ITEM_WEIGHT[made] > carryCapacity(w)) return fail('capacity', 'your bag cannot hold the result');
   takeItem(w, item, 1);
   w.items[made] = (w.items[made] ?? 0) + 1;
   r.s.fuel = (r.s.fuel ?? 0) - fn.cookFuel;
@@ -740,7 +814,7 @@ export function takeItems(world: World, siteId: string, item: string, n: number,
   } else if (freeIn(world, siteId, item) < n) {
     return fail('reserved', `only ${freeIn(world, siteId, item)} ${label(item)} here are free; the rest are reserved for your building sites (take them for the site, or cancel it)`);
   }
-  if (carriedWeight(w) + ITEM_WEIGHT[item as WildItem] * n > CARRY_CAPACITY) return fail('capacity', `your bag is full (${carriedWeight(w)}/${CARRY_CAPACITY})`);
+  if (carriedWeight(w) + ITEM_WEIGHT[item as WildItem] * n > carryCapacity(w)) return fail('capacity', `your bag is full (${carriedWeight(w)}/${carryCapacity(w)})`);
   r.s.stock = sortBag({ ...r.s.stock, [item]: r.s.stock![item] - n });
   w.items[item] = (w.items[item] ?? 0) + n;
   if (target) moveReservation(target, siteId, 'bag', item, n);

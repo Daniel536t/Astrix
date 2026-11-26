@@ -13,7 +13,7 @@ import { BrowserSaveStore, KeyValueStorage } from '../src/app/persistence';
 import { GENERATOR_V2, MAT, WILDERNESS, baseHeightAt, baseTopMaterialFor, baseWaterLevelAt, forestScore, surfaceAt } from '../src/sim/world';
 import { validateWorldSnapshot } from '../src/sim/snapshot';
 import {
-  CARRY_CAPACITY, LivePickup, PICKUP_REACH, WILD_RECIPES, carriedWeight, livePickup, pickupsInChunk, pickupsNear,
+  CARRY_CAPACITY, LATEST_WILD_CONTENT, LivePickup, PICKUP_REACH, WILD_RECIPES, carriedWeight, livePickup, pickupsInChunk, pickupsNear,
 } from '../src/sim/gathering';
 import { wildernessSpawn } from '../src/sim/wilderness';
 
@@ -232,8 +232,9 @@ test('pickup, drop, craft, equip and eat are journaled and replay; saves restore
   const loaded = store.load();
   assert.equal(loaded.status, 'new');
   const s = loaded.session;
-  // W3: a new world now starts with the latest content (v4 since W4); the W2 commands are unchanged there.
-  assert.equal(s.journal.wildContent, 4);
+  // W3: a new world now starts with the latest content (v5 since the W4 owner report 1); the W2 commands are unchanged there.
+  assert.equal(s.journal.wildContent, LATEST_WILD_CONTENT);
+  assert.equal(LATEST_WILD_CONTENT, 5);
   ticks(s, 3);
   const taken: string[] = [];
   for (const kind of ['branch', 'loose_stone', 'fiber_plant', 'fiber_plant', 'grass_tuft', 'grass_tuft', 'berry_bush']) {
@@ -271,7 +272,7 @@ test('pickup, drop, craft, equip and eat are journaled and replay; saves restore
     assert.equal((again as { code: string }).code, 'not_found');
   }
   s.compact();
-  assert.equal(s.journal.wildContent, 4);
+  assert.equal(s.journal.wildContent, LATEST_WILD_CONTENT);
   assert.equal(GameSession.restore(clone(s.snapshot), clone(s.journal)).stateHash, hash);
   // Tampering: a recorded outcome that disagrees, an item that does not exist, an overweight bag.
   const j = clone(s.journal.entries.length ? s.journal : mid.journal) as unknown as { entries: Array<{ command: Record<string, unknown>; outcome: Record<string, unknown> }> };

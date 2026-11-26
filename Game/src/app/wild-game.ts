@@ -18,8 +18,8 @@ import * as THREE from 'three';
 import type { GameSession } from './session';
 import type { ExploreController } from './explore';
 import {
-  CARRY_CAPACITY, FOOD_VALUE, ITEM_LABEL, ITEM_WEIGHT, LivePickup, PICKUP_LABEL, PICKUP_REACH, TOOL_DURABILITY, WILD_CONTENT_V4,
-  WILD_RECIPES, WildItem, carriedWeight, equippedTool, pickupsNear,
+  CARRY_CAPACITY, CARRY_CAPACITY_V5, FOOD_VALUE, ITEM_LABEL, ITEM_WEIGHT, LATEST_WILD_CONTENT, LivePickup, PICKUP_LABEL, PICKUP_REACH, TOOL_DURABILITY,
+  WILD_CONTENT_V5, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
 } from '../sim/gathering';
 import {
   CHOP_REACH, EventRecord, FellEvent, NearTree, SWING_COOLDOWN_MS, Trunk, choppable, stockpileAt, stockpileLogs, treeDistance,
@@ -211,12 +211,14 @@ export class WildGame {
 
   private get world() { return this.o.session.world; }
 
-  /** A W1 (content v1) or W2 (content v2) world gains the latest wilderness content through one journaled command. */
+  /** A world with older wilderness content (v1-v4) gains the latest (v5) through one journaled command. */
   private ensureContent(): void {
-    if (this.world.wild?.build) return;
-    const had = !!this.world.wild, fell = !!this.world.wild?.fell;
-    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V4 }, 'v4');
-    if (r) this.toast(fell ? 'You can now build anywhere: open Build (G) for a shelter, a fire, a workbench and storage.'
+    const w = this.world.wild;
+    if (w && w.content >= LATEST_WILD_CONTENT) return;
+    const had = !!w, fell = !!w?.fell, built = !!w?.build;
+    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V5 }, 'v5');
+    if (r) this.toast(built ? `Your bag now holds ${CARRY_CAPACITY_V5} weight (was ${CARRY_CAPACITY}). At a building site, free materials in your bag can now be delivered in place of ones reserved in piles.`
+      : fell ? 'You can now build anywhere: open Build (G) for a shelter, a fire, a workbench and storage.'
       : had ? 'Trees can now be felled and you can build: craft a stone axe, fell a tree, then open Build (G).'
         : 'The land around you now has loose branches, stones and plants to gather, trees to fell and room to build.', 'good');
   }
@@ -358,9 +360,9 @@ export class WildGame {
     const forSite = p.kind === 'pile' && w.build && freeIn(this.world, p.id, p.item) <= 0 ? reservationsInSource(this.world, p.id)[0]?.siteId : undefined;
     if (!at || !this.send({ type: 'pickup', entityId: p.id, at, ...(forSite ? { forSite } : {}) }, p.id)) return;
     const got = (w.items[p.item] ?? 0) - before;
-    if (forSite) { this.toast(`picked up ${got} ${ITEM_LABEL[p.item]} reserved for your ${buildingDef(w.build!.sites.get(forSite)!.kind)!.label.toLowerCase()} · bag ${carriedWeight(w)}/${CARRY_CAPACITY}`); return; }
-    const room = Math.floor((CARRY_CAPACITY - carriedWeight(w)) / ITEM_WEIGHT.log);
-    this.toast(`picked up ${got} ${ITEM_LABEL[p.item]}${got > 1 && p.item === 'log' ? 's' : ''} · bag ${carriedWeight(w)}/${CARRY_CAPACITY}`
+    if (forSite) { this.toast(`picked up ${got} ${ITEM_LABEL[p.item]} for your ${buildingDef(w.build!.sites.get(forSite)!.kind)!.label.toLowerCase()} (still reserved for it) · bag ${carriedWeight(w)}/${carryCapacity(w)} · carry it to the site and deliver (E)`); return; }
+    const room = Math.floor((carryCapacity(w) - carriedWeight(w)) / ITEM_WEIGHT.log);
+    this.toast(`picked up ${got} ${ITEM_LABEL[p.item]}${got > 1 && p.item === 'log' ? 's' : ''} · bag ${carriedWeight(w)}/${carryCapacity(w)}`
       + (p.item === 'log' ? (w.fell?.stockpiles.size ? ` · room for ${room} more · carry them to your stockpile` : ' · mark a stockpile (Bag) and carry them there') : ''));
   }
 
@@ -472,7 +474,7 @@ export class WildGame {
         if (!Object.keys(stageNeeds(site)).length) return { kind: 'site_work', s: site };
       }
     }
-    const room = CARRY_CAPACITY - carriedWeight(w);
+    const room = carryCapacity(w) - carriedWeight(w);
     const near = pickupsNear(this.world, ch.x, ch.z, PROMPT_REACH);
     const fits = near.find((p) => ITEM_WEIGHT[p.item] <= room) ?? null;
     // A targeted tree or trunk out of reach does not block what is in reach; its hint shows when nothing is.
@@ -594,6 +596,14 @@ export class WildGame {
       case 'pickup': {
         const t = a.p;
         const what = t.kind === 'pile' ? `${ITEM_LABEL[t.item]}${t.qty > 1 ? 's' : ''}${t.item === 'log' ? '' : ' (dropped)'}` : PICKUP_LABEL[t.kind];
+        // A pile holding reservations says for which site; a fully reserved one is picked up for it (and stays reserved).
+        const held = t.kind === 'pile' && this.world.wild?.build ? reservationsInSource(this.world, t.id) : [];
+        if (held.length) {
+          const site = buildingDef(held[0].kind)!.label.toLowerCase();
+          const free = freeIn(this.world, t.id, t.item), res = t.qty - free;
+          return free > 0 ? `${coarse ? 'Pick up' : 'E: pick up'} ${free} free ${ITEM_LABEL[t.item]} (${res} more reserved for your ${site})`
+            : `${coarse ? 'Pick up' : 'E: pick up'} ${res} ${ITEM_LABEL[t.item]} reserved for your ${site} · carried for that site`;
+        }
         return `${coarse ? 'Pick up' : 'E: pick up'} ${what}${t.qty > 1 ? ` ×${t.qty}` : ''}`;
       }
       case 'chop': {
@@ -615,7 +625,7 @@ export class WildGame {
     if (!w) return 'bag: empty · bare hands';
     const items = Object.entries(w.items).filter(([, n]) => n > 0).map(([k, n]) => `${ITEM_LABEL[k as WildItem]} ${n}`);
     const tool = equippedTool(this.world);
-    return `bag ${carriedWeight(w)}/${CARRY_CAPACITY}: ${items.length || w.tools.length ? [...items, ...w.tools.map((t) => ITEM_LABEL[t.kind])].join(', ') : 'empty'}`
+    return `bag ${carriedWeight(w)}/${carryCapacity(w)}: ${items.length || w.tools.length ? [...items, ...w.tools.map((t) => ITEM_LABEL[t.kind])].join(', ') : 'empty'}`
       + ` · ${tool ? `${ITEM_LABEL[tool.kind]} ${tool.durability}/${TOOL_DURABILITY[tool.kind]} in hand` : 'bare hands'} · hunger ${w.hunger}`;
   }
 
@@ -636,16 +646,17 @@ export class WildGame {
     const at = this.at();
     const bench = !!at && !!w.build && stationNear(this.world, 'workbench', at);
     const reserved = w.build ? reservedTotalsIn(this.world, 'bag') : {};
-    const key = JSON.stringify([w.items, w.tools, w.equipped, w.hunger, w.fell?.stockpiles.size, bench, reserved]);
+    const key = JSON.stringify([w.content, w.items, w.tools, w.equipped, w.hunger, w.fell?.stockpiles.size, bench, reserved]);
     if (key === this.panelKey) return;
     this.panelKey = key;
     const have = (k: string) => w.items[k] ?? 0;
     const items = Object.entries(w.items).filter(([, n]) => n > 0).sort(([a], [b]) => a.localeCompare(b));
-    const rows = items.length ? items.map(([k, n]) => `<li><span>${ITEM_LABEL[k as WildItem]} <b>×${n}</b>${reserved[k] ? ` <span class="dim" data-bag-reserved="${k}">(${reserved[k]} reserved for a site)</span>` : ''}</span>`
+    const wt = (k: string) => ITEM_WEIGHT[k as WildItem] ?? 0;
+    const rows = items.length ? items.map(([k, n]) => `<li><span>${ITEM_LABEL[k as WildItem]} <b>×${n}</b> <span class="dim" data-weight="${k}">${wt(k)} each · ${wt(k) * n}</span>${reserved[k] ? ` <span class="dim" data-bag-reserved="${k}">(${reserved[k]} reserved for a site)</span>` : ''}</span>`
       + (FOOD_VALUE[k as WildItem] ? `<button type="button" data-eat="${k}">Eat</button>` : '')
       + `<button type="button" data-drop="${k}" aria-label="Drop one ${ITEM_LABEL[k as WildItem]}">Drop 1</button></li>`).join('')
       : '<li class="dim">nothing yet: pick up branches, stones and plants (E or Pick up)</li>';
-    const tools = w.tools.length ? w.tools.map((t) => `<li><span>${ITEM_LABEL[t.kind]} <span class="dim">${t.durability ? `${t.durability}/${TOOL_DURABILITY[t.kind]}` : 'broken'}</span>${w.equipped === t.id ? ' <b class="eq">in hand</b>' : ''}</span>`
+    const tools = w.tools.length ? w.tools.map((t) => `<li><span>${ITEM_LABEL[t.kind]} <span class="dim">${t.durability ? `${t.durability}/${TOOL_DURABILITY[t.kind]}` : 'broken'} · weight ${wt(t.kind)}</span>${w.equipped === t.id ? ' <b class="eq">in hand</b>' : ''}</span>`
       + (w.equipped === t.id ? '<button type="button" data-equip="hands">Put away</button>' : `<button type="button" data-equip="${t.kind}">Equip</button>`) + '</li>').join('')
       : '<li class="dim">no tools yet</li>';
     const recipes = WILD_RECIPES.filter((r) => r.station === 'hand' || bench).map((r) => {
@@ -656,7 +667,10 @@ export class WildGame {
     }).join('');
     const piles = w.fell ? `<h3>Logs</h3><ul><li><span class="dim">${w.fell.stockpiles.size ? `${w.fell.stockpiles.size} stockpile${w.fell.stockpiles.size === 1 ? '' : 's'} marked · drop logs at one to deliver` : 'no stockpile yet'}</span>`
       + `<button type="button" data-stockpile>Mark stockpile here</button></li></ul>` : '';
-    this.panel.innerHTML = `<header><h2>Bag</h2><span class="dim">weight ${carriedWeight(w)}/${CARRY_CAPACITY} · hunger ${w.hunger}/100</span><button type="button" data-close aria-label="Close bag">×</button></header>`
+    const used = carriedWeight(w), cap = carryCapacity(w);
+    this.panel.innerHTML = `<header><h2>Bag</h2><span class="dim" data-capacity>weight ${used}/${cap} · hunger ${w.hunger}/100</span><button type="button" data-close aria-label="Close bag">×</button></header>`
+      + `<div class="bar" role="progressbar" aria-label="Bag weight" aria-valuemin="0" aria-valuemax="${cap}" aria-valuenow="${used}"><i style="width:${Math.min(100, Math.round(used / cap * 100))}%"></i></div>`
+      + `<p class="dim" data-capacity-help>Carries ${cap} weight, ${cap - used} free · log ${ITEM_WEIGHT.log}, plank ${ITEM_WEIGHT.plank}, branch ${ITEM_WEIGHT.branch}, stone ${ITEM_WEIGHT.stone}, fibre ${ITEM_WEIGHT.fiber}, axe ${ITEM_WEIGHT.stone_axe}${cap > CARRY_CAPACITY ? '' : ' (this world has the old bag: it gains the bigger one when loaded)'}</p>`
       + `<h3>Items</h3><ul>${rows}</ul><h3>Tools</h3><ul>${tools}</ul>${piles}<h3>${bench ? 'Craft (by hand and at the workbench)' : 'Craft by hand'}</h3><ul>${recipes}</ul>${bench ? '' : '<p class="dim">Stand by a workbench for planks, pickaxe, hammer, knife and chest.</p>'}`;
   }
 

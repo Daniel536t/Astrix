@@ -1210,6 +1210,9 @@ body.clean #wild-events, body.kit #wild-events, body.map #wild-events { display:
 .wild-sheet .miss { color: #F2B35C; }
 .wild-sheet .bar { height: 7px; margin: 5px 0 3px; background: rgba(240, 236, 220, 0.14); border-radius: 4px; overflow: hidden; }
 .wild-sheet .bar i { display: block; height: 100%; background: #E8C878; }
+#wild-panel .bar { height: 7px; margin: 4px 0 2px; background: rgba(240, 236, 220, 0.14); border-radius: 4px; overflow: hidden; }
+#wild-panel .bar i { display: block; height: 100%; background: #E8C878; }
+.wild-sheet .where { display: block; font-size: 0.92em; }
 body.clean #build-menu-button, body.kit #build-menu-button, body.map #build-menu-button, body.clean .wild-sheet { display: none; }
 /* One sheet at a time beside the bag: the site panel steps aside while the bag or the catalogue is open. */
 body:has(#wild-panel:not([hidden])) #wild-site-panel, body:has(#wild-build-panel:not([hidden])) #wild-panel { display: none; }

@@ -90,9 +90,13 @@ test('the Build catalogue: every definition is complete and consistent; early bu
 });
 
 test('content v4 genesis is pinned; v3 and settlement pins unchanged; the settlement refuses wilderness building', () => {
+  // A new world now starts at content v5 (W4 owner report 1: bag capacity and reservation swap); v4 keeps its pin.
   const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
-  assert.equal(w.journal.wildContent, 4);
-  W4_GENESIS = w.stateHash;
+  assert.equal(w.journal.wildContent, 5);
+  assert.equal(w.stateHash, W5_PIN, 'v5 genesis');
+  const w4 = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 4);
+  assert.equal(w4.journal.wildContent, 4);
+  W4_GENESIS = w4.stateHash;
   assert.equal(W4_GENESIS, W4_PIN);
   assert.equal(GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 3).stateHash, '158e989e4c10cf13', 'W3 (v3) genesis unchanged');
   assert.equal(GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2).stateHash, '3c3a0c8e4090efcf', 'W2 (v2) genesis unchanged');
@@ -112,6 +116,7 @@ test('content v4 genesis is pinned; v3 and settlement pins unchanged; the settle
   assert.equal(code(send(v3, { type: 'craft', recipe: 'planks', at: dm(SPAWN) })), 'wilderness');
 });
 const W4_PIN = '6d50f19f01f39eec';
+const W5_PIN = '9ddf941c10692096';
 
 // ---------- placement ----------
 

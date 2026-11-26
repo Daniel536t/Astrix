@@ -19,6 +19,11 @@
 // wilderness one is told apart by its shape (a catalogue kind with `at`; a
 // `b:` site id), so neither journal can carry the other's.
 //
+// Content v5 (W4 owner phone report 1): `deliver_site` may carry `swap`
+// (from the bag only): free units of the item in the bag stand in for the
+// site's reservations elsewhere, which are released; the outcome's `swapped`
+// names them per source. The bag holds CARRY_CAPACITY_V5.
+//
 // Reach: the avatar is player-local physics, so `pickup`, `drop`, `chop`,
 // `cut_log` and `mark_stockpile` carry the player's position (integer
 // decimetres) like the S2 tick presence, and the simulation checks reach
@@ -37,7 +42,7 @@ import {
   SITE_ID, SOURCE_ID, bagRefusal, cancelWildSite, claimShelter, cookAtFire, deliverToSite, fuelFire, placeWildSite, recordDeath, respawnPlayer, stationNear,
   storeItems, takeItems, workOnSite,
 } from '../sim/wild-build';
-import { WILD_CONTENT_V4 } from '../sim/gathering';
+import { WILD_CONTENT_V4, WILD_CONTENT_V5 } from '../sim/gathering';
 import type { World } from '../sim/world';
 
 interface Envelope { schema: 3; id: string; expectedRevision: number }
@@ -58,7 +63,7 @@ export interface MarkStockpileCommand extends Envelope { type: 'mark_stockpile';
 /** W4: mark out a catalogue building (the player's approval); its whole material list is reserved, or it is refused. */
 export interface WildPlaceSiteCommand extends Envelope { type: 'place_site'; kind: string; x: number; z: number; rot: number; at: At }
 /** W4: reserved materials into a site, from the bag (default) or a pile or storage within reach of it. */
-export interface DeliverSiteCommand extends Envelope { type: 'deliver_site'; siteId: string; item: WildItem; n: number; at: At; from?: string }
+export interface DeliverSiteCommand extends Envelope { type: 'deliver_site'; siteId: string; item: WildItem; n: number; at: At; from?: string; swap?: true }
 /** W4: one swing of construction work. */
 export interface BuildWorkCommand extends Envelope { type: 'build_work'; siteId: string; at: At }
 /** W4: give up an unfinished site; its materials go back on the ground. */
@@ -88,7 +93,7 @@ export type WildOutcome =
   | { type: 'cut_log'; trunkId: string; left: number; work: number; durability: number; events: FellEvent[]; pileId?: string }
   | { type: 'mark_stockpile'; stockpileId: string; events: FellEvent[] }
   | { type: 'place_site'; siteId: string; kind: string; x: number; z: number; rot: number; cleared: number; reserved: Record<string, Record<string, number>>; events: FellEvent[] }
-  | { type: 'deliver_site'; siteId: string; item: WildItem; n: number; events: FellEvent[] }
+  | { type: 'deliver_site'; siteId: string; item: WildItem; n: number; swapped?: Record<string, number>; events: FellEvent[] }
   | { type: 'build_work'; siteId: string; stage: number; work: number; durability?: number; events: FellEvent[] }
   | { type: 'cancel_site'; siteId: string; piles: string[]; released: Record<string, number>; events: FellEvent[] }
   | { type: 'claim_shelter'; siteId: string; events: FellEvent[] }
@@ -202,6 +207,8 @@ export function validateWildCommand(value: Record<string, unknown>, base: Envelo
       const at = atOf(value.at);
       if (!siteIdOf(value.siteId) || !itemOf(value.item) || !uint(value.n, 10_000) || value.n < 1 || !at) return null;
       const c = { ...base, type: value.type, siteId: value.siteId, item: value.item, n: value.n, at } as WildCommand;
+      // Content v5: `swap` (from the bag only): free units stand in for the site's reservations elsewhere.
+      if (value.type === 'deliver_site' && value.swap !== undefined) return value.swap === true && value.from === undefined ? { ...c, swap: true } as WildCommand : null;
       if (value.type === 'deliver_site' && value.from !== undefined) return typeof value.from === 'string' && SOURCE_ID.test(value.from) ? { ...c, from: value.from } as WildCommand : null;
       if (value.type === 'take_items' && value.forSite !== undefined) return siteIdOf(value.forSite) ? { ...c, forSite: value.forSite } as WildCommand : null;
       return value.from === undefined && value.forSite === undefined ? c : null;
@@ -231,6 +238,8 @@ const dropOutcome = (pileId: string, item: WildItem, n: number, stockpileId?: st
   ({ type: 'drop', pileId, item, n, ...(stockpileId ? { stockpileId } : {}), ...(events ? { events } : {}) });
 const chopOutcome = (entityId: string, hp: number, max: number, durability: number, events: FellEvent[], trunk?: string, branchPile?: string): WildOutcome =>
   ({ type: 'chop', entityId, hp, max, durability, events, ...(trunk ? { trunkId: trunk } : {}), ...(branchPile ? { branchPile } : {}) });
+const deliverOutcome = (siteId: string, item: WildItem, n: number, events: FellEvent[], swapped?: Record<string, number>): WildOutcome =>
+  ({ type: 'deliver_site', siteId, item, n, ...(swapped ? { swapped: { ...swapped } } : {}), events });
 const cutOutcome = (trunk: string, left: number, work: number, durability: number, events: FellEvent[], pileId?: string): WildOutcome =>
   ({ type: 'cut_log', trunkId: trunk, left, work, durability, events, ...(pileId ? { pileId } : {}) });
 
@@ -288,7 +297,17 @@ export function validateWildOutcome(value: Record<string, unknown>): WildOutcome
         && uint(value.cleared, 10_000) && reserved && ev ? { type: 'place_site', siteId: value.siteId, kind: value.kind, x: value.x as number, z: value.z as number, rot: value.rot,
           cleared: value.cleared, reserved, events: ev } : null;
     }
-    case 'deliver_site': case 'store_items': case 'take_items': {
+    case 'deliver_site': {
+      const ev = eventsOf(value.events, 2);
+      if (!siteIdOf(value.siteId) || !itemOf(value.item) || !uint(value.n, 10_000) || value.n < 1 || !ev) return null;
+      if (value.swapped === undefined) return deliverOutcome(value.siteId, value.item, value.n, ev);
+      const sw = isObj(value.swapped) ? value.swapped : null;
+      const keys = sw ? Object.keys(sw) : [];
+      if (!sw || !keys.length || keys.some((k) => k === 'bag' || !SOURCE_ID.test(k) || !uint(sw[k], 10_000) || (sw[k] as number) < 1)
+        || keys.join() !== [...keys].sort().join() || keys.reduce((a, k) => a + (sw[k] as number), 0) > value.n) return null;
+      return deliverOutcome(value.siteId, value.item, value.n, ev, sw as Record<string, number>);
+    }
+    case 'store_items': case 'take_items': {
       const ev = eventsOf(value.events, 2);
       return siteIdOf(value.siteId) && itemOf(value.item) && uint(value.n, 10_000) && value.n >= 1 && ev
         ? { type: value.type, siteId: value.siteId, item: value.item, n: value.n, events: ev } as WildOutcome : null;
@@ -346,6 +365,7 @@ export function wildAgrees(c: WildCommand, o: WildOutcome): boolean {
     case 'mark_stockpile': return true;
     case 'place_site': return o.type === 'place_site' && o.kind === c.kind && o.x === c.x && o.z === c.z && o.rot === c.rot;
     case 'deliver_site': case 'store_items': case 'take_items': case 'fuel_fire':
+      if (c.type === 'deliver_site' && o.type === 'deliver_site' && o.swapped !== undefined && c.swap !== true) return false;
       return (o.type === 'deliver_site' || o.type === 'store_items' || o.type === 'take_items' || o.type === 'fuel_fire') && o.siteId === c.siteId && o.item === c.item && o.n === c.n;
     case 'build_work': case 'cancel_site': case 'claim_shelter':
       return (o.type === 'build_work' || o.type === 'cancel_site' || o.type === 'claim_shelter') && o.siteId === c.siteId;
@@ -388,7 +408,7 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
     case 'place_site':
       return evOut(placeWildSite(world, c.kind, c.x, c.z, c.rot, c.at), (v) => ({ type: 'place_site', siteId: v.siteId, kind: c.kind, x: c.x, z: c.z, rot: c.rot, cleared: v.cleared, reserved: v.reserved, events: v.events }));
     case 'deliver_site':
-      return evOut(deliverToSite(world, c.siteId, c.item, c.n, c.at, c.from ?? 'bag'), (v) => ({ type: 'deliver_site', siteId: c.siteId, item: c.item, n: c.n, events: v.events }));
+      return evOut(deliverToSite(world, c.siteId, c.item, c.n, c.at, c.from ?? 'bag', c.swap === true), (v) => deliverOutcome(c.siteId, c.item, c.n, v.events, v.swapped));
     case 'build_work':
       return evOut(workOnSite(world, c.siteId, c.at), (v) => ({ type: 'build_work', siteId: c.siteId, stage: v.stage, work: v.work, ...(v.durability !== undefined ? { durability: v.durability } : {}), events: v.events }));
     case 'cancel_site':
@@ -460,4 +480,4 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
   }
 }
 
-export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4 };
+export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5 };

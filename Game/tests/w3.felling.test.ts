@@ -14,7 +14,7 @@ import { GameSession, validateJournal } from '../src/app/session';
 import { BrowserSaveStore, KeyValueStorage } from '../src/app/persistence';
 import { GENERATOR_V2, WILDERNESS, surfaceAt } from '../src/sim/world';
 import { validateWorldSnapshot } from '../src/sim/snapshot';
-import { CARRY_CAPACITY, ITEM_WEIGHT, LivePickup, carriedWeight, pickupsNear } from '../src/sim/gathering';
+import { CARRY_CAPACITY, ITEM_WEIGHT, LATEST_WILD_CONTENT, LivePickup, carriedWeight, pickupsNear } from '../src/sim/gathering';
 import {
   CHOP_REACH, DIRS16, STANDING, SWINGS_PER_TICK, cutSwings, treeHp, treesNear, trunkLogs, trunkDistance, NearTree,
 } from '../src/sim/felling';
@@ -268,7 +268,7 @@ test('felling is journaled and deterministic: replay, reload mid-felling keeps H
   const storage = new MemoryStorage();
   const store = new BrowserSaveStore(storage, 1337, GENERATOR_V2, { scenario: WILDERNESS, id: 'w9' });
   const s = store.load().session;
-  assert.equal(s.journal.wildContent, 4);
+  assert.equal(s.journal.wildContent, LATEST_WILD_CONTENT);
   load(s);
   axe(s);
   const t = treesNear(s.world, SPAWN.x, SPAWN.z, 40).find((x) => x.stage === 'old')!;
