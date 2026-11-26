@@ -295,3 +295,27 @@ Tests 477 (every model, stage and rotation) and 478 (32 buildings, 8 fires: 2 me
 - Evidence: `w4f-*.png`, `w4f-gen-camp.ts.txt` in this folder.
 
 Nothing was committed, staged, pushed or deployed. The backup `.tools/backups/w4-20261126/`, `05_Noxel_Studio/Asset_Sheets/2026-11-24_animals/Animals` and `W1-wilderness-scenario/live-entry.png` were not touched (content hashes identical before and after).
+
+## Candidate test deployment (not acceptance)
+
+**Status:** W4 is a **CANDIDATE, not accepted**. It is waiting for the owner's physical-phone walkthrough. W5 stays blocked and PR #1 stays unmerged.
+
+**Commit:** `c01c7747a05d7188dd642b20deb224b598506cdc` on `deploy/boxd`. After the push, a fresh fetch and the GitHub branches API both showed it on the remote before any deploy was started.
+
+**First deploy attempt failed.** Release `20261126T093823Z-c01c774` built and passed 478/478 tests, but the upload failed with `mkdir: cannot create directory '/var/www/astrix/releases/...': Read-only file system`.
+- The server's kernel log showed write I/O errors on `vda`, and ext4 had remounted read-only (`emergency_ro`).
+- The live site kept serving W3 (`20261126T033631Z-86865c8`) the whole time.
+- With the owner's approval, the machine was rebooted (`boxd machine reboot astrix`). Afterwards `/` was mounted `rw` and was writable with sudo, and nginx was active.
+
+**Second deploy succeeded.** Each fact below was checked after the deploy returned:
+- **Deploy script:** exit 0. Tests ran inside the deploy and gave 478 tests, 478 pass, 0 fail.
+- **Release:** `20261126T095429Z-c01c774`. On the server, `/var/www/astrix/current` resolves to that release.
+- **Bundle:** the served `index.html` loads `assets/index-Do3STZWm.js`. Its build stamp is `commit:"c01c774", dirty:false`.
+
+**Live check** (fresh headless Chromium, software GL, 1000x600, wilderness world seeded in storage, 45 s):
+- **World state:** title "ASTrix — Wilderness", wilderness content **4**. `build` and `felling` state are present, and the Bag and Build buttons are shown.
+- **Render cost:** 54 draw calls and 151,720 triangles.
+- **Errors:** 0 page errors, 0 failed requests and 0 HTTP ≥ 400 responses. There were 4 console warnings, all the software-GL driver notice "GPU stall due to ReadPixels".
+- **Not tested live:** the build loop itself. It was verified on the local build of the same commit (§§ above). No real phone has been used.
+
+**Local `Game/dist` mismatch:** the committed `Game/dist` in `c01c774` carries an older build stamp (`86865c8`, dirty). The deploy rebuilds from source, so the served bundle is the `c01c774` build. The local rebuilt `Game/dist` is left uncommitted, so the candidate commit stays exactly as reviewed.
