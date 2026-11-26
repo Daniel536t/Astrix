@@ -956,3 +956,21 @@ Emulated only (above). At the farm, draw calls are 46–80 and triangles 94–16
 - Faster villagers produce more per day. Store capacity, the spoil path and the woodland quota were not retuned.
 - The live site runs S3 (v7). S4 is now rules v8 and v7 is S3 again, so S3-era saves replay from genesis (resolved by the versioning correction). Deploying this build upgrades those farms to v8 on load. That upgrade cannot be undone in the save, though the v7 history before it still replays.
 - No real phone or tablet.
+
+## Live deployment check (v8)
+
+Release `20261126T002024Z-e1148b7` was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd`, not merged to `main`. The served bundle matches the local build (`assets/index-BFzvdl_r.js`).
+
+The previous release, `20261125T230303Z-bf23ae5` (S3, rules v7), was deployed by the orchestrator before the STAB-002 acceptance pass. That was a mistake against the owner's gate. Saves made on it replay exactly under the v8 build; see "Versioning correction (v8)".
+
+Fresh headless Chromium contexts (software GL, desktop 1000x600, empty storage) were run with `?metrics=1&timescale=4`, in `?chain=0` and chain-on pairs, for about 185 ticks each. There were no page errors in any run.
+
+- **First pair:** both reported `rules: 7`, and at the last sample all 15 animals were resting. I could not reproduce this and don't know the cause.
+- **Founding check:** a separate run read the saved journal. It recorded `found_homestead { rules: 8 }` and reported `rules: 8`.
+- **Two further pairs** reported `rules: 8`:
+  - all 15 of 15 animals moved, and none stayed still;
+  - states at the last sample were 11 rest, 1–2 wander, 1–2 graze and 1 drink;
+  - the farm view drew at most 72–77 draw calls and 147–156k triangles.
+- Screenshots: `live-chain0.png`, `live-chainon.png`.
+
+No real phone was used. M015 stays open.
