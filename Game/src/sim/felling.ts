@@ -37,7 +37,9 @@ export const FELL_EVENTS = ['CHOP_STARTED', 'TREE_DAMAGED', 'TREE_FELLED', 'TRUN
   'SITE_PLACED', 'MATERIALS_DELIVERED', 'CONSTRUCTION_PROGRESS', 'BUILDING_COMPLETED', 'SITE_CANCELLED', 'SHELTER_CLAIMED', 'FIRE_FUELED', 'FOOD_COOKED',
   'ITEMS_STORED', 'ITEMS_TAKEN', 'RESPAWNED', 'DIED',
   // W6 (content v7): mining deposits and smelting.
-  'MINE_STARTED', 'DEPOSIT_MINED', 'DEPOSIT_EXHAUSTED', 'SMELT_STARTED', 'SMELT_DONE'] as const;
+  'MINE_STARTED', 'DEPOSIT_MINED', 'DEPOSIT_EXHAUSTED', 'SMELT_STARTED', 'SMELT_DONE',
+  // W8 (content v9): hunting and butchering.
+  'ARROW_SHOT', 'ANIMAL_HIT', 'ANIMAL_STUNNED', 'ANIMAL_KILLED', 'CARCASS_CUT', 'CARCASS_BUTCHERED'] as const;
 export type FellEvent = (typeof FELL_EVENTS)[number];
 
 /** Stages a tree can be chopped in (a stump or an empty spot cannot). */
@@ -69,6 +71,8 @@ const TREE_LEN: Record<TreeSpecies, number> = { oak: 6, beech: 6.5, birch: 6, ch
 const TRUNK_W: Record<TreeSpecies, number> = { oak: 0.65, beech: 0.6, birch: 0.45, cherry: 0.6, pine: 0.55, spruce: 0.5 };
 const STAGE_LEN: Record<Standing, number> = { sapling: 0.4, young: 0.68, mature: 1, old: 1.12, dying: 1.12, snag: 0.8 };
 const STAGE_W: Record<Standing, number> = { sapling: 0.4, young: 0.68, mature: 1, old: 1.12, dying: 1.12, snag: 1.0 };
+/** W8: a standing tree's drawn height (m), the length it has when it lies felled. */
+export const standingTreeHeight = (sp: TreeSpecies, stage: Standing, scale: number): number => TREE_LEN[sp] * STAGE_LEN[stage] * scale;
 /** Branches the crown drops where it lands. */
 export const CROWN_BRANCHES: Record<Standing, number> = { sapling: 0, young: 1, mature: 2, old: 3, dying: 2, snag: 0 };
 

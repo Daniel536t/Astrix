@@ -97,7 +97,8 @@ export const RESERVE_REACH = 24;
 /** A drowning is recorded only where water lies within this distance (m) of the last dry spot. */
 export const DROWN_REACH = 6;
 /** What the campfire cooks. */
-export const COOKS: Partial<Record<WildItem, WildItem>> = { mushroom: 'cooked_mushroom' };
+/** What the campfire cooks (W8: raw meat, which exists only from wilderness content v9). */
+export const COOKS: Partial<Record<WildItem, WildItem>> = { mushroom: 'cooked_mushroom', raw_meat: 'cooked_meat' };
 export const SITE_ID = /^b:\d{1,7}$/;
 /** Reservation sources: the bag, a dropped pile, a finished storage building. */
 export const SOURCE_ID = /^(bag|d:\d{1,7}|b:\d{1,7})$/;

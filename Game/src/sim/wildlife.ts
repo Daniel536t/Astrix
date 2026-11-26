@@ -52,11 +52,13 @@ import { PLAYER_R, WILD_BODIES, WildId, bodyReach } from './bodies';
 import type { Presence } from './bodies';
 
 export const WILD_CONTENT_V8 = 8 as const;
+/** W8 (content v9): hunting (sim/hunting.ts). Records gain health (`hp`, only while wounded) and their latest tick's path is saved (`tr`). */
+export const WILD_CONTENT_V9 = 9 as const;
 export type WildSpecies = SpeciesDef['id'];
 export const WILD_SPECIES: readonly WildSpecies[] = ['deer', 'fox', 'rabbit', 'trout', 'wolf'];
 
 export const ACTS = ['alert', 'avoid', 'browse', 'chase', 'cruise', 'dart', 'drink', 'escape', 'feed', 'flee', 'follow', 'freeze', 'graze', 'hold',
-  'idle', 'mouse', 'patrol', 'pounce', 'rest', 'rise', 'school', 'stalk', 'wander'] as const;
+  'idle', 'mouse', 'patrol', 'pounce', 'rest', 'rise', 'school', 'stalk', 'stunned', 'wander'] as const;
 export type Act = (typeof ACTS)[number];
 /** What each species does. Every species has its own decision rules below; this is only the vocabulary. */
 export const SPECIES_ACTS: Record<WildSpecies, readonly Act[]> = {
@@ -66,8 +68,11 @@ export const SPECIES_ACTS: Record<WildSpecies, readonly Act[]> = {
   wolf: ['avoid', 'chase', 'drink', 'escape', 'feed', 'flee', 'follow', 'idle', 'patrol', 'rest'],
   trout: ['cruise', 'dart', 'escape', 'hold', 'rise', 'school'],
 };
+/** W8 (content v9): a land animal hit by a blunt arrow hard enough lies stunned (`stunned`) until its act ends, then flees. */
+export const STUN_ACT: Act = 'stunned';
+const actAllowed = (sp: WildSpecies, act: Act, content: number) => SPECIES_ACTS[sp].includes(act) || act === STUN_ACT && sp !== 'trout' && content >= WILD_CONTENT_V9;
 /** Acts that end when the animal is not watched (frozen); everything else is kept as it was. */
-const TRANSIENT: readonly Act[] = ['alert', 'avoid', 'chase', 'dart', 'escape', 'feed', 'flee', 'freeze', 'pounce', 'stalk'];
+const TRANSIENT: readonly Act[] = ['alert', 'avoid', 'chase', 'dart', 'escape', 'feed', 'flee', 'freeze', 'pounce', 'stalk', 'stunned'];
 
 /** Chunk rings around the focus chunk (Chebyshev distance). The renderer's near ring (3) is inside FULL_RING. */
 export const FULL_RING = 3;
@@ -83,6 +88,15 @@ export const MAX_DEAD = 20_000;
 export const MAX_CARCASSES = 256;
 /** A carcass lies this long (3 days) before it is gone; the tombstone stays for good. */
 export const CARCASS_TICKS = 900;
+/** W8 (content v9): a carcass of an animal the player shot lies until it is butchered, or this long (15 days). */
+export const PLAYER_CARCASS_TICKS = 4500;
+export const carcassTicks = (c: Pick<Carcass, 'by'>) => (c.by === 'player' ? PLAYER_CARCASS_TICKS : CARCASS_TICKS);
+/** W8 (content v9): health of a land animal (arrow damage, sim/hunting.ts). A record carries `hp` only while wounded. */
+export const WILD_HP: Record<Exclude<WildSpecies, 'trout'>, number> = { deer: 12, wolf: 10, fox: 4, rabbit: 3 };
+/** A wound heals one point every this many seconds while the animal is not fleeing (150 ticks). */
+export const HEAL_SECS = 300;
+/** A wounded animal runs at this share of its speed at its worst (plus the rest by its health), and tires 1.5 times as fast running. */
+export const woundFactor = (a: Pick<Animal, 'hp' | 'sp'>): number => (a.hp === undefined || a.sp === 'trout' ? 1 : 0.5 + 0.5 * a.hp / WILD_HP[a.sp]);
 /** Needs are 0..NEED_MAX (hunger, thirst, fatigue). */
 export const NEED_MAX = 10_000;
 /** Same day as the homestead's DAY_TICKS (300 ticks = 10 min); the wilderness sky follows it in content v8. */
@@ -383,10 +397,19 @@ export interface Animal {
   s: number;
   /** Sub-steps without progress toward its goal. */
   st: number;
-  /** Not saved: where it was at the start of the latest step and after each sub-step (dm), for drawing only. */
+  /**
+   * Where it was at the start of the latest step and after each sub-step (dm), each an equal share of the tick. v8: not
+   * saved, for drawing only. v9: saved as `tr` (when it moved), because a shot is resolved against this path.
+   */
   trail?: number[];
+  /** W8 (content v9): health while wounded (1..WILD_HP - 1); absent at full health. */
+  hp?: number;
 }
-export interface Carcass { id: string; sp: WildSpecies; x: number; z: number; t: number; by: 'wolf' }
+export interface Carcass {
+  id: string; sp: WildSpecies; x: number; z: number; t: number; by: 'wolf' | 'player';
+  /** W8 (content v9), a player's kill: outputs butchered so far and knife swings into the next. */
+  cut?: number; work?: number;
+}
 export interface WildlifeState {
   animals: Map<string, Animal>;
   dead: Set<string>;
@@ -457,6 +480,13 @@ function catchUp(a: Animal, away: number): void {
   if (a.sp !== 'trout') { a.th = to(a.th, BASELINE.th); a.fa = to(a.fa, BASELINE.fa); }
   if (TRANSIENT.includes(a.a)) { a.a = a.sp === 'trout' ? 'hold' : 'idle'; a.tg = ''; a.u = a.s + away; a.tx = a.x; a.tz = a.z; }
   a.st = 0;
+  // W8: a wound heals while it was away (one point every HEAL_SECS).
+  if (a.hp !== undefined) heal(a, Math.floor((a.s + away) / HEAL_SECS) - Math.floor(a.s / HEAL_SECS));
+}
+function heal(a: Animal, n: number): void {
+  if (a.hp === undefined || n <= 0 || a.sp === 'trout') return;
+  a.hp += n;
+  if (a.hp >= WILD_HP[a.sp]) delete a.hp;
 }
 
 // ---------- the step ----------
@@ -676,7 +706,8 @@ function goTo(env: Env, a: Animal, tx: number, tz: number, speed: number): boole
 /** Run away from a point. */
 function away(env: Env, a: Animal, fx: number, fz: number, speed: number, zig = 0): number {
   const k = (dirToward(a.x - fx, a.z - fz) + zig + 32) & 31;
-  const dist = Math.round(speed * env.dt);
+  // W8: a wounded animal runs slower (exactly 1 for every animal at full health, so v8 is unchanged).
+  const dist = Math.round(speed * woundFactor(a) * env.dt);
   const moved = moveDir(env, a, k, dist);
   a.st = moved * 4 < dist ? a.st + 1 : 0;
   return moved;
@@ -751,7 +782,10 @@ function needs(a: Animal, env: Env): void {
   a.hu = need(a.hu, R.hunger * dt * (resting ? 0.5 : 1));
   a.th = need(a.th, R.thirst * dt * (resting ? 0.5 : 1));
   const hard = a.a === 'flee' || a.a === 'chase' || a.a === 'pounce' || a.a === 'dart';
-  a.fa = a.sp === 'trout' ? 0 : need(a.fa, resting ? -50 * dt : hard ? (a.sp === 'deer' ? 150 : 90) * dt : R.fatigue * dt);
+  // W8: a wounded animal tires faster running (and its wound heals while it is not fleeing).
+  const hurt = a.hp !== undefined && hard ? 1.5 : 1;
+  a.fa = a.sp === 'trout' ? 0 : need(a.fa, resting ? -50 * dt : hard ? (a.sp === 'deer' ? 150 : 90) * dt * hurt : R.fatigue * dt);
+  if (a.hp !== undefined && a.a !== 'flee') heal(a, Math.floor(env.secs / HEAL_SECS) - Math.floor((env.secs - dt) / HEAL_SECS));
 }
 const start = (a: Animal, act: Act, tx: number, tz: number, u = 0, tg = '') => { a.a = act; a.tx = tx; a.tz = tz; a.u = u; a.tg = tg; a.st = 0; };
 const arrivedAct = (env: Env, a: Animal, secs: number) => { if (a.u === 0) a.u = env.secs + secs; };
@@ -1063,16 +1097,19 @@ function wolf(env: Env, a: Animal): void {
   calmAct(env, a, R);
 }
 
+/** At MAX_CARCASSES, the oldest carcass goes (W8: wolves' kills before the player's; v8 has only wolves' kills). */
+export function makeRoomForCarcass(wl: WildlifeState): void {
+  if (wl.carcasses.size < MAX_CARCASSES) return;
+  const oldest = [...wl.carcasses.values()].sort((p, q) => (p.by === q.by ? 0 : p.by === 'wolf' ? -1 : 1) || p.t - q.t || (p.id < q.id ? -1 : 1))[0];
+  wl.carcasses.delete(oldest.id);
+}
 /** An authoritative death: the record goes, the id is tombstoned for good, a carcass lies where it fell. */
 function kill(env: Env, prey: Animal, by: Animal): void {
   const wl = env.wl;
   wl.animals.delete(prey.id);
   wl.dead.add(prey.id);
   wl.kills++;
-  if (wl.carcasses.size >= MAX_CARCASSES) {
-    const oldest = [...wl.carcasses.values()].sort((p, q) => p.t - q.t || (p.id < q.id ? -1 : 1))[0];
-    wl.carcasses.delete(oldest.id);
-  }
+  makeRoomForCarcass(wl);
   wl.carcasses.set(prey.id, { id: prey.id, sp: prey.sp, x: prey.x, z: prey.z, t: env.tick, by: 'wolf' });
   // The whole pack feeds.
   for (const o of env.groups.get(groupOf(by.id)) ?? []) if (o.sp === 'wolf') start(o, 'feed', prey.x, prey.z, 0, prey.id);
@@ -1150,7 +1187,7 @@ export function stepWildlife(world: World, tick: number, presence?: Presence): v
     wl.focus = { x: presence.x, z: presence.z };
   }
   // Carcasses lie for CARCASS_TICKS, then are gone (their tombstones stay).
-  for (const c of [...wl.carcasses.values()]) if (tick - c.t >= CARCASS_TICKS) wl.carcasses.delete(c.id);
+  for (const c of [...wl.carcasses.values()]) if (tick - c.t >= carcassTicks(c)) wl.carcasses.delete(c.id);
   if (!wl.focus) return;
   const secs = secsOf(tick);
   const fcx = chunkOfDm(wl.focus.x), fcz = chunkOfDm(wl.focus.z);
@@ -1207,6 +1244,11 @@ export function stepWildlife(world: World, tick: number, presence?: Presence): v
 function stepOne(env: Env, a: Animal): void {
   needs(a, env);
   if (escapeIfStuck(env, a)) return;
+  // W8: a stunned animal lies still until its time is up, then gets up and flees from where it was shot (tx, tz).
+  if (a.a === STUN_ACT) {
+    if (env.secs < a.u) return;
+    start(a, 'flee', a.tx, a.tz, env.secs + 8, 'player');
+  }
   MINDS[a.sp](env, a);
   if (a.st >= 6) {
     // No progress for a while: a new goal in another direction, walked to (never a jump).
@@ -1228,8 +1270,8 @@ export function animalsNear(world: World, x: number, z: number, r: number): Anim
 
 // ---------- snapshot form ----------
 
-export interface AnimalSnapshot { a: Act; d: number; dp?: number; fa: number; hu: number; id: string; r: number; s: number; st: number; tg?: string; th: number; tx: number; tz: number; u: number; x: number; z: number }
-export interface CarcassSnapshot { by: 'wolf'; id: string; t: number; x: number; z: number }
+export interface AnimalSnapshot { a: Act; d: number; dp?: number; fa: number; hp?: number; hu: number; id: string; r: number; s: number; st: number; tg?: string; th: number; tr?: number[]; tx: number; tz: number; u: number; x: number; z: number }
+export interface CarcassSnapshot { by: 'wolf' | 'player'; cut?: number; id: string; t: number; work?: number; x: number; z: number }
 export interface WildlifeSnapshot {
   animals: AnimalSnapshot[];
   carcasses: CarcassSnapshot[];
@@ -1240,13 +1282,26 @@ export interface WildlifeSnapshot {
   reach: number;
 }
 const byId = <T extends { id: string }>(p: T, q: T) => (p.id < q.id ? -1 : p.id > q.id ? 1 : 0);
-export function wildlifeSnapshot(wl: WildlifeState): WildlifeSnapshot {
+/** v9: the latest tick's path, saved when the animal moved during it (a still one's path is its position). */
+function savedTrail(a: Animal): number[] | undefined {
+  const t = a.trail;
+  if (!t || t.length < 4) return undefined;
+  for (let i = 0; i < t.length; i += 2) if (t[i] !== a.x || t[i + 1] !== a.z) return [...t];
+  return undefined;
+}
+/** The canonical block. `content` (default v8): from v9 a record carries `hp` (wounded) and `tr` (its latest tick's path). */
+export function wildlifeSnapshot(wl: WildlifeState, content = WILD_CONTENT_V8 as number): WildlifeSnapshot {
+  const v9 = content >= WILD_CONTENT_V9;
   return {
-    animals: [...wl.animals.values()].sort(byId).map((a) => ({
-      a: a.a, d: a.d, ...(a.sp === 'trout' ? { dp: a.dp } : {}), fa: a.fa, hu: a.hu, id: a.id, r: a.r, s: a.s, st: a.st,
-      ...(a.tg ? { tg: a.tg } : {}), th: a.th, tx: a.tx, tz: a.tz, u: a.u, x: a.x, z: a.z,
-    })),
-    carcasses: [...wl.carcasses.values()].sort(byId).map((c) => ({ by: c.by, id: c.id, t: c.t, x: c.x, z: c.z })),
+    animals: [...wl.animals.values()].sort(byId).map((a) => {
+      const tr = v9 ? savedTrail(a) : undefined;
+      return {
+        a: a.a, d: a.d, ...(a.sp === 'trout' ? { dp: a.dp } : {}), fa: a.fa, ...(v9 && a.hp !== undefined ? { hp: a.hp } : {}), hu: a.hu, id: a.id, r: a.r, s: a.s, st: a.st,
+        ...(a.tg ? { tg: a.tg } : {}), th: a.th, ...(tr ? { tr } : {}), tx: a.tx, tz: a.tz, u: a.u, x: a.x, z: a.z,
+      };
+    }),
+    carcasses: [...wl.carcasses.values()].sort(byId).map((c) => (c.by === 'player'
+      ? { by: c.by, cut: c.cut ?? 0, id: c.id, t: c.t, work: c.work ?? 0, x: c.x, z: c.z } : { by: c.by, id: c.id, t: c.t, x: c.x, z: c.z })),
     dead: [...wl.dead].sort(),
     ...(wl.focus ? { focus: { x: wl.focus.x, z: wl.focus.z } } : {}),
     kills: wl.kills,
@@ -1261,8 +1316,26 @@ const POS = HALF * 10;
 const TG = /^(?:player|noise|fauna:(?:deer|rabbit|trout|fox|wolf):\d{1,2},\d{1,2}:\d{1,2})$/;
 const speciesOf = (id: string) => ANIMAL_ID.exec(id)![1] as WildSpecies;
 
+/**
+ * W8 (content v9): what butchering a player's kill gives, in order, one output at a time (sim/hunting.ts). From the
+ * species' fauna yields (food / 3 as meat, at least 1; hide as is) plus bone for the larger animals. Trout are not shot.
+ */
+export const BUTCHER_ORDER: Record<Exclude<WildSpecies, 'trout'>, ReadonlyArray<'raw_meat' | 'hide' | 'bone'>> = {
+  deer: ['hide', 'raw_meat', 'raw_meat', 'bone', 'raw_meat', 'hide', 'raw_meat', 'bone'],
+  wolf: ['hide', 'raw_meat', 'bone', 'raw_meat', 'hide', 'raw_meat', 'bone'],
+  fox: ['hide', 'raw_meat', 'bone'],
+  rabbit: ['hide', 'raw_meat'],
+};
+/** Knife swings for each output. */
+export const BUTCHER_SWINGS: Record<Exclude<WildSpecies, 'trout'>, number> = { deer: 2, wolf: 2, fox: 1, rabbit: 1 };
+const carcassRules = {
+  outputs: (sp: WildSpecies) => (sp === 'trout' ? 0 : BUTCHER_ORDER[sp].length),
+  swings: (sp: WildSpecies) => (sp === 'trout' ? 1 : BUTCHER_SWINGS[sp]),
+};
+
 /** Strict canonical form (formats and bounds; a record's id must be one a chunk can derive by its pattern); throws otherwise. */
-export function validateWildlife(raw: unknown, tick: number): WildlifeSnapshot {
+export function validateWildlife(raw: unknown, tick: number, content = WILD_CONTENT_V8 as number): WildlifeSnapshot {
+  const v9 = content >= WILD_CONTENT_V9;
   const bad = (what: string): never => { throw new Error(`snapshot wilderness wildlife: invalid ${what}`); };
   if (!isObj(raw)) bad('block');
   const v = raw as Record<string, unknown>;
@@ -1284,25 +1357,39 @@ export function validateWildlife(raw: unknown, tick: number): WildlifeSnapshot {
     if (!isObj(x) || typeof x.id !== 'string' || !ANIMAL_ID.test(x.id) || (last && !(last < x.id)) || dead.has(x.id)) bad('animal');
     const r = x as Record<string, unknown>, id = r.id as string, sp = speciesOf(id);
     const fish = sp === 'trout';
-    const k = ['a', 'd', ...(fish ? ['dp'] : []), 'fa', 'hu', 'id', 'r', 's', 'st', ...(r.tg !== undefined ? ['tg'] : []), 'th', 'tx', 'tz', 'u', 'x', 'z'];
+    const k = ['a', 'd', ...(fish ? ['dp'] : []), 'fa', ...(v9 && r.hp !== undefined ? ['hp'] : []), 'hu', 'id', 'r', 's', 'st', ...(r.tg !== undefined ? ['tg'] : []), 'th',
+      ...(v9 && r.tr !== undefined ? ['tr'] : []), 'tx', 'tz', 'u', 'x', 'z'];
     if (Object.keys(r).join() !== k.join()) bad(`animal ${id} fields`);
-    if (typeof r.a !== 'string' || !SPECIES_ACTS[sp].includes(r.a as Act) || !int(r.d, 0, 31) || fish && !int(r.dp, 0, 10)
+    // v9: health while wounded (below the species' full health); the latest tick's path, 2 to FULL_SUBSTEPS + 1 points ending where it stands.
+    if (r.hp !== undefined && (fish || !int(r.hp, 1, WILD_HP[sp as Exclude<WildSpecies, 'trout'>] - 1))) bad(`animal ${id} health`);
+    if (r.tr !== undefined) {
+      const tr = r.tr as unknown[];
+      if (!Array.isArray(tr) || tr.length < 4 || tr.length > 2 * (FULL_SUBSTEPS + 1) || tr.length % 2 || !tr.every((v) => int(v, -POS, POS))
+        || tr[tr.length - 2] !== r.x || tr[tr.length - 1] !== r.z || tr.every((v, i) => v === (i % 2 ? r.z : r.x))) bad(`animal ${id} path`);
+    }
+    if (typeof r.a !== 'string' || !actAllowed(sp, r.a as Act, content) || !int(r.d, 0, 31) || fish && !int(r.dp, 0, 10)
       || !int(r.hu, 0, NEED_MAX) || !int(r.th, 0, NEED_MAX) || !int(r.fa, 0, NEED_MAX) || fish && (r.th !== 0 || r.fa !== 0)
       || !int(r.r, 0, 0xffffffff) || !int(r.s, 0, secs) || !int(r.st, 0, 100) || r.tg !== undefined && (typeof r.tg !== 'string' || !TG.test(r.tg))
       || !int(r.x, -POS, POS) || !int(r.z, -POS, POS) || !int(r.tx, -POS, POS) || !int(r.tz, -POS, POS) || !int(r.u, 0, Number.MAX_SAFE_INTEGER)) bad(`animal ${id}`);
     last = id;
-    animals.push({ a: r.a as Act, d: r.d as number, ...(fish ? { dp: r.dp as number } : {}), fa: r.fa as number, hu: r.hu as number, id, r: r.r as number,
-      s: r.s as number, st: r.st as number, ...(r.tg !== undefined ? { tg: r.tg as string } : {}), th: r.th as number, tx: r.tx as number, tz: r.tz as number,
-      u: r.u as number, x: r.x as number, z: r.z as number });
+    animals.push({ a: r.a as Act, d: r.d as number, ...(fish ? { dp: r.dp as number } : {}), fa: r.fa as number, ...(r.hp !== undefined ? { hp: r.hp as number } : {}),
+      hu: r.hu as number, id, r: r.r as number,
+      s: r.s as number, st: r.st as number, ...(r.tg !== undefined ? { tg: r.tg as string } : {}), th: r.th as number, ...(r.tr !== undefined ? { tr: [...r.tr as number[]] } : {}),
+      tx: r.tx as number, tz: r.tz as number, u: r.u as number, x: r.x as number, z: r.z as number });
   }
   last = '';
   const carcasses: CarcassSnapshot[] = [];
   for (const x of v.carcasses as unknown[]) {
-    if (!isObj(x) || Object.keys(x).join() !== 'by,id,t,x,z' || x.by !== 'wolf' || typeof x.id !== 'string' || !ANIMAL_ID.test(x.id) || !dead.has(x.id)
-      || (last && !(last < x.id)) || !int(x.t, 0, tick) || tick - (x.t as number) > CARCASS_TICKS || !int(x.x, -POS, POS) || !int(x.z, -POS, POS)) bad('carcass');
+    // v9: a player's kill also counts what was butchered from it (outputs, and swings into the next one).
+    const player = v9 && isObj(x) && x.by === 'player';
+    if (!isObj(x) || Object.keys(x).join() !== (player ? 'by,cut,id,t,work,x,z' : 'by,id,t,x,z') || x.by !== 'wolf' && !player || typeof x.id !== 'string' || !ANIMAL_ID.test(x.id) || !dead.has(x.id)
+      || (last && !(last < x.id)) || !int(x.t, 0, tick) || tick - (x.t as number) > carcassTicks({ by: player ? 'player' : 'wolf' }) || !int(x.x, -POS, POS) || !int(x.z, -POS, POS)) bad('carcass');
+    if (player && (speciesOf(x.id as string) === 'trout' || !int(x.cut, 0, carcassRules.outputs(speciesOf(x.id as string)) - 1)
+      || !int(x.work, 0, carcassRules.swings(speciesOf(x.id as string)) - 1))) bad('carcass butchering');
     const c = x as Record<string, unknown>;
     last = c.id as string;
-    carcasses.push({ by: 'wolf', id: c.id as string, t: c.t as number, x: c.x as number, z: c.z as number });
+    carcasses.push(player ? { by: 'player', cut: c.cut as number, id: c.id as string, t: c.t as number, work: c.work as number, x: c.x as number, z: c.z as number }
+      : { by: 'wolf', id: c.id as string, t: c.t as number, x: c.x as number, z: c.z as number });
   }
   const pt = (p: unknown, t: boolean) => isObj(p) && Object.keys(p).join() === (t ? 't,x,z' : 'x,z') && int(p.x, -POS, POS) && int(p.z, -POS, POS) && (!t || int(p.t, 0, tick));
   if (v.focus !== undefined && !pt(v.focus, false)) bad('focus');
@@ -1316,9 +1403,10 @@ export function validateWildlife(raw: unknown, tick: number): WildlifeSnapshot {
 export function wildlifeFromSnapshot(s: WildlifeSnapshot): WildlifeState {
   return {
     animals: new Map(s.animals.map((a) => [a.id, { id: a.id, sp: speciesOf(a.id), x: a.x, z: a.z, d: a.d, a: a.a, u: a.u, tx: a.tx, tz: a.tz, tg: a.tg ?? '',
-      hu: a.hu, th: a.th, fa: a.fa, dp: a.dp ?? 0, r: a.r, s: a.s, st: a.st }])),
+      hu: a.hu, th: a.th, fa: a.fa, dp: a.dp ?? 0, r: a.r, s: a.s, st: a.st, ...(a.tr ? { trail: [...a.tr] } : {}), ...(a.hp !== undefined ? { hp: a.hp } : {}) }])),
     dead: new Set(s.dead),
-    carcasses: new Map(s.carcasses.map((c) => [c.id, { id: c.id, sp: speciesOf(c.id), x: c.x, z: c.z, t: c.t, by: c.by }])),
+    carcasses: new Map(s.carcasses.map((c) => [c.id, { id: c.id, sp: speciesOf(c.id), x: c.x, z: c.z, t: c.t, by: c.by,
+      ...(c.by === 'player' ? { cut: c.cut ?? 0, work: c.work ?? 0 } : {}) }])),
     focus: s.focus ? { ...s.focus } : null, reach: s.reach, noise: s.noise ? { ...s.noise } : null, kills: s.kills,
   };
 }

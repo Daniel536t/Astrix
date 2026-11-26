@@ -19,7 +19,7 @@ import type { GameSession } from './session';
 import type { ExploreController } from './explore';
 import {
   CARRY_CAPACITY, CARRY_CAPACITY_V5, FOOD_VALUE, ITEM_LABEL, ITEM_WEIGHT, LATEST_WILD_CONTENT, LivePickup, PICKUP_LABEL, PICKUP_REACH, TOOL_DURABILITY,
-  WILD_CONTENT_V5, WILD_CONTENT_V8, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
+  WILD_CONTENT_V5, WILD_CONTENT_V9, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
 } from '../sim/gathering';
 import {
   CHOP_REACH, EventRecord, FellEvent, NearTree, SWING_COOLDOWN_MS, Trunk, choppable, stockpileAt, stockpileLogs, treeDistance,
@@ -35,6 +35,10 @@ import { SITE_REACH, WildSite, buildingsNear, deliverable, freeIn, homeShelter, 
 import { buildingDef } from '../sim/catalogue';
 import { WildMap } from './wild-map';
 import { waterSurfaceAt } from '../sim/world';
+import { HuntUI } from './hunting-ui';
+import type { FaunaView } from '../render/fauna';
+import { BUTCHER_REACH, BUTCHER_SWINGS, carcassLeft, carcassOutputs, carcassesNear } from '../sim/hunting';
+import type { Carcass } from '../sim/wildlife';
 
 export interface WildGameOptions {
   session: GameSession;
@@ -49,6 +53,8 @@ export interface WildGameOptions {
   camera?: THREE.Camera;
   canvas?: HTMLElement;
   nature?: () => NatureHider | null;
+  /** W8: the wildlife view (the release moment of a shot, drawn targets, deferred kills). */
+  fauna?: () => FaunaView | null;
 }
 
 /** Pickups are drawn within this radius of the player (metres). */
@@ -57,6 +63,8 @@ const DRAW_RADIUS = 48;
 const PROMPT_REACH = PICKUP_REACH - 0.25;
 const CHOP_PROMPT = CHOP_REACH - 0.3;
 const MINE_PROMPT = MINE_REACH - 0.4;
+const BUTCHER_PROMPT = BUTCHER_REACH - 0.3;
+const SP_NAME: Record<string, string> = { deer: 'deer', rabbit: 'hare', fox: 'fox', wolf: 'wolf', trout: 'trout' };
 /** A tapped tree stays targeted within this distance. */
 const SELECT_KEEP = 25;
 
@@ -67,6 +75,7 @@ const EVENT_LABEL: Record<FellEvent, string> = {
   SITE_CANCELLED: 'site cancelled', SHELTER_CLAIMED: 'shelter claimed', FIRE_FUELED: 'fire fuelled', FOOD_COOKED: 'food cooked',
   ITEMS_STORED: 'items stored', ITEMS_TAKEN: 'items taken', RESPAWNED: 'respawned', DIED: 'died',
   MINE_STARTED: 'mining started', DEPOSIT_MINED: 'unit mined', DEPOSIT_EXHAUSTED: 'deposit worked out', SMELT_STARTED: 'smelting started', SMELT_DONE: 'ingots ready',
+  ARROW_SHOT: 'arrow shot', ANIMAL_HIT: 'animal hit', ANIMAL_STUNNED: 'animal stunned', ANIMAL_KILLED: 'animal killed', CARCASS_CUT: 'butchered', CARCASS_BUTCHERED: 'carcass done',
 };
 
 type Action =
@@ -77,7 +86,8 @@ type Action =
   | { kind: 'deliver'; stockpileId: string; n: number }
   | { kind: 'site_deliver'; s: WildSite; need: Record<string, number> }
   | { kind: 'site_work'; s: WildSite }
-  | { kind: 'mine'; d: Deposit };
+  | { kind: 'mine'; d: Deposit }
+  | { kind: 'butcher'; c: Carcass };
 
 export class WildGame {
   readonly view = new PickupView();
@@ -88,6 +98,8 @@ export class WildGame {
   readonly build: WildBuildUI;
   /** W5: minimap, full map, waypoints, routes and the trail. */
   readonly map: WildMap;
+  /** W8: the bow (aim, draw, release) and the drawn flights. */
+  readonly hunt: HuntUI | null;
   private readonly axe = buildHeldAxe();
   private readonly pickaxe = buildHeldPickaxe();
   private readonly toastEl: HTMLElement;
@@ -115,7 +127,7 @@ export class WildGame {
   /** Felling evidence: accepted swings and refusals, first chop and fall times. */
   readonly stats = { chops: 0, cuts: 0, refused: 0, fells: 0, firstChopMs: null as number | null, lastFellMs: null as number | null, lastRefusal: '',
     works: 0, mines: 0, unitsMined: 0, firstMineMs: null as number | null, deaths: 0, lastDeath: null as null | { dropped: Record<string, number>; piles: number } | { refused: string },
-    lastRespawn: null as null | { point: string; x: number; z: number; refused: string[] } };
+    lastRespawn: null as null | { point: string; x: number; z: number; refused: string[] }, butchered: 0 };
 
   constructor(private readonly o: WildGameOptions) {
     o.scene.add(this.view.group, this.felling.group, this.deposits.group);
@@ -165,6 +177,11 @@ export class WildGame {
     this.build.onWork = (s) => { if (performance.now() - this.lastSwing >= SWING_COOLDOWN_MS) { this.lastSwing = performance.now(); this.work(s); } };
     this.build.onCraft = (r) => this.craft(r);
     this.ensureContent();
+    this.hunt = o.camera && o.canvas ? new HuntUI({
+      session: o.session, scene: o.scene, camera: o.camera, canvas: o.canvas, explore: o.explore, fauna: () => o.fauna?.() ?? null, groundY: o.groundY,
+      toast: (m, k) => this.toast(m, k), changed: () => { this.version++; o.onChanged(); },
+      busy: () => !!this.build?.mode.active || !!this.map?.isOpen,
+    }) : null;
     let storage: Storage | null = null;
     try { storage = window.localStorage; } catch { storage = null; }
     const fwd = new THREE.Vector3();
@@ -242,13 +259,14 @@ export class WildGame {
 
   private get world() { return this.o.session.world; }
 
-  /** A world with older wilderness content (v1-v7) gains the latest (v8) through one journaled command. */
+  /** A world with older wilderness content (v1-v8) gains the latest (v9) through one journaled command. */
   private ensureContent(): void {
     const w = this.world.wild;
     if (w && w.content >= LATEST_WILD_CONTENT) return;
-    const had = !!w, fell = !!w?.fell, built = !!w?.build, big = !!w && w.content >= WILD_CONTENT_V5, mapped = !!w?.map, mined = !!w?.mine;
-    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V8 }, 'v8');
-    if (r) this.toast(mined ? 'The wild animals now live on in your world: each deer, hare, fox, wolf and trout keeps its place and its ways when you leave and come back.'
+    const had = !!w, fell = !!w?.fell, built = !!w?.build, big = !!w && w.content >= WILD_CONTENT_V5, mapped = !!w?.map, mined = !!w?.mine, alive = !!w?.wildlife;
+    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V9 }, 'v9');
+    if (r) this.toast(alive ? 'You can now hunt: make a bow and arrows at the workbench (with a knife), shoot, and butcher what you bring down with the knife.'
+      : mined ? 'The wild animals now live on in your world, and you can hunt them with a bow you make at the workbench.'
       : mapped ? 'Deposits can now be mined: explore to find iron, copper, coal, clay, sand and gravel, equip a stone pickaxe and swing (E). Clay, sand and gravel build a clay smelter for ingots.'
       : big ? 'You now have a map: tap the small map (or press M) to open it, set waypoints and get a walking route. What you have not seen stays hidden.'
       : built ? `Your bag now holds ${CARRY_CAPACITY_V5} weight (was ${CARRY_CAPACITY}). At a building site, free materials in your bag can now be delivered in place of ones reserved in piles.`
@@ -288,7 +306,7 @@ export class WildGame {
   /** Press: act now; while held, swings repeat at the swing pace. */
   holdStart(): void {
     // Only a press that swings keeps swinging: holding after a pickup or delivery must not start chopping.
-    this.held = this.action.kind === 'chop' || this.action.kind === 'cut' || this.action.kind === 'site_work' || this.action.kind === 'mine';
+    this.held = this.action.kind === 'chop' || this.action.kind === 'cut' || this.action.kind === 'site_work' || this.action.kind === 'mine' || this.action.kind === 'butcher';
     this.act(false);
   }
   holdEnd(): void { this.held = false; }
@@ -304,6 +322,7 @@ export class WildGame {
     if (performance.now() - this.lastSwing < SWING_COOLDOWN_MS) return;
     this.lastSwing = performance.now();
     if (a.kind === 'chop') this.chop(a.tree);
+    else if (a.kind === 'butcher') this.butcher(a.c);
     else if (a.kind === 'mine') this.mine(a.d);
     else if (a.kind === 'site_work') this.work(a.s);
     else this.cut(a.trunk);
@@ -369,6 +388,26 @@ export class WildGame {
       this.toast(`+1 ${ITEM_LABEL[item]} · ${o.left ? `${o.left}/${d.qty} left in the deposit` : 'the deposit is worked out (it does not regrow)'} · bag ${carriedWeight(w)}/${carryCapacity(w)}`, 'good');
       if (carriedWeight(w) + ITEM_WEIGHT[item] > carryCapacity(w)) this.held = false;
     } else this.toast(`mining ${DEPOSIT_LABEL[d.type]} ${o.work}/${MINE_SWINGS[d.type]} · ${o.left}/${d.qty} left · pickaxe ${o.durability}/${TOOL_DURABILITY.stone_pickaxe}`);
+  }
+
+  /** W8: one knife swing at a carcass; every few swings meat, hide or bone comes off onto a pile beside it. */
+  private butcher(c: Carcass): void {
+    const at = this.at();
+    if (!at) return;
+    const s = this.o.session;
+    const r = s.dispatch({ schema: 3, id: s.commandId('butcher' as never, c.id), expectedRevision: s.world.revision, type: 'butcher', carcassId: c.id, at });
+    if (!r.ok) { this.refused(r, ''); this.toast(`can't butcher: ${r.reasons.join('; ')}`, 'warn'); this.held = r.code === 'too_fast' && this.held; return; }
+    this.version++;
+    this.o.onChanged();
+    this.stats.butchered = (this.stats.butchered ?? 0) + 1;
+    this.o.explore()?.swing(c.x / 10, c.z / 10);
+    const o = r.outcome;
+    if (o.type !== 'butcher') return;
+    const sp = SP_NAME[c.sp];
+    if (o.item) {
+      if (o.left === 0) this.held = false;
+      this.toast(`+1 ${ITEM_LABEL[o.item]} on the pile beside the ${sp}${o.left ? ` · ${o.left} more to take` : ' · the carcass is done'} · knife ${o.durability}/${TOOL_DURABILITY.knife} · pick the piles up (E)`, 'good');
+    } else this.toast(`butchering the ${sp} ${o.work}/${BUTCHER_SWINGS[c.sp as keyof typeof BUTCHER_SWINGS]} · knife ${o.durability}/${TOOL_DURABILITY.knife}`);
   }
 
   /** One swing of construction work on a site. */
@@ -486,6 +525,7 @@ export class WildGame {
     else if (d.drop) this.drop(d.drop as WildItem);
     else if (d.equip) this.equip(d.equip);
     else if (d.stockpile !== undefined) this.markStockpile();
+    else if (d.quiver !== undefined) { this.hunt?.switchKind(); this.panelKey = ''; this.renderPanel(); }
   }
 
   /** Tap / click: target the tree or trunk nearest the pointer on screen. */
@@ -557,6 +597,10 @@ export class WildGame {
     const room = carryCapacity(w) - carriedWeight(w);
     const near = pickupsNear(this.world, ch.x, ch.z, PROMPT_REACH);
     const fits = near.find((p) => ITEM_WEIGHT[p.item] <= room) ?? null;
+    // W8: a carcass of an animal the player shot, within reach: with the knife in hand it comes first; otherwise after a pickup.
+    const carcass = w.hunt ? carcassesNear(this.world, ch.x, ch.z, BUTCHER_PROMPT).find(({ c }) => c.by === 'player')?.c ?? null : null;
+    const knife = equippedTool(this.world)?.kind === 'knife';
+    if (carcass && (knife || !fits)) return { kind: 'butcher', c: carcass };
     // A targeted tree or trunk out of reach does not block what is in reach; its hint shows when nothing is.
     let selHint = '';
     if (f && this.selected) {
@@ -634,7 +678,7 @@ export class WildGame {
     if (this.wake && ex?.wakeAt(this.wake)) this.wake = null;
     this.action = this.decide();
     this.target = this.action.kind === 'pickup' ? this.action.p : null;
-    if (this.held && (this.action.kind === 'chop' || this.action.kind === 'cut' || this.action.kind === 'site_work' || this.action.kind === 'mine')) this.act(true);
+    if (this.held && (this.action.kind === 'chop' || this.action.kind === 'cut' || this.action.kind === 'site_work' || this.action.kind === 'mine' || this.action.kind === 'butcher')) this.act(true);
     // The drawn set follows the player (or the camera target in the overview) and every accepted command.
     const fx = ch ? ch.x : this.drawn.x, fz = ch ? ch.z : this.drawn.z;
     if (Number.isFinite(fx) && (this.version !== this.drawn.version || Math.hypot(fx - this.drawn.x, fz - this.drawn.z) > 6)) {
@@ -649,6 +693,7 @@ export class WildGame {
     this.axe.visible = equippedTool(this.world)?.kind === 'stone_axe';
     this.pickaxe.visible = equippedTool(this.world)?.kind === 'stone_pickaxe';
     this.build.update(performance.now() / 1000);
+    this.hunt?.update();
     this.renderPanel();
     this.renderFeed();
   }
@@ -659,6 +704,7 @@ export class WildGame {
     if (a.kind === 'pickup') return { x: a.p.x, y: this.o.groundY(a.p.x, a.p.z) ?? a.p.y, z: a.p.z };
     if (a.kind === 'chop') return { x: a.tree.e.x, y: this.o.groundY(a.tree.e.x, a.tree.e.z) ?? a.tree.e.y, z: a.tree.e.z };
     if (a.kind === 'mine') return { x: a.d.x, y: this.o.groundY(a.d.x, a.d.z) ?? a.d.y, z: a.d.z };
+    if (a.kind === 'butcher') { const x = a.c.x / 10, z = a.c.z / 10; return { x, y: this.o.groundY(x, z) ?? 0, z }; }
     if (a.kind === 'cut') {
       const ch = this.o.explore()?.character;
       const c = ch ? trunkDistance(a.trunk, ch.x, ch.z) : { px: a.trunk.x, pz: a.trunk.z };
@@ -677,6 +723,7 @@ export class WildGame {
       case 'deliver': case 'site_deliver': return 'Deliver';
       case 'site_work': return 'Build';
       case 'mine': return 'Mine';
+      case 'butcher': return 'Butcher';
       default: return 'Pick up';
     }
   }
@@ -711,10 +758,15 @@ export class WildGame {
         const work = depositWork(this.world, d);
         return `${k}mine ${DEPOSIT_LABEL[d.type]} · ${work}/${MINE_SWINGS[d.type]} swings · ${depositLeft(this.world, d)}/${d.qty} left${tool?.kind === 'stone_pickaxe' ? ` · pickaxe ${tool.durability}/${TOOL_DURABILITY.stone_pickaxe}` : ' · needs a pickaxe in hand'}${coarse ? '' : ' · hold to keep swinging'}`;
       }
+      case 'butcher': {
+        const tool = equippedTool(this.world), left = carcassLeft(a.c), total = carcassOutputs(a.c).length;
+        const what = Object.entries(left).map(([m, n]) => `${n} ${ITEM_LABEL[m as WildItem]}`).join(', ');
+        return `${k}butcher the ${SP_NAME[a.c.sp]} · ${a.c.cut ?? 0}/${total} taken · left: ${what}${tool?.kind === 'knife' ? ` · knife ${tool.durability}/${TOOL_DURABILITY.knife}` : ' · needs the knife in hand'}${coarse ? '' : ' · hold to keep cutting'}`;
+      }
       case 'deliver': return `${k}deliver ${a.n} log${a.n === 1 ? '' : 's'} to the stockpile`;
       case 'site_deliver': return `${k}deliver ${Object.entries(a.need).map(([m, n]) => `${n} ${ITEM_LABEL[m as WildItem] ?? m}`).join(', ')} to the ${buildingDef(a.s.kind)!.label.toLowerCase()}`;
       case 'site_work': { const d = buildingDef(a.s.kind)!; return `${k}build ${d.label.toLowerCase()} · ${d.stages[Math.min(a.s.stage, d.stages.length - 1)].label}${coarse ? '' : ' · hold to keep working'}`; }
-      default: return a.hint;
+      default: return a.hint || (this.hunt && equippedTool(this.world)?.kind === 'bow' ? this.hunt.hint(coarse) : '');
     }
   }
 
@@ -745,7 +797,7 @@ export class WildGame {
     const at = this.at();
     const bench = !!at && !!w.build && stationNear(this.world, 'workbench', at);
     const reserved = w.build ? reservedTotalsIn(this.world, 'bag') : {};
-    const key = JSON.stringify([w.content, w.items, w.tools, w.equipped, w.hunger, w.fell?.stockpiles.size, bench, reserved]);
+    const key = JSON.stringify([w.content, w.items, w.tools, w.equipped, w.hunger, w.fell?.stockpiles.size, bench, reserved, this.hunt?.kind]);
     if (key === this.panelKey) return;
     this.panelKey = key;
     const have = (k: string) => w.items[k] ?? 0;
@@ -758,14 +810,18 @@ export class WildGame {
     const tools = w.tools.length ? w.tools.map((t) => `<li><span>${ITEM_LABEL[t.kind]} <span class="dim">${t.durability ? `${t.durability}/${TOOL_DURABILITY[t.kind]}` : 'broken'} · weight ${wt(t.kind)}</span>${w.equipped === t.id ? ' <b class="eq">in hand</b>' : ''}</span>`
       + (w.equipped === t.id ? '<button type="button" data-equip="hands">Put away</button>' : `<button type="button" data-equip="${t.kind}">Equip</button>`) + '</li>').join('')
       : '<li class="dim">no tools yet</li>';
-    const recipes = WILD_RECIPES.filter((r) => r.station === 'hand' || bench).map((r) => {
+    const recipes = WILD_RECIPES.filter((r) => (r.station === 'hand' || bench) && (r.since === undefined || w.content >= r.since)).map((r) => {
       const need = Object.entries(r.input).map(([k, n]) => `<span class="${have(k) >= (n ?? 0) ? 'ok' : 'miss'}">${ITEM_LABEL[k as WildItem]} ${Math.min(have(k), n ?? 0)}/${n}</span>`).join(' · ');
       const toolOk = !r.tool || w.tools.some((t) => t.kind === r.tool && t.durability > 0);
       const ok = toolOk && Object.entries(r.input).every(([k, n]) => have(k) >= (n ?? 0));
       return `<li class="recipe" data-recipe="${r.id}"><div><b>${r.label}</b>${r.station !== 'hand' ? ' <span class="dim">(workbench)</span>' : ''}<br><small>${need}${r.tool ? ` · <span class="${toolOk ? 'ok' : 'miss'}">${ITEM_LABEL[r.tool]}</span>` : ''}</small>${r.note ? `<br><small class="dim" data-note>${r.note}</small>` : ''}</div><button type="button" data-craft="${r.id}" ${ok ? '' : 'disabled aria-disabled="true"'}>Craft</button></li>`;
     }).join('');
-    const piles = w.fell ? `<h3>Logs</h3><ul><li><span class="dim">${w.fell.stockpiles.size ? `${w.fell.stockpiles.size} stockpile${w.fell.stockpiles.size === 1 ? '' : 's'} marked · drop logs at one to deliver` : 'no stockpile yet'}</span>`
-      + `<button type="button" data-stockpile>Mark stockpile here</button></li></ul>` : '';
+    // W8: which arrows the bow shoots.
+    const quiver = w.hunt && (have('arrow') || have('blunt_arrow') || w.tools.some((t) => t.kind === 'bow'))
+      ? `<h3>Quiver</h3><ul><li><span>${this.hunt?.kind === 'blunt_arrow' ? 'shooting <b>blunt arrows</b> (they stun)' : 'shooting <b>arrows</b>'} <span class="dim">· arrows ${have('arrow')} · blunt ${have('blunt_arrow')}</span></span>`
+        + `<button type="button" data-quiver>${this.hunt?.kind === 'blunt_arrow' ? 'Use arrows' : 'Use blunt'}</button></li></ul>` : '';
+    const piles = quiver + (w.fell ? `<h3>Logs</h3><ul><li><span class="dim">${w.fell.stockpiles.size ? `${w.fell.stockpiles.size} stockpile${w.fell.stockpiles.size === 1 ? '' : 's'} marked · drop logs at one to deliver` : 'no stockpile yet'}</span>`
+      + `<button type="button" data-stockpile>Mark stockpile here</button></li></ul>` : '');
     const used = carriedWeight(w), cap = carryCapacity(w);
     this.panel.innerHTML = `<header><h2>Bag</h2><span class="dim" data-capacity>weight ${used}/${cap} · hunger ${w.hunger}/100</span><button type="button" data-close aria-label="Close bag">×</button></header>`
       + `<div class="bar" role="progressbar" aria-label="Bag weight" aria-valuemin="0" aria-valuemax="${cap}" aria-valuenow="${used}"><i style="width:${Math.min(100, Math.round(used / cap * 100))}%"></i></div>`
@@ -799,7 +855,8 @@ export class WildGame {
         : a.kind === 'mine' ? { kind: 'mine', id: a.d.id, type: a.d.type, left: depositLeft(this.world, a.d), qty: a.d.qty, work: depositWork(this.world, a.d) }
         : a.kind === 'cut' ? { kind: 'cut', id: a.trunk.id, left: a.trunk.left } : a.kind === 'pickup' ? { kind: 'pickup', id: a.p.id, item: a.p.item }
           : a.kind === 'deliver' ? { kind: 'deliver', id: a.stockpileId, n: a.n }
-            : a.kind === 'site_deliver' ? { kind: 'site_deliver', id: a.s.id, need: a.need } : a.kind === 'site_work' ? { kind: 'site_work', id: a.s.id } : { kind: 'none', hint: a.hint },
+            : a.kind === 'site_deliver' ? { kind: 'site_deliver', id: a.s.id, need: a.need } : a.kind === 'site_work' ? { kind: 'site_work', id: a.s.id }
+              : a.kind === 'butcher' ? { kind: 'butcher', id: a.c.id, cut: a.c.cut ?? 0, work: a.c.work ?? 0 } : { kind: 'none', hint: a.hint },
       selected: this.selected,
       felling: f ? {
         damaged: [...f.chop.values()].map((c) => ({ ...c })),
@@ -812,6 +869,8 @@ export class WildGame {
       } : null,
       stats: { ...this.stats },
       build: this.build.metrics(),
+      hunt: this.hunt?.metrics() ?? null,
+      carcasses: w?.wildlife ? [...w.wildlife.carcasses.values()].map((c) => ({ ...c })) : [],
       map: this.map.metrics(),
       mining: w?.mine ? { worked: [...w.mine.deposits.values()].map((r) => ({ ...r })), drawn: { ...this.deposits.drawn },
         near: this.o.explore()?.character ? typedDepositsNear(this.world, this.o.explore()!.character!.x, this.o.explore()!.character!.z, 40).map((d) => ({ id: d.id, type: d.type, x: d.x, z: d.z, qty: d.qty, left: depositLeft(this.world, d), discovered: isDiscovered(this.world, d.id) })) : [] } : null,

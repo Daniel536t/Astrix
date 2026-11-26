@@ -33,7 +33,8 @@ class MemoryStorage implements KeyValueStorage {
   get length() { return this.map.size; }
 }
 const G = GENERATOR_V2;
-const v8 = () => GameSession.genesis(1337, G, 'wilderness');
+// W8: the default (latest) content is v9; these tests keep testing exactly the v8 rules.
+const v8 = () => GameSession.genesis(1337, G, 'wilderness', 8);
 type P = { x: number; z: number; mx?: number; mz?: number };
 const pres = (p: P) => ({ x: Math.round(p.x * 10), z: Math.round(p.z * 10), mx: p.mx ?? 0, mz: p.mz ?? 0 });
 /** World ticks carrying the player's presence (what the game sends every 2 s in v8). */
@@ -93,7 +94,7 @@ test('derivation: every chunk population is a pure function of (seed, generator,
 test('records: the first ticks around the player derive the creatures ring by ring; every record is a derived id, none twice; v8 genesis pinned', () => {
   const s = v8();
   assert.equal(s.journal.wildContent, 8);
-  assert.equal(LATEST_WILD_CONTENT, 8);
+  assert.equal(LATEST_WILD_CONTENT, 9, 'W8: the latest content is v9');
   assert.equal(s.stateHash, V8_PIN, 'v8 genesis');
   assert.equal(GameSession.genesis(1337, G, 'wilderness', 7).stateHash, '2b53c51d7dec7daa', 'v7 genesis unchanged');
   assert.equal(GameSession.genesis(1337).stateHash, 'e659504b056654dc', 'settlement genesis unchanged');

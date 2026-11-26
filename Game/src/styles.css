@@ -1354,3 +1354,23 @@ body.map-open #hud, body.map-open #wild-events { visibility: hidden; }
 @media (max-width: 379px) and (orientation: portrait) {
   body.wilderness #minimap:not([hidden]) { width: 80px; height: 80px; }
 }
+
+/* ---- W8 hunting: the Bow button (touch, while the bow is in hand) and the aim mark ---- */
+.bow-touch { display: none; }
+@media (pointer: coarse) {
+  body.explore.bow-ready .bow-touch {
+    display: grid; position: fixed; z-index: 7;
+    right: max(110px, calc(env(safe-area-inset-right) + 102px));
+    bottom: max(104px, calc(env(safe-area-inset-bottom) + 96px));
+    width: 62px; height: 62px;
+    color: #FFF3D6; background: rgba(138, 96, 56, 0.86); border-color: #E2C997;
+  }
+  body.building .bow-touch, body.planning-field .bow-touch { display: none !important; }
+}
+#aim-mark {
+  position: fixed; left: 0; top: 0; width: 26px; height: 26px; margin: -13px 0 0 -13px; z-index: 8;
+  border: 2px solid rgba(255, 244, 214, 0.9); border-radius: 50%; pointer-events: none; display: none;
+}
+#aim-mark.on { display: block; }
+#aim-mark.drawn { border-color: #F2CF4A; }
+#aim-mark.full { border-color: #A9CF6A; box-shadow: 0 0 0 2px rgba(169, 207, 106, 0.35); }

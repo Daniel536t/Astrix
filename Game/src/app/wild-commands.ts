@@ -41,6 +41,14 @@
 // wildlife reacts to; an accepted `chop`, `cut_log`, `mine` or `build_work`
 // is also a noise at its `at` that animals within earshot hear on the next tick.
 //
+// Content v9 (W8 hunting): `shoot` (one arrow: kind, release point in cm,
+// integer aim, draw time, the release moment within the tick; the simulation
+// flies it under gravity and drag against the ground, water, buildings, trees,
+// trunks and the animals where they are during the flight, and records the
+// impact and what it did) and `butcher` (one knife swing at a player's
+// carcass; an output comes off as a pile every few swings). Raw meat cooks at
+// the campfire (`cook`).
+//
 // Reach: the avatar is player-local physics, so `pickup`, `drop`, `chop`,
 // `cut_log` and `mark_stockpile` carry the player's position (integer
 // decimetres) like the S2 tick presence, and the simulation checks reach
@@ -67,7 +75,9 @@ import { ANY_DEPOSIT_ID } from '../sim/deposits';
 import { mineDeposit } from '../sim/mining';
 import { smeltRecipe } from '../sim/catalogue';
 import { WILD_CONTENT_V7, WILD_CONTENT_V8 } from '../sim/gathering';
-import { noteNoise } from '../sim/wildlife';
+import { ANIMAL_ID, noteNoise } from '../sim/wildlife';
+import { WILD_CONTENT_V9 } from '../sim/gathering';
+import { ArrowKind, HitKind, HitResult, ShotValue, butcher, isArrowKind, shoot } from '../sim/hunting';
 const siteSpotDm = (s: Parameters<typeof siteSpotOf>[0]) => { const p = siteSpotOf(s); return { x: Math.round(p.x * 10), z: Math.round(p.z * 10) }; };
 import type { World } from '../sim/world';
 
@@ -112,11 +122,15 @@ export interface RemoveWaypointCommand extends Envelope { type: 'remove_waypoint
 export interface MineCommand extends Envelope { type: 'mine'; depositId: string; at: At }
 /** W6: start a smelting batch at a finished clay smelter. */
 export interface SmeltCommand extends Envelope { type: 'smelt'; siteId: string; recipe: string; at: At }
+/** W8 (content v9): one arrow released: release point (cm), aim (integer, length ~10,000), draw (ms), release moment in the tick (thousandths). */
+export interface ShootCommand extends Envelope { type: 'shoot'; arrow: ArrowKind; from: { x: number; y: number; z: number }; dir: { x: number; y: number; z: number }; draw: number; t: number; at: At }
+/** W8: one knife swing at a carcass. */
+export interface ButcherCommand extends Envelope { type: 'butcher'; carcassId: string; at: At }
 export type WildCommand = PickupCommand | DropCommand | CraftCommand | EquipCommand | EatCommand | UpgradeWildernessCommand
   | ChopCommand | CutLogCommand | MarkStockpileCommand
   | WildPlaceSiteCommand | DeliverSiteCommand | BuildWorkCommand | WildCancelSiteCommand | ClaimShelterCommand | FuelFireCommand | CookCommand
   | StoreItemsCommand | TakeItemsCommand | DiedCommand | RespawnCommand | ExploreCommand | SetWaypointCommand | RemoveWaypointCommand
-  | MineCommand | SmeltCommand;
+  | MineCommand | SmeltCommand | ShootCommand | ButcherCommand;
 
 export type WildOutcome =
   | { type: 'pickup'; entityId: string; item: WildItem; amount: number; events?: FellEvent[] }
@@ -143,12 +157,16 @@ export type WildOutcome =
   | { type: 'set_waypoint'; waypointId: string }
   | { type: 'remove_waypoint'; waypointId: string }
   | { type: 'mine'; depositId: string; left: number; work: number; durability: number; item?: WildItem; amount?: number; events: FellEvent[] }
-  | { type: 'smelt'; siteId: string; recipe: string; spent: Record<string, number>; end: number; events: FellEvent[] };
+  | { type: 'smelt'; siteId: string; recipe: string; spent: Record<string, number>; end: number; events: FellEvent[] }
+  | ({ type: 'shoot'; arrow: ArrowKind } & ShotValue)
+  | { type: 'butcher'; carcassId: string; cut: number; left: number; work: number; durability: number; item?: WildItem; pileId?: string; events: FellEvent[] };
 
 /** Commands only the wilderness has. */
 export const WILD_COMMAND_TYPES: readonly string[] = ['pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness', 'chop', 'cut_log', 'mark_stockpile',
   'deliver_site', 'build_work', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn',
-  'explore', 'set_waypoint', 'remove_waypoint', 'mine', 'smelt'];
+  'explore', 'set_waypoint', 'remove_waypoint', 'mine', 'smelt', 'shoot', 'butcher'];
+/** W8 (content v9) commands. */
+export const HUNT_COMMAND_TYPES: readonly string[] = ['shoot', 'butcher'];
 /** W6 (content v7) commands. */
 export const MINING_COMMAND_TYPES: readonly string[] = ['mine', 'smelt'];
 /** W5 (content v6) commands. */
@@ -291,9 +309,34 @@ export function validateWildCommand(value: Record<string, unknown>, base: Envelo
       const at = atOf(value.at);
       return siteIdOf(value.siteId) && typeof value.recipe === 'string' && smeltRecipe(value.recipe) && at ? { ...base, type: 'smelt', siteId: value.siteId, recipe: value.recipe, at } : null;
     }
+    case 'shoot': {
+      const at = atOf(value.at), from = v3Of(value.from, PRESENCE_POS * 10, 20_000), dir = v3Of(value.dir, 10_100, 10_100);
+      return isArrowKind(value.arrow) && from && dir && uint(value.draw, 60_000) && uint(value.t, 1000) && at
+        ? { ...base, type: 'shoot', arrow: value.arrow, from, dir, draw: value.draw, t: value.t, at } : null;
+    }
+    case 'butcher': {
+      const at = atOf(value.at);
+      return typeof value.carcassId === 'string' && ANIMAL_ID.test(value.carcassId) && at ? { ...base, type: 'butcher', carcassId: value.carcassId, at } : null;
+    }
   }
   return null;
 }
+/** An integer vector {x, y, z} within bounds (canonical key order), or null. */
+function v3Of(v: unknown, xz: number, y: number): { x: number; y: number; z: number } | null {
+  if (!isObj(v) || Object.keys(v).join() !== 'x,y,z') return null;
+  const b = (n: unknown, m: number) => Number.isSafeInteger(n) && Math.abs(n as number) <= m;
+  return b(v.x, xz) && b(v.y, y) && b(v.z, xz) ? { x: v.x as number, y: v.y as number, z: v.z as number } : null;
+}
+const HIT_KINDS: readonly HitKind[] = ['none', 'terrain', 'water', 'tree', 'trunk', 'building', 'animal'];
+const HIT_RESULTS: readonly HitResult[] = ['wounded', 'killed', 'stunned', 'bruised', 'glanced'];
+const shootOutcome = (arrow: ArrowKind, v: ShotValue): WildOutcome => ({
+  type: 'shoot', arrow, hit: v.hit, ...(v.ref !== undefined ? { ref: v.ref } : {}), ...(v.part !== undefined ? { part: v.part } : {}), x: v.x, y: v.y, z: v.z, ms: v.ms, speed: v.speed,
+  ...(v.result !== undefined ? { result: v.result } : {}), ...(v.damage !== undefined ? { damage: v.damage } : {}), ...(v.hp !== undefined ? { hp: v.hp } : {}),
+  ...(v.pileId !== undefined ? { pileId: v.pileId } : {}), ...(v.broke ? { broke: true as const } : {}), startled: [...v.startled], durability: v.durability, events: [...v.events],
+});
+const butcherOutcome = (carcassId: string, v: { cut: number; left: number; work: number; durability: number; item?: WildItem; pileId?: string; events: FellEvent[] }): WildOutcome => ({
+  type: 'butcher', carcassId, cut: v.cut, left: v.left, work: v.work, durability: v.durability, ...(v.item !== undefined ? { item: v.item, pileId: v.pileId } : {}), events: [...v.events],
+});
 
 // Outcome builders: dispatch and validation share them, so the field order is one definition.
 const pickupOutcome = (entityId: string, item: WildItem, amount: number, events?: FellEvent[]): WildOutcome =>
@@ -434,6 +477,37 @@ export function validateWildOutcome(value: Record<string, unknown>): WildOutcome
       return siteIdOf(value.siteId) && typeof value.recipe === 'string' && smeltRecipe(value.recipe) && spent && uint(value.end, Number.MAX_SAFE_INTEGER) && ev && ev[0] === 'SMELT_STARTED'
         ? smeltOutcome(value.siteId, value.recipe, spent, value.end, ev) : null;
     }
+    case 'shoot': {
+      const ev = eventsOf(value.events, 3), hit = value.hit as HitKind, animal = hit === 'animal';
+      const pos = (n: unknown, m: number) => Number.isSafeInteger(n) && Math.abs(n as number) <= m;
+      const st = value.startled;
+      const refOk = value.ref === undefined ? hit === 'none' || hit === 'terrain' || hit === 'water'
+        : typeof value.ref === 'string' && (hit === 'animal' ? ANIMAL_ID.test(value.ref) : hit === 'tree' ? isTreeEntityId(value.ref) : hit === 'trunk' ? TRUNK_ID.test(value.ref) : hit === 'building' ? SITE_ID.test(value.ref) : false);
+      if (!isArrowKind(value.arrow) || !HIT_KINDS.includes(hit) || !refOk || !ev || ev[0] !== 'ARROW_SHOT'
+        || (value.part !== undefined) !== animal || animal && value.part !== 'body' && value.part !== 'head'
+        || (value.result !== undefined) !== animal || animal && !HIT_RESULTS.includes(value.result as HitResult)
+        || (value.damage !== undefined) !== animal || animal && !uint(value.damage, 100) || (value.hp !== undefined) !== animal || animal && !uint(value.hp, 100)
+        || !pos(value.x, PRESENCE_POS * 10) || !pos(value.y, 20_000) || !pos(value.z, PRESENCE_POS * 10) || !uint(value.ms, 10_000) || !uint(value.speed, 1000)
+        || value.pileId !== undefined && !pile(value.pileId) || value.broke !== undefined && (value.broke !== true || animal || value.pileId !== undefined)
+        || !Array.isArray(st) || st.length > 16 || !st.every((x, i) => typeof x === 'string' && ANIMAL_ID.test(x) && (i === 0 || (st[i - 1] as string) < x))
+        || !uint(value.durability, 1000)) return null;
+      return shootOutcome(value.arrow, {
+        hit, ...(value.ref !== undefined ? { ref: value.ref as string } : {}), ...(animal ? { part: value.part as 'body' | 'head' } : {}),
+        x: value.x as number, y: value.y as number, z: value.z as number, ms: value.ms, speed: value.speed,
+        ...(animal ? { result: value.result as HitResult, damage: value.damage as number, hp: value.hp as number } : {}),
+        ...(value.pileId !== undefined ? { pileId: value.pileId as string } : {}), ...(value.broke ? { broke: true as const } : {}),
+        startled: [...st as string[]], durability: value.durability, events: ev,
+      });
+    }
+    case 'butcher': {
+      const ev = eventsOf(value.events, 2);
+      if (typeof value.carcassId !== 'string' || !ANIMAL_ID.test(value.carcassId) || !uint(value.cut, 20) || !uint(value.left, 20) || !uint(value.work, 10)
+        || !uint(value.durability, 1000) || !ev) return null;
+      // An output came off exactly when the outcome names it (one item and its pile), and work on the next starts at 0.
+      if ((value.item === undefined) !== (value.pileId === undefined) || value.item !== undefined && (!itemOf(value.item) || !pile(value.pileId) || value.work !== 0)) return null;
+      return butcherOutcome(value.carcassId, { cut: value.cut, left: value.left, work: value.work, durability: value.durability,
+        ...(value.item !== undefined ? { item: value.item as WildItem, pileId: value.pileId as string } : {}), events: ev });
+    }
   }
   return null;
 }
@@ -465,6 +539,8 @@ export function wildAgrees(c: WildCommand, o: WildOutcome): boolean {
     case 'remove_waypoint': return o.type === 'remove_waypoint' && o.waypointId === c.waypointId;
     case 'mine': return o.type === 'mine' && o.depositId === c.depositId;
     case 'smelt': return o.type === 'smelt' && o.siteId === c.siteId && o.recipe === c.recipe;
+    case 'shoot': return o.type === 'shoot' && o.arrow === c.arrow;
+    case 'butcher': return o.type === 'butcher' && o.carcassId === c.carcassId;
   }
 }
 
@@ -503,6 +579,9 @@ function dispatchWildRules(world: World, c: WildCommand): WildDispatch {
   }
   if (MINING_COMMAND_TYPES.includes(c.type) && (world.wild.content < WILD_CONTENT_V7 || !world.wild.mine)) {
     return { ok: false, code: 'wilderness', reasons: ['this world predates mining (wilderness content v6); it needs upgrade_wilderness first'] };
+  }
+  if (HUNT_COMMAND_TYPES.includes(c.type) && (world.wild.content < WILD_CONTENT_V9 || !world.wild.hunt || !world.wild.wildlife)) {
+    return { ok: false, code: 'wilderness', reasons: ['this world predates hunting (wilderness content v8); it needs upgrade_wilderness first'] };
   }
   // A recorded death waits for its respawn: nothing else is done by a dead character.
   if (world.wild.build?.death && c.type !== 'respawn' && c.type !== 'died') {
@@ -558,6 +637,14 @@ function dispatchWildRules(world: World, c: WildCommand): WildDispatch {
       const r = smeltAt(world, c.siteId, c.recipe, c.at);
       return r.ok ? { ok: true, value: smeltOutcome(c.siteId, c.recipe, r.value.spent, r.value.end, r.value.events) } : r;
     }
+    case 'shoot': {
+      const r = shoot(world, { arrow: c.arrow, from: c.from, dir: c.dir, draw: c.draw, t: c.t, at: c.at });
+      return r.ok ? { ok: true, value: shootOutcome(c.arrow, r.value) } : r;
+    }
+    case 'butcher': {
+      const r = butcher(world, c.carcassId, c.at);
+      return r.ok ? { ok: true, value: butcherOutcome(c.carcassId, r.value) } : r;
+    }
     case 'pickup': {
       const r = pickUp(world, c.entityId, c.at, c.forSite);
       if (!r.ok) return r;
@@ -581,6 +668,7 @@ function dispatchWildRules(world: World, c: WildCommand): WildDispatch {
     case 'craft': {
       // W4: a workbench recipe is made within reach of a finished workbench.
       const recipe = recipeById(c.recipe)!;
+      if (recipe.since !== undefined && world.wild.content < recipe.since) return { ok: false, code: 'content', reasons: [`${recipe.label} is not known in this world yet (wilderness content v${recipe.since})`] };
       if (recipe.station !== 'hand' && !building) return { ok: false, code: 'wilderness', reasons: ['this world predates building (wilderness content v3); it needs upgrade_wilderness first'] };
       if (recipe.station !== 'hand' && !c.at) return { ok: false, code: 'station', reasons: [`${recipe.label} is made at a ${recipe.station}: stand by one`] };
       const atStation = recipe.station !== 'hand' && !!c.at && stationNear(world, recipe.station, c.at);
@@ -611,4 +699,4 @@ function dispatchWildRules(world: World, c: WildCommand): WildDispatch {
   }
 }
 
-export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6, WILD_CONTENT_V7, WILD_CONTENT_V8 };
+export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6, WILD_CONTENT_V7, WILD_CONTENT_V8, WILD_CONTENT_V9 };

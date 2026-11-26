@@ -15,7 +15,8 @@
 import * as THREE from 'three';
 import { World, chunkKey, residentSurfaceAt, worldToChunkX, worldToChunkZ } from '../sim/world';
 import { Creature, FAUNA_STEP, FaunaContext, SPECIES, spawnChunkFauna, stepCreature } from '../sim/fauna';
-import { Animal, headingOf, wildGround, wildlifeStats } from '../sim/wildlife';
+import { Animal, BUTCHER_ORDER, STUN_ACT, headingOf, wildGround, wildlifeStats } from '../sim/wildlife';
+import { HIT_SHAPES, Prey, lyingAnimal } from '../sim/hunting';
 import { AnimalBatch } from './animal-kit';
 import { DynamicBody, creatureBody } from '../sim/bodies';
 import { ANIMAL_MODELS } from './animal-models';
@@ -55,6 +56,14 @@ export class FaunaView {
   private loaded: ReadonlySet<string> = new Set();
   private readonly tickSeconds: number;
   private drawnSim: Array<{ a: Animal; t: SimTrack }> = [];
+  /**
+   * W8: animals hit by an arrow still in the air. The sim has already decided (a kill removed the record, a stun laid
+   * it down); until the drawn arrow arrives the animal is drawn as it was, along its old path.
+   */
+  private deferred = new Map<string, { a: Animal; until: number }>();
+  /** W8: stunned animals drawn this frame (head positions), for the dazed ring. */
+  dazed: Array<{ x: number; y: number; z: number }> = [];
+  private carcassHeading = new Map<string, number>();
 
   constructor(private readonly world: World, tickSeconds = 2) {
     this.tickSeconds = tickSeconds;
@@ -64,6 +73,21 @@ export class FaunaView {
       this.batches.set(id, b);
       this.group.add(b.mesh);
     }
+  }
+
+  /** W8: how far the drawn animals are along their latest tick's path (0..1): the release moment a shot carries. */
+  tickAlpha(): number { return Math.min(1, Math.max(0, (performance.now() - this.simAt) / (this.tickSeconds * 1000))); }
+  /** W8: keep drawing `a` (a copy taken before the shot) as it was until `until` (ms). */
+  defer(a: Animal, until: number): void { this.deferred.set(a.id, { a, until }); }
+  /** W8: drawn land animals' body centres (m), for the touch aim assist (presentation only). */
+  drawnTargets(): Array<{ id: string; x: number; y: number; z: number }> {
+    const out: Array<{ id: string; x: number; y: number; z: number }> = [];
+    for (const { a, t } of this.drawnSim) {
+      if (a.sp === 'trout' || a.a === STUN_ACT) continue;
+      const H = HIT_SHAPES[a.sp as Prey], ux = Math.sin(t.shown.heading), uz = Math.cos(t.shown.heading);
+      out.push({ id: a.id, x: t.shown.x + ux * H.bz, y: t.shown.y + H.y - (lyingAnimal(a) ? H.lie : 0), z: t.shown.z + uz * H.bz });
+    }
+    return out;
   }
 
   /** W7: the creatures are sim records in this world. */
@@ -209,17 +233,40 @@ export class FaunaView {
         t.pts = pts; t.from = t.shown.heading; t.heading = headingOf(a.d); t.speed = len / this.tickSeconds; t.seen = tick;
         this.tracks.set(a.id, t);
       }
-      for (const id of [...this.tracks.keys()]) if (!alive.has(id)) this.tracks.delete(id);
+      for (const id of [...this.tracks.keys()]) {
+        if (alive.has(id) || this.deferred.has(id)) continue;
+        // W8: a carcass keeps the heading its animal had.
+        if (wl.carcasses.has(id)) this.carcassHeading.set(id, this.tracks.get(id)!.shown.heading);
+        this.tracks.delete(id);
+      }
+      for (const id of [...this.carcassHeading.keys()]) if (!wl.carcasses.has(id)) this.carcassHeading.delete(id);
       this.simTick = tick; this.simAt = now;
     }
     const alpha = Math.min(1, Math.max(0, (now - this.simAt) / (this.tickSeconds * 1000)));
     const g = wildGround(this.world);
     for (const b of this.batches.values()) b.begin();
     this.drawnSim = [];
+    this.dazed = [];
     const secs = now / 1000;
-    for (const a of wl.animals.values()) {
+    for (const [id, d] of [...this.deferred]) if (now >= d.until) this.deferred.delete(id);
+    const list: Animal[] = [...wl.animals.values()];
+    for (const d of this.deferred.values()) if (!wl.animals.has(d.a.id)) list.push(d.a);
+    for (const live of list) {
+      const a = this.deferred.get(live.id)?.a ?? live;
       const t = this.tracks.get(a.id);
       if (!t) continue;
+      if (a.a === STUN_ACT) {
+        // W8: lying on its side where the arrow laid it, until it comes round.
+        const x = a.x / 10, z = a.z / 10, fx = Math.floor(x), fz = Math.floor(z);
+        if (!this.loaded.has(chunkKey(worldToChunkX(fx), worldToChunkZ(fz)))) continue;
+        const y = residentSurfaceAt(this.world, fx, fz) ?? g.height(fx, fz);
+        t.shown.x = x; t.shown.y = y; t.shown.z = z;
+        this.drawnSim.push({ a, t });
+        this.batches.get(a.sp)!.push({ x, y, z, heading: t.shown.heading, scale: 1, phase: 0, legSwing: 0, headPitch: 0.5, tailWag: 0, male: isMale(a.id), young: false, lying: true, extra: 1, pitch: 0, roll: 1.2 });
+        const H = HIT_SHAPES[a.sp as Prey];
+        this.dazed.push({ x: x + Math.sin(t.shown.heading) * H.hz, y: y + H.hy - H.lie, z: z + Math.cos(t.shown.heading) * H.hz });
+        continue;
+      }
       // Where along the path (piecewise, each sub-step an equal share of the tick).
       const segs = (t.pts.length - 2) / 2;
       let x = t.pts[0], z = t.pts[1], hx = 0, hz = 0;
@@ -269,10 +316,14 @@ export class FaunaView {
     }
     // Carcasses (W7: deer brought down by wolves) lie on their side where they fell.
     for (const c of wl.carcasses.values()) {
+      if (this.deferred.has(c.id)) continue;
       const x = c.x / 10, z = c.z / 10;
       if (!this.loaded.has(chunkKey(worldToChunkX(Math.floor(x)), worldToChunkZ(Math.floor(z))))) continue;
       const y = residentSurfaceAt(this.world, Math.floor(x), Math.floor(z)) ?? g.height(Math.floor(x), Math.floor(z));
-      this.batches.get(c.sp)!.push({ x, y, z, heading: 0, scale: 1, phase: 0, legSwing: 0, headPitch: 0.6, tailWag: 0, male: isMale(c.id), young: false, lying: true, extra: 1, pitch: 0, roll: 1.35 });
+      // W8: a player's kill grows smaller as it is butchered (no gore: the block body simply shrinks).
+      const left = c.by === 'player' && c.sp !== 'trout' ? 1 - (c.cut ?? 0) / BUTCHER_ORDER[c.sp].length : 1;
+      const heading = this.tracks.get(c.id)?.shown.heading ?? this.carcassHeading.get(c.id) ?? 0;
+      this.batches.get(c.sp)!.push({ x, y, z, heading, scale: 0.6 + 0.4 * left, phase: 0, legSwing: 0, headPitch: 0.6, tailWag: 0, male: isMale(c.id), young: false, lying: true, extra: 1, pitch: 0, roll: 1.35 });
     }
     for (const b of this.batches.values()) b.end();
   }

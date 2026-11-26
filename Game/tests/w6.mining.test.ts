@@ -491,7 +491,7 @@ test('a v6 world: mine and smelt are refused, the smelter is locked, ore outcrop
   assert.ok(![...s6.world.wild!.map!.deposits].some((id) => id.startsWith('k:')));
   const s7 = v7();
   assert.equal(s7.journal.wildContent, 7);
-  assert.equal(LATEST_WILD_CONTENT, 8);
+  assert.equal(LATEST_WILD_CONTENT, 9);
   assert.equal(s7.stateHash, V7_PIN, 'v7 genesis');
   assert.equal(GameSession.genesis(1337).stateHash, 'e659504b056654dc', 'settlement genesis');
   // The catalogue: the smelter is the only W6 building; the forge and the workshop stay locked, and say why.

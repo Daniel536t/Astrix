@@ -1074,7 +1074,7 @@ if (!isMap && !isKit) {
   };
   if (wilderness && !noUi) {
     wildGame = new WildGame({ session, scene, explore: () => explore, groundY: (x, z) => residentSurfaceAt(world, Math.floor(x), Math.floor(z)),
-      camera: rig.camera, canvas: renderer.domElement, nature: () => natureView,
+      camera: rig.camera, canvas: renderer.domElement, nature: () => natureView, fauna: () => fauna,
       onChanged: () => { const r = store.save(session); persistenceMessage = r.message; saveScheduler.saved(Date.now()); }, notice: (message) => { lastAction = message; } });
     explore.reachOverride = wildGame.reachTarget;
     // Evidence harness (?metrics=1 only): a read-only scan of what lies around the player.

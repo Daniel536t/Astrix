@@ -105,6 +105,8 @@ export class ExploreController {
   reachOverride: ((x: number, z: number) => { x: number; y: number; z: number } | null) | null = null;
   /** W2: the right arm joint, for a held tool. */
   get rightHand(): THREE.Object3D { return this.figure.armR; }
+  /** W8: the left arm joint, for the bow. */
+  get leftHand(): THREE.Object3D { return this.figure.armL; }
   /** W3: an accepted axe swing (presentation): start time and the direction to face. */
   private swingStart = -1;
   private swingFace: number | null = null;
@@ -405,6 +407,7 @@ export class ExploreController {
     placeFigure(this.figure, x, y, z, s.heading);
     animateFigure(this.figure, s, frameDt, y);
     this.poseSwing(s);
+    this.poseAim(s);
 
     // Follow camera: smooth the target (snappier horizontally than vertically
     // so stepping up a voxel does not jolt the view).
@@ -442,6 +445,19 @@ export class ExploreController {
 
     this.saveTimer += frameDt;
     if (this.saveTimer > 3) { this.saveTimer = 0; this.persist(); }
+  }
+
+  /** W8: while the bow is drawn: face the aim (radians, +z forward) and how far it is drawn (0..1). Null otherwise. */
+  aim: { heading: number; pitch: number; draw: number } | null = null;
+  /** W8: the left arm holds the bow out along the aim, the right draws the string back. */
+  private poseAim(s: CharacterState): void {
+    const a = this.aim;
+    if (!a) return;
+    s.heading = a.heading;
+    this.figure.root.rotation.y = a.heading;
+    const f = this.figure, up = -Math.PI / 2 - a.pitch;
+    f.armL.rotation.x = up; f.armL.rotation.z = 0.12;
+    f.armR.rotation.x = up + 0.25 * a.draw; f.armR.rotation.z = -0.35 - 0.45 * a.draw;
   }
 
   /** W3: the two-handed axe swing laid over the walk pose. */

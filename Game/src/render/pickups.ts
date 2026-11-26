@@ -11,14 +11,17 @@ import type { LivePickup, PickupKind, WildItem } from '../sim/gathering';
 
 // W3: logs (a single log, and a stack for a pile of several, e.g. at a stockpile).
 // W6: mined material (a heap) and ingots (a bar), one mesh each, coloured per item (instance colour).
-type DrawKind = PickupKind | 'pile' | 'log' | 'log_stack' | 'mineral' | 'ingot';
-const KINDS: DrawKind[] = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom', 'pile', 'log', 'log_stack', 'mineral', 'ingot'];
+// W8: arrows lying on the ground, a folded hide, and meat or bone (a tinted heap).
+type DrawKind = PickupKind | 'pile' | 'log' | 'log_stack' | 'mineral' | 'ingot' | 'arrow' | 'hide';
+const KINDS: DrawKind[] = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom', 'pile', 'log', 'log_stack', 'mineral', 'ingot', 'arrow', 'hide'];
 /** W6: the tint of mined material and ingots lying on the ground. */
 export const ITEM_TINT: Partial<Record<WildItem, string>> = {
   iron_ore: '#b5683e', copper_ore: '#3fa892', coal: '#333333', clay: '#b0724c', sand: '#e3d197', gravel: '#9c988e',
   iron_ingot: '#8d939a', copper_ingot: '#d1834a',
+  // W8 (plain, bloodless colours).
+  raw_meat: '#c9806e', cooked_meat: '#8c5a3a', bone: '#ebe5d3', hide: '#9b6b44', arrow: '#ffffff', blunt_arrow: '#8a6a4a',
 };
-const TINTED = new Set<DrawKind>(['mineral', 'ingot']);
+const TINTED = new Set<DrawKind>(['mineral', 'ingot', 'arrow', 'hide']);
 const LOG = '#7A5638', LOG_CUT = '#E2C997';
 const log = (x: number, y: number, z: number, len = 1.1, r = 0.34): Block[] => [
   { x, y, z, w: len, h: r, d: r, hex: LOG },
@@ -77,6 +80,16 @@ function plan(kind: DrawKind): Block[] {
       { x: 0, y: 0.07, z: 0, w: 0.5, h: 0.14, d: 0.22, hex: '#ffffff' },
       { x: 0, y: 0.15, z: 0, w: 0.42, h: 0.03, d: 0.16, hex: '#dcdcdc' },
     ];
+    case 'arrow': return [
+      { x: 0, y: 0.03, z: 0, w: 0.03, h: 0.03, d: 0.7, hex: BARK },
+      { x: 0, y: 0.03, z: 0.37, w: 0.06, h: 0.04, d: 0.07, hex: STONE },
+      { x: 0, y: 0.03, z: -0.3, w: 0.09, h: 0.012, d: 0.12, hex: FIBRE },
+      { x: 0.08, y: 0.03, z: 0.02, w: 0.03, h: 0.03, d: 0.66, hex: BARK, omit: 0 },
+    ];
+    case 'hide': return [
+      { x: 0, y: 0.04, z: 0, w: 0.7, h: 0.08, d: 0.5, hex: '#ffffff' },
+      { x: 0.05, y: 0.1, z: -0.05, w: 0.5, h: 0.05, d: 0.36, hex: '#e6e6e6' },
+    ];
     case 'log': return log(0, 0.17, 0);
     case 'log_stack': return [...log(0, 0.17, -0.19), ...log(0, 0.17, 0.19), ...log(0, 0.48, 0)];
   }
@@ -116,7 +129,7 @@ export class PickupView {
     for (const p of list) {
       const tint = p.kind === 'pile' ? ITEM_TINT[p.item] : undefined;
       const kind: DrawKind = p.kind === 'pile' && p.item === 'log' ? (p.qty > 1 ? 'log_stack' : 'log')
-        : tint ? (p.item.endsWith('_ingot') ? 'ingot' : 'mineral') : p.kind;
+        : tint ? (p.item.endsWith('_ingot') ? 'ingot' : p.item === 'arrow' || p.item === 'blunt_arrow' ? 'arrow' : p.item === 'hide' ? 'hide' : 'mineral') : p.kind;
       const mesh = this.meshes.get(kind)!;
       const i = counts.get(kind) ?? 0;
       if (i >= MAX_PER_KIND) continue;

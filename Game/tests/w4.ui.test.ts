@@ -1,6 +1,6 @@
 // W4 completion: the Build menu, the placement ghost and bar (the shared M014 build mode with the wilderness
 // adapter), rotation, placing and refusing, the site and building panels, honest labels (no campfire warmth,
-// the knife has no use yet), and the rendering budgets of every building model and construction stage.
+// the knife says what it is for: W8 butchering), and the rendering budgets of every building model and construction stage.
 // The UI runs against a minimal DOM stand-in (no browser): it checks what the panels say and that every
 // verdict they show is the simulation's own.
 import test from 'node:test';
@@ -78,7 +78,8 @@ test('the Build menu lists the catalogue honestly; choosing a building opens the
   assert.match(menu.innerHTML, /data-choose="cabin" disabled/, 'later buildings are locked');
   assert.match(menu.innerHTML, /Locked: arrives with a later milestone \(needs smithed iron nails\)/);
   assert.ok(!/warm/i.test(menu.innerHTML), 'no warmth is claimed anywhere in the catalogue');
-  assert.match(menu.innerHTML, /stone knife \(no use yet\)/);
+  // W8: the knife now has a use (butchering), and the catalogue says so.
+  assert.match(menu.innerHTML, /stone knife \(for butchering\)/);
   assert.match(menu.innerHTML, /placing reserves all its materials/);
   menu.click(/data-choose="campfire"/);
   assert.equal(ui.mode.active, true);
@@ -191,7 +192,7 @@ test('the site panel: reservations by source, deliveries, stage progress and a t
   assert.ok(pile && Math.hypot(pile.x - siteSpotOf(site).x, pile.z - siteSpotOf(site).z) < 1.5, 'the stones lie at the site');
 });
 
-test('building panels are honest: the campfire cooks (no warmth claimed), the knife has no use yet, reserved items are not offered as free', () => {
+test('building panels are honest: the campfire cooks (no warmth claimed), the knife says what it is for (W8: butchering), reserved items are not offered as free', () => {
   const { s, ui, stand, toasts } = harness();
   axe(s);
   const fid = build(s, 'campfire', SPAWN);
@@ -204,11 +205,12 @@ test('building panels are honest: the campfire cooks (no warmth claimed), the kn
   stand(siteSpotOf(s.world.wild!.build!.sites.get(wid)!));
   ui.update(0);
   assert.equal(ui.near?.id, wid);
+  // W8 (content v9): the knife's note says what it now does (butchering a carcass the player shot; shaping the bow and arrows).
   const knife = WILD_RECIPES.find((r) => r.id === 'knife')!;
-  assert.match(knife.note!, /no use yet/);
-  assert.match(knife.note!, /W8/);
-  assert.doesNotMatch(knife.label + knife.note!, /butcher(s|ing)? (works|animals)|skins?/i);
-  assert.match(el(ui.site).innerHTML, /data-recipe="knife"[\s\S]*?no use yet/);
+  assert.doesNotMatch(knife.note!, /no use yet/);
+  assert.match(knife.note!, /Butchers the carcass of an animal you shot/);
+  assert.doesNotMatch(knife.label + knife.note!, /skins?/i);
+  assert.match(el(ui.site).innerHTML, /data-recipe="knife"[\s\S]*?Butchers the carcass/);
   // Reserve stones for a campfire, then try to craft a pickaxe with them at the bench: refused by the simulation.
   fund(s, 'campfire', SPAWN);
   const c = findWildSpot(s.world, 'campfire', 0, dm(SPAWN))!;

@@ -1,0 +1,40 @@
+// Node-made content-v9 wilderness save for the W8 browser walkthrough (current working tree): a finished
+// workbench and log store near the spawn, a stone axe and a stone knife, and the materials for a bow, arrows and
+// blunt arrows in the bag (the bow and arrows themselves are crafted in the browser).
+import { writeFileSync } from 'node:fs';
+import { GameSession } from '../../Astrix/Game/src/app/session';
+import { BrowserSaveStore, KeyValueStorage } from '../../Astrix/Game/src/app/persistence';
+import { GENERATOR_V2, WILDERNESS } from '../../Astrix/Game/src/sim/world';
+import { siteSpotOf } from '../../Astrix/Game/src/sim/wild-build';
+import { SPAWN, axe, build, dm, gather, load, ok, send } from '../../Astrix/Game/tests/w4-harness';
+
+class MemoryStorage implements KeyValueStorage {
+  readonly map = new Map<string, string>();
+  getItem(k: string) { return this.map.get(k) ?? null; }
+  setItem(k: string, v: string) { this.map.set(k, v); }
+  removeItem(k: string) { this.map.delete(k); }
+  key(i: number) { return [...this.map.keys()][i] ?? null; }
+  get length() { return this.map.size; }
+}
+const storage = new MemoryStorage();
+const store = new BrowserSaveStore(storage, 1337, GENERATOR_V2, { scenario: WILDERNESS, id: 'w1' });
+const s: GameSession = store.load().session;
+if (s.journal.wildContent !== 9) throw new Error('not v9');
+load(s);
+const tickP = (p: { x: number; z: number }) => ok(send(s, { type: 'tick', ticks: 1, presence: { ...dm(p), mx: 0, mz: 0 } }), 'tick');
+tickP(SPAWN);
+axe(s);
+const bench = build(s, 'workbench', { x: SPAWN.x - 10, z: SPAWN.z + 2 });
+const shed = build(s, 'log_store', { x: SPAWN.x - 4, z: SPAWN.z + 9 });
+const at = dm(siteSpotOf(s.world.wild!.build!.sites.get(bench)!));
+gather(s, 'branch', 1); gather(s, 'loose_stone', 1); gather(s, 'fiber_plant', 1);
+ok(send(s, { type: 'craft', recipe: 'knife', at }), 'knife');
+gather(s, 'fiber_plant', 4);
+ok(send(s, { type: 'craft', recipe: 'cord' }), 'cord'); ok(send(s, { type: 'craft', recipe: 'cord' }), 'cord');
+gather(s, 'branch', 6); gather(s, 'loose_stone', 2); gather(s, 'fiber_plant', 6);
+tickP(SPAWN);
+const res = store.save(s);
+if (!res.ok) throw new Error('save');
+const out: Record<string, string> = Object.fromEntries(storage.map);
+writeFileSync(process.argv[2], JSON.stringify({ bench, shed, benchAt: at, shedAt: dm(siteSpotOf(s.world.wild!.build!.sites.get(shed)!)), items: s.world.wild!.items, hash: s.stateHash, storage: out }, null, 1));
+console.log('saved', s.stateHash, s.world.wild!.items, Object.keys(out), at);

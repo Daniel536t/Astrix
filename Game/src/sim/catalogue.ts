@@ -172,7 +172,7 @@ export const BUILD_CATALOGUE: readonly BuildingDef[] = [
       st('top', 'Split-log top', 3, { log: 1 }),
     ],
     tool: 'stone_axe',
-    function: { kind: 'station', station: 'workbench', summary: 'A crafting station: planks from logs, a stone pickaxe, a hammer, a stone knife (no use yet) and a wooden chest (craft within reach).' },
+    function: { kind: 'station', station: 'workbench', summary: 'A crafting station: planks from logs, a stone pickaxe, a hammer, a stone knife (for butchering), a wooden chest and (W8) a bow, arrows and blunt arrows (craft within reach).' },
     solids: [{ x0: 0, z0: 0, x1: 2, z1: 1, h: 0.9 }],
     description: 'A heavy split-log bench on stone footings.',
   }),
