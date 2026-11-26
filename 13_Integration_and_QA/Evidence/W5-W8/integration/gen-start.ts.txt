@@ -1,0 +1,100 @@
+// Integration start save (Node-generated, journaled commands only) for the W5-W8 integration chains.
+// Source: /projects/sandbox/Astrix/Game/src at HEAD a4a02a4 (Game/src identical to feature commit 2429be3).
+// World: seed 1337, generator 2, wilderness id 'w1', content v9 (new world).
+// Contents generated here (NOT played in the browser):
+//  - stone axe, workbench, log store near the spawn (W4 construction harness);
+//  - stone knife, stone pickaxe (equipped), 2 cord + bow/arrow/blunt-arrow materials in the bag;
+//  - a journaled walk north (explore report + world tick every <=16 m) to iron e:31,16:6, 2 iron ore mined,
+//    to coal k:25,15:0, 2 coal mined, walk back; ore, coal, 6 stone and 2 branches stored in the log store.
+// Deliberately NOT done here (left for the browser): discovering / mining clay, sand, gravel; the smelter;
+// smelting; crafting the bow and arrows; any shot; any wildlife (no presence is sent, so no records exist).
+import { writeFileSync } from 'node:fs';
+import { GameSession } from '../../../Astrix/Game/src/app/session';
+import { BrowserSaveStore, KeyValueStorage } from '../../../Astrix/Game/src/app/persistence';
+import { GENERATOR_V2, WILDERNESS } from '../../../Astrix/Game/src/sim/world';
+import { siteSpotOf } from '../../../Astrix/Game/src/sim/wild-build';
+import { depositOf } from '../../../Astrix/Game/src/sim/deposits';
+import { exploredCount } from '../../../Astrix/Game/src/sim/map';
+import { SPAWN, axe, build, dm, gather, load, ok, send, swing, tick } from '../../../Astrix/Game/tests/w4-harness';
+
+class MemoryStorage implements KeyValueStorage {
+  readonly map = new Map<string, string>();
+  getItem(k: string) { return this.map.get(k) ?? null; }
+  setItem(k: string, v: string) { this.map.set(k, v); }
+  removeItem(k: string) { this.map.delete(k); }
+  key(i: number) { return [...this.map.keys()][i] ?? null; }
+  get length() { return this.map.size; }
+}
+const G = GENERATOR_V2;
+const storage = new MemoryStorage();
+const store = new BrowserSaveStore(storage, 1337, G, { scenario: WILDERNESS, id: 'w1' });
+const s: GameSession = store.load().session;
+if (s.journal.wildContent !== 9) throw new Error('not v9: ' + s.journal.wildContent);
+load(s);
+const explore = (p: { x: number; z: number }) => send(s, { type: 'explore', at: dm(p) });
+function walk(a: { x: number; z: number }, b: { x: number; z: number }) {
+  const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 16));
+  for (let k = 1; k <= n; k++) { tick(s); ok(explore({ x: a.x + (b.x - a.x) * k / n, z: a.z + (b.z - a.z) * k / n }), `report ${k}/${n}`); }
+}
+const dep = (id: string) => depositOf(1337, G, id)!;
+const by = (d: { x: number; z: number }, from = SPAWN) => { const l = Math.hypot(from.x - d.x, from.z - d.z) || 1; return { x: d.x + (from.x - d.x) / l, z: d.z + (from.z - d.z) / l }; };
+function mineUnits(id: string, n: number, at: { x: number; z: number }) {
+  let got = 0;
+  for (let i = 0; i < 200 && got < n; i++) {
+    const r = ok(swing(s, { type: 'mine', depositId: id, at: dm(at) }), `mine ${id}`);
+    if (r.ok && r.outcome.type === 'mine' && (r.outcome as { amount?: number }).amount) got++;
+  }
+  if (got !== n) throw new Error(`mined ${got}/${n} of ${id}`);
+}
+
+tick(s, 2);
+ok(explore(SPAWN), 'first report');
+axe(s);
+const bench = build(s, 'workbench', { x: SPAWN.x - 10, z: SPAWN.z + 2 });
+const shed = build(s, 'log_store', { x: SPAWN.x - 4, z: SPAWN.z + 9 });
+const w = s.world.wild!;
+const benchAt = dm(siteSpotOf(w.build!.sites.get(bench)!));
+const shedAt = dm(siteSpotOf(w.build!.sites.get(shed)!));
+// knife (as the W8 browser save generator), pickaxe (as the W6 base()).
+gather(s, 'branch', 1); gather(s, 'loose_stone', 1); gather(s, 'fiber_plant', 1);
+ok(send(s, { type: 'craft', recipe: 'knife', at: benchAt }), 'knife');
+gather(s, 'branch', 1); gather(s, 'loose_stone', 2); gather(s, 'fiber_plant', 2);
+ok(send(s, { type: 'craft', recipe: 'cord' }), 'cord for pickaxe');
+ok(send(s, { type: 'craft', recipe: 'stone_pickaxe', at: benchAt }), 'pickaxe');
+ok(send(s, { type: 'equip', item: 'stone_pickaxe' }), 'equip pickaxe');
+// bow + arrows + blunt arrows materials: 2 cord, branch 6, stone 2, fibre 6
+gather(s, 'fiber_plant', 4);
+ok(send(s, { type: 'craft', recipe: 'cord' }), 'cord'); ok(send(s, { type: 'craft', recipe: 'cord' }), 'cord');
+gather(s, 'branch', 6); gather(s, 'loose_stone', 2); gather(s, 'fiber_plant', 6);
+const undiscoveredBefore = ['k:29,28:0', 'k:28,28:1', 'k:28,27:1', 'k:28,27:0'].filter((id) => !w.map!.deposits.has(id));
+// journaled walk to iron and coal and back
+const IRON = dep('e:31,16:6'), COAL = dep('k:25,15:0');
+walk(SPAWN, by(IRON));
+mineUnits(IRON.id, 2, by(IRON));
+walk(by(IRON), by(COAL, IRON));
+mineUnits(COAL.id, 2, by(COAL, IRON));
+const home = { x: shedAt.x / 10, z: shedAt.z / 10 };
+walk(by(COAL, IRON), home);
+for (const [item, n] of [['iron_ore', 2], ['coal', 2]] as const) ok(send(s, { type: 'store_items', siteId: shed, item, n, at: shedAt }), `store ${item}`);
+gather(s, 'loose_stone', 6, home); gather(s, 'branch', 2, home);
+ok(send(s, { type: 'store_items', siteId: shed, item: 'stone', n: 6, at: shedAt }), 'store stone');
+ok(send(s, { type: 'store_items', siteId: shed, item: 'branch', n: 2, at: shedAt }), 'store branch');
+tick(s, 1);
+const res = store.save(s);
+if (!res.ok) throw new Error('save failed');
+const out = Object.fromEntries(storage.map);
+const summary = {
+  generatedBy: 'gen-start.ts (Node, journaled commands only)',
+  hash: s.stateHash, tick: s.world.life?.tick, journalEntries: s.journal.entries.length, content: w.content,
+  bench, shed, benchAt, shedAt,
+  items: w.items, tools: w.tools, equipped: w.equipped,
+  shedStock: w.build!.sites.get(shed)!.stock,
+  explored: exploredCount(w.map!), places: [...w.map!.places], discoveredDeposits: [...w.map!.deposits.keys()],
+  clayEtcUndiscoveredAtEnd: ['k:29,28:0', 'k:28,28:1', 'k:28,27:1', 'k:28,27:0'].filter((id) => !w.map!.deposits.has(id)),
+  undiscoveredBefore,
+  mineState: [...w.mine!.deposits.entries()],
+  wildlifeRecords: w.wildlife?.animals.size ?? null,
+  storageKeys: Object.keys(out), saveBytes: Object.values(out).reduce((a, v) => a + v.length, 0),
+};
+writeFileSync(process.argv[2], JSON.stringify({ summary, storage: out }));
+console.log(JSON.stringify(summary, null, 1));

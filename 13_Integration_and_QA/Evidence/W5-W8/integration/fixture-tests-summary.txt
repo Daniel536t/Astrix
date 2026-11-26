@@ -1,0 +1,62 @@
+ 18:47:33 up  9:06,  0 users,  load average: 13.55, 13.46, 12.01
+exit 0
+ 18:49:05 up  9:07,  0 users,  load average: 14.21, 13.96, 12.33
+files: stab002.s1 stab002.s3 stab002.v8 w1.wilderness w2.gathering w3.felling w4.build w4.owner-report1 w5.map w6.mining w7.wildlife w8.hunting
+# tests 165
+# pass 165
+# fail 0
+ok 1 - rules v1-v6 keep their hashes: v1-v3 (M012 run), v4-v6 (M014 reference run; v6 measured on 4169c21 before this change); genesis unchanged
+ok 2 - a v6 save written by the build before v7 (4169c21) restores byte-identical with its recorded hash; v6 refuses v7 animal fields
+ok 8 - v7 save and reload: the same states and hash after a restore mid-run; snapshots with act/until validate only under v7
+ok 9 - v6 save -> v7: one journaled upgrade keeps every animal, villager, building, field, woodland and stock; trapped animals walk out; reload keeps the hash
+ok 17 - replay and reload: a v7 journal with orders, shared jobs and batched trips replays from genesis to the same hash; a save mid-task restores and plays on identically
+ok 18 - time accounting: travel, waiting, work, idle, eating and sleeping add up to the ticks observed, per villager, under v6 and v7 alike
+ok 21 - a v7 save made by the S3 build restores byte-identical with its recorded hash and replays from genesis to it
+ok 25 - v8 pins: the same scenario fresh under v8
+ok 27 - the v7 save played on under v7 (300 ticks, young animals in the herd) stays v7 and its journal replays from genesis
+ok 28 - settlement worlds are byte-identical to before W1: journal bytes, params hash, genesis and played hashes
+ok 29 - the v6 and v7 save fixtures restore byte-identical as settlement worlds
+ok 32 - a wilderness journal replays deterministically from genesis and restores from a mid-run save
+ok 38 - settlement worlds have no pickups, refuse the wilderness commands, and keep their pins
+ok 39 - a W1 wilderness save made by the 69296e9 code loads, replays and keeps playing; it gains pickups only by upgrade_wilderness
+ok 45 - content v3 genesis is pinned; settlement worlds keep their pins and refuse felling
+ok 54 - content v4 genesis is pinned; v3 and settlement pins unchanged; the settlement refuses wilderness building
+ok 65 - the owner's stuck campfire (v4 save from c01c774, short): loads and replays byte-identically, stays stuck under v4, upgrades to v5 and is finished
+ok 66 - the owner's stuck campfire (v4 save from c01c774, long): loads and replays byte-identically, stays stuck under v4, upgrades to v5 and is finished
+ok 75 - named places: deterministic pure rules, pinned near the spawn, each one where its rule really holds
+ok 76 - fog starts unexplored: a new v6 world has explored nothing and discovered nothing; v6 genesis is pinned
+ok 87 - the v5 save made by the live W4 candidate code (0e41531, short) loads byte-identically, replays under v5, upgrades to v6 and keeps everything
+ok 88 - the v5 save made by the live W4 candidate code (0e41531, long) loads byte-identically, replays under v5, upgrades to v6 and keeps everything
+ok 89 - the W1 wilderness fixtures load, replay under their own rules and upgrade straight to v6
+ok 90 - the W2 wilderness fixtures load, replay under their own rules and upgrade straight to v6
+ok 91 - the W3 wilderness fixtures load, replay under their own rules and upgrade straight to v6
+ok 92 - the W4 wilderness fixtures load, replay under their own rules and upgrade straight to v6
+ok 93 - pins: settlement genesis and the wilderness v2-v5 genesis hashes are unchanged
+ok 106 - a v6 world: mine and smelt are refused, the smelter is locked, ore outcrops are still the only deposits; v6 and v7 genesis pinned
+ok 107 - the v6 save made by the live W5 code (5917608, short) loads byte-identically, replays under v6, upgrades to v7; its discovered outcrop is an iron deposit to mine
+ok 108 - the v6 save made by the live W5 code (5917608, long) loads byte-identically, replays under v6, upgrades to v7; its discovered outcrop is an iron deposit to mine
+ok 109 - the W1 wilderness fixture loads, replays under its own rules and upgrades straight to v7
+ok 110 - the W2 wilderness fixture loads, replays under its own rules and upgrades straight to v7
+ok 111 - the W3 wilderness fixture loads, replays under its own rules and upgrades straight to v7
+ok 112 - the W4 wilderness fixture loads, replays under its own rules and upgrades straight to v7
+ok 113 - the W5 wilderness fixture loads, replays under its own rules and upgrades straight to v7
+ok 115 - records: the first ticks around the player derive the creatures ring by ring; every record is a derived id, none twice; v8 genesis pinned
+ok 134 - the v7 save made by the live W6 code (12bf1e2, short) loads byte-identically, replays under v7 (presence ignored), upgrades to v8 with its state untouched
+ok 135 - the v7 save made by the live W6 code (12bf1e2, long) loads byte-identically, replays under v7 (presence ignored), upgrades to v8 with its state untouched
+ok 137 - the W1 wilderness fixture loads, replays under its own rules and upgrades straight to v8
+ok 138 - the W2 wilderness fixture loads, replays under its own rules and upgrades straight to v8
+ok 139 - the W3 wilderness fixture loads, replays under its own rules and upgrades straight to v8
+ok 140 - the W4 wilderness fixture loads, replays under its own rules and upgrades straight to v8
+ok 141 - the W5 wilderness fixture loads, replays under its own rules and upgrades straight to v8
+ok 142 - the W6 wilderness fixture loads, replays under its own rules and upgrades straight to v8
+ok 143 - the settlement is untouched: no wildlife block, genesis pinned, ticks with presence unchanged by W7
+ok 155 - the v8 save made by the live W7 code (9068b88, short) loads byte-identically, replays under v8, upgrades to v9 with its state untouched, and hunts
+ok 156 - the v8 save made by the live W7 code (9068b88, long) loads byte-identically, replays under v8, upgrades to v9 with its state untouched, and hunts
+ok 157 - the W1 wilderness fixture loads, replays under its own rules and upgrades straight to v9
+ok 158 - the W2 wilderness fixture loads, replays under its own rules and upgrades straight to v9
+ok 159 - the W3 wilderness fixture loads, replays under its own rules and upgrades straight to v9
+ok 160 - the W4 wilderness fixture loads, replays under its own rules and upgrades straight to v9
+ok 161 - the W5 wilderness fixture loads, replays under its own rules and upgrades straight to v9
+ok 162 - the W6 wilderness fixture loads, replays under its own rules and upgrades straight to v9
+ok 163 - the W7 wilderness fixture loads, replays under its own rules and upgrades straight to v9
+ok 164 - pins: settlement genesis and v7, v8 wilderness genesis unchanged; v9 genesis pinned; settlement has no hunting

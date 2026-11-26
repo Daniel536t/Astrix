@@ -1,0 +1,327 @@
+{
+ "loadStatus": "restored",
+ "startHash": "69fa627f97f2e111",
+ "expectedStartHash": "69fa627f97f2e111",
+ "H1": {
+  "deposit": "k:29,28:0",
+  "discoveredAfterReportAt40m": false,
+  "mineWhileUndiscovered": "undiscovered",
+  "discoveredAfterReportAt20m": true
+ },
+ "reloads": [
+  {
+   "label": "H2 after storing clay",
+   "before": "b829c44a1ee826d6",
+   "after": "b829c44a1ee826d6",
+   "equal": true,
+   "status": "restored",
+   "records": 159,
+   "dead": 0,
+   "carcasses": 0
+  },
+  {
+   "label": "H2 exhausted + 300 ticks",
+   "before": "e35289494cc5ac8e",
+   "after": "e35289494cc5ac8e",
+   "equal": true,
+   "status": "restored",
+   "records": 159,
+   "dead": 0,
+   "carcasses": 0
+  },
+  {
+   "label": "H6 after kill (before butchering)",
+   "before": "2267dfc4eb901ba3",
+   "after": "2267dfc4eb901ba3",
+   "equal": true,
+   "status": "restored",
+   "records": 218,
+   "dead": 1,
+   "carcasses": 1
+  },
+  {
+   "label": "H6 mid-butchering (5 swings)",
+   "before": "7d3d3a5345fb88d8",
+   "after": "7d3d3a5345fb88d8",
+   "equal": true,
+   "status": "restored",
+   "records": 242,
+   "dead": 1,
+   "carcasses": 1
+  },
+  {
+   "label": "H6 after storing outputs",
+   "before": "644af93856099b2d",
+   "after": "644af93856099b2d",
+   "equal": true,
+   "status": "restored",
+   "records": 242,
+   "dead": 1,
+   "carcasses": 0
+  },
+  {
+   "label": "H6 stored + 50 ticks",
+   "before": "688d9b320588be79",
+   "after": "688d9b320588be79",
+   "equal": true,
+   "status": "restored",
+   "records": 242,
+   "dead": 1,
+   "carcasses": 0
+  },
+  {
+   "label": "H7 during stun",
+   "before": "1a26ab44b4e56925",
+   "after": "1a26ab44b4e56925",
+   "equal": true,
+   "status": "restored",
+   "records": 242,
+   "dead": 1,
+   "carcasses": 0
+  }
+ ],
+ "H2": {
+  "clayMined": 8,
+  "nextSwing": "too_fast",
+  "depositLeft": {
+   "id": "k:29,28:0",
+   "left": 0,
+   "work": 0
+  },
+  "shedStock": {
+   "branch": 2,
+   "clay": 8,
+   "coal": 2,
+   "iron_ore": 2,
+   "stone": 6
+  },
+  "reloadEqual": true,
+  "stockAfterReload": {
+   "branch": 2,
+   "clay": 8,
+   "coal": 2,
+   "iron_ore": 2,
+   "stone": 6
+  },
+  "exhaustedAfter300TicksAndReload": {
+   "left": {
+    "id": "k:29,28:0",
+    "left": 0,
+    "work": 0
+   },
+   "nextMine": "exhausted"
+  }
+ },
+ "crafted": {
+  "items": {
+   "branch": 1,
+   "fiber": 3,
+   "arrow": 8,
+   "blunt_arrow": 4
+  },
+  "tools": [
+   "stone_axe:10",
+   "knife:36",
+   "stone_pickaxe:26",
+   "bow:150"
+  ]
+ },
+ "H5": {
+  "deer": "fauna:deer:30,25:1",
+  "act": "flee",
+  "ranInTick_m": 15.7,
+  "sidesTried": 3,
+  "attempts": [
+   {
+    "stand": {
+     "x": -107.77,
+     "z": -190.02
+    },
+    "sameStart": true,
+    "leadShot": {
+     "hit": "water",
+     "x": -11795,
+     "y": 0,
+     "z": -18773,
+     "ms": 347,
+     "speed": 410
+    },
+    "noLeadShot": {
+     "hit": "terrain",
+     "x": -11696,
+     "y": 0,
+     "z": -18507,
+     "ms": 347,
+     "speed": 410
+    }
+   },
+   {
+    "stand": {
+     "x": -108.7,
+     "z": -189.64
+    },
+    "sameStart": true,
+    "leadShot": {
+     "hit": "water",
+     "x": -11782,
+     "y": 0,
+     "z": -18745,
+     "ms": 311,
+     "speed": 409
+    },
+    "noLeadShot": {
+     "hit": "terrain",
+     "x": -11596,
+     "y": 100,
+     "z": -18558,
+     "ms": 276,
+     "speed": 408
+    }
+   },
+   {
+    "stand": {
+     "x": -106.85,
+     "z": -190.41
+    },
+    "sameStart": true,
+    "leadShot": {
+     "hit": "animal",
+     "ref": "fauna:deer:30,25:1",
+     "part": "body",
+     "x": -11632,
+     "y": 117,
+     "z": -18833,
+     "ms": 314,
+     "speed": 409,
+     "result": "wounded",
+     "damage": 10,
+     "hp": 2
+    },
+    "noLeadShot": {
+     "hit": "terrain",
+     "x": -11557,
+     "y": 100,
+     "z": -18584,
+     "ms": 320,
+     "speed": 409
+    }
+   }
+  ]
+ },
+ "H6": {
+  "deer": "fauna:deer:29,25:1",
+  "shots": [
+   {
+    "hit": "animal",
+    "ref": "fauna:deer:29,25:1",
+    "part": "head",
+    "ms": 296,
+    "speed": 387,
+    "result": "killed",
+    "damage": 14,
+    "hp": 0
+   }
+  ],
+  "killed": true,
+  "carcass": {
+   "id": "fauna:deer:29,25:1",
+   "sp": "deer",
+   "x": -644,
+   "z": -2248,
+   "t": 407,
+   "by": "player",
+   "cut": 0,
+   "work": 0
+  },
+  "withBow": "no_knife",
+  "made": [
+   "hide",
+   "raw_meat",
+   "raw_meat",
+   "bone",
+   "raw_meat",
+   "hide",
+   "raw_meat",
+   "bone"
+  ],
+  "swings": 16,
+  "pileTotals": {
+   "hide": 2,
+   "raw_meat": 4,
+   "bone": 2
+  },
+  "picked": {
+   "raw_meat": 4,
+   "hide": 2,
+   "bone": 2
+  },
+  "carcassGone": true,
+  "tombstone": true,
+  "recordBack": false,
+  "stockAfterStore": {
+   "bone": 2,
+   "branch": 2,
+   "clay": 10,
+   "coal": 2,
+   "hide": 2,
+   "iron_ore": 2,
+   "raw_meat": 4,
+   "stone": 6
+  },
+  "reloadEqual": true,
+  "stockAfter50TicksAndReload": {
+   "bone": 2,
+   "branch": 2,
+   "clay": 10,
+   "coal": 2,
+   "hide": 2,
+   "iron_ore": 2,
+   "raw_meat": 4,
+   "stone": 6
+  },
+  "butcherAgain": "not_found"
+ },
+ "H7": {
+  "hare": "fauna:rabbit:28,26:1",
+  "shot": {
+   "hit": "animal",
+   "ref": "fauna:rabbit:28,26:1",
+   "part": "body",
+   "ms": 236,
+   "speed": 373,
+   "result": "stunned",
+   "damage": 9,
+   "hp": 3
+  },
+  "right": {
+   "act": "stunned",
+   "hp": "full",
+   "deadDelta": 0,
+   "carcassDelta": 0,
+   "tombstoned": false
+  },
+  "afterReload": {
+   "act": "stunned"
+  },
+  "actsAfter": [
+   "stunned",
+   "flee"
+  ],
+  "end": {
+   "alive": true,
+   "deadDelta": 0,
+   "tombstoned": false,
+   "carcassOfHare": false
+  }
+ },
+ "H8": {
+  "records": 242,
+  "duplicateIds": 0,
+  "resurrected": 0,
+  "dead": 1,
+  "restoreEqual": true,
+  "compactRestoreEqual": true,
+  "finalHash": "93a4ca0731b327e7",
+  "tick": 492
+ }
+}

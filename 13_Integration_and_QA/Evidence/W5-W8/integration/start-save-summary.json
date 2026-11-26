@@ -1,0 +1,123 @@
+{
+ "generatedBy": "gen-start.ts (Node, journaled commands only)",
+ "hash": "69fa627f97f2e111",
+ "tick": 74,
+ "journalEntries": 262,
+ "content": 9,
+ "bench": "b:10",
+ "shed": "b:18",
+ "benchAt": {
+  "x": -885,
+  "z": -1675
+ },
+ "shedAt": {
+  "x": -825,
+  "z": -1605
+ },
+ "items": {
+  "fiber": 8,
+  "cord": 2,
+  "branch": 6,
+  "stone": 2
+ },
+ "tools": [
+  {
+   "id": "tool:1",
+   "kind": "stone_axe",
+   "durability": 10
+  },
+  {
+   "id": "tool:19",
+   "kind": "knife",
+   "durability": 40
+  },
+  {
+   "id": "tool:20",
+   "kind": "stone_pickaxe",
+   "durability": 46
+  }
+ ],
+ "equipped": "tool:20",
+ "shedStock": {
+  "branch": 2,
+  "coal": 2,
+  "iron_ore": 2,
+  "stone": 6
+ },
+ "explored": 311,
+ "places": [
+  "pl:ford:1,1:0",
+  "pl:forest:1,1"
+ ],
+ "discoveredDeposits": [
+  "k:29,23:2",
+  "k:29,23:3",
+  "k:29,23:1",
+  "k:30,22:1",
+  "k:30,22:0",
+  "k:29,21:0",
+  "k:30,20:2",
+  "k:30,20:0",
+  "k:30,20:3",
+  "k:30,19:1",
+  "k:30,20:1",
+  "k:31,20:0",
+  "k:31,19:0",
+  "k:31,19:1",
+  "k:30,18:0",
+  "k:30,19:0",
+  "e:31,16:6",
+  "k:27,16:0",
+  "k:26,15:0",
+  "k:26,15:1",
+  "k:26,15:2",
+  "k:27,15:0",
+  "k:25,15:0",
+  "k:25,16:0",
+  "k:25,17:0",
+  "k:25,17:2",
+  "k:26,17:0",
+  "k:27,23:0",
+  "k:27,23:1",
+  "k:28,23:0",
+  "k:28,24:0",
+  "k:27,24:1",
+  "k:28,25:0"
+ ],
+ "clayEtcUndiscoveredAtEnd": [
+  "k:29,28:0",
+  "k:28,28:1",
+  "k:28,27:1",
+  "k:28,27:0"
+ ],
+ "undiscoveredBefore": [
+  "k:29,28:0",
+  "k:28,28:1",
+  "k:28,27:1",
+  "k:28,27:0"
+ ],
+ "mineState": [
+  [
+   "e:31,16:6",
+   {
+    "id": "e:31,16:6",
+    "left": 13,
+    "work": 0
+   }
+  ],
+  [
+   "k:25,15:0",
+   {
+    "id": "k:25,15:0",
+    "left": 11,
+    "work": 0
+   }
+  ]
+ ],
+ "wildlifeRecords": 0,
+ "storageKeys": [
+  "astrix:wild:v3:w1:seed:1337"
+ ],
+ "saveBytes": 79941,
+ "sha256": "03e2f1cdaeaee9d155b71119e3ac6af1430f389ba53fddafcf9dc9d43b88865e"
+}
