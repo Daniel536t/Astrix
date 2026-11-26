@@ -226,3 +226,24 @@ These are covered by tests 4, 8 and 9.
 | Performance with meaningful populations | Pass (sim: 7.2 ms median with 165 animals; render within budget with 107–118 drawn); frame rate on real hardware NOT VERIFIED | §5 |
 | Tests cover persistence, death, spawning, movement and behaviour | Pass | 30 new tests; 557/557 |
 | Old saves preserved (settlement pins and fixtures; W1–W6; new v7 fixture) | Pass | Tests 2, 21–30; full suite |
+
+## Orchestrator verification and deployment (recorded after results were read)
+
+- **Pre-commit check:** I ran the full suite myself on the final working tree: **557 tests, 557 pass, 0 fail**. Typecheck was clean and the build passed. Host load average was about 13.6.
+- **Commit:** `9068b88c7c54d19dfbbe2a8b3ed42aac1cb6c778`. Both `git fetch` and the GitHub branches API confirmed it on the remote before I deployed.
+- **Deploy attempt 1 failed at its own test step.** The script reported 557 tests, 556 pass, 1 fail, and **did not upload**; the live site stayed on W6, `index-BVp4sZm9.js`.
+  - The failing test was the m004 wall-clock check "v2 chunk generation stays within budget per chunk", which measured 61.1 ms against a 60 ms limit.
+  - Host load average was 11.8–14.0 at the time. This is the same host-load flake recorded in W5. The threshold was not relaxed.
+- **Deploy attempt 2, same commit, no changes, succeeded.** Exit 0, and the suite gave 557 / 557.
+  - Release: `20261126T161401Z-9068b88`. The server's `current` resolves to it.
+  - Bundle: `assets/index-CzxGZWdl.js`, stamped `commit:"9068b88", dirty:false`.
+- **Live check** (fresh headless Chromium, desktop 1000x600, software GL, new wilderness world, 50 s at spawn):
+  - wilderness content **8**;
+  - fauna source `sim`, with 139 saved records and 82 drawn (21 deer, 22 rabbit, 5 fox, 9 wolf, 25 trout);
+  - 0 dead, 0 carcasses, 0 kills in that window;
+  - deer behaviour states seen included wander 4, graze 11 and idle 3;
+  - 55 draw calls, 152,176 triangles;
+  - 0 page errors, 0 console errors, 0 failed requests, 0 HTTP ≥ 400 responses.
+- **NOT VERIFIED on the live site:** reactions to the player, persistence across reload, and kills. These were verified on the local build, as described above.
+
+W7 is implemented and deployed, and **not owner-accepted**.
