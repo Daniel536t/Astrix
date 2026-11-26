@@ -1,0 +1,26 @@
+async (page) => {
+  const DIR = '/projects/sandbox/.kiro/artifacts/screenshots/probe/dist';
+  const ctx = page.context();
+  await ctx.unrouteAll({ behavior: 'ignoreErrors' }).catch(() => {});
+  await ctx.route(/^https:\/\/astrix\.local\//, async (route) => { let p = route.request().url().replace(/^https:\/\/astrix\.local/, '').split('?')[0]; if (p === '/blank') { await route.fulfill({ body: '<html></html>', contentType: 'text/html' }); return; } if (p === '/' || p === '') p = '/index.html'; await route.fulfill({ path: DIR + p }); });
+  if (!page.__w5) {
+    page.__w5 = { console: [], pageerror: [], failed: [], http: [] };
+    const L = page.__w5;
+    page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') L.console.push(m.type() + ': ' + m.text().slice(0, 200)); });
+    page.on('pageerror', (e) => L.pageerror.push(String(e).slice(0, 300)));
+    page.on('requestfailed', (r) => L.failed.push(r.url()));
+    page.on('response', (r) => { if (r.status() >= 400) L.http.push(r.status() + ' ' + r.url()); });
+    await ctx.addInitScript({ path: '/projects/sandbox/.kiro/artifacts/screenshots/probe/w4-helpers.js' });
+  }
+  await page.setViewportSize({ width: 1200, height: 700 });
+  await page.goto('https://astrix.local/blank');
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('astrix:entered:v1', '1'); localStorage.setItem('astrix:worlds:v1', JSON.stringify({ v: 1, worlds: [{ id: 'w1', seed: 1337, generatorVersion: 2, created: 1764000000000, spawn: { x: -82, z: -172 } }] })); localStorage.setItem('astrix:world:active:v1', 'w1'); });
+  page.__w5.console.length = 0; page.__w5.pageerror.length = 0; page.__w5.failed.length = 0; page.__w5.http.length = 0;
+  await page.goto('https://astrix.local/?chain=0&metrics=1');
+  await page.waitForFunction(() => window.__metrics?.explore?.spawned === true, null, { timeout: 120000 });
+  await page.waitForTimeout(2500);
+  await page.screenshot({ path: '/projects/sandbox/.kiro/artifacts/screenshots/w5/w5-a-desktop-spawn.png' });
+  const rects = await page.evaluate(() => { const r = {}; for (const id of ['minimap','route-pill','wild-events','mode-button','hud','vitals','settings-button','bag-button','build-menu-button']) { const el = document.getElementById(id); if (el) { const b = el.getBoundingClientRect(); r[id] = [b.left,b.top,b.right,b.bottom].map(Math.round).concat(getComputedStyle(el).display); } } return r; });
+  const map = await page.evaluate(() => { const m = window.__metrics.wild.map; return { explored: m.explored, places: m.places, last: m.last, minimap: m.minimap, stats: m.stats }; });
+  return { log: page.__w5, rects, map };
+}

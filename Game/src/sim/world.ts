@@ -766,18 +766,24 @@ export function computeBaseColumns(seed: number, version: number, cx: number, cz
   const columns = { heights: new Uint8Array(CHUNK_AREA), topMaterials: new Uint8Array(CHUNK_AREA) };
   for (let lz = 0; lz < CHUNK_SIZE; lz++) {
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-      const x = chunkOriginX(cx) + lx, z = chunkOriginZ(cz) + lz;
-      const h = baseHeightAt(seed, version, x, z);
-      const slope = version >= GENERATOR_V2
-        ? versionedSlope(seed, version, x, z, h) : slopeAt(seed, x, z, h);
+      const c = baseColumnAt(seed, version, chunkOriginX(cx) + lx, chunkOriginZ(cz) + lz);
       const index = lz * CHUNK_SIZE + lx;
-      columns.heights[index] = clamp(h - Y_MIN, 0, WORLD_HEIGHT - 1);
-      columns.topMaterials[index] = version >= GENERATOR_V2
-        ? baseTopMaterialFor(seed, version, x, z, h, slope)
-        : topMaterialAt(seed, x, z, h, slope);
+      columns.heights[index] = c.stored;
+      columns.topMaterials[index] = c.top;
     }
   }
   return columns;
+}
+
+/** One base column as `computeBaseColumns` stores it: height (offset by Y_MIN, clamped) and top material. Pure. */
+export function baseColumnAt(seed: number, version: number, x: number, z: number): { stored: number; top: MatId } {
+  const h = baseHeightAt(seed, version, x, z);
+  const slope = version >= GENERATOR_V2
+    ? versionedSlope(seed, version, x, z, h) : slopeAt(seed, x, z, h);
+  return {
+    stored: clamp(h - Y_MIN, 0, WORLD_HEIGHT - 1),
+    top: version >= GENERATOR_V2 ? baseTopMaterialFor(seed, version, x, z, h, slope) : topMaterialAt(seed, x, z, h, slope),
+  };
 }
 
 /** Provide precomputed base columns (for example from a worker) before installing a chunk. */
@@ -1053,20 +1059,33 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
   if (world.entityChunks.has(key)) return;
   const chunk = ensureChunk(world, cx, cz);
   if (!chunk) return;
-
-  const rnd = mulberry32((hash2i(chunk.cx, chunk.cz, world.seed + 900) * 4294967296) >>> 0);
-  const ox = chunkOriginX(chunk.cx), oz = chunkOriginZ(chunk.cz);
   const columns = baseColumns(world, chunk);
+  planNaturalEntities(world.seed, chunk.cx, chunk.cz,
+    (lx, lz) => columns.heights[lz * CHUNK_SIZE + lx] + Y_MIN,
+    (lx, lz) => columns.topMaterials[lz * CHUNK_SIZE + lx] as MatId,
+    isStoneReplay(world),
+    {
+      entity: (e) => addEntity(world, e),
+      stat: (k) => { world.stats[k]++; },
+    });
+}
+
+/**
+ * W5: the natural entities a chunk's generation places, as a pure function of
+ * (seed, chunk) and the chunk's base columns (`localSurface`, `localTop`).
+ * `generateEntityChunk` adds them to the world (the same records, in the same
+ * order, with the same random draws as before this was split out); the map's
+ * ore discovery reads them without generating the chunk's voxels.
+ */
+export function planNaturalEntities(seed: number, cx: number, cz: number,
+  localSurface: (lx: number, lz: number) => number, localTop: (lx: number, lz: number) => MatId, stoneReplay: boolean,
+  sink: { entity: (e: Entity) => void; stat: (k: 'trees' | 'pinkTrees' | 'pinkOverflow') => void }): void {
+  const chunk = { cx, cz, key: chunkKey(cx, cz) };
+  const rnd = mulberry32((hash2i(chunk.cx, chunk.cz, seed + 900) * 4294967296) >>> 0);
+  const ox = chunkOriginX(chunk.cx), oz = chunkOriginZ(chunk.cz);
   let n = 0;
   let naturalTrees = 0;
   let naturalPinkTrees = 0;
-
-  const localSurface = (lx: number, lz: number): number => {
-    return columns.heights[lz * CHUNK_SIZE + lx] + Y_MIN;
-  };
-  const localTop = (lx: number, lz: number): MatId => {
-    return columns.topMaterials[lz * CHUNK_SIZE + lx] as MatId;
-  };
   const localSlope = (lx: number, lz: number): number => {
     const h = localSurface(lx, lz);
     return Math.max(
@@ -1088,8 +1107,8 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
       const slope = localSlope(lx, lz);
       const top = localTop(lx, lz);
       if (top === MAT.WATER) continue;
-      const forest = forestScore(wx, wz, world.seed);
-      const rocky = rockScore(wx, wz, world.seed);
+      const forest = forestScore(wx, wz, seed);
+      const rocky = rockScore(wx, wz, seed);
       const roll = rnd();
 
       const treeChance = forest > 0.50 ? 0.72 : forest > 0.30 ? 0.25 : 0.05;
@@ -1103,12 +1122,12 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
           if ((naturalPinkTrees + 1) > 0.25 * (naturalTrees + 1)) {
             kind = 'styl_tree_cluster';
             variant = Math.floor(rnd() * 3);
-            world.stats.pinkOverflow++;
+            sink.stat('pinkOverflow');
           } else {
             kind = 'styl_tree_blossom';
             variant = Math.floor(rnd() * 2);
             naturalPinkTrees++;
-            world.stats.pinkTrees++;
+            sink.stat('pinkTrees');
           }
         } else if (speciesRoll < 0.40) {
           kind = 'styl_tree_spire';
@@ -1121,8 +1140,8 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
           variant = Math.floor(rnd() * 3);
         }
         naturalTrees++;
-        world.stats.trees++;
-        addEntity(world, {
+        sink.stat('trees');
+        sink.entity({
           id: entityId(chunk.key, n++),
           kind, chunk: chunk.key, x: wx + 0.5, y: h, z: wz + 0.5,
           rot: Math.floor(rnd() * 24) * (Math.PI / 12),
@@ -1150,11 +1169,11 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
         };
         // Only entities that existed in an accepted old save get tombstones,
         // during explicit migration. Ordinary generation must restore exactly.
-        if (isStoneReplay(world)) addEntity(world, record);
+        if (stoneReplay) sink.entity(record);
         continue;
       }
       if (top === MAT.STONE && rocky > 0.58 && roll < 0.18) {
-        addEntity(world, {
+        sink.entity({
           id: entityId(chunk.key, n++),
           kind: 'styl_ore', chunk: chunk.key, x: wx + 0.5, y: h, z: wz + 0.5,
           rot: Math.floor(rnd() * 24) * (Math.PI / 12),
@@ -1165,7 +1184,7 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
         continue;
       }
       if (top === MAT.GRASS && slope <= 1 && roll < 0.30) {
-        addEntity(world, {
+        sink.entity({
           id: entityId(chunk.key, n++),
           kind: 'styl_shrub', chunk: chunk.key, x: wx + 0.5, y: h, z: wz + 0.5,
           rot: Math.floor(rnd() * 24) * (Math.PI / 12),

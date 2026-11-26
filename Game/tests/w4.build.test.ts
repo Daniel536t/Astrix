@@ -90,8 +90,9 @@ test('the Build catalogue: every definition is complete and consistent; early bu
 });
 
 test('content v4 genesis is pinned; v3 and settlement pins unchanged; the settlement refuses wilderness building', () => {
-  // A new world now starts at content v5 (W4 owner report 1: bag capacity and reservation swap); v4 keeps its pin.
-  const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  // A new world now starts at content v6 (W5: world navigation and map); v5 (W4 owner report 1) and v4 keep their pins.
+  assert.equal(GameSession.genesis(1337, GENERATOR_V2, 'wilderness').journal.wildContent, 6);
+  const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 5);
   assert.equal(w.journal.wildContent, 5);
   assert.equal(w.stateHash, W5_PIN, 'v5 genesis');
   const w4 = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 4);

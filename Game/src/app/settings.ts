@@ -12,6 +12,8 @@ export interface SettingsOptions {
   onFrameCap?: (cap: FrameCap) => void;
   /** W1: the world open now, and how to open the world list. */
   worlds?: { current: string; open: () => void };
+  /** W5: the wilderness map (open it; show or hide the small map). */
+  map?: { open: () => void; shown: () => boolean; setShown: (on: boolean) => void };
 }
 
 const describe = (l: QualityLevel) => {
@@ -38,6 +40,10 @@ export function mountSettings(o: SettingsOptions): void {
     ${o.worlds ? `<h3>Worlds</h3>
     <p class="dim">Open now: <b>${o.worlds.current}</b>. Your settlement and every wilderness world are kept; switching reloads the page.</p>
     <button type="button" data-worlds>Your worlds…</button>` : ''}
+    ${o.map ? `<h3>Map</h3>
+    <p class="dim">The small map shows what you have explored around you. Tap it, or press M, for the full map.</p>
+    <button type="button" data-map-open>Open the map (M)</button>
+    <label class="q-opt"><input type="checkbox" data-minimap ${o.map.shown() ? 'checked' : ''}><span><b>Show the small map</b></span></label>` : ''}
     <h3>Graphics quality</h3>
     <p class="dim">${now}. Animals, people and buildings look the same at every level.</p>
     <form data-quality>
@@ -58,12 +64,18 @@ export function mountSettings(o: SettingsOptions): void {
     <p class="dim">Shows fps and frame time and records a report you can copy or download.</p>
     <button type="button" data-perf-toggle>${o.perfOn ? 'Turn the monitor off' : 'Turn the monitor on (?perf=1)'}</button>`;
   document.body.append(button, panel);
-  const toggle = (open = panel.hidden) => { panel.hidden = !open; button.setAttribute('aria-expanded', String(open)); };
+  const toggle = (open = panel.hidden) => {
+    panel.hidden = !open; button.setAttribute('aria-expanded', String(open));
+    // W5: the small-map switch shows its current state (the map may be made after the settings).
+    const mm = panel.querySelector<HTMLInputElement>('input[data-minimap]');
+    if (open && mm && o.map) mm.checked = o.map.shown();
+  };
   button.addEventListener('click', () => toggle());
   panel.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     if (t.closest('[data-settings-close]')) toggle(false);
     if (t.closest('[data-worlds]')) { toggle(false); o.worlds?.open(); }
+    if (t.closest('[data-map-open]')) { toggle(false); o.map?.open(); }
     if (t.closest('[data-perf-toggle]')) {
       const q = new URLSearchParams(location.search);
       if (o.perfOn) q.delete('perf'); else q.set('perf', '1');
@@ -71,6 +83,7 @@ export function mountSettings(o: SettingsOptions): void {
       location.href = location.pathname + (s ? `?${s}` : '');
     }
   });
+  panel.querySelector('input[data-minimap]')?.addEventListener('change', (e) => o.map?.setShown((e.target as HTMLInputElement).checked));
   panel.querySelector('form[data-fpscap]')?.addEventListener('change', (e) => {
     const cap = parseFrameCap((e.target as HTMLInputElement).value) ?? 0;
     try { localStorage.setItem(FRAME_CAP_STORAGE_KEY, String(cap)); } catch { /* private mode: this load only */ }

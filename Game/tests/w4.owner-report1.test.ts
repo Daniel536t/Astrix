@@ -146,7 +146,8 @@ function remoteCampfire(s: GameSession): string {
 }
 
 test('v5 swap: explicit and journaled; never takes units reserved for another site; refused when short or malformed; tampering refused', () => {
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  // Under the v5 rules exactly (W5 made v6 the default for new worlds; v6 keeps these rules, tested in w5.map.test.ts).
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 5);
   assert.equal(s.world.wild!.content, 5);
   load(s);
   const a = remoteCampfire(s);

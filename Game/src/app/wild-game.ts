@@ -19,7 +19,7 @@ import type { GameSession } from './session';
 import type { ExploreController } from './explore';
 import {
   CARRY_CAPACITY, CARRY_CAPACITY_V5, FOOD_VALUE, ITEM_LABEL, ITEM_WEIGHT, LATEST_WILD_CONTENT, LivePickup, PICKUP_LABEL, PICKUP_REACH, TOOL_DURABILITY,
-  WILD_CONTENT_V5, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
+  WILD_CONTENT_V5, WILD_CONTENT_V6, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
 } from '../sim/gathering';
 import {
   CHOP_REACH, EventRecord, FellEvent, NearTree, SWING_COOLDOWN_MS, Trunk, choppable, stockpileAt, stockpileLogs, treeDistance,
@@ -30,6 +30,8 @@ import { FellingView, NatureHider } from '../render/felling';
 import { WildBuildUI } from './wild-build-ui';
 import { SITE_REACH, WildSite, buildingsNear, deliverable, freeIn, homeShelter, reservationsInSource, reservedTotalsIn, siteSpotOf, stageNeeds, stationNear } from '../sim/wild-build';
 import { buildingDef } from '../sim/catalogue';
+import { WildMap } from './wild-map';
+import { waterSurfaceAt } from '../sim/world';
 
 export interface WildGameOptions {
   session: GameSession;
@@ -76,6 +78,8 @@ export class WildGame {
   readonly felling = new FellingView();
   /** W4: the Build menu, ghost, construction and building panels. */
   readonly build: WildBuildUI;
+  /** W5: minimap, full map, waypoints, routes and the trail. */
+  readonly map: WildMap;
   private readonly axe = buildHeldAxe();
   private readonly toastEl: HTMLElement;
   private toastTimer = 0;
@@ -152,6 +156,24 @@ export class WildGame {
     this.build.onWork = (s) => { if (performance.now() - this.lastSwing >= SWING_COOLDOWN_MS) { this.lastSwing = performance.now(); this.work(s); } };
     this.build.onCraft = (r) => this.craft(r);
     this.ensureContent();
+    let storage: Storage | null = null;
+    try { storage = window.localStorage; } catch { storage = null; }
+    const fwd = new THREE.Vector3();
+    this.map = new WildMap({
+      world: () => this.world,
+      dispatch: (c, t) => {
+        const s = o.session;
+        const r = s.dispatch({ schema: 3, id: s.commandId(c.type as never, t), expectedRevision: s.world.revision, ...c });
+        if (r.ok) { this.version++; o.onChanged(); return { ok: true, outcome: r.outcome as never }; }
+        return { ok: false, code: r.code, reasons: r.reasons };
+      },
+      toast: (m, k) => this.toast(m, k),
+      player: () => { const c = o.explore()?.active ? o.explore()!.character : null; return c && !c.dead ? { x: c.x, z: c.z, heading: c.heading } : null; },
+      cameraForward: () => { if (!o.camera) return null; o.camera.getWorldDirection(fwd); const l = Math.hypot(fwd.x, fwd.z); return l > 1e-3 ? { x: fwd.x / l, z: fwd.z / l } : null; },
+      // On the ground, or on the water's surface where the route wades.
+      groundY: (x, z) => { const g = o.groundY(x, z); if (g === null) return null; const fx = Math.floor(x), fz = Math.floor(z); return Math.max(g, waterSurfaceAt(this.world, fx, fz) - 0.08); },
+      scene: o.scene, storage,
+    });
     // W4: the claimed lean-to is the Home return target and the respawn point.
     const ex = o.explore();
     if (ex) {
@@ -211,13 +233,14 @@ export class WildGame {
 
   private get world() { return this.o.session.world; }
 
-  /** A world with older wilderness content (v1-v4) gains the latest (v5) through one journaled command. */
+  /** A world with older wilderness content (v1-v5) gains the latest (v6) through one journaled command. */
   private ensureContent(): void {
     const w = this.world.wild;
     if (w && w.content >= LATEST_WILD_CONTENT) return;
-    const had = !!w, fell = !!w?.fell, built = !!w?.build;
-    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V5 }, 'v5');
-    if (r) this.toast(built ? `Your bag now holds ${CARRY_CAPACITY_V5} weight (was ${CARRY_CAPACITY}). At a building site, free materials in your bag can now be delivered in place of ones reserved in piles.`
+    const had = !!w, fell = !!w?.fell, built = !!w?.build, big = !!w && w.content >= WILD_CONTENT_V5;
+    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V6 }, 'v6');
+    if (r) this.toast(big ? 'You now have a map: tap the small map (or press M) to open it, set waypoints and get a walking route. What you have not seen stays hidden.'
+      : built ? `Your bag now holds ${CARRY_CAPACITY_V5} weight (was ${CARRY_CAPACITY}). At a building site, free materials in your bag can now be delivered in place of ones reserved in piles.`
       : fell ? 'You can now build anywhere: open Build (G) for a shelter, a fire, a workbench and storage.'
       : had ? 'Trees can now be felled and you can build: craft a stone axe, fell a tree, then open Build (G).'
         : 'The land around you now has loose branches, stones and plants to gather, trees to fell and room to build.', 'good');
@@ -540,6 +563,7 @@ export class WildGame {
     const ex = this.o.explore();
     const ch = ex?.active ? ex.character : null;
     if (!w) return;
+    this.map.update();
     // A death recorded before a reload: the character is alive again on this page, so the respawn is journaled now.
     if (w.build?.death && ch && !ch.dead) this.wake = this.respawn();
     if (this.wake && ex?.wakeAt(this.wake)) this.wake = null;
@@ -712,6 +736,7 @@ export class WildGame {
       } : null,
       stats: { ...this.stats },
       build: this.build.metrics(),
+      map: this.map.metrics(),
     };
   }
 }

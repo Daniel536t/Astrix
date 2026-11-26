@@ -24,6 +24,12 @@
 // site's reservations elsewhere, which are released; the outcome's `swapped`
 // names them per source. The bag holds CARRY_CAPACITY_V5.
 //
+// Content v6 (W5 world navigation and map): `explore` (the player's
+// position, reported as it walks; the simulation reveals the fog around it
+// by its visibility rule, records discovered places and ore, and refuses a
+// position the player could not have walked to), `set_waypoint` and
+// `remove_waypoint`. Routes are derived and never journaled.
+//
 // Reach: the avatar is player-local physics, so `pickup`, `drop`, `chop`,
 // `cut_log` and `mark_stockpile` carry the player's position (integer
 // decimetres) like the S2 tick presence, and the simulation checks reach
@@ -42,7 +48,11 @@ import {
   SITE_ID, SOURCE_ID, bagRefusal, cancelWildSite, claimShelter, cookAtFire, deliverToSite, fuelFire, placeWildSite, recordDeath, respawnPlayer, stationNear,
   storeItems, takeItems, workOnSite,
 } from '../sim/wild-build';
-import { WILD_CONTENT_V4, WILD_CONTENT_V5 } from '../sim/gathering';
+import { WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6 } from '../sim/gathering';
+import { DEPOSIT_ID, WAYPOINT_ID, WAYPOINT_NAME, exploreAt, noteLanding, removeWaypoint, setWaypoint } from '../sim/map';
+import { PLACE_ID } from '../sim/places';
+import { homeShelter, siteSpotOf, spawnPoint } from '../sim/wild-build';
+const siteSpotDm = (s: Parameters<typeof siteSpotOf>[0]) => { const p = siteSpotOf(s); return { x: Math.round(p.x * 10), z: Math.round(p.z * 10) }; };
 import type { World } from '../sim/world';
 
 interface Envelope { schema: 3; id: string; expectedRevision: number }
@@ -77,10 +87,15 @@ export interface TakeItemsCommand extends Envelope { type: 'take_items'; siteId:
 export interface DiedCommand extends Envelope { type: 'died'; cause: 'drowned'; at: At }
 /** W4: wake from the recorded death at the claimed lean-to (its id) or the spawn ('spawn'). */
 export interface RespawnCommand extends Envelope { type: 'respawn'; to: string }
+/** W5 (content v6): the player's position as it walks; the simulation reveals what can be seen from there. */
+export interface ExploreCommand extends Envelope { type: 'explore'; at: At }
+/** W5: a named waypoint at (x, z) whole metres. */
+export interface SetWaypointCommand extends Envelope { type: 'set_waypoint'; x: number; z: number; name: string }
+export interface RemoveWaypointCommand extends Envelope { type: 'remove_waypoint'; waypointId: string }
 export type WildCommand = PickupCommand | DropCommand | CraftCommand | EquipCommand | EatCommand | UpgradeWildernessCommand
   | ChopCommand | CutLogCommand | MarkStockpileCommand
   | WildPlaceSiteCommand | DeliverSiteCommand | BuildWorkCommand | WildCancelSiteCommand | ClaimShelterCommand | FuelFireCommand | CookCommand
-  | StoreItemsCommand | TakeItemsCommand | DiedCommand | RespawnCommand;
+  | StoreItemsCommand | TakeItemsCommand | DiedCommand | RespawnCommand | ExploreCommand | SetWaypointCommand | RemoveWaypointCommand;
 
 export type WildOutcome =
   | { type: 'pickup'; entityId: string; item: WildItem; amount: number; events?: FellEvent[] }
@@ -102,11 +117,17 @@ export type WildOutcome =
   | { type: 'store_items'; siteId: string; item: WildItem; n: number; events: FellEvent[] }
   | { type: 'take_items'; siteId: string; item: WildItem; n: number; events: FellEvent[] }
   | { type: 'died'; cause: 'drowned'; dropped: Record<string, number>; piles: string[]; events: FellEvent[] }
-  | { type: 'respawn'; point: string; x: number; z: number; events: FellEvent[] };
+  | { type: 'respawn'; point: string; x: number; z: number; events: FellEvent[] }
+  | { type: 'explore'; revealed: number; places: string[]; deposits: string[] }
+  | { type: 'set_waypoint'; waypointId: string }
+  | { type: 'remove_waypoint'; waypointId: string };
 
 /** Commands only the wilderness has. */
 export const WILD_COMMAND_TYPES: readonly string[] = ['pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness', 'chop', 'cut_log', 'mark_stockpile',
-  'deliver_site', 'build_work', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn'];
+  'deliver_site', 'build_work', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn',
+  'explore', 'set_waypoint', 'remove_waypoint'];
+/** W5 (content v6) commands. */
+export const MAP_COMMAND_TYPES: readonly string[] = ['explore', 'set_waypoint', 'remove_waypoint'];
 /** Command names shared with the settlement (M014): told apart by shape. */
 export const SHARED_COMMAND_TYPES: readonly string[] = ['place_site', 'cancel_site'];
 export const isWildCommandType = (t: unknown): boolean => WILD_COMMAND_TYPES.includes(String(t));
@@ -227,6 +248,16 @@ export function validateWildCommand(value: Record<string, unknown>, base: Envelo
     }
     case 'respawn':
       return value.to === 'spawn' || siteIdOf(value.to) ? { ...base, type: 'respawn', to: value.to as string } : null;
+    case 'explore': {
+      const at = atOf(value.at);
+      return at ? { ...base, type: 'explore', at } : null;
+    }
+    case 'set_waypoint':
+      return Number.isSafeInteger(value.x) && Math.abs(value.x as number) <= 1022 && Number.isSafeInteger(value.z) && Math.abs(value.z as number) <= 1022
+        && typeof value.name === 'string' && WAYPOINT_NAME.test(value.name)
+        ? { ...base, type: 'set_waypoint', x: value.x as number, z: value.z as number, name: value.name } : null;
+    case 'remove_waypoint':
+      return typeof value.waypointId === 'string' && WAYPOINT_ID.test(value.waypointId) ? { ...base, type: 'remove_waypoint', waypointId: value.waypointId } : null;
   }
   return null;
 }
@@ -346,6 +377,14 @@ export function validateWildOutcome(value: Record<string, unknown>): WildOutcome
       return (value.point === 'spawn' || siteIdOf(value.point)) && pos(value.x) && pos(value.z) && ev && ev[0] === 'RESPAWNED'
         ? { type: 'respawn', point: value.point as string, x: value.x as number, z: value.z as number, events: ev } : null;
     }
+    case 'explore': {
+      const list = (v: unknown, re: RegExp) => Array.isArray(v) && v.length <= 64 && v.every((x) => typeof x === 'string' && re.test(x))
+        && v.every((x, i) => i === 0 || (v[i - 1] as string).localeCompare(x as string) < 0);
+      return uint(value.revealed, 1024) && list(value.places, PLACE_ID) && list(value.deposits, DEPOSIT_ID)
+        ? { type: 'explore', revealed: value.revealed, places: [...value.places as string[]], deposits: [...value.deposits as string[]] } : null;
+    }
+    case 'set_waypoint': case 'remove_waypoint':
+      return typeof value.waypointId === 'string' && WAYPOINT_ID.test(value.waypointId) ? { type: value.type, waypointId: value.waypointId } as WildOutcome : null;
   }
   return null;
 }
@@ -372,6 +411,9 @@ export function wildAgrees(c: WildCommand, o: WildOutcome): boolean {
     case 'cook': return o.type === 'cook' && o.siteId === c.siteId && o.item === c.item;
     case 'died': return o.type === 'died' && o.cause === c.cause;
     case 'respawn': return o.type === 'respawn' && o.point === c.to;
+    case 'explore': return true;
+    case 'set_waypoint': return o.type === 'set_waypoint';
+    case 'remove_waypoint': return o.type === 'remove_waypoint' && o.waypointId === c.waypointId;
   }
 }
 
@@ -397,6 +439,9 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
   const W4 = ['place_site', 'deliver_site', 'build_work', 'cancel_site', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn'];
   if (W4.includes(c.type) && !building) {
     return { ok: false, code: 'wilderness', reasons: ['this world predates building (wilderness content v3); it needs upgrade_wilderness first'] };
+  }
+  if (MAP_COMMAND_TYPES.includes(c.type) && !world.wild.map) {
+    return { ok: false, code: 'wilderness', reasons: ['this world predates the map (wilderness content v5); it needs upgrade_wilderness first'] };
   }
   // A recorded death waits for its respawn: nothing else is done by a dead character.
   if (world.wild.build?.death && c.type !== 'respawn' && c.type !== 'died') {
@@ -425,8 +470,25 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
       return evOut(takeItems(world, c.siteId, c.item, c.n, c.at, c.forSite), (v) => ({ type: 'take_items', siteId: c.siteId, item: c.item, n: c.n, events: v.events }));
     case 'died':
       return evOut(recordDeath(world, c.cause, c.at), (v) => ({ type: 'died', cause: c.cause, dropped: v.dropped, piles: v.piles, events: v.events }));
-    case 'respawn':
-      return evOut(respawnPlayer(world, c.to), (v) => ({ type: 'respawn', point: v.point, x: v.x, z: v.z, events: v.events }));
+    case 'respawn': {
+      const r = respawnPlayer(world, c.to);
+      // W5: the next exploration report is measured from where the character woke.
+      if (r.ok && world.wild.map) noteLanding(world, world.wild.map, { x: r.value.x, z: r.value.z });
+      return evOut(r, (v) => ({ type: 'respawn', point: v.point, x: v.x, z: v.z, events: v.events }));
+    }
+    case 'explore': {
+      const anchors = () => { const home = homeShelter(world); return [spawnPoint(world), ...(home ? [siteSpotDm(home)] : [])]; };
+      const r = exploreAt(world, world.wild.map!, c.at, anchors);
+      return r.ok ? { ok: true, value: { type: 'explore', revealed: r.value.revealed, places: r.value.places, deposits: r.value.deposits } } : r;
+    }
+    case 'set_waypoint': {
+      const r = setWaypoint(world.wild.map!, c.x, c.z, c.name);
+      return r.ok ? { ok: true, value: { type: 'set_waypoint', waypointId: r.value.waypointId } } : r;
+    }
+    case 'remove_waypoint': {
+      const r = removeWaypoint(world.wild.map!, c.waypointId);
+      return r.ok ? { ok: true, value: { type: 'remove_waypoint', waypointId: r.value.waypointId } } : r;
+    }
     case 'pickup': {
       const r = pickUp(world, c.entityId, c.at, c.forSite);
       if (!r.ok) return r;
@@ -480,4 +542,4 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
   }
 }
 
-export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5 };
+export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6 };

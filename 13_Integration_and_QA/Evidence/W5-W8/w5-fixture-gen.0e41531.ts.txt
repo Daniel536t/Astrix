@@ -1,0 +1,59 @@
+// Run under the live W4 candidate code (0e41531, temporary worktree): a content-v5 wilderness save for
+// tests/fixtures/w5-wilderness-save.json. State: a stone axe, a finished campfire with fuel, a lean-to site
+// half built (stage 1, reservations in piles and bag), dropped piles, a felled-tree trunk cut to logs, ticks.
+import { writeFileSync } from 'node:fs';
+import { GameSession } from './src/app/session';
+import { BrowserSaveStore, KeyValueStorage } from './src/app/persistence';
+import { GENERATOR_V2, WILDERNESS } from './src/sim/world';
+import { carriedWeight, carryCapacity } from './src/sim/gathering';
+import { siteSpotOf } from './src/sim/wild-build';
+import { SPAWN, axe, build, dm, fund, gather, load, ok, placeAt, send, spot, tick, deliverAll } from './tests/w4-harness';
+
+class MemoryStorage implements KeyValueStorage {
+  readonly map = new Map<string, string>();
+  getItem(k: string) { return this.map.get(k) ?? null; }
+  setItem(k: string, v: string) { this.map.set(k, v); }
+  removeItem(k: string) { this.map.delete(k); }
+  key(i: number) { return [...this.map.keys()][i] ?? null; }
+  get length() { return this.map.size; }
+}
+const storage = new MemoryStorage();
+const store = new BrowserSaveStore(storage, 1337, GENERATOR_V2, { scenario: WILDERNESS, id: 'w1' });
+const loaded = store.load();
+if (loaded.status !== 'new') throw new Error(loaded.status);
+const s = loaded.session;
+if (s.journal.wildContent !== 5) throw new Error('not v5');
+load(s);
+tick(s, 2);
+axe(s);
+const fire = build(s, 'campfire', SPAWN);
+gather(s, 'branch', 2);
+ok(send(s, { type: 'fuel_fire', siteId: fire, item: 'branch', n: 1, at: dm(siteSpotOf(s.world.wild!.build!.sites.get(fire)!)) }), 'fuel');
+// A lean-to marked out and delivered, stage 1 worked once (unfinished).
+const from = { x: SPAWN.x + 12, z: SPAWN.z + 4 };
+fund(s, 'lean_to', from);
+const lean = placeAt(s, 'lean_to', spot(s, 'lean_to', from), 1, from);
+deliverAll(s, lean);
+tick(s, 1);
+const site = s.world.wild!.build!.sites.get(lean)!;
+ok(send(s, { type: 'build_work', siteId: lean, at: dm(siteSpotOf(site)) }), 'work once');
+gather(s, 'loose_stone', 3);
+ok(send(s, { type: 'drop', item: 'stone', n: 2, at: dm({ x: SPAWN.x - 6, z: SPAWN.z + 5 }) }), 'drop');
+tick(s, 3);
+console.log('bag', JSON.stringify(s.world.wild!.items), carriedWeight(s.world.wild!), '/', carryCapacity(s.world.wild!), 'lean', site.state, site.stage, site.work, 'fire', s.world.wild!.build!.sites.get(fire)!.state);
+const save = (): { key: string; hash: string; record: string } => {
+  const res = store.save(s);
+  if (!res.ok) throw new Error('save');
+  const key = [...storage.map.keys()].find((k) => k.startsWith('astrix:wild:'))!;
+  return { key, hash: s.stateHash, record: storage.getItem(key)! };
+};
+const short = save();
+if (GameSession.replay(JSON.parse(JSON.stringify(s.journal))).stateHash !== s.stateHash) throw new Error('replay');
+s.compact();
+const long = { ...save(), compacted: true };
+const fixture = {
+  made: 'Live W4 candidate code at 0e41531 (temporary worktree), BrowserSaveStore seed 1337 gen 2 slot w1, wilderness content v5: stone axe, a finished campfire with fuel, an unfinished lean-to (first stage, worked once) with its materials delivered, dropped piles, logs, a 60-weight bag',
+  fire, lean, short, long,
+};
+writeFileSync(process.argv[2], JSON.stringify(fixture, null, 2) + '\n');
+console.log('wrote', process.argv[2], 'entries', JSON.parse(short.record).journal.entries.length, 'hash', short.hash, long.hash);

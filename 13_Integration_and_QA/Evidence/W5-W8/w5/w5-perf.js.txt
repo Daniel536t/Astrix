@@ -1,0 +1,44 @@
+async (page) => {
+  const DIR = '/projects/sandbox/.kiro/artifacts/screenshots/probe/dist';
+  const out = {};
+  for (const run of [{ w: 390, h: 844, touch: true, rate: 1, tag: 'phone390 x1' }, { w: 390, h: 844, touch: true, rate: 4, tag: 'phone390 cpu/4' }, { w: 1200, h: 700, touch: false, rate: 1, tag: 'desktop1200' }]) {
+    const ctx = await page.context().browser().newContext({ viewport: { width: run.w, height: run.h }, isMobile: run.touch, hasTouch: run.touch, deviceScaleFactor: run.touch ? 2 : 1 });
+    await ctx.route(/^https:\/\/astrix\.local\//, async (route) => { let p = route.request().url().replace(/^https:\/\/astrix\.local/, '').split('?')[0]; if (p === '/' || p === '') p = '/index.html'; await route.fulfill({ path: DIR + p }); });
+    await ctx.addInitScript(() => { if (!localStorage.getItem('astrix:worlds:v1')) { localStorage.setItem('astrix:entered:v1', '1'); localStorage.setItem('astrix:worlds:v1', JSON.stringify({ v: 1, worlds: [{ id: 'w1', seed: 1337, generatorVersion: 2, created: 1764000000000, spawn: { x: -82, z: -172 } }] })); localStorage.setItem('astrix:world:active:v1', 'w1'); } });
+    const pg = await ctx.newPage();
+    const errs = []; pg.on('pageerror', (e) => errs.push(String(e).slice(0, 200))); pg.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errs.push(m.text().slice(0, 200)); });
+    const cdp = await ctx.newCDPSession(pg);
+    if (run.rate > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: run.rate });
+    await pg.goto('https://astrix.local/?chain=0&metrics=1' + (run.touch ? '&quality=low' : ''));
+    await pg.waitForFunction(() => window.__metrics?.explore?.spawned === true, null, { timeout: 180000 });
+    await pg.waitForTimeout(3000);
+    const r = {};
+    r.first = await pg.evaluate(() => { const s = window.__metrics.wild.map.stats; return { exploreMaxMs: s.exploreMaxMs, minimapMs: s.minimapMs, minimapMaxMs: s.minimapMaxMs, tilesMs: s.tilesMs, tilesBuilt: s.tilesBuilt }; });
+    await pg.evaluate(() => document.getElementById('minimap').click()); await pg.waitForTimeout(800);
+    r.mapOpenMs = await pg.evaluate(() => window.__metrics.wild.map.stats.mapOpenMs);
+    const plan = async (x, z) => {
+      const v = await pg.evaluate(() => window.__metrics.wild.map.view);
+      await pg.evaluate(([x, z, v]) => { const mapEl = document.querySelector('#world-map'); void mapEl; }, [x, z, v]);
+      // Tap through the UI: the popup's Route here.
+      const px = v.left + v.w / 2 + (x - v.cx) * v.s, py = v.top + v.h / 2 + (z - v.cz) * v.s;
+      if (px < v.left || py < v.top || px > v.left + v.w || py > v.top + v.h) return { offscreen: true };
+      if (run.touch) await pg.touchscreen.tap(px, py); else await pg.mouse.click(px, py);
+      await pg.waitForTimeout(300);
+      await pg.evaluate(() => document.querySelector('.map-popup [data-route-to]').click());
+      await pg.waitForFunction(() => { const m = window.__metrics.wild.map; return !m.planning && (m.route || m.refusal); }, null, { timeout: 120000 });
+      return await pg.evaluate(() => { const m = window.__metrics.wild.map; return { route: m.route, refusal: m.refusal, wallMs: m.stats.routeMs, cpuMs: m.stats.routeCpuMs, expanded: m.stats.routeExpanded, refineMs: m.stats.refineMs }; });
+    };
+    r.short = await plan(-160, -185);
+    for (let i = 0; i < 4; i++) await pg.evaluate(() => document.querySelector('#world-map [data-mapzoom=out]').click());
+    await pg.waitForTimeout(300);
+    r.long = await plan(248, -136);
+    r.mapDrawMs = await pg.evaluate(() => window.__metrics.wild.map.stats.mapDrawMs);
+    await pg.evaluate(() => document.querySelector('#world-map [data-close]').click());
+    await pg.waitForTimeout(1500);
+    r.after = await pg.evaluate(() => { const s = window.__metrics.wild.map.stats; return { minimapMs: s.minimapMs, minimapMaxMs: s.minimapMaxMs, draws: s.minimapDraws, budget: window.__metrics.sceneBudget, fps: window.__metrics.fps ?? null }; });
+    r.errors = errs;
+    out[run.tag] = r;
+    await ctx.close();
+  }
+  return out;
+}

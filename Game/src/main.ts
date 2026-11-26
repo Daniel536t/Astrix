@@ -714,6 +714,7 @@ const perfOverlay: PerfOverlay | null = perfOn && !isMap && !isKit ? new PerfOve
 }) : null;
 if (!noUi && !isMap && !isKit) {
   mountSettings({ current: quality, perfOn, frameCap, worlds: { current: wilderness ? `Wilderness ${wild!.id.slice(1)}` : 'Settlement', open: () => showWorldList(worldList) },
+    ...(wilderness ? { map: { open: () => wildGame?.map.open(), shown: () => wildGame?.map.minimapShown ?? true, setShown: (on: boolean) => wildGame?.map.setMinimap(on) } } : {}),
     onFrameCap: (cap) => { limiter.set(cap); frameCap.cap = cap; frameCap.source = 'saved'; perfOverlay?.capChanged(cap); } });
 }
 // W1: ?worlds=1 opens the world list at start (also reachable from Settings → Worlds).
@@ -929,6 +930,9 @@ window.addEventListener('keydown', (e) => {
   if (homesteadGame?.build.key(e)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
   // W4: the wilderness Build menu (G) and its placement ghost (Escape, X, Enter).
   if (wildGame && explore?.active && wildGame.build.key(e)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  // W5: M opens and closes the wilderness map; Escape closes it.
+  if (wildGame && (e.key === 'm' || e.key === 'M') && !e.repeat) { wildGame.map.toggle(); e.preventDefault(); return; }
+  if (wildGame?.map.isOpen && e.key === 'Escape') { wildGame.map.close(); e.preventDefault(); return; }
   // Key map (documented in 00_Project_Core/Controls.md): P pauses time; Space
   // is jump in explore mode (handled by the explore controller).
   if (e.key === 'p' || e.key === 'P') time.paused = !time.paused;

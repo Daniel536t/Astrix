@@ -632,7 +632,7 @@ function octile(ax: number, az: number, bx: number, bz: number): number {
 }
 
 /** Min-heap ordered by (f, h, cell index): a total order, so ties never depend on insertion. */
-class Heap {
+export class Heap {
   private f: number[] = []; private h: number[] = []; private i: number[] = [];
   get size() { return this.i.length; }
   private less(a: number, b: number) {

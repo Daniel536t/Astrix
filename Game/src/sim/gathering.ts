@@ -22,6 +22,7 @@ import {
 } from './world';
 import { hash2i, mulberry32 } from './noise';
 import { FellSnapshot, FellState, WILD_CONTENT_V3, createFell, fellFromSnapshot, fellSnapshot, stepFelling, validateFell } from './felling';
+import { MapSnapshot, MapState, createMap, mapFromSnapshot, mapSnapshot, validateMap } from './map';
 import { BuildSnapshot, BuildState, bagRefusal, buildFromSnapshot, buildSnapshot, createBuild, notePileTaken, pileTakeable, stepBuild, validateBuild } from './wild-build';
 
 /**
@@ -36,9 +37,11 @@ export const WILD_CONTENT_V2 = 2 as const;
 export { WILD_CONTENT_V3 };
 export const WILD_CONTENT_V4 = 4 as const;
 export const WILD_CONTENT_V5 = 5 as const;
-export const LATEST_WILD_CONTENT = 5 as const;
-export type WildContent = typeof WILD_CONTENT_V2 | typeof WILD_CONTENT_V3 | typeof WILD_CONTENT_V4 | typeof WILD_CONTENT_V5;
-export const isWildContent = (v: unknown): v is WildContent => v === WILD_CONTENT_V2 || v === 3 || v === 4 || v === 5;
+/** v6 (W5): world navigation and map: exploration (fog), discovered places and ore, waypoints (sim/map.ts). Rules of v5 otherwise. */
+export const WILD_CONTENT_V6 = 6 as const;
+export const LATEST_WILD_CONTENT = 6 as const;
+export type WildContent = typeof WILD_CONTENT_V2 | typeof WILD_CONTENT_V3 | typeof WILD_CONTENT_V4 | typeof WILD_CONTENT_V5 | typeof WILD_CONTENT_V6;
+export const isWildContent = (v: unknown): v is WildContent => v === WILD_CONTENT_V2 || v === 3 || v === 4 || v === 5 || v === 6;
 
 export const PICKUP_KINDS = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom'] as const;
 export type PickupKind = (typeof PICKUP_KINDS)[number];
@@ -152,18 +155,23 @@ export interface WildState {
   fell?: FellState;
   /** W4 (content v4): building sites, finished buildings and the claimed home. */
   build?: BuildState;
+  /** W5 (content v6): explored fog cells, discovered places and ore, waypoints. */
+  map?: MapState;
 }
 
 export function createWildState(content: WildContent = WILD_CONTENT_V2, seed = 0, tick = 0): WildState {
   return { content, hunger: HUNGER_START, items: {}, tools: [], equipped: null,
     taken: new Set(), left: new Map(), piles: new Map(), nextId: 1,
-    ...(content >= WILD_CONTENT_V3 ? { fell: createFell(seed, tick) } : {}), ...(content >= WILD_CONTENT_V4 ? { build: createBuild() } : {}) };
+    ...(content >= WILD_CONTENT_V3 ? { fell: createFell(seed, tick) } : {}), ...(content >= WILD_CONTENT_V4 ? { build: createBuild() } : {}),
+    ...(content >= WILD_CONTENT_V6 ? { map: createMap() } : {}) };
 }
 
-/** A content-v2 state gains W3 felling (v3), a v3 state W4 building (v4), a v4 state the v5 rules, through journaled `upgrade_wilderness`. */
+/** A content-v2 state gains W3 felling (v3), a v3 state W4 building (v4), a v4 state the v5 rules, a v5 state the W5 map (v6), through journaled `upgrade_wilderness`. */
 export function upgradeWildState(w: WildState, seed: number, tick: number, to: WildContent = WILD_CONTENT_V3): void {
   if (!w.fell && to >= WILD_CONTENT_V3) w.fell = createFell(seed, tick);
   if (!w.build && to >= WILD_CONTENT_V4) w.build = createBuild();
+  // Nothing is explored by the upgrade itself: the map starts empty, and the first report is anchored where the player stands.
+  if (!w.map && to >= WILD_CONTENT_V6) w.map = createMap();
   w.content = to;
 }
 
@@ -447,6 +455,7 @@ export interface WildSnapshot {
   hunger: number;
   items: Record<string, number>;
   left: Record<string, number>;
+  map?: MapSnapshot;
   nextId: number;
   piles: Pile[];
   taken: string[];
@@ -462,6 +471,7 @@ export function wildSnapshot(w: WildState): WildSnapshot {
     hunger: w.hunger,
     items: sortBag(w.items),
     left: Object.fromEntries([...w.left.entries()].sort(([a], [b]) => a.localeCompare(b))),
+    ...(w.map ? { map: mapSnapshot(w.map) } : {}),
     nextId: w.nextId,
     piles: [...w.piles.values()].sort((a, b) => a.id.localeCompare(b.id)).map((p) => ({ id: p.id, item: p.item, qty: p.qty, x: p.x, y: p.y, z: p.z })),
     taken: [...w.taken].sort((a, b) => a.localeCompare(b)),
@@ -481,6 +491,8 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
   const v3 = (v.content as number) >= WILD_CONTENT_V3, v4 = (v.content as number) >= WILD_CONTENT_V4;
   if (v3 !== (v.fell !== undefined)) bad('felling block');
   if (v4 !== (v.build !== undefined)) bad('building block');
+  const v6 = (v.content as number) >= WILD_CONTENT_V6;
+  if (v6 !== (v.map !== undefined)) bad('map block');
   // Logs exist only with felling (content v3); planks, chests and cooked food with building (v4).
   const itemOk = (k: unknown) => WILD_ITEMS.includes(k as WildItem) && (v3 || k !== 'log') && (v4 || !V4_ITEMS.includes(k as WildItem));
   if (!uintMax(v.hunger, 100) || !uintMax(v.nextId, 9_999_999) || v.nextId < 1) bad('counters');
@@ -526,12 +538,13 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
   if (v.equipped !== undefined && (typeof v.equipped !== 'string' || !toolIds.has(v.equipped))) bad('equipped tool');
   const fell = v3 ? validateFell(v.fell, tick, v.nextId as number) : undefined;
   const build = v4 ? validateBuild(v.build, tick, v.nextId as number, (k) => itemOk(k), { items, piles }) : undefined;
+  const map = v6 ? validateMap(v.map, tick) : undefined;
   const s: WildSnapshot = {
     ...(build ? { build } : {}),
     content: v.content as WildContent,
     ...(v.equipped !== undefined ? { equipped: v.equipped as string } : {}),
     ...(fell ? { fell } : {}),
-    hunger: v.hunger as number, items, left, nextId: v.nextId as number, piles, taken: taken as string[], tools,
+    hunger: v.hunger as number, items, left, ...(map ? { map } : {}), nextId: v.nextId as number, piles, taken: taken as string[], tools,
   };
   const weight = carriedWeight(wildFromSnapshot(s));
   if (weight > carryCapacity(s)) bad('carried weight');
@@ -540,7 +553,8 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
 
 export function wildFromSnapshot(s: WildSnapshot): WildState {
   return {
-    content: s.content, ...(s.fell ? { fell: fellFromSnapshot(s.fell) } : {}), ...(s.build ? { build: buildFromSnapshot(s.build) } : {}), hunger: s.hunger, items: { ...s.items },
+    content: s.content, ...(s.fell ? { fell: fellFromSnapshot(s.fell) } : {}), ...(s.build ? { build: buildFromSnapshot(s.build) } : {}),
+    ...(s.map ? { map: mapFromSnapshot(s.map) } : {}), hunger: s.hunger, items: { ...s.items },
     tools: s.tools.map((t) => ({ ...t })), equipped: s.equipped ?? null,
     taken: new Set(s.taken), left: new Map(Object.entries(s.left)),
     piles: new Map(s.piles.map((p) => [p.id, { ...p }])), nextId: s.nextId,

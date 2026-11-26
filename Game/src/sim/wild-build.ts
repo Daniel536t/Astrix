@@ -292,7 +292,7 @@ export function siteWindow(cells: { x0: number; z0: number; x1: number; z1: numb
 }
 
 /** The window's walking grid, with the player's existing sites as building blocks. Generates the window's chunks first (replay does too). */
-function windowGrid(world: World, region: { ox: number; oz: number; w: number; h: number }, ignoreId?: string): NavGrid {
+export function windowGrid(world: World, region: { ox: number; oz: number; w: number; h: number }, ignoreId?: string): NavGrid {
   for (let cz = worldToChunkZ(region.oz); cz <= worldToChunkZ(region.oz + region.h - 1); cz++) {
     for (let cx = worldToChunkX(region.ox); cx <= worldToChunkX(region.ox + region.w - 1); cx++) ensureChunk(world, cx, cz);
   }
