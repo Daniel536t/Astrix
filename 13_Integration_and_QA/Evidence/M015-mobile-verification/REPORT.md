@@ -382,3 +382,18 @@ The fixes:
   - the same quality on every load;
   - the battery drain with and without the 30 fps cap.
 - Everything above except the owner's numbers is emulated. **M015 stays open** until that run is reviewed.
+
+## Device run 2 (owner, 2026-11-26, build e1148b7) — short run
+
+Same tablet (Adreno 710). The user agent shows Chrome's Desktop site mode was still on. The run lasted 2.1 min (12 buckets), so it covers only the first part of the plan. Raw report: `device/owner-report-2026-11-26-run2.txt`.
+
+| Check | Run 1 (b235406) | Run 2 (e1148b7) | Result |
+|---|---|---|---|
+| Median fps / p95 frame | 59.5 / 19 ms | 58.9 / 18 ms | PASS |
+| Max draw calls | 143 | **86** | PASS (≤ 120; target ≤ 100 met) |
+| Max triangles | 194,094 | 189,180 | PASS |
+| Frames > 50 ms per 10 s while walking into new ground | 10–17 (buckets 16–25) | 3–7 (buckets 6–11) | Improved, but the ≤ 3 target is not met |
+| Quality at load / after reload | high → medium (flipped) | medium → medium | PASS (stable) |
+| Session ≥ 20 min, thermal drift | 17.9 min, weak | 2.1 min, not measurable | **FAIL / open** |
+
+**Verdict:** the draw-call fix and the stable quality choice are confirmed on the real device. The walking stutter is reduced but still above target. Thermal behaviour and long-session behaviour remain unverified. **M015 stays OPEN** until a full 20+ minute run is done. Per the owner's original rule, M015 gates birds.

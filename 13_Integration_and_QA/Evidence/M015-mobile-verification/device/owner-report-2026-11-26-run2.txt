@@ -1,0 +1,25 @@
+ASTrix perf report v1 · build e1148b7 (index-BFzvdl_r.js)
+Device: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
+GPU: Adreno (TM) 710 · cores 8 · memory 8 GB · screen 1366x854 @1.875x · viewport 1365x709
+Render: multi-draw · quality medium (auto: touch device) · pixel ratio 1.5 · canvas 2047x1063 · frame cap unlimited (default)
+Session: 2.1 min · 12 buckets (12 visible)
+FPS: median 58.9 · worst bucket 53.9 · p5 57.1 · frame p50 17 ms · p95 18 ms · frames > 50 ms: 38
+Draw calls max 86 · triangles max 189180
+Heap MB first/last/max: 59/75/82 · battery 81% → 80%
+Thermal: unknown · the baseline scene has not been revisited after two minutes
+Checks: median fps PASS · p95 frame PASS · drift n/a · length FAIL
+Events: 0s start quality medium · multi-draw · 5s hidden · 5s reload quality medium · multi-draw · cap unlimited
+Buckets: i t fps/p5 p95ms >50ms calls ktris bat quality scene
+0 5 53.9/47 21 5 85 189 81 M walk:-1,0:close
+1 15 60/57 18 0 86 186 80 M =
+2 25 60/58 17 0 74 163 80 M =
+3 35 59.8/58 17 0 58 135 80 M walk:0,-1:close
+4 45 59.8/58 17 1 55 132 80 M =
+5 55 59.5/58 17 2 54 129 80 M walk:1,0:close
+6 65 58/56 18 7 51 122 80 M walk:1,2:close
+7 75 58.8/56 18 3 52 128 80 M walk:0,2:close
+8 85 58.9/57 18 3 55 130 80 M walk:-1,3:close
+9 95 58.2/58 17 5 57 143 80 M walk:-1,4:close
+10 105 58.6/57 18 5 51 133 80 M walk:-2,4:close
+11 115 58.1/57 18 7 52 133 80 M =
+(pasted by the owner in chat 2026-11-26; Desktop site still on per the UA)
