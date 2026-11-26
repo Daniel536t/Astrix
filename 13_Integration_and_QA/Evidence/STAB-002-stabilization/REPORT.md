@@ -974,3 +974,21 @@ Fresh headless Chromium contexts (software GL, desktop 1000x600, empty storage) 
 - Screenshots: `live-chain0.png`, `live-chainon.png`.
 
 No real phone was used. M015 stays open.
+
+## Acceptance decision (owner, 2026-11-26)
+
+**STAB-002: ACCEPTED, with the recorded limitations.** The owner accepts STAB-002 apart from M015, on two conditions: the evidence is complete, and the live v8 deployment is verified. Both are met: release `20261126T002024Z-e1148b7` was checked as described in "Live deployment check (v8)".
+
+Limitations carried forward, not fixed:
+- **Villager work share:** 9.7–10.7 % of awake time, against a 15 % target (**not met**). The time saved shows up as idle on small farms.
+- **Squeeze:** after 2.5 s of pushing, the player can go up to 0.12 m into a body.
+- **Gates:** the herder leaves a gate open while the player stands in it.
+- **Villager drawing:** villagers can be drawn up to 0.17 m ahead of their collision body for about a second.
+- **Animal spacing:** animals still share cells with one another.
+- **Night:** no work happens at night.
+- **Births:** about 13 % fewer than under v6.
+- **Unexplained reading:** the first post-deploy probe pair read `rules: 7` and could not be reproduced.
+
+**M015: OPEN**, as a separate acceptance item. It requires the owner's physical-device run 2, as set out in `13_Integration_and_QA/Diagnostics/STAB-001/M015_device_evidence_assessment.md`. That run should include measurements both with and without the MagicBlock view.
+
+**Gates:** W1 (wilderness scenario) starts only after M015 run 2 has been reviewed. Birds stay blocked until M015 passes and the bird reference sheets are in the repository.
