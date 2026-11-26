@@ -39,6 +39,10 @@ function assertGridMove(g: ReturnType<typeof homesteadNav>, a: { x: number; z: n
 const young = (s: GameSession, a: Animal) => s.world.life!.tick - a.born < SPECIES_RULES[a.species].adultAge;
 const insideOf = (s: GameSession, a: Animal) => { const r = facility(s.world.homestead!, SPECIES_RULES[a.species].enclosure)!.rect; return a.x >= r.x0 && a.x < r.x1 && a.z >= r.z0 && a.z < r.z1; };
 
+/** Rules v8 pins: the M014 reference run without presence and fresh 900-tick runs (measured on this change). */
+const V8_REF = 'c00abf2c4d2547e5';
+const V8_FRESH: Record<number, string> = { 1: 'b694b9920e078b04', 42: '94273b8582468240', 1337: 'c01722f641c93945', 2024: 'afd8788159b1bb6a' };
+
 function reference(rules: number, presence?: () => Presence | null): GameSession {
   const s = GameSession.genesis(1337, GENERATOR_V2);
   const t = (n: number) => { for (let i = 0; i < n; i++) tick(s, presence?.()); };
@@ -63,7 +67,7 @@ const wandering = (s: GameSession) => {
   };
 };
 
-test('presence never changes rules v1-v6 (v6 M014 run with presence on every tick keeps 037429c4ffbcf710); v7 journals without presence replay to their pinned hashes (re-pinned for S3 and S4, which changed v7 work)', () => {
+test('presence never changes rules v1-v6 (v6 M014 run with presence on every tick keeps 037429c4ffbcf710); v7 journals without presence replay to their pinned hashes (S3 = released v7, bf23ae5); v8 (S4) has its own pins', () => {
   assert.equal(GameSession.genesis(1337).stateHash, 'e659504b056654dc');
   const v6 = GameSession.genesis(1337, GENERATOR_V2);
   ok(v6, { type: 'found_homestead', rules: 6 });
@@ -74,11 +78,11 @@ test('presence never changes rules v1-v6 (v6 M014 run with presence on every tic
   assert.equal(reference(5, () => ({ x: -200, z: 0, mx: 1, mz: 0 })).stateHash, 'f249cb544027b9bd');
   assert.ok(withPresence.journal.entries.some((e) => e.command.type === 'tick' && e.command.presence), 'the v6 journal holds presence');
   // v7 without presence. S1/S2 pinned f849279d086aa120 and 0a9011b2db7e9b63 / a4837164213ddc3b / 69c99cab31257384 /
-  // d3c8cd112e45a006 (measured on cd0aff6); STAB-002 S3 changed v7 villager work (rules v7 are not released) and
-  // re-pinned them as 7dea616c561cc8a4 and c905f7a613e3c30d / 3d9dec9afa4fddfa / ae1dd7c3549b697e / 11620894712a3048;
-  // STAB-002 S4 (villager speed 39 dm, exact part steps, seed kept for owner fields, critical age 85) re-pins them again.
-  assert.equal(reference(7).stateHash, 'c8aa0ba108a6a545');
-  const fresh: Record<number, string> = { 1: 'd98430b7ef97b94b', 42: 'b191fb03cfcc7b59', 1337: 'c588a10b511239a1', 2024: 'd5c4c7c1d6a39f6e' };
+  // d3c8cd112e45a006 (measured on cd0aff6); STAB-002 S3 changed v7 villager work, so these were re-pinned at S3. S3 (bf23ae5)
+  // was then deployed with v7: these S3 values are final for v7. (S4 had re-pinned them as c8aa0ba108a6a545 and
+  // d98430b7ef97b94b / b191fb03cfcc7b59 / c588a10b511239a1 / d5c4c7c1d6a39f6e without a new rules number; that is now v8.)
+  assert.equal(reference(7).stateHash, '7dea616c561cc8a4');
+  const fresh: Record<number, string> = { 1: 'c905f7a613e3c30d', 42: '3d9dec9afa4fddfa', 1337: 'ae1dd7c3549b697e', 2024: '11620894712a3048' };
   for (const [seed, hash] of Object.entries(fresh)) {
     const s = GameSession.genesis(Number(seed), GENERATOR_V2);
     ok(s, { type: 'found_homestead', rules: 7 });
@@ -86,7 +90,16 @@ test('presence never changes rules v1-v6 (v6 M014 run with presence on every tic
     assert.equal(s.stateHash, hash, `fresh v7 seed ${seed}`);
   }
   // With presence v7 does react (otherwise the rest of this file would test nothing).
-  assert.notEqual(reference(7, wandering(v6)).stateHash, 'c8aa0ba108a6a545');
+  assert.notEqual(reference(7, wandering(v6)).stateHash, '7dea616c561cc8a4');
+  // v8 (STAB-002 S4 and the newborn follow rule), the same runs.
+  const v8 = { ref: V8_REF, fresh: V8_FRESH };
+  assert.equal(reference(8).stateHash, v8.ref);
+  for (const [seed, hash] of Object.entries(v8.fresh)) {
+    const s = GameSession.genesis(Number(seed), GENERATOR_V2);
+    ok(s, { type: 'found_homestead', rules: 8 });
+    for (let i = 0; i < 900; i++) tick(s);
+    assert.equal(s.stateHash, hash, `fresh v8 seed ${seed}`);
+  }
 });
 
 test('tick presence is strict and replays: bad presence is rejected, the journal with presence replays to the same hash, a save mid-run restores and plays on identically', () => {

@@ -1,5 +1,5 @@
 // STAB-002 S4 acceptance (a): at the S4 walking speed every S3 woodshed and owner-field bound holds on every
-// scenario, fresh v7 and v6 -> v7 (including the v6 -> v7 woodshed at 400 and the 6-field upgraded farm, which
+// scenario, fresh v8 and v6 -> v8 (including the v6 -> v8 woodshed at 400 and the 6-field upgraded farm, which
 // S3 did not assert), no step exceeds the exact allowance, and the total task time is at least 30 % below S3's.
 import test from 'node:test';
 import assert from 'node:assert/strict';

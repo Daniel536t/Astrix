@@ -141,7 +141,7 @@ test('a body walking into a standing founder at 0.6 m/s (the fastest drawn anima
   }
 });
 
-test('a villager walking (1.3 m/s raw capsule; 1.95 m/s, the v7 speed since STAB-002 S4, from sim positions) into a founder who has been pressing into it for 3 s (squeezing) never gets deeper than the squeeze depth plus 0.05 m', () => {
+test('a villager walking (1.3 m/s raw capsule; 1.95 m/s, the v8 speed since STAB-002 S4, from sim positions) into a founder who has been pressing into it for 3 s (squeezing) never gets deeper than the squeeze depth plus 0.05 m', () => {
   for (const speed of [1.3, 1.95]) {
     const world = flatPad();
     let s = settle(world, 0.5, 0.5);
@@ -158,7 +158,7 @@ test('a villager walking (1.3 m/s raw capsule; 1.95 m/s, the v7 speed since STAB
     // the sim never walks a villager closer than 0.6 m to the presence (S2). The raw case is kept for 1.3 m/s only.
     if (speed < CONTACT_PUSH_SPEED) assert.ok(worst <= CONTACT_SQUEEZE_DEPTH + 0.05, `${speed} m/s: deepest ${worst.toFixed(3)} m`);
   }
-  // STAB-002 S4: the same walk-through at the v7 speed, with the capsule from sim positions as the game builds it:
+  // STAB-002 S4: the same walk-through at the v8 speed, with the capsule from sim positions as the game builds it:
   // ticks of 2 s, the villager 39 dm further each tick, blended by HomesteadBodies with the founder's radius.
   const world = flatPad();
   let s = settle(world, 0.5, 0.5);

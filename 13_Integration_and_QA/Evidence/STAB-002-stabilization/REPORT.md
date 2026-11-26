@@ -1,8 +1,8 @@
-# STAB-002 · Stabilization (settlement rules v7)
+# STAB-002 · Stabilization (settlement rules v7 and v8)
 
-Repo `Astrix`, branch `deploy/boxd`. Base commit `4169c21` (STAB-001 docs). Not pushed or deployed. Everything below was measured headlessly or in an emulated desktop browser (Playwright Chromium). **No real phone or tablet was used.**
+Repo `Astrix`, branch `deploy/boxd`. Base commit `4169c21` (STAB-001 docs). This work was not pushed or deployed from this session. The S3 build (`bf23ae5`, rules v7) is nevertheless live; see "Versioning correction (v8)". Everything below was measured headlessly or in an emulated desktop browser (Playwright Chromium). **No real phone or tablet was used.**
 
-S1, S2, S3 and S4 (villager speed) are in this report, followed by the STAB-002 acceptance summary.
+S1, S2, S3 and S4 (villager speed) are in this report, then the versioning correction that moved S4 to rules v8, then the STAB-002 acceptance summary. S1 to S3 are rules v7. S4 was written as a change to v7; it is now rules v8, and the S4 section's "v7" means v8 wherever it describes S4 behaviour.
 
 ## S1 · Animal unstick
 
@@ -551,7 +551,9 @@ Base commit `bf23ae5` (S3). Committed locally only: not pushed, not deployed. **
 
 ### What changed
 
-Everything is under **settlement rules v7**. No new rules version was added, and v1 to v6 run unchanged code.
+> **Superseded by "Versioning correction (v8)".** As first committed (`e353813`), S4 changed rules v7 without a new rules number. v7 had already been deployed with S3. Every S4 rule below now applies only under **settlement rules v8**, and v7 is again exactly S3. Measurements in this section were taken on `e353813`; the v8 re-measurement is in the correction section.
+
+As first committed, everything was under settlement rules v7. No new rules version was added, and v1 to v6 ran unchanged code.
 
 1. **Speed.** `VILLAGER_SPEED_V7 = 39` dm per tick (1.95 m/s, 1.5×) in `sim/homestead.ts`. `villagerSpeed(h)` returns 39 for v7 and `VILLAGER_SPEED` (26) for v1 to v6. A starving villager still walks at half speed (19.5 dm). The routine-work "would run into the night" estimate (`taskTicks`, used only by v7) uses the v7 speed. The value comes from the BUG-C speed sensitivity (`Diagnostics/STAB-001/BUG-C_worker_productivity.md` §6): 1.5× brought the stalled field from 243 to 22 ticks, the well from 370 to 161 and the woodshed from 149 to 92, and speeds above 2× added little.
 2. **No-teleport check, exact.** `navStep` gets a `NavContext.exact` flag, which `navWalk` sets only under v7. Part steps then round each axis toward zero (`Math.trunc`) instead of to the nearest value, and the queue step-aside does the same. Under v7 one tick's move is therefore never longer than the speed. The S3 excess of up to 0.71 dm (26.4 against 26) is gone: the largest step over every S4 run is **1.0000** of speed × 1 tick. v2 to v6 keep the old rounding, so their hashes do not change.
@@ -701,6 +703,8 @@ Reading:
 
 ### S1 and S2 regression on the final code
 
+> Measured on `e353813`. The awake-ticks counting described here was reverted by the versioning correction; S1 is again reported exactly as worded, and passes under v8.
+
 **S1.** Survey `s1/s1.ts`, 15 seeds × 3 days, plus the acceptance tests.
 
 | scenario | frozen (S1 wording: ≥ 100 ticks observed, 0 moves) | min daytime share, S1 wording | min daytime share, animals ≥ 100 awake daytime ticks | longest daytime still, rest excluded | starving |
@@ -728,7 +732,7 @@ Journal growth: +43.9 B per tick entry with presence. Contact headless: unchange
 
 ### Not met, or open
 
-- **S1 wording, 4 newborn animals** (above). They pass when counted by awake ticks; the counting change is in `tests/stab002-accept.ts`.
+- **S1 wording, 4 newborn animals** (above). They passed only when counted by awake ticks. *Resolved in the versioning correction:* the counting change was reverted, and the v8 newborn follow rule makes the S1 wording pass (0 failures).
 - **A founder steering at a villager's sim position, ahead of its drawn figure,** can end inside the villager's capsule. Scratch `s4` chase, steering at the logical position: up to 0.37 m on seeds 42, 1 and 2. **It happens identically on the S3 tree** (seed 42: 0.370 m at the same frame). This is a pre-existing player-local contact case: an idle villager steps into a free cell before the founder reaches it, and push-out does not clear the overlap. It is not caused by S4. Steering at the drawn villager (the test, and what a player sees) gives 0.000 m. Not fixed here.
 - **A villager's step already under way** may end in a cell the founder walked into during the tick. Nav checks occupancy at cell centres. The 0.6 m distance clip still holds. Counted as "committed steps" in test 5 (0 in the drawn-steering chase).
 - **Errand time per task falls 18 %, not 33 %.** Work ticks, gate ticks and the leg remainder are speed-independent.
@@ -746,11 +750,158 @@ From `Game/`:
 - Pins: `s4/pin7.ts`, the same way.
 - Browser: build, copy `dist` to `.kiro/artifacts/screenshots/probe/dist`, extract `git archive 6e7fc61 Game/dist` to `probe/dist-s4-before`, run `node s4/gen-s4-probes.mjs <suffix>`, then run each `s4-*.js` with Playwright `browser_run_code_unsafe { filename }`.
 
+## Versioning correction (v8)
+
+**What went wrong.** The S3 build (`bf23ae5`, settlement rules v7) was deployed to the live site https://astrix.nyc.boxd.sh by mistake at 2026-11-25 23:03 UTC (release `20261125T230303Z-bf23ae5`). That happened before the STAB-002 acceptance pass. Players who loaded it have saves founded at, or upgraded to, v7 with S3 semantics. S4 (`e353813`) then changed v7 outcomes without a new rules number: villager speed 39 dm per tick, part steps rounded toward zero, seed kept for owner fields, and chores waiting 85 daytime ticks made critical. Under S4 those saves no longer replayed from genesis to their hashes. The owner's condition was: "Preserve existing settlement saves and their historical replay behaviour. Version the new rules and prove that old saves still replay identically."
+
+Committed locally only: not pushed, not deployed.
+
+### What changed
+
+1. **Rules v8** (`HOMESTEAD_PACE_VERSION = 8`, `isPaceHomestead`, `sim/homestead.ts`). It is now the latest version (`HOMESTEAD_LATEST_VERSION`) and the only one with the S4 rules:
+   - `villagerSpeed(h)` is 39 dm (`VILLAGER_SPEED_V8`) under v8 and 26 under v1 to v7;
+   - `taskTicks` (the dusk check for routine work) uses the homestead's own speed, so v7 plans at 26 dm as S3 did;
+   - `navWalk` sets `exact` only under v8, so v7 keeps the S3 rounding;
+   - the seed reservation (`seedStore`, `orderSeed`) is v8 only; v7 counts all seed in the store as free, as S3 did;
+   - `dueClass` applies `AGE_CRITICAL` only under v8.
+2. **Rules v7 are exactly S3 again.** No other v7 code path changed: S1, S2 and S3 are the same code as on `bf23ae5`.
+3. **Founding and upgrading.** `found_homestead` and `upgrade_homestead` accept `rules: 8`; rules 9 are refused (`app/session.ts`). The app's `ensureFounded` (`app/homestead.ts`) founds new farms at v8. It upgrades any older farm, v7 included, by one journaled `upgrade_homestead { rules: 8 }`.
+4. **The v7 to v8 upgrade changes nothing but the rules number.** In `upgradeHomestead`, the v7 step (animals keep their place, start wandering, end tick now) now runs only when the farm is older than v7. The M014 and S1 steps were checked: the v4 step (Cora, sites) runs only from below v4; the v6 step (rotation 0, empty timber stores) runs only from below v6; the woodland starts only from below v5. From v7, every animal (with its state and end tick), villager, task, route, carried load, building site and its progress, field, woodland and stock stays as it is (test 3 below). From v6 or older, v8 applies the v7 step once, then the number.
+5. **S1 strict wording: newborns follow their mother (v8 only).** `motherOf` and `follow` in `sim/homestead.ts`. A young animal (younger than its species' `adultAge`) has as mother the nearest adult female of its species inside the same enclosure. No new state is stored. While the young animal is inside, not hungry, not grazing or drinking and not heading out, it behaves like this:
+   - farther than `FOLLOW_DM` (1.5 m) from her, it gets up and walks to her cell (a free main-area cell, never at the player);
+   - beside her, it lies down when she rests and gets up when she does;
+   - otherwise it lives as an adult does.
+
+   A newborn born at dusk now moves whenever its mother does, so it no longer sleeps alone through the window. Measured on a lamb's first 290 ticks: 116 moving ticks, and within 3.5 m of its mother 275 of 290 ticks (v7: 65 and 221).
+6. **App message.** The upgrade toast adds "Villagers walk faster and keep seed for the fields you mark." It shows the S1 herd message only when upgrading from below v7.
+
+Files:
+- changed: `Game/src/sim/homestead.ts`, `Game/src/app/session.ts`, `Game/src/app/homestead.ts`;
+- tests:
+  - new: `Game/tests/stab002.v8.test.ts` (8), `stab002.s1-accept-c.test.ts` (2), `stab002-v7-scenario.ts` (the shared v7 reference scenario), and the fixture `tests/fixtures/stab002-v7-s3-save.json`;
+  - changed: `stab002-accept.ts`, `stab002.s1-accept-a/b`, `stab002.s3-accept`, `stab002.s4`, `stab002.s4-accept-a/b`, `stab002-s4-accept.ts`, `stab002-s3-harness.ts`, `stab002.s2.test.ts`, `stab002.s1.test.ts`, `stab002.s2-contact.test.ts` (wording), `m010.navigation` and `m012.living` (rules 9 is now the invalid example);
+- evidence: `v8/` (`gen-v7.ts` and its output on `bf23ae5`, `livecheck.ts` and its output, `workshare.ts` and its output, the browser probe `stab002-v8-upgrade.probe.js`, results JSON, the exported live localStorage and screenshots);
+- regenerated: `Game/dist`, `Game/tests/.build`.
+
+### Replay evidence (headless)
+
+**Proof that v7 = S3.** I checked out `bf23ae5` into a temporary git worktree (`/projects/sandbox/.tools/scratch/s3-wt`, removed afterwards with `git worktree remove`). I ran `tests/stab002-v7-scenario.ts` on its code with `v8/gen-v7.ts`. The scenario uses only commands S3 already had and covers:
+- S1: v7 founding, births (15 to 25 animals), graze, drink and rest states, the pen gate opened and closed;
+- S2: the founder's presence on 300 journaled ticks, walking through the four pens;
+- S3: two owner fields, an approved woodshed, `set_priority` on the coop, and the steward assigning roles as the app runs it.
+
+| check | on `bf23ae5` (S3) | on this tree |
+|---|---|---|
+| v7 reference run, fresh, 900 ticks | `4b53db46a1916870` | `4b53db46a1916870` |
+| v7 save fixture (v6 farm, 300 ticks, upgraded to v7, 600 ticks with presence): recorded hash | `75eaf4d14533a811` | restores to `75eaf4d14533a811`, snapshot **byte-identical** |
+| the fixture's journal replayed from genesis (every entry's hash checked) | `75eaf4d14533a811` | `75eaf4d14533a811` |
+| S3's own v7 pins: M014 reference run; fresh 900 ticks, seeds 1 / 42 / 1337 / 2024 | `7dea616c561cc8a4`; `c905f7a613e3c30d` / `3d9dec9afa4fddfa` / `ae1dd7c3549b697e` / `11620894712a3048` | the same (restored in `stab002.s2.test.ts`) |
+| BUG-C standard farm under v7: work share of awake ticks, seeds 1337 / 42 / 7 | 7.6 / 9.0 / 9.1 % (S4 report) | 7.6 / 9.0 / 9.1 % (`v8/workshare-out.txt`) |
+
+The fixture file is reproducible: running the generator again on `bf23ae5` writes the same bytes (sha256 `1f277390…aa9ebc`).
+
+**A real save from the live site.** The browser probe (below) exported the localStorage of the live S3 build after 60 ticks (`v8/stab002-v8-live-s3-localstorage.json`). Headless on this tree (`v8/livecheck.ts`):
+- it is rules v7 at tick 60 with 61 journal entries;
+- it restores to `41142835a590a3e9` with its snapshot byte-identical;
+- its journal replays from genesis to the same `41142835a590a3e9`;
+- one `upgrade_homestead { rules: 8 }` leaves the farm unchanged except for the rules number (15 animals, 3 villagers).
+
+**Unchanged and asserted:**
+- genesis `e659504b056654dc`;
+- v1 `16ca4c350d98096f`, v2 `542411888c83bf3a`, v3 `d2c28283712a8de7`, v4 `6ce5ae532227eeb9`, v5 `f249cb544027b9bd`, v6 `037429c4ffbcf710`;
+- the v6 save fixture: byte-identical, and its journal replays.
+
+**v8 pins** (new, measured on this change):
+- M014 reference run `c00abf2c4d2547e5`;
+- fresh 900 ticks, seeds 1 / 42 / 1337 / 2024: `b694b9920e078b04` / `94273b8582468240` / `c01722f641c93945` / `afd8788159b1bb6a`;
+- the v7 reference scenario under v8: `362adca8d692a1c0`;
+- the v7 fixture upgraded to v8 and played 250 ticks: `8eab5d5e44cca5ea`.
+
+The S4 commit's v7 re-pins (`c8aa0ba108a6a545` and the fresh `d98430b7…`, `b191fb03…`, `c588a10b…`, `d5c4c7c1…`) are retired.
+
+`stab002.v8.test.ts`:
+1. The v7 reference run gives the S3 hash. It exercised births, states, 300 presence ticks, a steward assignment and a finished site. v8 is the latest version. Speed is 26 dm for v1 to v7 and 39 for v8.
+2. The v7 fixture restores byte-identical with its hash, replays from genesis to it, and equals the same scenario run here. Played on 120 ticks, the restored and replayed copies agree.
+3. v7 to v8 on the fixture's end state and on a mid-run v7 farm (a villager carrying a load, a route in progress, a site with materials delivered). For both:
+   - one journaled upgrade changes nothing but the rules number (homestead snapshot, store, bag, entities);
+   - the animal records are byte-equal;
+   - a second upgrade is refused (`unchanged`), and so is a downgrade to 7;
+   - reloads play on identically, and the upgraded journal replays from genesis.
+4. v6 to v8 (the v6 fixture): every animal stays where it stood and starts wandering. A timber store keeps `{ wood: 7 }` and rotation 2. No settler is added or moved. A legacy v1 farm upgraded to v8 gets gates, Cora, sites and the woodland.
+5. `found_homestead { rules: 8 }` is the v7 founding with a new number. Rules 9, 0 and `'8'` are refused for both commands. A v8 journal restores and replays. A snapshot with version 9 is rejected.
+6. The v8 pin of the reference scenario.
+7. Newborn follow (numbers in item 5 above). The lamb's final cell is a free cell of the pen.
+8. The v7 save played on 300 ticks stays v7, and its journal replays from genesis.
+
+The tests that S4 had moved onto v7 now run on v8:
+- `stab002.s4*`;
+- the S3 acceptance (`stab002.s3-accept`, now for v8 **and** v7);
+- the S1 acceptance (`stab002.s1-accept-a/b/c`).
+
+The S1, S2 and S3 unit tests stay on v7 and pass as on `bf23ae5`. The S4 seed-reservation test used to be the v6 → v7, seed 42, 4-field run. The follow rule changes that run's random stream under v8: free seed at marking is now 1 for 4 units, so the case is gone. It is now a direct set-up: a dug routine field and a new owner field, with exactly the owner field's 4 seed in the store, on seeds 1337, 42 and 7. Under v8 no seed is fetched for the routine field while the owner field needs it, and the owner field is fully sown. The same set-up under v7 also fetched none, so this test shows the v8 rule holds but does not show a v7 difference. The v7/v8 difference is pinned by the hashes.
+
+### S1 acceptance, exactly as worded (final rules v8)
+
+The S4 reinterpretation (counting animals by awake ticks) has been reverted. `tests/stab002-accept.ts` uses the S1 wording again:
+- frozen = observed ≥ 100 ticks with 0 moves, rest included;
+- slow = observed ≥ 100 daytime ticks and moving in under 15 % of them;
+- still = longest daytime still stretch > 80 ticks, rest excluded.
+
+It collects every failure on every seed, prints the count, and only then asserts zero.
+
+| scenario (15 seeds × 3 days) | S1-wording failures, v8 without the follow rule | v8 with the follow rule (final) |
+|---|---|---|
+| fresh v8 | 2 (seed 6 `animal:023` frozen, seed 42 `animal:030` frozen) | **0** (min daytime share 30.1 %, longest still 36) |
+| v2 → v8 | 1 (seed 99999 `animal:027` slow, 13.8 %) | **0** (min 32.0 %, longest 43) |
+| v5 → v8 | 1 (seed 99999 `animal:028` frozen) | **0** (min 34.3 %, longest 35) |
+| v6 → v8 | 1 (the same) | **0** (min 34.3 %, longest 35) |
+| v7 → v8 (new) | 0 | **0** (min 29.6 %, longest 40) |
+| fresh v7 (released S3 rules) | 0 (v7 has no follow rule) | 0 (min 19.9 %, longest 41) |
+
+Without the follow rule, v8 gives exactly the S4 failures: 4 newborns, 5 S1-wording failures. With it, **the S1 criteria pass as worded on all 90 v8 seed runs and on the 15 v7 runs**, and the mid-window reloads give the same hash and herd.
+
+### S3 and S4 bounds on v8 (headless)
+
+| bound | result on v8 (fresh and v6 → v8, seeds 1337 / 42 / 7) |
+|---|---|
+| woodshed + well, no hand roles, ≤ 300 ticks (S3 acceptance) | max 204 (fresh, 1337 @ 400); all pass. The same test on v7 passes as on S3: max 272. |
+| owner field taken ≤ 30 / sown ≤ 60, seed-limited (S3 acceptance) | taken ≤ 6; sown ≤ 56 with full seed; seed-limited runs sow all free seed by +60; all pass |
+| S4: every B and F bound on all 36 runs, step ≤ 1.0 of the exact allowance | all pass |
+| S4: total task time ≥ 30 % below S3's 9,136 | **5,933 (−35.1 %)** (`e353813`: 5,751, −37.1 %) |
+| routine and upkeep waits ≤ 120 (18 farms) and the standard farm | max 112 (v6 → v8, 42, 6 fields); standard farm 45; 0 starving ticks |
+| BUG-C work share of awake ticks, standard farm, ≥ 15 % | **9.7 / 10.7 / 10.4 % (1337 / 42 / 7): not met** (`e353813`: 10.1–11.1 %) |
+
+### Browser (emulated desktop Chromium 1000 × 600, software GL; separate from the tests)
+
+Probe `v8/stab002-v8-upgrade.probe.js`. Results are in `v8/stab002-v8-browser-results.json`; screenshots are `v8/stab002-v8-*.png`. The local build (`Game/dist`) was copied to `.kiro/artifacts/screenshots/probe/dist` and routed as `https://astrix.local/`. Each step used a fresh context.
+1. **Live S3:** https://astrix.nyc.boxd.sh/?chain=0 (with `&metrics=1&timescale=4` to read the state and shorten the wait). It founded a farm at **rules 7** and ran to tick 61. Its save is rules 7 at tick 60, with 15 animals and 3 villagers. All localStorage was exported.
+2. **That storage in the local v8 build:** the farm upgraded to **rules 8** by one journaled `upgrade_homestead { rules: 8 }` at sequence 61. The saved snapshot is v8. All 15 animal ids and all 3 villagers were kept. The toast read "Villagers walk faster and keep seed for the fields you mark." **No page errors.**
+3. **Fresh storage in the local v8 build:** a new farm founded at **rules 8** (Ada, Bram, Cora, 15 animals). No page errors.
+
+### Reproduce
+
+From `Game/`:
+- `npm test` (`stab002.v8.test.ts` holds the v7 = S3 and upgrade checks).
+- v7 reference and fixture:
+  - `git worktree add --detach <dir> bf23ae5`, link `node_modules`, and copy `tests/stab002-v7-scenario.ts` into its `Game/tests/`;
+  - bundle and run `v8/gen-v7.ts` there (see its header);
+  - `git worktree remove <dir>`.
+- Live save: `v8/livecheck.ts`. Work share: `v8/workshare.ts` (headers give the commands).
+- Browser: build, copy `dist` to `.kiro/artifacts/screenshots/probe/dist`, then run `v8/stab002-v8-upgrade.probe.js` with Playwright `browser_run_code_unsafe { filename }`.
+
+### Not met, or open
+
+- **BUG-C work share** of awake ticks on the standard farm is 9.7–10.7 % under v8 against the ≥ 15 % target. **Not met.**
+- **The S4 seed-reservation case** is now a direct set-up. It shows the v8 rule holds, but not a v7 difference (see the tests above).
+- The follow rule changes v8 herd movement and the shared random stream. All S1–S4 bounds were re-measured on v8 (above).
+- No real device.
+
 ## STAB-002 acceptance summary
 
-State: S1 `cd0aff6`, S2 `863f0f7`, S2 fix `03d0842`, S3 `bf23ae5`, and S4 (this commit), all on `deploy/boxd`.
+State: S1 `cd0aff6`, S2 `863f0f7`, S2 fix `03d0842`, S3 `bf23ae5` (rules v7), S4 `e353813`, and the versioning correction (this commit; S4 is rules v8). All are on `deploy/boxd`.
 - **Merged** locally on the branch; nothing is pushed.
-- **Deployed:** the live site serves the **S3** build (`bf23ae5`, dirty stamp, last-modified 2026-11-25 23:03 GMT). This session did not deploy it. S4 is not deployed.
+- **Deployed:** the live site serves the **S3** build (`bf23ae5`, rules v7, release `20261125T230303Z-bf23ae5`, 2026-11-25 23:03 UTC). It was deployed before this acceptance pass, by mistake. S4 and the v8 correction are not deployed.
+- **Rules:** v7 = S1 + S2 + S3, exactly as deployed. v8 = v7 + S4 + the newborn follow rule; new farms are founded at v8, and older ones upgrade on load.
 - Tests and browser are reported separately. The browser was always emulated Chromium; no real phone or tablet was used.
 
 ### Per fix
@@ -761,35 +912,37 @@ State: S1 `cd0aff6`, S2 `863f0f7`, S2 fix `03d0842`, S3 `bf23ae5`, and S4 (this 
 | S2 bodies and presence | The founder was invisible to the sim (villagers and animals walked through them); no founder contact with sim bodies | 19 (all pass) |
 | S2 fix, coop step | Contact ignored bodies below a standing founder's feet on a 1 m step; falls landed inside a hen | 4 (all pass) |
 | S3 priority and steward | Steward moved the farmer to herder early, 300-tick cooldown, no woodcutter; no priority for owner orders; exclusive roles; waking hungry; no batching | 11 (all pass) |
-| S4 speed | Villagers walked 1.3 m/s against a compressed clock (player 4.2 m/s); integer rounding exceeded the step allowance; routine sowing could take owner seed; order units could hold old chores | 9 (all pass) |
+| S4 speed (rules v8) | Villagers walked 1.3 m/s against a compressed clock (player 4.2 m/s); integer rounding exceeded the step allowance; routine sowing could take owner seed; order units could hold old chores | 9 (all pass, now on v8) |
+| v8 versioning correction | S4 changed the released v7 without a new rules number; S1-wording failures of newborns | 8 + 2 S1 acceptance runs + v7 runs of the S3 acceptance (all pass) |
 
-Totals: 405 tests pass (348 before STAB-002). `npx tsc --noEmit` is clean and the build is OK.
+Totals: **417 tests pass** (348 before STAB-002). `npx tsc --noEmit` is clean and the build is OK. `npm test` takes about 130 s.
 
 ### Against the STAB-001 original failures (headless, final code)
 
-| STAB-001 original failure | target | result (S4 final) | pass/fail |
+| STAB-001 original failure | target | result (final, rules v8) | pass/fail |
 |---|---|---|---|
-| A: frozen animals (7 on seed 1337; 31–43 over 15 seeds, v6) | 0 frozen, 15 seeds, fresh and upgraded | 0 counted by ≥ 100 awake ticks; **4 newborns** under the S1 wording (≥ 100 ticks observed, mostly asleep) | pass (awake wording) / **fail (S1 wording)** |
-| A: 12.8 % of ticks moving; animals under 15 % by day | ≥ 15 % daytime moving, every animal | min 25.8–30.7 % (awake ≥ 100); 13.8 % for one newborn under the S1 wording | pass (awake wording) / **fail (S1 wording, 1 animal)** |
-| A: longest still stretch 136–180 ticks | ≤ 80 daytime, rest excluded | max 38 | pass |
+| A: frozen animals (7 on seed 1337; 31–43 over 15 seeds, v6) | 0 frozen, 15 seeds, fresh and upgraded (S1 wording: ≥ 100 ticks observed, 0 moves) | **0** on all 90 v8 runs (fresh, v2/v5/v6/v7 → v8) and 15 v7 runs. Without the newborn follow rule v8 had 4 frozen newborns. | **pass (S1 wording)** |
+| A: 12.8 % of ticks moving; animals under 15 % by day | ≥ 15 % daytime moving, every animal observed ≥ 100 daytime ticks | min 29.6–34.3 % (v8), 19.9 % (v7) | **pass (S1 wording)** |
+| A: longest still stretch 136–180 ticks | ≤ 80 daytime, rest excluded | max 43 | pass |
 | B: founder walked through the cow (0.06 m centre distance); cow walked through the founder | no pass-through; capsule gap ≥ −0.02 m outside the squeeze | S2 tests pass: min gap 0.000 m all species; crowded pens −0.009 m | pass |
 | B: villagers walked through the founder | never in the founder's cells or within 0.6 m | door queue test; S4 chase at 1.95 m/s, 0 violations from cell centres; nearest 5.8 dm | pass |
-| C: woodshed approved at 0 / 120 / 400, no help | ≤ 300 ticks | max 202 (36 runs incl. well; fresh and upgraded) | pass |
+| C: woodshed approved at 0 / 120 / 400, no help | ≤ 300 ticks | max 204 (S3 acceptance runs on v8); all 36 S4 runs incl. well pass | pass |
 | C: woodshed with materials and a builder +149 | ≤ 100 (BUG-C) | not re-measured in that exact setup. Fresh store, no hand roles, approved at 0: 41–70 (fresh), 67–138 (upgraded) | not measured as specified |
-| C: new owner field on a busy farm never claimed | taken ≤ 30 | max 7 | pass |
-| C: 6 × 6 owner field sown +56 to +94 | ≤ 60 (seed-limited) | max 59; seed-limited runs sow all free seed by +60 | pass |
+| C: new owner field on a busy farm never claimed | taken ≤ 30 | max 6 (S3 acceptance on v8); all 18 S4 runs pass | pass |
+| C: 6 × 6 owner field sown +56 to +94 | ≤ 60 (seed-limited) | max 56 with full seed; seed-limited runs sow all free seed by +60 | pass |
 | C: routine chores starve (S3: 121–139 on the heaviest farms) | ≤ 120 | max 112 (all 21 farms) | pass |
 | C: starving 6–8 % of ticks | < 1 % | 0 | pass |
-| C: work share of awake ticks 8–9 % | ≥ 15 % | 10.1–11.1 % | **fail** |
+| C: work share of awake ticks 8–9 % | ≥ 15 % | 9.7–10.7 % (v8; S4 on `e353813` measured 10.1–11.1 %) | **NOT met** |
 | C: first productive task after dawn 27–42 ticks | ≤ 15 | not measured in S3 or S4 | not measured |
-| Determinism, v1–v6 replay | unchanged | v1–v6 pins, genesis and the v6 fixture byte-identical; v7 journals replay; reloads give the same hash (tests and browser) | pass |
-| Total task time (S4) | −30 % | −37 % | pass |
+| Determinism, v1–v7 replay | unchanged | v1–v6 pins, genesis and the v6 fixture byte-identical; v7 = S3: reference run, fixture and a live-site save made by `bf23ae5` restore byte-identical and replay from genesis to their hashes; reloads give the same hash (tests and browser) | pass |
+| Total task time (S4, v8) | −30 % | −35.1 % | pass |
 
 ### Old saves and replay
 
 - Rules v1 to v6 run unchanged code. Their pins and the v6 save fixture are asserted, and v6 rejects every v7 field.
-- A v6 save upgrades on load with one journaled `upgrade_homestead { rules: 7 }`. Its snapshot keeps every id, position, store and bag.
-- v7 is unreleased. Its references were re-pinned at S3 and again at S4.
+- **Rules v7 are the released S3 rules.** The v7 reference hash `4b53db46a1916870`, the v7 save fixture `75eaf4d14533a811` (byte-identical, replays from genesis) and S3's own v7 pins were all produced by `bf23ae5`, and all match on this tree. A save written by the live site also replays from genesis to its hash (`41142835a590a3e9`).
+- Every older save upgrades on load with one journaled `upgrade_homestead { rules: 8 }`. From v7 only the rules number changes. From v6 or older the v7 step is applied once (animals keep their places), and the v4 and v6 steps are not re-applied.
+- v8 has its own pins (see "Versioning correction (v8)").
 
 ### Mobile and perf
 
@@ -797,9 +950,9 @@ Emulated only (above). At the farm, draw calls are 46–80 and triangles 94–16
 
 ### Remaining limitations and risks
 
-- S1 acceptance wording: 4 newborn animals fail the "≥ 100 ticks observed" wording. The tests count awake ticks instead.
-- The BUG-C work-share target (≥ 15 % of awake ticks) is not met, and the dawn-start target was not measured.
+- S1 acceptance now passes as worded under v8 (0 failures). That depends on the v8 newborn follow rule; without it, 4 newborns fail.
+- **The BUG-C work-share target (≥ 15 % of awake ticks) is NOT met: 9.7–10.7 % under v8.** The dawn-start target was not measured.
 - Pre-existing founder-capsule overlap of up to 0.37 m when steering at villagers' logical (not drawn) positions. It is the same on S3 and was not fixed.
 - Faster villagers produce more per day. Store capacity, the spoil path and the woodland quota were not retuned.
-- **The live site already runs S3 (v7), so S3-era v7 saves may exist.** I checked with a scratch test: a fresh v7 world played 250 ticks on the S3 tree and saved. The S4 code restores that save (snapshot and journal boundary) to the same hash, `094f911b4efc9e30`, and it plays on under S4 rules. **A replay of its journal from genesis under S4 gives a different hash** (`1cd86a28260bb271`), because v7 changed again without a new rules number. Anything that verifies v7 journals by full replay would reject S3-era saves. Before deploying S4, decide between two options: accept this (v7 was never declared released), or put the S4 changes behind a rules v8.
+- The live site runs S3 (v7). S4 is now rules v8 and v7 is S3 again, so S3-era saves replay from genesis (resolved by the versioning correction). Deploying this build upgrades those farms to v8 on load. That upgrade cannot be undone in the save, though the v7 history before it still replays.
 - No real phone or tablet.

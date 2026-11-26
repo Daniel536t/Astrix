@@ -1,0 +1,6 @@
+v7 seed 1337: work share of awake 7.6 %, travel 23 %, max wait 57, starving 0
+v7 seed 42: work share of awake 9.0 %, travel 25 %, max wait 62, starving 0
+v7 seed 7: work share of awake 9.1 %, travel 25 %, max wait 53, starving 0
+v8 seed 1337: work share of awake 9.7 %, travel 19 %, max wait 45, starving 0
+v8 seed 42: work share of awake 10.7 %, travel 19 %, max wait 45, starving 0
+v8 seed 7: work share of awake 10.4 %, travel 19 %, max wait 45, starving 0

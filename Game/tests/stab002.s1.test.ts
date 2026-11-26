@@ -74,8 +74,10 @@ test('rules v1-v6 keep their hashes: v1-v3 (M012 run), v4-v6 (M014 reference run
   const v6 = reference(6);
   assert.equal(v6.stateHash, '037429c4ffbcf710');
   assert.ok(!/"act"|"until"/.test(JSON.stringify(v6.snapshot.homestead)), 'no v7 fields under v6');
-  assert.deepEqual(HOMESTEAD_VERSIONS, [1, 2, 3, 4, 5, 6, 7]);
-  assert.equal(HOMESTEAD_LATEST_VERSION, HOMESTEAD_HERD_VERSION);
+  assert.deepEqual(HOMESTEAD_VERSIONS, [1, 2, 3, 4, 5, 6, 7, 8]);
+  // STAB-002 v8: S4 is rules v8 (v7 is the released S3 rules); new farms are founded at v8 (tests/stab002.v8.test.ts).
+  assert.equal(HOMESTEAD_HERD_VERSION, 7);
+  assert.equal(HOMESTEAD_LATEST_VERSION, 8);
 });
 
 test('a v6 save written by the build before v7 (4169c21) restores byte-identical with its recorded hash; v6 refuses v7 animal fields', () => {

@@ -1,6 +1,7 @@
-// STAB-002 S4: evidence-tuned walking speed under settlement rules v7.
-//  - v7 villagers walk 39 dm per tick (1.95 m/s, 1.5x); v1 to v6 keep 26 dm; starving halves it;
-//  - under v7 a tick's step never exceeds the speed (part steps round toward zero; no +1 dm of rounding);
+// STAB-002 S4: evidence-tuned walking speed under settlement rules v8 (v7 was released with S3 and keeps its
+// behaviour; tests/stab002.v8.test.ts proves it against the S3 build).
+//  - v8 villagers walk 39 dm per tick (1.95 m/s, 1.5x); v1 to v7 keep 26 dm; starving halves it;
+//  - under v8 a tick's step never exceeds the speed (part steps round toward zero; no +1 dm of rounding);
 //  - queueing at a gate and the head-on step-aside still work at the higher speed, gates are shut behind;
 //  - the herder still drives strays home and shuts the gate (animal speeds unchanged);
 //  - a founder chasing villagers round the farm: no villager steps from a cell centre into the founder's cells or
@@ -15,8 +16,8 @@ import assert from 'node:assert/strict';
 import { GameSession } from '../src/app/session';
 import { GENERATOR_V2 } from '../src/sim/world';
 import {
-  AGE_CRITICAL, AGE_OVERDUE, DM, Leg, NIGHT_END, PRIORITY, PLAYER_ID, VILLAGER_SPEED, VILLAGER_SPEED_V7, Villager, dueClass, facility,
-  NAV_TICK_BUDGET, homesteadNav, homesteadSnapshot, penGate, straysOf, validateHomestead, villagerSpeed,
+  AGE_CRITICAL, AGE_OVERDUE, DM, Leg, NIGHT_END, PRIORITY, PLAYER_ID, VILLAGER_SPEED, VILLAGER_SPEED_V8, Villager, dueClass, facility,
+  NAV_TICK_BUDGET, TILL_PER_UNIT, homesteadNav, homesteadSnapshot, penGate, straysOf, validateHomestead, villagerSpeed,
 } from '../src/sim/homestead';
 import type { DueJob } from '../src/sim/homestead';
 import { navStep } from '../src/sim/nav';
@@ -24,7 +25,7 @@ import { PLAYER_R, presenceCells } from '../src/sim/bodies';
 import { CONTACT_SQUEEZE_DEPTH } from '../src/sim/character';
 import { plantedStride } from '../src/render/characters';
 import { Walk, farm as s2farm } from './stab002-s2-harness';
-import { busyField, farm } from './stab002-s3-harness';
+import { farm, markField } from './stab002-s3-harness';
 
 let seq = 0;
 const send = (s: GameSession, c: Record<string, unknown>) => s.dispatch({ schema: 3, id: `s4:${seq++}`, expectedRevision: s.world.revision, ...c } as never);
@@ -49,19 +50,19 @@ function walkTask(kind: string, target: string, to: { x: number; z: number }, wo
   const legs: Leg[] = [{ op: 'walk', x: to.x, z: to.z, ticks: 0, effect: 'none' }, { op: 'work', x: to.x, z: to.z, ticks: workTicks, effect: 'none' }];
   return { kind, target, legs, leg: 0, progress: 0 };
 }
-/** Park the third v7 villager inside the farmhouse on a long stint, out of a two-villager test. */
+/** Park the third villager inside the farmhouse on a long stint, out of a two-villager test. */
 function park(s: GameSession, v: Villager) {
   const home = facility(s.world.homestead!, 'farmhouse')!.use;
   v.x = home.x; v.z = home.z; delete v.nav;
   v.task = walkTask('feed', `feed:park:${v.id}`, home, 500);
 }
 
-test('speed: v7 villagers walk 39 dm per tick (1.95 m/s), v1-v6 keep 26 dm; a full tick covers the whole speed and never more; starving halves it', () => {
+test('speed: v8 villagers walk 39 dm per tick (1.95 m/s), v1-v7 keep 26 dm (v7 as released with S3); a full tick covers the whole speed and never more; starving halves it', () => {
   assert.equal(VILLAGER_SPEED, 26);
-  assert.equal(VILLAGER_SPEED_V7, 39);
-  for (const v of [1, 2, 3, 4, 5, 6]) assert.equal(villagerSpeed({ version: v }), 26, `v${v}`);
-  assert.equal(villagerSpeed({ version: 7 }), 39);
-  for (const [rules, speed, allowance] of [[6, 26, 27], [7, 39, 39]] as const) {
+  assert.equal(VILLAGER_SPEED_V8, 39);
+  for (const v of [1, 2, 3, 4, 5, 6, 7]) assert.equal(villagerSpeed({ version: v }), 26, `v${v}`);
+  assert.equal(villagerSpeed({ version: 8 }), 39);
+  for (const [rules, speed, allowance] of [[7, 26, 27], [8, 39, 39]] as const) {
     const s = founded(rules);
     let worst = 0, full = 0;
     const last = new Map<string, { x: number; z: number }>();
@@ -76,7 +77,7 @@ test('speed: v7 villagers walk 39 dm per tick (1.95 m/s), v1-v6 keep 26 dm; a fu
     assert.ok(worst >= speed - 1 && full > 20, `v${rules}: villagers do walk at ${speed} dm (largest ${worst.toFixed(2)}, ${full} full steps)`);
   }
   // Starving: half the speed, still exact.
-  const s = founded(7);
+  const s = founded(8);
   calm(s);
   const h = s.world.homestead!;
   const v = h.villagers[0];
@@ -93,8 +94,8 @@ test('speed: v7 villagers walk 39 dm per tick (1.95 m/s), v1-v6 keep 26 dm; a fu
   assert.ok(max <= 39 / 2 && max >= 18, `starving step ${max.toFixed(2)} dm`);
 });
 
-test('exact part steps: with `exact` a step that ends between two centres is never longer than the speed; without it (v2-v6) the old rounding is kept', () => {
-  const s = founded(7);
+test('exact part steps: with `exact` a step that ends between two centres is never longer than the speed; without it (v2-v7) the old rounding is kept', () => {
+  const s = founded(8);
   const h = s.world.homestead!;
   const grid = homesteadNav(s.world, h);
   const home = facility(h, 'farmhouse')!.use;
@@ -115,13 +116,13 @@ test('exact part steps: with `exact` a step that ends between two centres is nev
     }
   }
   assert.equal(overExact, 0, 'exact steps never exceed the speed');
-  assert.ok(overOld > 0, `the old rounding does exceed it now and then (${overOld} of ${n / 2}), which v2-v6 keep`);
+  assert.ok(overOld > 0, `the old rounding does exceed it now and then (${overOld} of ${n / 2}), which v2-v7 keep`);
 });
 
-test('v7 at 39 dm: two villagers queue at a narrow gate (the wait is in the saved state); head-on at the gate the later id steps aside; the gate is shut behind', () => {
+test('v8 at 39 dm: two villagers queue at a narrow gate (the wait is in the saved state); head-on at the gate the later id steps aside; the gate is shut behind', () => {
   // Queue.
   {
-    const s = founded(7);
+    const s = founded(8);
     const h = s.world.homestead!;
     calm(s);
     const pg = penGate(h, 'pen');
@@ -152,7 +153,7 @@ test('v7 at 39 dm: two villagers queue at a narrow gate (the wait is in the save
   }
   // Head-on.
   {
-    const s = founded(7);
+    const s = founded(8);
     const h = s.world.homestead!;
     calm(s);
     const pg = penGate(h, 'pen');
@@ -183,8 +184,8 @@ test('v7 at 39 dm: two villagers queue at a narrow gate (the wait is in the save
   }
 });
 
-test('v7 at 39 dm: the herder drives strays back through the gate, holds it and shuts it; animals keep their own speeds', () => {
-  const s = founded(7);
+test('v8 at 39 dm: the herder drives strays back through the gate, holds it and shuts it; animals keep their own speeds', () => {
+  const s = founded(8);
   const h = s.world.homestead!;
   ticks(s, 10);
   assert.ok(send(s, { type: 'set_gate', gateId: 'gate:pen', state: 'open' }).ok);
@@ -208,9 +209,9 @@ test('v7 at 39 dm: the herder drives strays back through the gate, holds it and 
   assert.ok(maxAnimal <= 13, `animals still walk at most their driven speed (largest step ${maxAnimal.toFixed(1)} dm)`);
 });
 
-test('v7 at 39 dm: a founder chasing villagers round the farm for 3 seeds: no villager walks into the founder\'s cells or within the S2 distance; idle villagers step aside; capsule overlap within the squeeze', () => {
+test('v8 at 39 dm: a founder chasing villagers round the farm for 3 seeds: no villager walks into the founder\'s cells or within the S2 distance; idle villagers step aside; capsule overlap within the squeeze', () => {
   for (const seed of [1337, 42, 7]) {
-    const s = s2farm(7, seed);
+    const s = s2farm(8, seed);
     const h = s.world.homestead!;
     // Start at the store, in the middle of the traffic.
     const home = facility(h, 'farmhouse')!.use;
@@ -278,12 +279,39 @@ test('drawn villagers: the walk cycle keeps planted feet at 1.3 and 1.95 m/s (th
   assert.ok(2.4 / 2 > 2 * 0.82 * Math.sin(amp(1.95)) * 1.5);
 });
 
-test('S4 priority: routine sowing leaves the seed an owner field still needs (v6 -> v7, seed 42, 4 fields: the owner field is fully sown within 60 ticks); work 85 daytime ticks old is critical for anyone', () => {
-  const r = busyField(42, 7, 4, 300, 6, 6, 60, { from: 6, pre: 300 });
-  assert.ok(r.seedAtMark >= r.units, `free seed ${r.seedAtMark} at marking for ${r.units} units`);
-  assert.ok(r.sown !== null && r.sown <= 60, `owner field sown at ${r.sown}`);
+test('S4 priority: routine sowing leaves the seed an owner field still needs (v8: a dug routine field gets none of the 4 seed a new owner field needs, which is fully sown); work 85 daytime ticks old is critical for anyone under v8 and is not under v7 (S3)', () => {
+  // A dug 6 x 6 routine field and a new 6 x 6 owner field (4 units each) with exactly 4 seed in the store and no
+  // fibre to thresh, seeds 1337 / 42 / 7. (S4 found the fault on v6 -> v7 seed 42 with 4 fields, where routine
+  // sowing took 2 seed the owner field needed; the newborn follow rule changed that run's random stream under v8,
+  // so the case is set up directly.) Under v8 no seed is fetched for the routine field while the owner field still
+  // needs it, and the owner field is fully sown. v7 is run the same way and only logged: these set-ups do not hit
+  // the S3 race either (the v7 and v8 difference is pinned by the hashes in stab002.v8.test.ts).
+  const took: Record<number, number> = { 7: 0, 8: 0 };
+  for (const seed of [1337, 42, 7]) for (const rules of [8, 7]) {
+    const f = farm(seed, rules);
+    const routineId = markField(f.s, f.send, 6, 6);
+    const orderId = markField(f.s, f.send, 6, 6);
+    const hh = f.s.world.homestead!;
+    const routine = hh.plots.find((p) => p.id === routineId)!;
+    delete routine.order; routine.state = 'tilled'; routine.tilled = TILL_PER_UNIT * 4; routine.sown = 0;
+    const inv = f.s.world.life!.stockpiles.get('stockpile:founder')!.inventory;
+    inv.seed = 4; delete inv.fiber; hh.overflow.seed = 0; delete hh.overflow.fiber;
+    const order = () => f.s.world.homestead!.plots.find((p) => p.id === orderId)!;
+    for (let i = 0; i < 900 && order().state !== 'growing'; i++) {
+      f.step();
+      for (const v of f.s.world.homestead!.villagers) {
+        const t = v.task;
+        if (t && t.target === routineId && t.legs.some((l, k) => k >= t.leg && l.effect === 'take' && l.item === 'seed')) took[rules]++;
+      }
+    }
+    if (rules === 8) {
+      assert.equal(took[8], 0, `seed ${seed}, v8: no seed fetched for the routine field while the owner field needs it`);
+      assert.equal(order().state, 'growing', `seed ${seed}, v8: the owner field is fully sown`);
+    }
+  }
+  console.log(`# seed for routine sowing while the owner field needed it: v8 ${took[8]} task-ticks, v7 ${took[7]}`);
   // Classes by age (daytime ticks), any role.
-  const s = farm(1337, 7);
+  const s = farm(1337, 8);
   const h = s.s.world.homestead!;
   const j: DueJob = { key: 'eggs:coop', kind: 'eggs', target: 'coop', role: 'herder', base: 3, critical: false, place: 'coop' };
   const day0 = 300 + NIGHT_END; // the second dawn (daytime until tick 771)
@@ -294,4 +322,9 @@ test('S4 priority: routine sowing leaves the seed an owner field still needs (v6
   assert.equal(at(AGE_CRITICAL), PRIORITY.critical, 'critical for anyone at 85');
   assert.equal(dueClass(h, j, day0 + AGE_CRITICAL, 'herder'), PRIORITY.critical);
   assert.ok(PRIORITY.critical < PRIORITY.onJob && PRIORITY.critical < PRIORITY.order);
+  // Rules v7 (released with S3) have no critical age: the same job stays late for another role, overdue for its own.
+  h.version = 7;
+  assert.equal(at(AGE_CRITICAL), PRIORITY.lateOther, 'v7: no critical age');
+  assert.equal(dueClass(h, j, day0 + AGE_CRITICAL, 'herder'), PRIORITY.overdue);
+  h.version = 8;
 });

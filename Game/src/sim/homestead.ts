@@ -99,10 +99,27 @@ export const HOMESTEAD_BUILD_VERSION = 6 as const;
  * bed and slows hunger in sleep (see `planV7`).
  */
 export const HOMESTEAD_HERD_VERSION = 7 as const;
+/**
+ * Settlement rules v8 (STAB-002 S4, "pace"): villagers walk 39 dm per tick
+ * (VILLAGER_SPEED_V8) and plan with that speed; a part step rounds toward zero
+ * on each axis, so a tick's move never exceeds the speed; routine sowing leaves
+ * the seed other villagers are fetching and the seed the owner's fields still
+ * need; any upkeep or routine work waiting AGE_CRITICAL daytime ticks is
+ * critical; a young animal follows its mother (`follow`, so a newborn moves
+ * with her from its first night). Everything else is v7 (S1-S3). Rules v7 were released with the S3
+ * build (bf23ae5, deployed 2026-11-25) and keep exactly that behaviour; S4
+ * changes apply only from v8. Founded with `found_homestead { rules: 8 }` or
+ * switched by `upgrade_homestead { rules: 8 }`, which from v7 changes nothing
+ * but the rules number (every animal, villager, task, load, site and field
+ * stays as it is); from v6 or older it first applies the v7 step.
+ */
+export const HOMESTEAD_PACE_VERSION = 8 as const;
 /** The rules new homesteads are founded with and old ones are upgraded to on load. */
-export const HOMESTEAD_LATEST_VERSION = HOMESTEAD_HERD_VERSION;
-export type HomesteadVersion = typeof HOMESTEAD_VERSION | typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION | typeof HOMESTEAD_HERD_VERSION;
-export const HOMESTEAD_VERSIONS: readonly HomesteadVersion[] = [HOMESTEAD_VERSION, HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, HOMESTEAD_HERD_VERSION];
+export const HOMESTEAD_LATEST_VERSION = HOMESTEAD_PACE_VERSION;
+export type HomesteadVersion = typeof HOMESTEAD_VERSION | typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION | typeof HOMESTEAD_HERD_VERSION | typeof HOMESTEAD_PACE_VERSION;
+export const HOMESTEAD_VERSIONS: readonly HomesteadVersion[] = [HOMESTEAD_VERSION, HOMESTEAD_NAV_VERSION, HOMESTEAD_LIVING_VERSION, HOMESTEAD_WORK_VERSION, HOMESTEAD_WOODLAND_VERSION, HOMESTEAD_BUILD_VERSION, HOMESTEAD_HERD_VERSION, HOMESTEAD_PACE_VERSION];
+/** Rules a homestead can be upgraded to by the journaled `upgrade_homestead`. */
+export type UpgradeVersion = Exclude<HomesteadVersion, typeof HOMESTEAD_VERSION>;
 /** Decimetres per metre: sim positions are integer decimetres. */
 export const DM = 10;
 /** One in-game day: 300 ticks of 2 s = 10 minutes, matching the sky's day length. */
@@ -110,15 +127,15 @@ export const DAY_TICKS = 300;
 /** Night inside a day (ticks), when villagers go home and rest. */
 export const NIGHT_START = 171;
 export const NIGHT_END = 291;
-export const VILLAGER_SPEED = 26; // dm per tick (1.3 m/s), settlement rules v1 to v6
+export const VILLAGER_SPEED = 26; // dm per tick (1.3 m/s), settlement rules v1 to v7
 /**
- * STAB-002 S4 (settlement rules v7): villagers walk 39 dm per tick (1.95 m/s,
+ * STAB-002 S4 (settlement rules v8): villagers walk 39 dm per tick (1.95 m/s,
  * 1.5x), from the STAB-001 BUG-C speed sensitivity (field +243 -> +22, well
  * +370 -> +161; above 2x little more is gained). Starving still halves it.
  */
-export const VILLAGER_SPEED_V7 = 39;
+export const VILLAGER_SPEED_V8 = 39;
 /** Walking speed of a homestead's villagers (dm per tick) under its rules. */
-export const villagerSpeed = (h: Pick<HomesteadState, 'version'>) => (h.version >= HOMESTEAD_HERD_VERSION ? VILLAGER_SPEED_V7 : VILLAGER_SPEED);
+export const villagerSpeed = (h: Pick<HomesteadState, 'version'>) => (h.version >= HOMESTEAD_PACE_VERSION ? VILLAGER_SPEED_V8 : VILLAGER_SPEED);
 export const ANIMAL_SPEED = 7;
 export const MAX_VILLAGERS = 8;
 export const MAX_ANIMALS = 60;
@@ -351,6 +368,8 @@ export const MAX_SITES = 8;
 export const MAX_SITES_V6 = 16;
 export const isBuildHomestead = (h: Pick<HomesteadState, 'version'>) => h.version >= HOMESTEAD_BUILD_VERSION;
 export const isHerdHomestead = (h: Pick<HomesteadState, 'version'>) => h.version >= HOMESTEAD_HERD_VERSION;
+/** STAB-002 S4 rules (v8): villager speed 39 dm, exact part steps, seed kept for owner fields, critical age. */
+export const isPaceHomestead = (h: Pick<HomesteadState, 'version'>) => h.version >= HOMESTEAD_PACE_VERSION;
 /** Barn capacity (in addition to the 200 of the founder store). */
 export const OVERFLOW_CAPACITY = 300;
 
@@ -780,7 +799,7 @@ function settlerArrives(world: World, h: HomesteadState): void {
  * `to: 3` switches a v1 or v2 homestead to v3 (gates keep their state; a
  * legacy one gets closed gates).
  */
-export function upgradeHomestead(world: World, to: typeof HOMESTEAD_NAV_VERSION | typeof HOMESTEAD_LIVING_VERSION | typeof HOMESTEAD_WORK_VERSION | typeof HOMESTEAD_WOODLAND_VERSION | typeof HOMESTEAD_BUILD_VERSION | typeof HOMESTEAD_HERD_VERSION = HOMESTEAD_NAV_VERSION): LifeResult<{ version: HomesteadVersion }> {
+export function upgradeHomestead(world: World, to: UpgradeVersion = HOMESTEAD_NAV_VERSION): LifeResult<{ version: HomesteadVersion }> {
   const h = world.homestead;
   if (!h) return fail('no_homestead', 'found the homestead first');
   if (h.version >= to) return fail('unchanged', `the homestead already uses settlement rules v${h.version}`);
@@ -798,8 +817,9 @@ export function upgradeHomestead(world: World, to: typeof HOMESTEAD_NAV_VERSION 
   if (to >= HOMESTEAD_BUILD_VERSION && (recorded || from < HOMESTEAD_BUILD_VERSION)) for (const st of h.sites ?? []) { st.rot = 0; if (st.state === 'done' && SITE_RULES[st.kind].store) st.stock = {}; }
   // v7: every animal stays exactly where it is and starts wandering; one that
   // stands on a blocked or cut-off cell walks out on the following ticks.
-  // Animals heading out or being driven home keep their way.
-  if (to >= HOMESTEAD_HERD_VERSION) {
+  // Animals heading out or being driven home keep their way. (v7 -> v8 skips
+  // it: animals keep their state and end tick; v8 adds no state of its own.)
+  if (to >= HOMESTEAD_HERD_VERSION && from < HOMESTEAD_HERD_VERSION) {
     const tick = lifeState(world).tick;
     for (const a of h.animals) {
       if (!a.go) { a.tx = a.x; a.tz = a.z; }
@@ -1605,7 +1625,7 @@ export const AGE_STEP = 30;
 /** Any upkeep or routine work waiting this many daytime ticks (75) is overdue: ahead of owner orders, and anyone may do it. */
 export const AGE_OVERDUE = 75;
 /**
- * STAB-002 S4: any upkeep or routine work waiting this many daytime ticks (85) is critical, for anyone: it
+ * STAB-002 S4 (rules v8): any upkeep or routine work waiting this many daytime ticks (85) is critical, for anyone: it
  * comes ahead of the next unit of an owner order a villager is standing at and of owner orders, so a chain of
  * order units (a farm of newly marked fields) cannot hold chores past the 120-tick bound.
  */
@@ -1762,10 +1782,10 @@ export const sowable = (p: Plot) => (p.state === 'tilled' ? unitsOf(p) : p.state
 /** Where a helper waits at a field without standing on a worker's spot: its corner cell. */
 const fieldCorner = (p: Pick<Plot, 'x' | 'z'>) => ({ x: p.x * DM + 5, z: p.z * DM + 5 });
 /** Rough length of a task (ticks): straight-line walks with a detour allowance, plus the work. */
-function taskTicks(v: Villager, t: Task): number {
+function taskTicks(v: Villager, t: Task, speed: number): number {
   let x = v.x, z = v.z, n = 0;
   for (const l of t.legs) {
-    if (l.op === 'walk') { n += Math.ceil((len2(l.x - x, l.z - z) * 1.4) / VILLAGER_SPEED_V7); x = l.x; z = l.z; } else n += l.ticks;
+    if (l.op === 'walk') { n += Math.ceil((len2(l.x - x, l.z - z) * 1.4) / speed); x = l.x; z = l.z; } else n += l.ticks;
   }
   return n;
 }
@@ -1778,7 +1798,7 @@ export function dueClass(h: HomesteadState, j: DueJob, tick: number, role: Role)
   if (h.priority?.includes(j.place)) return PRIORITY.order;
   const age = daylightAge(h.due?.[j.key] ?? tick, tick);
   if (j.critical) return PRIORITY.critical;
-  if (age >= AGE_CRITICAL) return PRIORITY.critical;
+  if (isPaceHomestead(h) && age >= AGE_CRITICAL) return PRIORITY.critical;
   if (age >= AGE_OVERDUE) return j.role === null || j.role === role || age >= 2 * AGE_OVERDUE ? PRIORITY.overdue : PRIORITY.lateOther;
   return j.base === 3 && age < AGE_URGENT ? PRIORITY.routine : PRIORITY.urgent;
 }
@@ -1822,15 +1842,17 @@ function planV7(world: World, h: HomesteadState, v: Villager, tick: number, budg
   const sites = [...(h.sites ?? [])].sort((a, b) => a.id.localeCompare(b.id));
   const prio = new Set(h.priority ?? []);
   const isOrder = (p: Plot) => p.order !== undefined || prio.has(p.id);
-  // STAB-002 S4: seed other villagers will still take from the store is not free; nor, for a field that is not
+  // STAB-002 S4 (v8): seed other villagers will still take from the store is not free; nor, for a field that is not
   // an owner order, the seed the owner's fields still need (orders outrank routine sowing for the seed too).
-  const seedStore = (s.seed ?? 0) + (h.overflow.seed ?? 0) - pending(h, v, (_t, l) => l.effect === 'take' && l.item === 'seed');
+  // v7 (S3) counts all seed in the store as free for every field.
+  const pace = isPaceHomestead(h);
+  const seedStore = (s.seed ?? 0) + (h.overflow.seed ?? 0) - (pace ? pending(h, v, (_t, l) => l.effect === 'take' && l.item === 'seed') : 0);
   const fiberFree = (s.fiber ?? 0) + (h.overflow.fiber ?? 0);
   const units = (p: Plot) => unitsOf(p);
   const cap = (p: Plot) => (units(p) >= 3 ? JOB_WORKERS : 1);
   const tillLeft = (p: Plot) => TILL_PER_UNIT * units(p) - p.tilled - pending(h, v, (t, l) => l.effect === 'till' && legAt(t, l) === p.id, true);
   const sowLeft = (p: Plot) => units(p) - (p.sown ?? 0) - seedGoing(h, v, p);
-  const orderSeed = plots.filter((p) => isOrder(p) && (p.state === 'wild' || p.state === 'tilled')).reduce((n, p) => n + Math.max(0, sowLeft(p)), 0);
+  const orderSeed = pace ? plots.filter((p) => isOrder(p) && (p.state === 'wild' || p.state === 'tilled')).reduce((n, p) => n + Math.max(0, sowLeft(p)), 0) : 0;
   const seedFor = (p: Plot) => Math.max(0, seedStore - (isOrder(p) ? 0 : orderSeed));
   const tillTask = (p: Plot): Task | null => {
     const left = tillLeft(p);
@@ -2053,7 +2075,7 @@ function planV7(world: World, h: HomesteadState, v: Villager, tick: number, budg
     if (t === 'busy') return null;
     if (!t) continue;
     // Near dusk, routine work that would run into the night waits for the morning.
-    if (j.cls >= PRIORITY.routine && dayT + taskTicks(v, t) > NIGHT_START) continue;
+    if (j.cls >= PRIORITY.routine && dayT + taskTicks(v, t, villagerSpeed(h)) > NIGHT_START) continue;
     return t;
   }
   if (probe) return null;
@@ -2597,8 +2619,8 @@ function navWalk(world: World, h: HomesteadState, v: Villager, t: Task, tick: nu
     gate: (id) => h.gates?.find((g) => g.id === id)?.state ?? 'locked',
     setGate: (id, state) => { const g = h.gates?.find((x) => x.id === id); if (g) g.state = state; },
     canOperate: () => true,
-    // STAB-002 S4: under v7 a tick's step never exceeds the walking speed (part steps round toward zero).
-    ...(isHerdHomestead(h) ? { exact: true } : {}),
+    // STAB-002 S4: under v8 a tick's step never exceeds the walking speed (part steps round toward zero).
+    ...(isPaceHomestead(h) ? { exact: true } : {}),
     ...(occupied ? {
       occupied, self: v.id,
       // STAB-002 S2: a founder walking toward this villager counts as waiting on it (a head-on meeting in a
@@ -3335,6 +3357,8 @@ function herdAnimal(world: World, h: HomesteadState, a: Animal, fac: Facility, e
   const trough = fac.trough!;
   const hungry = a.hunger >= HERD_RULES.hungry;
   const pasture = inside && rule.graze > 0 && encl.grass >= rule.graze;
+  // (2b) Rules v8: a young animal keeps to its mother (`follow`); otherwise it lives as an adult does.
+  if (isPaceHomestead(h) && follow(world, h, a, fac, nav, tick, inside, hungry, sp)) return;
   // (3) Carry on with the current state.
   if (a.act === 'rest') {
     // Up at the rest's end, or earlier when hunger wakes it.
@@ -3418,6 +3442,52 @@ function herdAnimal(world: World, h: HomesteadState, a: Animal, fac: Facility, e
   // Start walking this tick.
   const r = walkTo(world, nav, a, { x: a.tx, z: a.tz, reach: ANIMAL_REACH }, a.go === 'home' ? DRIVEN_SPEED : ANIMAL_SPEED);
   if (r === 'fail' || (r === 'arrived' && !a.go)) { if (a.go === 'out') delete a.go; a.tx = a.x; a.tz = a.z; }
+}
+
+/** Rules v8: a young animal walks to its mother once she is farther than this (dm). */
+export const FOLLOW_DM = 15;
+/**
+ * Rules v8 (STAB-002 S1 strict wording): the mother of a young animal (one not
+ * yet of `adultAge`): the nearest adult female of its species inside the same
+ * enclosure (ties by id). No state is stored: it is derived each tick.
+ */
+export function motherOf(h: HomesteadState, a: Animal, tick: number): Animal | null {
+  const rule = SPECIES_RULES[a.species];
+  if (tick - a.born >= rule.adultAge) return null;
+  const r = facility(h, rule.enclosure)!.rect;
+  let best: Animal | null = null, bd = Infinity;
+  for (const m of h.animals) {
+    if (m === a || m.species !== a.species || m.sex !== 'f' || tick - m.born < rule.adultAge || m.go || !insideRect(r, m.x, m.z)) continue;
+    const d = len2(m.x - a.x, m.z - a.z);
+    if (d < bd || d === bd && best && m.id < best.id) { best = m; bd = d; }
+  }
+  return best;
+}
+/**
+ * Rules v8: a young animal inside its enclosure that is not eating or hungry
+ * follows its mother: farther than FOLLOW_DM it gets up and walks to her cell
+ * (round the player's ring like any walk); beside her it lies down when she
+ * rests and gets up when she does. A newborn therefore moves whenever its
+ * mother moves, also on its first night. True when the tick is spent.
+ */
+function follow(world: World, h: HomesteadState, a: Animal, fac: Facility, nav: AnimalNav, tick: number, inside: boolean, hungry: boolean, sp: Space | null): boolean {
+  if (!inside || hungry || a.go || a.act === 'graze' || a.act === 'drink') return false;
+  const m = motherOf(h, a, tick);
+  if (!m) return false;
+  const g = nav.grid;
+  if (len2(m.x - a.x, m.z - a.z) > FOLLOW_DM) {
+    const cx = Math.floor(m.x / DM), cz = Math.floor(m.z / DM);
+    if (!g.inside(cx, cz) || !penCells(world, h, g, SPECIES_RULES[a.species].enclosure).main.has(g.index(cx, cz))) return false;
+    const to = { x: cx * DM + 5, z: cz * DM + 5 };
+    if (sp && presenceDist(to.x, to.z) < sp.clear) return false;
+    a.act = 'wander'; a.until = tick; a.tx = to.x; a.tz = to.z;
+    const r = walkTo(world, nav, a, { ...to, reach: ANIMAL_REACH }, ANIMAL_SPEED);
+    if (r === 'fail' || r === 'arrived') { a.tx = a.x; a.tz = a.z; }
+    return r !== 'fail';
+  }
+  if (m.act === 'rest' && a.act !== 'rest') { a.act = 'rest'; a.until = Math.max(tick, m.until ?? tick); a.tx = a.x; a.tz = a.z; return true; }
+  if (m.act !== 'rest' && a.act === 'rest') { a.act = 'wander'; a.until = tick; a.tx = a.x; a.tz = a.z; }
+  return false;
 }
 
 /** A free cell centre (dm) for a stray near (x, z), kept within range of its gate and outside every pen; null if none. */

@@ -144,16 +144,17 @@ export class HomesteadGame {
       return;
     }
     if (this.world.homestead.version < HOMESTEAD_LATEST_VERSION) {
-      // M012-M014, STAB-002: one journaled upgrade to the latest settlement rules (v7, from v1-v6); the saved hash loads first, unchanged.
+      // M012-M014, STAB-002: one journaled upgrade to the latest settlement rules (v8, from v1-v7); the saved hash loads first, unchanged.
       const was = this.world.homestead.version;
       const r = this.send({ type: 'upgrade_homestead', rules: HOMESTEAD_LATEST_VERSION });
       const cora = was < 4 ? ' Cora has joined the homestead: make her a woodcutter or a builder in Farm.' : '';
       const wood = was < 5 ? ' The woodland is alive now: trees grow, age and regrow; set how it is harvested in Farm.' : '';
       const build = was < HOMESTEAD_BUILD_VERSION ? ' You can now choose where to build and which way it faces: Build (G, or Farm → Build). Finished woodsheds store timber for the woodcutter.' : '';
-      const herd = ' The animals graze, drink at the trough and lie down to rest, and none stays stuck under a shelter.';
+      const herd = was < 7 ? ' The animals graze, drink at the trough and lie down to rest, and none stays stuck under a shelter.' : '';
+      const pace = ' Villagers walk faster and keep seed for the fields you mark.';
       if (r.ok) this.o.toast(((was < 2 ? 'The homestead now has gates and doors: villagers and animals walk real routes around fences, buildings and trees.'
         : was < 3 ? 'The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use.'
-          : was < 4 ? 'Villagers can now fell trees and build.' : '') + cora + wood + build + herd).trim(), 'good');
+          : was < 4 ? 'Villagers can now fell trees and build.' : '') + cora + wood + build + herd + pace).trim(), 'good');
     }
   }
 

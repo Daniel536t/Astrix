@@ -560,7 +560,7 @@ test('genesis is unchanged and new commands are strictly validated', () => {
     { type: 'set_gate', gateId: 'gate:barn', state: 'open' },
     { type: 'set_gate', gateId: 'gate:pen', state: 'ajar' },
     { type: 'set_gate', gateId: 'gate:pen', state: 'open', extra: 1 },
-    { type: 'found_homestead', rules: 8 }, // M012 made rules 3 and then 4 valid, M013 made 5 valid, M014 made 6 valid, STAB-002 made 7 valid; 8 does not exist
+    { type: 'found_homestead', rules: 9 }, // M012 made rules 3 and then 4 valid, M013 made 5 valid, M014 made 6 valid, STAB-002 made 7 and 8 valid; 9 does not exist
   ]) {
     const r = send(s, bad);
     assert.ok(!r.ok && r.code === 'invalid_command', JSON.stringify(bad));
