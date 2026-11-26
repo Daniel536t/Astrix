@@ -1,0 +1,66 @@
+// Run under the live W6 code (12bf1e2, temporary worktree): a content-v7 wilderness save for
+// tests/fixtures/w7-wilderness-save.json. State: a finished workbench, a stone axe and a stone pickaxe (equipped),
+// land explored from the spawn to the river, the clay deposit k:29,28:0 discovered and mined (2 units carried),
+// a dropped pile, and world ticks, some of them carrying the player's presence (which v7 wilderness rules ignore).
+import { writeFileSync } from 'node:fs';
+import { GameSession } from './src/app/session';
+import { BrowserSaveStore, KeyValueStorage } from './src/app/persistence';
+import { GENERATOR_V2, WILDERNESS } from './src/sim/world';
+import { siteSpotOf } from './src/sim/wild-build';
+import { depositOf } from './src/sim/deposits';
+import { SPAWN, axe, build, dm, gather, load, ok, send, swing, tick } from './tests/w4-harness';
+
+class MemoryStorage implements KeyValueStorage {
+  readonly map = new Map<string, string>();
+  getItem(k: string) { return this.map.get(k) ?? null; }
+  setItem(k: string, v: string) { this.map.set(k, v); }
+  removeItem(k: string) { this.map.delete(k); }
+  key(i: number) { return [...this.map.keys()][i] ?? null; }
+  get length() { return this.map.size; }
+}
+const storage = new MemoryStorage();
+const store = new BrowserSaveStore(storage, 1337, GENERATOR_V2, { scenario: WILDERNESS, id: 'w1' });
+const loaded = store.load();
+if (loaded.status !== 'new') throw new Error(loaded.status);
+const s = loaded.session;
+if (s.journal.wildContent !== 7) throw new Error('not v7');
+load(s);
+tick(s, 2);
+ok(send(s, { type: 'explore', at: dm(SPAWN) }), 'explore at spawn');
+axe(s);
+const bench = build(s, 'workbench', { x: SPAWN.x - 10, z: SPAWN.z + 2 });
+gather(s, 'branch', 1); gather(s, 'loose_stone', 2); gather(s, 'fiber_plant', 2);
+ok(send(s, { type: 'craft', recipe: 'cord' }), 'cord');
+ok(send(s, { type: 'craft', recipe: 'stone_pickaxe', at: dm(siteSpotOf(s.world.wild!.build!.sites.get(bench)!)) }), 'pickaxe');
+ok(send(s, { type: 'equip', item: 'stone_pickaxe' }), 'equip');
+// Walk north to the clay at the river, reporting every 16 m, a tick each; some ticks carry presence.
+const clay = depositOf(1337, GENERATOR_V2, 'k:29,28:0')!;
+const l = Math.hypot(SPAWN.x - clay.x, SPAWN.z - clay.z);
+const end = { x: clay.x + (SPAWN.x - clay.x) / l, z: clay.z + (SPAWN.z - clay.z) / l };
+const n = Math.ceil(Math.hypot(end.x - SPAWN.x, end.z - SPAWN.z) / 16);
+for (let k = 1; k <= n; k++) {
+  const p = { x: SPAWN.x + (end.x - SPAWN.x) * k / n, z: SPAWN.z + (end.z - SPAWN.z) * k / n };
+  ok(send(s, { type: 'tick', ticks: 1, presence: { ...dm(p), mx: 0, mz: 1 } }), 'tick with presence');
+  ok(send(s, { type: 'explore', at: dm(p) }), `report ${k}`);
+}
+if (!s.world.wild!.map!.deposits.has(clay.id)) throw new Error('clay not discovered');
+for (let i = 0; i < 4; i++) ok(swing(s, { type: 'mine', depositId: clay.id, at: dm(end) }), 'mine');
+if ((s.world.wild!.items.clay ?? 0) !== 2) throw new Error('clay');
+ok(send(s, { type: 'drop', item: 'clay', n: 1, at: dm({ x: end.x + 1, z: end.z }) }), 'drop');
+tick(s, 3);
+const save = (): { key: string; hash: string; record: string } => {
+  const res = store.save(s);
+  if (!res.ok) throw new Error('save');
+  const key = [...storage.map.keys()].find((k) => k.startsWith('astrix:wild:'))!;
+  return { key, hash: s.stateHash, record: storage.getItem(key)! };
+};
+const short = save();
+if (GameSession.replay(JSON.parse(JSON.stringify(s.journal))).stateHash !== s.stateHash) throw new Error('replay');
+s.compact();
+const long = { ...save(), compacted: true };
+const fixture = {
+  made: 'Live W6 code at 12bf1e2 (temporary worktree), BrowserSaveStore seed 1337 gen 2 slot w1, wilderness content v7: finished workbench, stone axe and stone pickaxe (equipped), land explored from the spawn to the clay at the river, clay k:29,28:0 discovered and mined (2 clay: 1 carried, 1 dropped as a pile), ticks (some with presence, ignored by v7 rules)',
+  bench, clay: clay.id, at: dm(end), tick: s.world.life!.tick, short, long,
+};
+writeFileSync(process.argv[2], JSON.stringify(fixture, null, 2) + '\n');
+console.log('wrote', process.argv[2], 'entries', JSON.parse(short.record).journal.entries.length, 'hash', short.hash, long.hash, 'tick', s.world.life!.tick);

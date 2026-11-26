@@ -32,7 +32,7 @@ import { TouchControls } from './app/touch-controls';
 import { VitalsHud } from './app/vitals-hud';
 import { HomesteadGame } from './app/homestead';
 import { DAY_TICKS, SPECIES_RULES, felledTrees, playerPresence } from './sim/homestead';
-import { DynamicBody, HomesteadBodies } from './sim/bodies';
+import { DynamicBody, HomesteadBodies, quantisePresence } from './sim/bodies';
 import { CHARACTER_RADIUS } from './sim/character';
 import type { Presence } from './sim/bodies';
 import { buildAnimalShowcase } from './render/animal-showcase';
@@ -306,7 +306,7 @@ const devInspect = params.get('inspect') === '1' || isKit;
 let faunaDirty = true;
 terrainView.onChunksChanged = () => { faunaDirty = true; };
 // Living creatures (ambient tier) for the resident near chunks.
-const fauna = isMap || isKit ? null : new FaunaView(world);
+const fauna = isMap || isKit ? null : new FaunaView(world, TICK_SECONDS);
 if (fauna) scene.add(fauna.group);
 if (params.get('trees') === '1') {
   // M013 developer lineup: every species through every lifecycle stage (near LOD), north of the kit spot.
@@ -758,8 +758,8 @@ function frame(timestamp?: number) {
   for (let k = 0; k < dueTicks; k++) {
     const tTick = performance.now();
     // STAB-002 S2: the player's quantised presence rides on the tick (rules v7, walking on the settlement grid only).
-    lastPresence = playerPresence(world, explore?.active ? explore.character : null, explore?.intent);
-    const r = lifeGame ? lifeGame.realtimeTick(lastPresence) : wildernessTick();
+    lastPresence = lifeGame ? playerPresence(world, explore?.active ? explore.character : null, explore?.intent) : wildPresence();
+    const r = lifeGame ? lifeGame.realtimeTick(lastPresence) : wildernessTick(lastPresence);
     sections.record('tick', performance.now() - tTick);
     // A villager felled a tree (rules v4): redraw nature from the entities, as after the player's harvest.
     // (M013: felled trees, stumps and growth reach the drawing incrementally through NatureView.sync.)
@@ -793,7 +793,8 @@ function frame(timestamp?: number) {
   sections.record('fauna', performance.now() - tFauna);
 
   // With a homestead, the sky follows settlement time so villagers sleep when it is dark.
-  const lifeTick = session.world.homestead ? session.world.life?.tick : undefined;
+  // W7: in a wilderness world with sim wildlife the sky follows world time too, so dawn, midday and night are the animals' own.
+  const lifeTick = session.world.homestead || session.world.wild?.wildlife ? session.world.life?.tick : undefined;
   if (lifeTick !== undefined && !freeze) {
     const frac = Math.min(0.999, Math.max(0, 1 - simClock.secondsToNext / TICK_SECONDS));
     time.t = ((lifeTick + frac) / DAY_TICKS + 0.23) % 1;
@@ -1014,8 +1015,20 @@ if (!isMap && !isKit && !wilderness) {
 }
 
 /** W1: one journaled world tick in a wilderness world (no settlement controller there). */
-function wildernessTick(): { ok: boolean; reasons: string[] } {
-  const r = session.dispatch({ schema: 3, id: session.commandId('tick', 'realtime'), type: 'tick', ticks: 1, expectedRevision: world.revision });
+/**
+ * W7 (wilderness content v8): the player's quantised presence rides on every wilderness tick while the character
+ * is alive (walking or swimming): the wildlife is simulated around it and reacts to it. Older content sends none.
+ */
+function wildPresence(): Presence | null {
+  const ch = explore?.active ? explore.character : null;
+  if (!session.world.wild?.wildlife || !ch || ch.dead) return null;
+  const intent = explore?.intent;
+  const i = intent && Math.hypot(intent.x, intent.z) > 0.1 ? { x: intent.x * 4, z: intent.z * 4 } : { x: ch.vx, z: ch.vz };
+  return quantisePresence(ch.x, ch.z, i.x, i.z);
+}
+function wildernessTick(presence: Presence | null): { ok: boolean; reasons: string[] } {
+  const r = session.dispatch({ schema: 3, id: session.commandId('tick', 'realtime'), type: 'tick', ticks: 1, expectedRevision: world.revision,
+    ...(presence ? { presence } : {}) });
   return r.ok ? { ok: true, reasons: [] } : { ok: false, reasons: r.reasons };
 }
 
@@ -1066,6 +1079,8 @@ if (!isMap && !isKit) {
     explore.reachOverride = wildGame.reachTarget;
     // Evidence harness (?metrics=1 only): a read-only scan of what lies around the player.
     if (metricsEveryFrame) (window as unknown as { __wildNear?: (r?: number) => unknown }).__wildNear = (r?: number) => wildGame?.scan(r) ?? null;
+    // W7 evidence harness (?metrics=1 only): the drawn wildlife as shown, with sim state, read-only.
+    if (metricsEveryFrame) (window as unknown as { __wildlife?: () => unknown }).__wildlife = () => fauna?.simSample() ?? null;
   }
   const scripted = action !== '' || noUi || params.has('tx') || params.has('dist');
   const startMode = params.get('mode') ?? (scripted ? 'builder' : 'explore');

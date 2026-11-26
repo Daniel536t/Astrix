@@ -68,11 +68,11 @@ export const SPECIES: Record<SpeciesDef['id'], SpeciesDef> = {
   },
 };
 /** Who flees whom (wildlife only; livestock enclosures are not part of this ambient tier). */
-const FEARS: Partial<Record<SpeciesDef['id'], ReadonlyArray<SpeciesDef['id']>>> = {
+export const FEARS: Partial<Record<SpeciesDef['id'], ReadonlyArray<SpeciesDef['id']>>> = {
   rabbit: ['fox', 'wolf'], deer: ['wolf'], fox: ['wolf'],
 };
 /** How close a predator must be before its prey bolts (metres). */
-const PREDATOR_ALARM = 9;
+export const PREDATOR_ALARM = 9;
 
 export interface Creature {
   /** Stable, deterministic id: fauna:<species>:<chunk>:<index>. */

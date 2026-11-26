@@ -25,6 +25,8 @@ import { FellSnapshot, FellState, WILD_CONTENT_V3, createFell, fellFromSnapshot,
 import { MapSnapshot, MapState, createMap, mapFromSnapshot, mapSnapshot, validateMap } from './map';
 import { BuildSnapshot, BuildState, bagRefusal, buildFromSnapshot, buildSnapshot, createBuild, notePileTaken, pileTakeable, stepBuild, validateBuild } from './wild-build';
 import { MineSnapshot, MineState, WILD_CONTENT_V7, createMine, mineFromSnapshot, mineSnapshot, validateMine } from './mining';
+import { WILD_CONTENT_V8, WildlifeSnapshot, WildlifeState, createWildlife, stepWildlife, validateWildlife, wildlifeFromSnapshot, wildlifeSnapshot } from './wildlife';
+import type { Presence } from './bodies';
 
 /**
  * Wilderness content versions. v1 (W1): no pickups, items or crafting. v2 (W2): this file. v3 (W3): physical
@@ -46,9 +48,15 @@ export const WILD_CONTENT_V6 = 6 as const;
  * (sim/wild-build.ts). Rules of v6 otherwise.
  */
 export { WILD_CONTENT_V7 };
-export const LATEST_WILD_CONTENT = 7 as const;
-export type WildContent = typeof WILD_CONTENT_V2 | typeof WILD_CONTENT_V3 | typeof WILD_CONTENT_V4 | typeof WILD_CONTENT_V5 | typeof WILD_CONTENT_V6 | typeof WILD_CONTENT_V7;
-export const isWildContent = (v: unknown): v is WildContent => v === WILD_CONTENT_V2 || v === 3 || v === 4 || v === 5 || v === 6 || v === 7;
+/**
+ * v8 (W7): persistent wildlife (sim/wildlife.ts): the creatures are hashed state, stepped on the world tick around
+ * the player's journaled presence, saved per creature, and a killed one stays dead. Rules of v7 otherwise.
+ */
+export { WILD_CONTENT_V8 };
+export const LATEST_WILD_CONTENT = 8 as const;
+export type WildContent = typeof WILD_CONTENT_V2 | typeof WILD_CONTENT_V3 | typeof WILD_CONTENT_V4 | typeof WILD_CONTENT_V5 | typeof WILD_CONTENT_V6 | typeof WILD_CONTENT_V7
+  | typeof WILD_CONTENT_V8;
+export const isWildContent = (v: unknown): v is WildContent => v === WILD_CONTENT_V2 || v === 3 || v === 4 || v === 5 || v === 6 || v === 7 || v === 8;
 
 export const PICKUP_KINDS = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom'] as const;
 export type PickupKind = (typeof PICKUP_KINDS)[number];
@@ -172,13 +180,16 @@ export interface WildState {
   map?: MapState;
   /** W6 (content v7): what has been mined out of deposits. */
   mine?: MineState;
+  /** W7 (content v8): the wildlife: creature records, tombstones, carcasses, the active area. */
+  wildlife?: WildlifeState;
 }
 
 export function createWildState(content: WildContent = WILD_CONTENT_V2, seed = 0, tick = 0): WildState {
   return { content, hunger: HUNGER_START, items: {}, tools: [], equipped: null,
     taken: new Set(), left: new Map(), piles: new Map(), nextId: 1,
     ...(content >= WILD_CONTENT_V3 ? { fell: createFell(seed, tick) } : {}), ...(content >= WILD_CONTENT_V4 ? { build: createBuild() } : {}),
-    ...(content >= WILD_CONTENT_V6 ? { map: createMap() } : {}), ...(content >= WILD_CONTENT_V7 ? { mine: createMine() } : {}) };
+    ...(content >= WILD_CONTENT_V6 ? { map: createMap() } : {}), ...(content >= WILD_CONTENT_V7 ? { mine: createMine() } : {}),
+    ...(content >= WILD_CONTENT_V8 ? { wildlife: createWildlife() } : {}) };
 }
 
 /** A content-v2 state gains W3 felling (v3), a v3 state W4 building (v4), a v4 state the v5 rules, a v5 state the W5 map (v6), a v6 state W6 mining (v7), through journaled `upgrade_wilderness`. */
@@ -189,6 +200,8 @@ export function upgradeWildState(w: WildState, seed: number, tick: number, to: W
   if (!w.map && to >= WILD_CONTENT_V6) w.map = createMap();
   // W6: deposits are generated; nothing is mined or discovered by the upgrade itself (ore outcrops seen in v6 stay discovered).
   if (!w.mine && to >= WILD_CONTENT_V7) w.mine = createMine();
+  // W7: no creature is recorded by the upgrade itself; the first ticks with the player's presence derive the ones around it.
+  if (!w.wildlife && to >= WILD_CONTENT_V8) w.wildlife = createWildlife();
   w.content = to;
 }
 
@@ -451,12 +464,13 @@ export function eat(world: World, item: WildItem): WildResult<{ hunger: number }
   return { ok: true, value: { hunger: w.hunger } };
 }
 
-/** One world tick of wilderness life (hunger; W3: the woodland's stumps and regrowth). */
-export function stepWild(world: World, tick: number): void {
+/** One world tick of wilderness life (hunger; W3: the woodland's stumps and regrowth; W7: the wildlife, which reads the tick's presence). */
+export function stepWild(world: World, tick: number, presence?: Presence): void {
   const w = world.wild;
   if (w && tick % HUNGER_TICKS === 0) w.hunger = Math.min(100, w.hunger + 1);
   if (w?.fell) stepFelling(world, tick);
   if (w?.build) stepBuild(world, tick);
+  if (w?.wildlife) stepWildlife(world, tick, presence);
 }
 
 function sortBag(bag: Record<string, number>): Record<string, number> {
@@ -478,6 +492,7 @@ export interface WildSnapshot {
   piles: Pile[];
   taken: string[];
   tools: WildTool[];
+  wildlife?: WildlifeSnapshot;
 }
 
 export function wildSnapshot(w: WildState): WildSnapshot {
@@ -495,6 +510,7 @@ export function wildSnapshot(w: WildState): WildSnapshot {
     piles: [...w.piles.values()].sort((a, b) => a.id.localeCompare(b.id)).map((p) => ({ id: p.id, item: p.item, qty: p.qty, x: p.x, y: p.y, z: p.z })),
     taken: [...w.taken].sort((a, b) => a.localeCompare(b)),
     tools: [...w.tools].map((t) => ({ id: t.id, kind: t.kind, durability: t.durability })),
+    ...(w.wildlife ? { wildlife: wildlifeSnapshot(w.wildlife) } : {}),
   };
 }
 
@@ -514,6 +530,8 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
   if (v6 !== (v.map !== undefined)) bad('map block');
   const v7 = (v.content as number) >= WILD_CONTENT_V7;
   if (v7 !== (v.mine !== undefined)) bad('mining block');
+  const v8 = (v.content as number) >= WILD_CONTENT_V8;
+  if (v8 !== (v.wildlife !== undefined)) bad('wildlife block');
   // Logs exist only with felling (content v3); planks, chests and cooked food with building (v4); ores, ingots and soft materials with mining (v7).
   const itemOk = (k: unknown) => WILD_ITEMS.includes(k as WildItem) && (v3 || k !== 'log') && (v4 || !V4_ITEMS.includes(k as WildItem)) && (v7 || !V7_ITEMS.includes(k as WildItem));
   if (!uintMax(v.hunger, 100) || !uintMax(v.nextId, 9_999_999) || v.nextId < 1) bad('counters');
@@ -563,12 +581,14 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
   // W6 deposit ids (`k:`) are discovered only in content v7.
   if (map && !v7 && map.deposits.some((id) => !id.startsWith('e:'))) bad('map block (a deposit only content v7 has)');
   const mine = v7 ? validateMine(v.mine) : undefined;
+  const wildlife = v8 ? validateWildlife(v.wildlife, tick) : undefined;
   const s: WildSnapshot = {
     ...(build ? { build } : {}),
     content: v.content as WildContent,
     ...(v.equipped !== undefined ? { equipped: v.equipped as string } : {}),
     ...(fell ? { fell } : {}),
     hunger: v.hunger as number, items, left, ...(map ? { map } : {}), ...(mine ? { mine } : {}), nextId: v.nextId as number, piles, taken: taken as string[], tools,
+    ...(wildlife ? { wildlife } : {}),
   };
   const weight = carriedWeight(wildFromSnapshot(s));
   if (weight > carryCapacity(s)) bad('carried weight');
@@ -582,5 +602,6 @@ export function wildFromSnapshot(s: WildSnapshot): WildState {
     tools: s.tools.map((t) => ({ ...t })), equipped: s.equipped ?? null,
     taken: new Set(s.taken), left: new Map(Object.entries(s.left)),
     piles: new Map(s.piles.map((p) => [p.id, { ...p }])), nextId: s.nextId,
+    ...(s.wildlife ? { wildlife: wildlifeFromSnapshot(s.wildlife) } : {}),
   };
 }

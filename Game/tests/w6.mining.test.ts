@@ -36,7 +36,8 @@ class MemoryStorage implements KeyValueStorage {
   get length() { return this.map.size; }
 }
 const G = GENERATOR_V2;
-const v7 = () => GameSession.genesis(1337, G, 'wilderness');
+// W7: an explicit v7 world, so these tests keep testing exactly the v7 rules (a new world now starts at v8).
+const v7 = () => GameSession.genesis(1337, G, 'wilderness', 7);
 const explore = (s: GameSession, p: { x: number; z: number }) => send(s, { type: 'explore', at: dm(p) });
 /** Walk from a to b reporting every 16 m, a world tick per report (the W5 travel credit). */
 function walk(s: GameSession, a: { x: number; z: number }, b: { x: number; z: number }): void {
@@ -490,7 +491,7 @@ test('a v6 world: mine and smelt are refused, the smelter is locked, ore outcrop
   assert.ok(![...s6.world.wild!.map!.deposits].some((id) => id.startsWith('k:')));
   const s7 = v7();
   assert.equal(s7.journal.wildContent, 7);
-  assert.equal(LATEST_WILD_CONTENT, 7);
+  assert.equal(LATEST_WILD_CONTENT, 8);
   assert.equal(s7.stateHash, V7_PIN, 'v7 genesis');
   assert.equal(GameSession.genesis(1337).stateHash, 'e659504b056654dc', 'settlement genesis');
   // The catalogue: the smelter is the only W6 building; the forge and the workshop stay locked, and say why.

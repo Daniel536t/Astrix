@@ -232,9 +232,9 @@ test('pickup, drop, craft, equip and eat are journaled and replay; saves restore
   const loaded = store.load();
   assert.equal(loaded.status, 'new');
   const s = loaded.session;
-  // W3: a new world now starts with the latest content (v7 since W6, deposits and mining); the W2 commands are unchanged there.
+  // W3: a new world now starts with the latest content (v8 since W7, persistent wildlife); the W2 commands are unchanged there.
   assert.equal(s.journal.wildContent, LATEST_WILD_CONTENT);
-  assert.equal(LATEST_WILD_CONTENT, 7);
+  assert.equal(LATEST_WILD_CONTENT, 8);
   ticks(s, 3);
   const taken: string[] = [];
   for (const kind of ['branch', 'loose_stone', 'fiber_plant', 'fiber_plant', 'grass_tuft', 'grass_tuft', 'berry_bush']) {

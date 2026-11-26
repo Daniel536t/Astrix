@@ -36,6 +36,11 @@
 // finished clay smelter; its ore and coal leave the bag at once and the
 // ingots come out at the smelter's door when the batch is done, in a tick).
 //
+// Content v8 (W7 persistent wildlife): no new command. The `tick` presence
+// (the player's quantised position, as in the settlement's S2) is what the
+// wildlife reacts to; an accepted `chop`, `cut_log`, `mine` or `build_work`
+// is also a noise at its `at` that animals within earshot hear on the next tick.
+//
 // Reach: the avatar is player-local physics, so `pickup`, `drop`, `chop`,
 // `cut_log` and `mark_stockpile` carry the player's position (integer
 // decimetres) like the S2 tick presence, and the simulation checks reach
@@ -61,7 +66,8 @@ import { homeShelter, siteSpotOf, smeltAt, spawnPoint } from '../sim/wild-build'
 import { ANY_DEPOSIT_ID } from '../sim/deposits';
 import { mineDeposit } from '../sim/mining';
 import { smeltRecipe } from '../sim/catalogue';
-import { WILD_CONTENT_V7 } from '../sim/gathering';
+import { WILD_CONTENT_V7, WILD_CONTENT_V8 } from '../sim/gathering';
+import { noteNoise } from '../sim/wildlife';
 const siteSpotDm = (s: Parameters<typeof siteSpotOf>[0]) => { const p = siteSpotOf(s); return { x: Math.round(p.x * 10), z: Math.round(p.z * 10) }; };
 import type { World } from '../sim/world';
 
@@ -465,6 +471,13 @@ export function wildAgrees(c: WildCommand, o: WildOutcome): boolean {
 export type WildDispatch = { ok: true; value: WildOutcome } | { ok: false; code: string; reasons: string[] };
 
 export function dispatchWild(world: World, c: WildCommand): WildDispatch {
+  const r = dispatchWildRules(world, c);
+  // W7 (content v8): chopping, cutting, mining and building are loud; the wildlife hears where.
+  if (r.ok && world.wild?.wildlife && (c.type === 'chop' || c.type === 'cut_log' || c.type === 'mine' || c.type === 'build_work')) noteNoise(world, c.at);
+  return r;
+}
+
+function dispatchWildRules(world: World, c: WildCommand): WildDispatch {
   if (c.type === 'upgrade_wilderness') {
     const tick = world.life?.tick ?? 0;
     if (!world.wild) {
@@ -598,4 +611,4 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
   }
 }
 
-export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6, WILD_CONTENT_V7 };
+export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6, WILD_CONTENT_V7, WILD_CONTENT_V8 };

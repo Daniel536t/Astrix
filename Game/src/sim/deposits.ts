@@ -51,7 +51,12 @@ export const ANY_DEPOSIT_ID = /^(?:e:\d{1,2},\d{1,2}:\d{1,4}|k:\d{1,2},\d{1,2}:\
 
 // ---------- the natural planner's output, read without voxels ----------
 
-interface NaturalPlan { ore: Array<{ id: string; x: number; y: number; z: number }>; spots: Array<{ x: number; z: number }> }
+interface NaturalPlan {
+  ore: Array<{ id: string; x: number; y: number; z: number }>;
+  spots: Array<{ x: number; z: number }>;
+  /** W7: trees and ore (what a walker cannot pass through; shrubs are walked through), with their ids. */
+  solid: Array<{ id: string; x: number; z: number; tree: boolean }>;
+}
 const planCache = new Map<string, NaturalPlan>();
 /**
  * What `planNaturalEntities` places in a chunk (ore outcrops with their ids;
@@ -68,9 +73,13 @@ export function naturalPlanInChunk(seed: number, gen: number, cx: number, cz: nu
     if (!c) { c = baseColumnAt(seed, gen, chunkOriginX(cx) + lx, chunkOriginZ(cz) + lz); cols.set(k, c); }
     return c;
   };
-  const out: NaturalPlan = { ore: [], spots: [] };
+  const out: NaturalPlan = { ore: [], spots: [], solid: [] };
   planNaturalEntities(seed, cx, cz, (lx, lz) => col(lx, lz).stored + Y_MIN, (lx, lz) => col(lx, lz).top, false, {
-    entity: (e) => { out.spots.push({ x: e.x, z: e.z }); if (e.kind === 'styl_ore') out.ore.push({ id: e.id, x: e.x, y: e.y, z: e.z }); },
+    entity: (e) => {
+      out.spots.push({ x: e.x, z: e.z });
+      if (e.kind === 'styl_ore') out.ore.push({ id: e.id, x: e.x, y: e.y, z: e.z });
+      if (e.kind === 'styl_ore' || e.kind.startsWith('styl_tree_')) out.solid.push({ id: e.id, x: e.x, z: e.z, tree: e.kind.startsWith('styl_tree_') });
+    },
     stat: () => {},
   });
   if (planCache.size > 4096) planCache.delete(planCache.keys().next().value!);

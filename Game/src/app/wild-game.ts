@@ -19,7 +19,7 @@ import type { GameSession } from './session';
 import type { ExploreController } from './explore';
 import {
   CARRY_CAPACITY, CARRY_CAPACITY_V5, FOOD_VALUE, ITEM_LABEL, ITEM_WEIGHT, LATEST_WILD_CONTENT, LivePickup, PICKUP_LABEL, PICKUP_REACH, TOOL_DURABILITY,
-  WILD_CONTENT_V5, WILD_CONTENT_V7, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
+  WILD_CONTENT_V5, WILD_CONTENT_V8, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
 } from '../sim/gathering';
 import {
   CHOP_REACH, EventRecord, FellEvent, NearTree, SWING_COOLDOWN_MS, Trunk, choppable, stockpileAt, stockpileLogs, treeDistance,
@@ -242,13 +242,14 @@ export class WildGame {
 
   private get world() { return this.o.session.world; }
 
-  /** A world with older wilderness content (v1-v6) gains the latest (v7) through one journaled command. */
+  /** A world with older wilderness content (v1-v7) gains the latest (v8) through one journaled command. */
   private ensureContent(): void {
     const w = this.world.wild;
     if (w && w.content >= LATEST_WILD_CONTENT) return;
-    const had = !!w, fell = !!w?.fell, built = !!w?.build, big = !!w && w.content >= WILD_CONTENT_V5, mapped = !!w?.map;
-    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V7 }, 'v7');
-    if (r) this.toast(mapped ? 'Deposits can now be mined: explore to find iron, copper, coal, clay, sand and gravel, equip a stone pickaxe and swing (E). Clay, sand and gravel build a clay smelter for ingots.'
+    const had = !!w, fell = !!w?.fell, built = !!w?.build, big = !!w && w.content >= WILD_CONTENT_V5, mapped = !!w?.map, mined = !!w?.mine;
+    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V8 }, 'v8');
+    if (r) this.toast(mined ? 'The wild animals now live on in your world: each deer, hare, fox, wolf and trout keeps its place and its ways when you leave and come back.'
+      : mapped ? 'Deposits can now be mined: explore to find iron, copper, coal, clay, sand and gravel, equip a stone pickaxe and swing (E). Clay, sand and gravel build a clay smelter for ingots.'
       : big ? 'You now have a map: tap the small map (or press M) to open it, set waypoints and get a walking route. What you have not seen stays hidden.'
       : built ? `Your bag now holds ${CARRY_CAPACITY_V5} weight (was ${CARRY_CAPACITY}). At a building site, free materials in your bag can now be delivered in place of ones reserved in piles.`
       : fell ? 'You can now build anywhere: open Build (G) for a shelter, a fire, a workbench and storage.'

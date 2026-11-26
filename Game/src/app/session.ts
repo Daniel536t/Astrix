@@ -1058,7 +1058,7 @@ export class GameSession {
     } else if (command.type === 'tick') {
       const world = this.world;
       const presence = command.presence;
-      const result = advanceTicks(world, command.ticks, (tick) => { stepHomestead(world, tick, presence); stepWild(world, tick); });
+      const result = advanceTicks(world, command.ticks, (tick) => { stepHomestead(world, tick, presence); stepWild(world, tick, presence); });
       if (!result.ok) return this.reject(command.id, result.code, result.reasons);
       outcome = { type: 'tick', ...result.value };
     } else if (command.type === 'plant') {
