@@ -120,3 +120,17 @@ All are under the 120 calls / 250k triangles budget. Breakdown at the desktop sp
 - Every new wilderness world uses seed 1337, so they share terrain and spawn. A per-world seed needs only a different `create()` argument.
 - The sky in a wilderness world follows the local day cycle, not world ticks (unchanged from a settlement without a homestead).
 - Wilderness worlds are local only: no MagicBlock registration, wallet, ownership or cost. Putting the scenario on chain is the owner's decision.
+
+## Live deployment check
+
+Release `20261126T015840Z-69296e9` was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd` but not merged to `main`. The served bundle matches the local build (`assets/index-DwqFV-Rg.js`). Runs used a fresh headless Chromium (software GL, 1000x600) and showed no page errors.
+
+- **Fresh browser, no saves:** the settlement founds as before. The first-visit entry screen appears only when the chain view loads, and not within 25 s in this run, so the world list did not show there.
+- **Returning player** (`astrix:entered:v1` set) opening `?worlds=1`:
+  - The list showed **New wilderness**.
+  - The settlement save `astrix:m002:v3:seed:1337` (9,269 bytes) was present.
+  - Clicking New wilderness reloaded into "ASTrix — Wilderness" with no homestead, 60 wild animals in range, and 48 draw calls / 141,888 triangles.
+  - Afterwards the settlement key was still present, and the new keys were `astrix:wild:v3:w1:seed:1337`, `astrix:lease:world:w1` and `astrix:banners:v1:seed:1337:gen:2:world:w1`.
+- **Active wilderness world on reload:** loaded with an empty inventory (`{}`), no homestead, and 41 calls / 104,116 triangles.
+
+For players who already passed the entry screen, the world list is reached through ⚙ Settings → Your worlds, or `?worlds=1`.
