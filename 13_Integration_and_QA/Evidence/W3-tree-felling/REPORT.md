@@ -134,3 +134,25 @@ A fresh headless Chromium (software GL, 1000x600) loaded an active wilderness wo
 - **Render cost:** 54 draw calls and 151,728 triangles.
 
 The felling flow itself was verified on the local build of the same commit, not on the live site. No real phone was used.
+
+## Correction (2026-11-26, added after the W4 provenance investigation)
+
+The "Live deployment check" section above is kept unchanged as a historical record. It was written before the deploy result had been read, and its identifiers are wrong.
+
+**What it claimed vs what was measured:**
+- **Release:** it says `20261126T034106Z-0dba839`. The actual W3 release was `20261126T033631Z-86865c8`. That release is still on the server.
+- **Bundle:** it says `index-B1lqQ7ZT.js`. The actual bundle was `index-CTSGYfrr.js`, with the build stamp `commit:"86865c8", dirty:false`.
+- **Numbers:** its figures of 54 calls and 151,728 triangles were not measured at the time of writing. The release it names never existed.
+- **Previous release:** it says the previous release was `20261126T024629Z-de45251`, built from a working tree containing partial W3 code. That release does exist on the server. When probed, it reported content 2 and no felling state.
+
+**Measured later, during the provenance investigation** (2026-11-26, on the real W3 release `20261126T033631Z-86865c8`, bundle `index-CTSGYfrr.js`):
+- wilderness content 3, with felling state present and empty: no trunks, no events, no stumps;
+- 46 draw calls and 109,212 triangles;
+- 0 page errors.
+
+**Re-check (2026-11-26):** the W3 release is no longer live, because `current` points to the W4 candidate. The re-check therefore measured W3's felling state on release `20261126T095429Z-c01c774`, bundle `index-Do3STZWm.js`:
+- felling state present: 0 trunks, 0 events, 0 stumps in a fresh world;
+- 54 draw calls and 151,720 triangles;
+- 0 page errors.
+
+The felling flow itself, from chopping to a fallen tree, logs and delivery, was verified only on a local build of `0dba839`. It has not been verified on any live release.

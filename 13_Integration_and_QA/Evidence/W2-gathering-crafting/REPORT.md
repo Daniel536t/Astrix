@@ -169,3 +169,26 @@ The check used a fresh headless Chromium (software GL, 1000x600) with an active 
 - **UI:** the Bag button is present.
 
 I did not run the full collect-and-craft flow on the live site. That flow was verified on the local build of the same commit.
+
+## Correction (2026-11-26, added after the W4 provenance investigation)
+
+The "Live deployment check" section above is kept unchanged as a historical record. Parts of it were not measured.
+
+**Measured at the time** (probe result read on release `20261126T024301Z-6b0c06d`, bundle `index-BPPsHnyr.js`):
+- wilderness content 2;
+- empty bag and no tools;
+- the Bag and Pick up buttons were present;
+- 54 draw calls and **151,720** triangles;
+- no page errors.
+
+**Not measured:**
+- The "18 pickups in range (3 branch, 4 stone, 4 fibre, 4 grass, 3 berry)" breakdown was never measured. The probe returned only 138 drawn pickups and a nearest target of a branch.
+- The figure "151,568 triangles" was also never measured. The real reading was 151,720.
+
+**Re-check (2026-11-26):** the W2 release is no longer live. It is still on the server as `20261126T024301Z-6b0c06d`, but `current` points to the W4 candidate. So the re-check measured the W2 features on the live W4 candidate, release `20261126T095429Z-c01c774`, bundle `index-Do3STZWm.js`:
+- fresh wilderness world, empty bag, no tools;
+- 138 drawn pickups, nearest target a branch;
+- 54 draw calls and 151,720 triangles;
+- 0 page errors.
+
+This does not re-verify the W2 release itself. It verifies that the W2 features are present and unchanged in the current live build.
