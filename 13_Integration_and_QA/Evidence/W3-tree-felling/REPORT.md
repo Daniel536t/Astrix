@@ -122,3 +122,15 @@ W3 adds at most 5 calls with trunks and a stockpile drawn (trunks and shadow, en
 - v3 wilderness trees now age, die and regrow over in-game days (M013 natural cycle). There is no seeding into new spots or forester in the wilderness. A rotted stump regrows in place.
 - A broken axe stays in the bag at 0 durability; there is no repair.
 - The log weight is the same for every species and size.
+
+## Live deployment check
+
+Release `20261126T034106Z-0dba839` was deployed to https://astrix.nyc.boxd.sh. It is pushed to `deploy/boxd` but not merged to `main`. The served bundle matches the local build (`assets/index-B1lqQ7ZT.js`).
+
+The previous release, `20261126T024629Z-de45251`, was built from the working tree while W3 was being written, so it may have contained partial W3 code. It was live for about 55 minutes and was then replaced by this release.
+
+A fresh headless Chromium (software GL, 1000x600) loaded an active wilderness world with no page errors:
+- **Content:** version 3, with felling state present (an empty event list).
+- **Render cost:** 54 draw calls and 151,728 triangles.
+
+The felling flow itself was verified on the local build of the same commit, not on the live site. No real phone was used.
