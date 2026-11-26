@@ -12,6 +12,7 @@
 import type { Structure } from './structures';
 import type { LifeState } from './economy';
 import type { HomesteadState } from './homestead';
+import type { WildState } from './gathering';
 import { isStoneReplay } from './stone-compat';
 import { Hydrology } from './hydrology';
 import { TerrainV2, V2Column } from './terrain-v2';
@@ -208,6 +209,8 @@ export interface World {
   life?: LifeState;
   /** M006 living homestead; present once founded (schema 3 only). */
   homestead?: HomesteadState;
+  /** W2: wilderness content v2 (pickups, items, tools, hunger). Absent in settlement and W1 (content v1) worlds. */
+  wild?: WildState;
   dirty: Set<string>;
   stats: WorldStats;
   authoredPlaced: boolean;

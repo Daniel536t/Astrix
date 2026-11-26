@@ -88,6 +88,10 @@ export class ExploreController {
   private pendingReturn: { target: BannerTarget; carry: CharacterState; since: number } | null = null;
   /** Completed returns this session (metrics). */
   returns = 0;
+  /** W2: when set, the ring marks what this returns (a pickup in reach) instead of the nearest harvestable entity. */
+  reachOverride: ((x: number, z: number) => { x: number; y: number; z: number } | null) | null = null;
+  /** W2: the right arm joint, for a held tool. */
+  get rightHand(): THREE.Object3D { return this.figure.armR; }
   /** Player-facing messages (planted, returning, cancelled...). */
   onNotice: ((message: string, kind?: 'good' | 'warn') => void) | null = null;
 
@@ -360,7 +364,16 @@ export class ExploreController {
       if (rig.camera.position.y < floor) { rig.camera.position.y = floor; rig.camera.lookAt(rig.target); }
     }
 
-    // Interaction prompt.
+    // Interaction prompt. W2: a wilderness world marks the loose pickup in reach instead.
+    if (this.reachOverride) {
+      this.reachable = null;
+      const t = this.reachOverride(s.x, s.z);
+      this.marker.visible = !!t;
+      if (t) this.marker.position.set(t.x, t.y + 0.06, t.z);
+      this.saveTimer += frameDt;
+      if (this.saveTimer > 3) { this.saveTimer = 0; this.persist(); }
+      return;
+    }
     const e = nearestHarvestable(this.o.world, s.x, s.z, INTERACT_REACH + 1.5);
     this.reachable = e && Math.hypot(e.x - s.x, e.z - s.z) <= INTERACT_REACH + 1.5 ? e : null;
     if (this.reachable) {

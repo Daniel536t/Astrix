@@ -1,0 +1,122 @@
+// W2: loose natural pickups (branch, stones, fibre plant, grass tuft, berry
+// bush, mushroom) and dropped piles, drawn in the plain block style of the
+// vegetation kit. One InstancedMesh per kind (7 draw calls at most), no
+// shadows cast. The simulation decides what exists (sim/gathering.ts); this
+// view only draws the live records near the player and drops a picked one on
+// the next sync. Also the stone axe held in the hand.
+import * as THREE from 'three';
+import { Block, blocksGeometry } from './vegetation-kit';
+import { natureMaterial } from './nature';
+import type { LivePickup, PickupKind } from '../sim/gathering';
+
+type DrawKind = PickupKind | 'pile';
+const KINDS: DrawKind[] = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom', 'pile'];
+const MAX_PER_KIND = 256;
+
+const BARK = '#7A5638', BARK_D = '#5E412A', STONE = '#9A9890', STONE_D = '#7E7C76', FIBRE = '#9DB45A', FIBRE_D = '#7E9A44',
+  GRASS = '#B7C96A', LEAF = '#4F8A3E', BERRY = '#C4344A', STEM = '#E9DFC6', CAP = '#B5553A', SOIL = '#8C7350';
+
+function plan(kind: DrawKind): Block[] {
+  switch (kind) {
+    case 'branch': return [
+      { x: 0, y: 0.07, z: 0, w: 1.5, h: 0.13, d: 0.14, hex: BARK },
+      { x: 0.35, y: 0.07, z: 0.2, w: 0.09, h: 0.09, d: 0.36, hex: BARK_D },
+      { x: -0.45, y: 0.06, z: -0.13, w: 0.08, h: 0.08, d: 0.24, hex: BARK_D },
+    ];
+    case 'loose_stone': return [
+      { x: 0, y: 0.13, z: 0, w: 0.46, h: 0.26, d: 0.36, hex: STONE },
+      { x: 0.3, y: 0.08, z: 0.16, w: 0.22, h: 0.16, d: 0.2, hex: STONE_D },
+    ];
+    case 'fiber_plant': return [
+      { x: 0, y: 0.05, z: 0, w: 0.3, h: 0.1, d: 0.3, hex: FIBRE_D },
+      { x: 0.08, y: 0.45, z: 0, w: 0.07, h: 0.8, d: 0.07, hex: FIBRE },
+      { x: -0.09, y: 0.38, z: 0.07, w: 0.07, h: 0.66, d: 0.07, hex: FIBRE },
+      { x: 0, y: 0.34, z: -0.1, w: 0.07, h: 0.58, d: 0.07, hex: FIBRE_D },
+    ];
+    case 'grass_tuft': return [
+      { x: 0, y: 0.17, z: 0, w: 0.34, h: 0.34, d: 0.12, hex: GRASS },
+      { x: 0, y: 0.13, z: 0, w: 0.12, h: 0.26, d: 0.32, hex: GRASS },
+    ];
+    case 'berry_bush': return [
+      { x: 0, y: 0.3, z: 0, w: 0.8, h: 0.6, d: 0.75, hex: LEAF },
+      { x: 0.28, y: 0.45, z: 0.39, w: 0.13, h: 0.13, d: 0.06, hex: BERRY, omit: 32 },
+      { x: -0.2, y: 0.3, z: 0.39, w: 0.13, h: 0.13, d: 0.06, hex: BERRY, omit: 32 },
+      { x: 0.41, y: 0.25, z: -0.15, w: 0.06, h: 0.13, d: 0.13, hex: BERRY, omit: 2 },
+      { x: -0.1, y: 0.62, z: 0.05, w: 0.13, h: 0.06, d: 0.13, hex: BERRY, omit: 8 },
+    ];
+    case 'mushroom': return [
+      { x: 0, y: 0.1, z: 0, w: 0.09, h: 0.2, d: 0.09, hex: STEM },
+      { x: 0, y: 0.24, z: 0, w: 0.32, h: 0.09, d: 0.32, hex: CAP },
+      { x: 0.2, y: 0.06, z: 0.12, w: 0.06, h: 0.12, d: 0.06, hex: STEM },
+      { x: 0.2, y: 0.14, z: 0.12, w: 0.16, h: 0.05, d: 0.16, hex: CAP },
+    ];
+    case 'pile': return [
+      { x: 0, y: 0.08, z: 0, w: 0.6, h: 0.16, d: 0.5, hex: SOIL },
+      { x: 0.05, y: 0.2, z: 0, w: 0.36, h: 0.1, d: 0.3, hex: BARK },
+    ];
+  }
+}
+
+export class PickupView {
+  readonly group = new THREE.Group();
+  private readonly meshes = new Map<DrawKind, THREE.InstancedMesh>();
+  private readonly m = new THREE.Matrix4();
+  private readonly q = new THREE.Quaternion();
+  private readonly up = new THREE.Vector3(0, 1, 0);
+  private readonly pos = new THREE.Vector3();
+  private readonly one = new THREE.Vector3(1, 1, 1);
+  /** Instances drawn after the last sync. */
+  count = 0;
+
+  constructor() {
+    this.group.name = 'w2_pickups';
+    for (const kind of KINDS) {
+      const mesh = new THREE.InstancedMesh(blocksGeometry(plan(kind)), natureMaterial, MAX_PER_KIND);
+      mesh.name = `pickup_${kind}`;
+      mesh.count = 0;
+      mesh.castShadow = false;
+      mesh.receiveShadow = true;
+      mesh.frustumCulled = false;
+      this.meshes.set(kind, mesh);
+      this.group.add(mesh);
+    }
+  }
+
+  /** Draw exactly these live records. `groundY` gives the drawn ground (resident terrain). */
+  sync(list: readonly LivePickup[], groundY: (x: number, z: number) => number | null): void {
+    const counts = new Map<DrawKind, number>();
+    this.count = 0;
+    for (const p of list) {
+      const mesh = this.meshes.get(p.kind)!;
+      const i = counts.get(p.kind) ?? 0;
+      if (i >= MAX_PER_KIND) continue;
+      const y = groundY(p.x, p.z) ?? p.y;
+      this.q.setFromAxisAngle(this.up, p.rot);
+      // A partly picked bush or plant looks a little smaller.
+      const s = p.kind === 'berry_bush' || p.kind === 'fiber_plant' ? 0.8 + 0.1 * Math.min(2, p.qty - 1) : 0.9 + 0.08 * p.variant;
+      this.m.compose(this.pos.set(p.x, y, p.z), this.q, this.one.set(s, s, s));
+      mesh.setMatrixAt(i, this.m);
+      counts.set(p.kind, i + 1);
+      this.count++;
+    }
+    for (const [kind, mesh] of this.meshes) {
+      mesh.count = counts.get(kind) ?? 0;
+      mesh.visible = mesh.count > 0;
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+}
+
+/** The stone axe: a haft and a lashed stone head, for the right hand (arm space, the hand at y ≈ -0.6). */
+export function buildHeldAxe(): THREE.Mesh {
+  const g = blocksGeometry([
+    { x: 0, y: -0.62, z: 0.12, w: 0.06, h: 0.06, d: 0.62, hex: BARK },
+    { x: 0, y: -0.62, z: 0.44, w: 0.09, h: 0.2, d: 0.12, hex: STONE },
+    { x: 0, y: -0.62, z: 0.37, w: 0.08, h: 0.08, d: 0.05, hex: FIBRE_D },
+  ]);
+  const mesh = new THREE.Mesh(g, natureMaterial);
+  mesh.name = 'held_stone_axe';
+  mesh.castShadow = true;
+  mesh.visible = false;
+  return mesh;
+}

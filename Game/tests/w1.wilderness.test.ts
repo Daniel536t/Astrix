@@ -15,6 +15,8 @@ import { validateWorldSnapshot } from '../src/sim/snapshot';
 import { SETTLEMENT_ZONE, wildernessSpawn } from '../src/sim/wilderness';
 
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+/** W2: these W1 checks run on wilderness content v1 (as W1 shipped it), so their pins are unchanged; content v2 is tests/w2.gathering.test.ts. */
+const W1_CONTENT = 1;
 let seq = 0;
 const send = (s: GameSession, c: Record<string, unknown>) => s.dispatch({ schema: 3, id: `w1:${seq++}:${String(c.type)}`, expectedRevision: s.world.revision, ...c } as never);
 const ticks = (s: GameSession, n: number) => { for (let i = 0; i < n; i++) assert.ok(send(s, { type: 'tick', ticks: 1 }).ok); };
@@ -67,7 +69,7 @@ test('the v6 and v7 save fixtures restore byte-identical as settlement worlds', 
 });
 
 test('a wilderness world: scenario in journal and manifest, empty bag, no stockpile, no homestead, no human-made sites', () => {
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', W1_CONTENT);
   assert.equal(s.scenario, 'wilderness');
   assert.equal(JSON.stringify(s.journal), '{"schema":3,"seed":1337,"generatorVersion":2,"scenario":"wilderness","starterInventory":{},"entries":[]}');
   assert.deepEqual(s.world.inventory, {});
@@ -87,7 +89,7 @@ test('a wilderness world: scenario in journal and manifest, empty bag, no stockp
 });
 
 test('found_homestead, upgrade_homestead and every settlement command are rejected in a wilderness world, with no state change', () => {
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', W1_CONTENT);
   ticks(s, 3);
   const before = s.stateHash, entries = s.journal.entries.length;
   const tree = [...s.world.entities.values()].find((e) => e.kind.startsWith('styl_tree'))!;
@@ -112,7 +114,7 @@ test('found_homestead, upgrade_homestead and every settlement command are reject
 const WILD_120 = 'cac927319fa86807';
 
 test('a wilderness journal replays deterministically from genesis and restores from a mid-run save', () => {
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', W1_CONTENT);
   ticks(s, 60);
   const mid = { snapshot: clone(s.snapshot), journal: clone(s.journal) };
   ticks(s, 60);
@@ -132,7 +134,7 @@ test('a wilderness journal replays deterministically from genesis and restores f
 });
 
 test('snapshot and journal scenario mismatches are rejected, and tampered wilderness journals do not validate', () => {
-  const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', W1_CONTENT);
   const t = GameSession.genesis(1337, GENERATOR_V2);
   ticks(w, 2); ticks(t, 2);
   assert.throws(() => GameSession.restore(clone(w.snapshot), clone(t.journal)), /scenarios differ/);

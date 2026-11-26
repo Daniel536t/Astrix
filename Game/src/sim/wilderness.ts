@@ -15,12 +15,14 @@ import { hash2i } from './noise';
 export const WILDERNESS_STARTER_INVENTORY: Readonly<Record<string, number>> = Object.freeze({});
 
 /**
- * Commands a wilderness world accepts in W1. Only time passes: there is no
+ * Commands a wilderness world accepts. W1: only time passes; there is no
  * settlement to found or upgrade, no founder stockpile, no founder slice to
- * build and no crop plot. Natural harvesting is refused too, because bare
- * hands cannot fell a tree or break rock (tools and gathering are W2 and W3).
+ * build and no crop plot. W2 adds gathering loose pickups, dropping, hand
+ * crafting, equipping and eating (wilderness content v2; a v1 world accepts
+ * them only after `upgrade_wilderness`). `harvest` stays refused: felling
+ * trees becomes physical felling in W3, and breaking rock needs a pickaxe.
  */
-export const WILDERNESS_COMMANDS: readonly string[] = ['tick'];
+export const WILDERNESS_COMMANDS: readonly string[] = ['tick', 'pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness'];
 
 export function wildernessAllows(type: string): boolean {
   return WILDERNESS_COMMANDS.includes(type);
@@ -28,7 +30,7 @@ export function wildernessAllows(type: string): boolean {
 
 export function wildernessRefusal(type: string): string {
   if (type === 'found_homestead' || type === 'upgrade_homestead') return 'a wilderness world has no settlement to found or upgrade';
-  if (type === 'harvest') return 'bare hands cannot fell trees or break rock yet';
+  if (type === 'harvest') return 'trees are felled with an axe in W3 (physical felling); breaking rock needs a pickaxe';
   if (type === 'build') return 'a wilderness world has no founder slice to build';
   return `${type} needs a settlement, which a wilderness world does not have`;
 }

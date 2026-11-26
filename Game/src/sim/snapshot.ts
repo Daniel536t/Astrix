@@ -11,6 +11,7 @@ import { FOUNDER_DESIGN_VERSION, Structure } from './structures';
 import {
   enableStoneReplay, finishStoneReplay, isHistoricalStoneHash, isStoneReplay,
 } from './stone-compat';
+import { WildSnapshot, validateWildSnapshot, wildFromSnapshot, wildSnapshot } from './gathering';
 import { HomesteadState, homesteadSnapshot, validateHomestead, cloneHomestead } from './homestead';
 import {
   CARRIED_CAPACITY, CROP_GROWTH_TICKS, CROP_PLOT_IDS, FOUNDER_STOCKPILE,
@@ -56,6 +57,8 @@ export type WorldSnapshot = BaseWorldSnapshot & ({
   crops: Array<{ id: string; plantedTick: number; growthTicks: typeof CROP_GROWTH_TICKS }>;
   /** M006: absent until founded, so older saves keep their exact bytes and hashes. */
   homestead?: HomesteadState;
+  /** W2: wilderness content v2 only (absent in settlement and W1 wilderness snapshots, so their bytes are unchanged). */
+  wild?: WildSnapshot;
 });
 type LifeSnapshot = Extract<WorldSnapshot, { schema: typeof CURRENT_SNAPSHOT_SCHEMA }>;
 
@@ -121,6 +124,7 @@ export function createWorldSnapshot(
     jobs: [...world.life.jobs.values()].sort((a, b) => a.id.localeCompare(b.id)).map((j) => ({ ...j })),
     crops: [...world.life.crops.values()].sort((a, b) => a.id.localeCompare(b.id)).map((c) => ({ ...c })),
     ...(world.homestead ? { homestead: homesteadSnapshot(world.homestead) } : {}),
+    ...(world.wild ? { wild: wildSnapshot(world.wild) } : {}),
   };
 }
 
@@ -248,13 +252,15 @@ function stockTotal(value: Record<string, number>): number {
   return Object.values(value).reduce((sum, amount) => sum + amount, 0);
 }
 
-function validateLifeFields(value: Record<string, unknown>, wild = false): Pick<LifeSnapshot, 'tick' | 'stockpiles' | 'jobs' | 'crops' | 'homestead'> {
+function validateLifeFields(value: Record<string, unknown>, wild = false): Pick<LifeSnapshot, 'tick' | 'stockpiles' | 'jobs' | 'crops' | 'homestead' | 'wild'> {
   if (!uint(value.tick, Number.MAX_SAFE_INTEGER)
     || !Array.isArray(value.stockpiles) || value.stockpiles.length !== (wild ? 0 : 1)
     || !Array.isArray(value.jobs) || value.jobs.length > (wild ? 0 : MAX_PRODUCTION_JOBS)
     || !Array.isArray(value.crops) || value.crops.length > (wild ? 0 : CROP_PLOT_IDS.length)
     // W1: a wilderness world has no founder stockpile, jobs, crop plots or homestead.
-    || wild && 'homestead' in value) {
+    || wild && 'homestead' in value
+    // W2: wilderness content lives only in a wilderness world.
+    || !wild && 'wild' in value) {
     throw new Error('snapshot has invalid life-loop fields');
   }
   const stockpiles: NonNullable<LifeSnapshot['stockpiles']> = [];
@@ -304,7 +310,8 @@ function validateLifeFields(value: Record<string, unknown>, wild = false): Pick<
     const stored = homestead!.sites!.reduce((n, x) => n + (x.stock?.[k] ?? 0), 0);
     if (held > (stockpiles[0].inventory[k] ?? 0) + stored) throw new Error('building-site reservations exceed the store');
   }
-  return { tick: value.tick, stockpiles, jobs, crops, ...(homestead ? { homestead } : {}) };
+  const wildState = value.wild === undefined ? undefined : validateWildSnapshot(value.wild);
+  return { tick: value.tick, stockpiles, jobs, crops, ...(homestead ? { homestead } : {}), ...(wildState ? { wild: wildState } : {}) };
 }
 
 function validateCost(value: unknown): Partial<Record<ResourceType, number>> {
@@ -518,6 +525,7 @@ export function restoreWorldSnapshotExact(world: World, input: WorldSnapshot): v
     for (const c of snapshot.crops) world.life.crops.set(c.id, { ...c });
   }
   world.homestead = snapshot.schema === CURRENT_SNAPSHOT_SCHEMA && snapshot.homestead ? cloneHomestead(snapshot.homestead) : undefined;
+  world.wild = snapshot.schema === CURRENT_SNAPSHOT_SCHEMA && snapshot.wild ? wildFromSnapshot(snapshot.wild) : undefined;
   world.dirty.clear();
   world.sites = [];
   world.stats = {

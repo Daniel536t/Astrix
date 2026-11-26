@@ -1125,4 +1125,42 @@ body.clean #perf-overlay { display: none; }
 #enter-screen .world-row .here { color: #9EE2B8; font-weight: 400; }
 #enter-screen.worlds-only .enter-card { width: min(520px, 100%); }
 #farm-button.off { color: #8D8A80; background: #3A3B40; border-color: #55565C; cursor: default; }
-body.wilderness .drawer-toggle, body.wilderness #gather-nearest { display: none; }
+body.wilderness .drawer-toggle { display: none; }
+
+/* ---- W2 bag, crafting and pick-up ---- */
+#bag-button {
+  position: fixed; z-index: 9; left: calc(max(14px, env(safe-area-inset-left)) + 72px); top: max(78px, calc(env(safe-area-inset-top) + 70px));
+  min-height: 36px; padding: 7px 14px; color: #1B202B; background: #9EE2B8; border: 1px solid #D4F5DF; border-radius: 7px;
+  font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; cursor: pointer; touch-action: manipulation;
+}
+#bag-button.on { background: #D4F5DF; }
+#wild-panel {
+  position: fixed; z-index: 12; left: max(14px, env(safe-area-inset-left)); top: max(122px, calc(env(safe-area-inset-top) + 114px));
+  width: min(320px, calc(100vw - 28px)); max-height: calc(100dvh - 150px); overflow-y: auto; padding: 10px 12px;
+  color: #F4F0E4; background: rgba(20, 23, 34, 0.9); border: 1px solid rgba(240, 236, 220, 0.22); border-radius: 9px;
+  backdrop-filter: blur(9px); font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+}
+#wild-panel[hidden] { display: none; }
+#wild-panel header { display: flex; align-items: center; gap: 8px; }
+#wild-panel header h2 { margin: 0; font-size: 14px; color: #FFF3D6; }
+#wild-panel header button { margin-left: auto; min-width: 32px; }
+#wild-panel h3 { margin: 10px 0 4px; color: #7AD7E6; font-size: 11px; }
+#wild-panel ul { list-style: none; margin: 0; padding: 0; }
+#wild-panel li { display: flex; align-items: center; gap: 6px; padding: 3px 0; border-top: 1px solid rgba(240, 236, 220, 0.08); }
+#wild-panel li > span, #wild-panel li > div { flex: 1; }
+#wild-panel button { padding: 4px 9px; color: #1B202B; background: #D7C778; border: 1px solid #F4E8A4; border-radius: 6px; font: 600 11px/1.2 ui-sans-serif, system-ui, sans-serif; cursor: pointer; }
+#wild-panel button:disabled { color: #8D8A80; background: #3A3B40; border-color: #55565C; cursor: default; }
+#wild-panel .dim { color: rgba(240, 236, 220, 0.6); }
+#wild-panel .ok { color: #9EE2B8; }
+#wild-panel .miss { color: #F2B35C; }
+#wild-panel .eq { color: #9EE2B8; }
+body.clean #bag-button, body.kit #bag-button, body.map #bag-button, body.clean #wild-panel { display: none; }
+#controls .harvest-touch.idle { opacity: 0.55; }
+@media (pointer: coarse) {
+  #bag-button { min-height: 44px; min-width: 64px; }
+  #wild-panel button { min-height: 40px; padding: 8px 12px; }
+}
+/* Phones: the bag sits under the top buttons and ends well above the joystick and Jump / Pick up (bottom third). */
+@media (max-width: 760px) {
+  #wild-panel { top: max(128px, calc(env(safe-area-inset-top) + 120px)); max-height: calc(100dvh - 128px - 250px); }
+}
