@@ -329,3 +329,24 @@ The smelter glows at its door while a batch is in it.
 | Tests cover mining, depletion, inventory limits, processing, reload and replay | Pass | 20 new tests; 527/527 |
 | Mobile usability | Pass, emulated (0 overlaps at 390, 360 and 844×390 after the fixes; a transient overlap for 3 s after load noted); physical phone NOT DONE | §4 |
 | Render budget | Pass | §5 (max 66 calls, 161,508 triangles) |
+
+## Orchestrator verification and deployment (recorded after results were read)
+
+**Pre-commit check:** an independent full-suite run on the final working tree gave **527 tests, 527 pass, 0 fail**. Typecheck was clean and the build passed. Host load average was about 13.
+
+**Commit:** `12bf1e28c73b793dda11a10aa3df730f872ab4c4`. Both `git fetch` and the GitHub branches API confirmed it on the remote before deploying.
+
+**Deploy:** the script exited 0, and its own suite run gave 527 / 527.
+- Release: `20261126T144002Z-12bf1e2`. The server's `current` link points to it.
+- Bundle: `assets/index-BVp4sZm9.js`, stamped `commit:"12bf1e2", dirty:false`.
+
+**Live check:** a fresh headless Chromium (desktop 1000x600, software GL) opened a new wilderness world and stayed 45 s at spawn.
+- Wilderness content is **7**, and `mining` state is present.
+- 4 deposit models are drawn near spawn.
+- The map shows 0 discovered deposits, 0 places and 29 explored cells. Deposits in view are not revealed on the map before discovery.
+- 55 draw calls and 147,236 triangles.
+- 0 page errors, 0 console errors, 0 failed requests, 0 HTTP ≥ 400 responses.
+
+**NOT VERIFIED on the live site:** mining, smelting and storage. Those were verified on the local build, as described above. Iron and coal mining were done by scripted journaled commands, not through the UI.
+
+**Status:** W6 is implemented and deployed. It is **not owner-accepted**.
