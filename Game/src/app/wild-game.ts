@@ -373,7 +373,12 @@ export class WildGame {
     if (!isDiscovered(this.world, d.id)) this.map.reportNow({ x: ch.x, z: ch.z });
     const s = this.o.session;
     const r = s.dispatch({ schema: 3, id: s.commandId('mine' as never, d.id), expectedRevision: s.world.revision, type: 'mine', depositId: d.id, at });
-    if (!r.ok) { this.refused(r, ''); this.toast(`can't mine: ${r.reasons.join('; ')}`, 'warn'); this.held = r.code === 'too_fast' && this.held; return; }
+    if (!r.ok) {
+      this.refused(r, '');
+      // FINAL-MAP: every deposit is on the map, so "walk up to it so it goes on your map" would confuse; say what is missing.
+      const why = r.code === 'undiscovered' ? 'your walk here has not been recorded yet (exploration is recorded as you walk): try again in a moment' : r.reasons.join('; ');
+      this.toast(`can't mine: ${why}`, 'warn'); this.held = r.code === 'too_fast' && this.held; return;
+    }
     this.version++;
     this.o.onChanged();
     this.stats.mines++;

@@ -1328,9 +1328,14 @@ body.wilderness #world-map:not([hidden]) {
 .lg-place { background: #fff3d6; transform: rotate(45deg) scale(0.7); } .lg-ore { background: #e0904a; border-radius: 50% !important; }
 .lg-dep { transform: scale(0.8); } .lg-dep.lg-out { background: transparent; border: 2px solid #c0643a; }
 .lg-wp { background: #5ec8ff; border-radius: 50% !important; } .lg-route { background: #ffd34d; height: 4px !important; } .lg-you { background: #ff4f3a; }
+/* FINAL-MAP: full-world legend entries. */
+.lg-dest { background: #ffd34d; border-radius: 50% !important; } .lg-dep.lg-found { background: #9a968c; border: 2px solid #fff; }
+#world-map .legend i.lg-cluster { background: #c0643a; border-radius: 50%; font: bold 9px system-ui, sans-serif; font-style: normal; color: #fff; text-align: center; line-height: 12px; }
+.lg-beach { background: #cec496; } .lg-grass { background: #7a9c50; } .lg-forest { background: #3e762d; } .lg-rock { background: #807a72; } .lg-snow { background: #eceef0; }
 .map-popup { position: absolute; z-index: 2; max-width: 260px; padding: 8px 10px; border-radius: 10px; background: rgba(28, 35, 45, 0.96); border: 1px solid #5a6472;
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .map-popup[hidden] { display: none; }
+@media (max-width: 519px) { .map-popup { max-width: calc(100vw - 12px); max-height: 40%; overflow: auto; } }
 .map-popup b { flex-basis: calc(100% - 50px); } .map-popup .dim { flex-basis: 100%; }
 .map-popup [data-popup-close] { position: absolute; top: 4px; right: 4px; }
 body.map-open #hud, body.map-open #wild-events { visibility: hidden; }
