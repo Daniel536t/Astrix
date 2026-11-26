@@ -3,7 +3,9 @@
 //   Wallet Play  world owned by an external wallet from the start.
 // Plus recovery for players who already own a world, and offline exploring.
 // Shown once per browser (until a world exists); ?enter=1 shows it again.
+// W1: the screen also lists the browser's local worlds (settlement and wilderness).
 import type { DetectedWallet } from './identity';
+import { WorldListState, openWorld, worldListHtml } from '../app/worlds';
 
 const SEEN = 'astrix:entered:v1';
 
@@ -11,6 +13,8 @@ export interface EnterOptions {
   wallets: () => DetectedWallet[];
   passkey: boolean;
   choose: (act: string) => Promise<void>;
+  /** W1: the local world list ("Continue settlement", "New wilderness", "Continue wilderness"). */
+  worlds?: WorldListState;
 }
 
 export function showEnterScreen(o: EnterOptions): { status: (m: string) => void } | null {
@@ -27,6 +31,7 @@ export function showEnterScreen(o: EnterOptions): { status: (m: string) => void 
   el.innerHTML = `<div class="enter-card">
     <h1>ASTrix</h1>
     <p class="lead">Your own living world. Its seed, terrain and settlement belong to you, recorded on MagicBlock and Solana.</p>
+    ${o.worlds ? worldListHtml(o.worlds) : ''}
     <div class="enter-options">
       <section>
         <h2>Quick Play</h2>
@@ -52,6 +57,9 @@ export function showEnterScreen(o: EnterOptions): { status: (m: string) => void 
   const buttons = () => Array.from(el.querySelectorAll('button[data-act]')) as HTMLButtonElement[];
   const close = () => { localStorage.setItem(SEEN, String(Date.now())); el.remove(); };
   el.addEventListener('click', async (e) => {
+    const world = (e.target as HTMLElement).closest('button')?.getAttribute('data-world');
+    // A local world: open it (reload), or close the screen when it is already open.
+    if (world && o.worlds) { if (!openWorld(world, o.worlds)) close(); return; }
     const act = (e.target as HTMLElement).closest('button')?.getAttribute('data-act');
     if (!act) return;
     if (act === 'offline') { close(); return; }

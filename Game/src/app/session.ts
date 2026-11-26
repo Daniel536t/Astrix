@@ -2,8 +2,9 @@
 // durable input; rejected attempts, renderer work and terrain queries are not.
 import {
   ResourceType, World, createWorld, generateWorld, harvestEntity, placeAuthoredSites,
-  retireStoneEntities, isRetiredStoneKind, GENERATOR_VERSION, GENERATOR_V2,
+  retireStoneEntities, isRetiredStoneKind, GENERATOR_VERSION, GENERATOR_V2, WILDERNESS, Scenario, worldScenario,
 } from '../sim/world';
+import { WILDERNESS_STARTER_INVENTORY, wildernessAllows, wildernessRefusal } from '../sim/wilderness';
 import { M002_LAYOUT } from '../sim/m002';
 import { LocalAuthorizer } from '../sim/preparation';
 import { LocalStructureAuthorizer, FOUNDER_DESIGN_VERSION } from '../sim/structures';
@@ -201,6 +202,13 @@ export interface CommandJournal {
    * bytes (and hashes) are unchanged.
    */
   generatorVersion?: typeof GENERATOR_V2;
+  /**
+   * W1: the starting-world configuration. Absent means the settlement
+   * scenario, so every journal written before W1 keeps its exact bytes.
+   * A wilderness journal starts with an empty bag and accepts only the
+   * commands the wilderness allows (sim/wilderness.ts).
+   */
+  scenario?: typeof WILDERNESS;
   /**
    * Present once history has been compacted: entries before `sequence` were
    * dropped because a snapshot authenticated against `hash` (the state hash at
@@ -566,15 +574,23 @@ function isResources(value: unknown): value is Record<string, number> {
 
 export function createJournal(
   seed = 1337, schema: CommandJournal['schema'] = CURRENT_JOURNAL_SCHEMA, generatorVersion = GENERATOR_VERSION,
+  scenario: Scenario = 'settlement',
 ): CommandJournal {
   if (generatorVersion !== GENERATOR_VERSION && schema !== CURRENT_JOURNAL_SCHEMA) {
     throw new Error('legacy journal schemas only exist for generator v1');
   }
+  if (scenario === WILDERNESS && schema !== CURRENT_JOURNAL_SCHEMA) throw new Error('a wilderness world needs the current journal schema');
   return {
     schema, seed,
     ...(generatorVersion === GENERATOR_V2 ? { generatorVersion: GENERATOR_V2 } : {}),
-    starterInventory: inventory(M002_STARTER_INVENTORY), entries: [],
+    ...(scenario === WILDERNESS ? { scenario: WILDERNESS } : {}),
+    starterInventory: inventory(starterInventoryFor(scenario)), entries: [],
   };
+}
+
+/** W1: the starter grant of a scenario (settlement: the M002 wood 24 / stone 48; wilderness: nothing). */
+export function starterInventoryFor(scenario: Scenario): Readonly<Record<string, number>> {
+  return scenario === WILDERNESS ? WILDERNESS_STARTER_INVENTORY : M002_STARTER_INVENTORY;
 }
 
 /** Generator version a journal replays on (absent field = v1). */
@@ -582,14 +598,21 @@ export function journalGenerator(journal: Pick<CommandJournal, 'generatorVersion
   return journal.generatorVersion ?? GENERATOR_VERSION;
 }
 
+/** Scenario a journal replays on (absent field = settlement). */
+export function journalScenario(journal: Pick<CommandJournal, 'scenario'>): Scenario {
+  return journal.scenario === WILDERNESS ? WILDERNESS : 'settlement';
+}
+
 /** Validate an entire journal without changing a live session. */
 export function validateJournal(value: unknown): CommandJournal {
   if (!object(value) || (value.schema !== JOURNAL_SCHEMA && value.schema !== DESIGN_JOURNAL_SCHEMA && value.schema !== CURRENT_JOURNAL_SCHEMA)
     || !uint(value.seed) || value.seed > 0xffffffff
     || !Array.isArray(value.entries) || value.entries.length > MAX_JOURNAL_ENTRIES
-    || 'generatorVersion' in value && (value.generatorVersion !== GENERATOR_V2 || value.schema !== CURRENT_JOURNAL_SCHEMA)) {
+    || 'generatorVersion' in value && (value.generatorVersion !== GENERATOR_V2 || value.schema !== CURRENT_JOURNAL_SCHEMA)
+    || 'scenario' in value && (value.scenario !== WILDERNESS || value.schema !== CURRENT_JOURNAL_SCHEMA)) {
     throw new Error('invalid command journal');
   }
+  const scenario: Scenario = value.scenario === WILDERNESS ? WILDERNESS : 'settlement';
   let base: { sequence: number; hash: string } | undefined;
   if ('base' in value) {
     const b = value.base;
@@ -603,6 +626,7 @@ export function validateJournal(value: unknown): CommandJournal {
   const journal: CommandJournal = {
     schema: value.schema, seed: value.seed,
     ...('generatorVersion' in value ? { generatorVersion: GENERATOR_V2 } : {}),
+    ...(scenario === WILDERNESS ? { scenario: WILDERNESS } : {}),
     ...(base ? { base } : {}),
     starterInventory: inventory(value.starterInventory), entries: [],
   };
@@ -621,6 +645,9 @@ export function validateJournal(value: unknown): CommandJournal {
     }
     if (JSON.stringify(entry) !== JSON.stringify(raw)) throw new Error('non-canonical journal entry');
     if (ids.has(entry.command.id)) throw new Error('duplicate journal command id');
+    if (scenario === WILDERNESS && !wildernessAllows(entry.command.type)) {
+      throw new Error(`a wilderness journal cannot contain ${entry.command.type}`);
+    }
     if (entry.command.type !== entry.outcome.type
       || entry.command.type === 'harvest' && entry.outcome.type === 'harvest'
       && entry.command.entityId !== entry.outcome.entityId
@@ -665,7 +692,7 @@ export function validateJournal(value: unknown): CommandJournal {
   if (JSON.stringify(journal) !== JSON.stringify(value)) throw new Error('non-canonical command journal');
   // This slice has one deterministic genesis configuration. A changed starter
   // grant must not pass unnoticed when replay begins from a later snapshot.
-  if (JSON.stringify(journal.starterInventory) !== JSON.stringify(createJournal(value.seed, value.schema, journalGenerator(journal)).starterInventory)) {
+  if (JSON.stringify(journal.starterInventory) !== JSON.stringify(createJournal(value.seed, value.schema, journalGenerator(journal), scenario).starterInventory)) {
     throw new Error('journal starter inventory is incompatible with this version');
   }
   return journal;
@@ -692,12 +719,15 @@ export class GameSession {
   }
 
   /** A new current-schema world. `generatorVersion` defaults to v1 for API compatibility. */
-  static genesis(seed = 1337, generatorVersion = GENERATOR_VERSION): GameSession {
+  static genesis(seed = 1337, generatorVersion = GENERATOR_VERSION, scenario: Scenario = 'settlement'): GameSession {
     return new GameSession(
-      genesisWorld(seed, inventory(M002_STARTER_INVENTORY), CURRENT_JOURNAL_SCHEMA, generatorVersion),
-      createJournal(seed, CURRENT_JOURNAL_SCHEMA, generatorVersion),
+      genesisWorld(seed, inventory(starterInventoryFor(scenario)), CURRENT_JOURNAL_SCHEMA, generatorVersion, scenario),
+      createJournal(seed, CURRENT_JOURNAL_SCHEMA, generatorVersion, scenario),
     );
   }
+
+  /** W1: the scenario of this world (settlement or wilderness). */
+  get scenario(): Scenario { return journalScenario(this.journal); }
 
   /** Compatibility entry point for recorded M002 fixtures and saved worlds. */
   static legacyGenesis(seed = 1337, schema: typeof JOURNAL_SCHEMA | typeof DESIGN_JOURNAL_SCHEMA = JOURNAL_SCHEMA): GameSession {
@@ -734,6 +764,8 @@ export class GameSession {
     const journal = validateJournal(journalInput);
     const snapshot = validateWorldSnapshot(snapshotInput);
     if (snapshot.schema !== journal.schema) throw new Error('snapshot and journal schemas differ');
+    // W1: a wilderness snapshot never restores under a settlement journal, nor the reverse.
+    if ((snapshot.manifest.scenario ?? 'settlement') !== journalScenario(journal)) throw new Error('snapshot and journal scenarios differ');
     const next = snapshot.nextSequence;
     const first = journal.base?.sequence ?? 0;
     if (next < first) throw new Error('snapshot is older than the compacted journal');
@@ -788,8 +820,8 @@ export class GameSession {
   /** Replay already-authenticated current-state commands. */
   private static replayCurrent(journal: CommandJournal): GameSession {
     const session = new GameSession(
-      genesisWorld(journal.seed, journal.starterInventory, journal.schema, journalGenerator(journal)),
-      createJournal(journal.seed, journal.schema, journalGenerator(journal)),
+      genesisWorld(journal.seed, journal.starterInventory, journal.schema, journalGenerator(journal), journalScenario(journal)),
+      createJournal(journal.seed, journal.schema, journalGenerator(journal), journalScenario(journal)),
     );
     for (const entry of journal.entries) session.replayEntry(entry);
     return session;
@@ -801,7 +833,8 @@ export class GameSession {
     if (world.params.generatorVersion !== journalGenerator(journal)) {
       throw new Error('snapshot and journal terrain generators differ');
     }
-    const genesis = genesisWorld(journal.seed, journal.starterInventory, journal.schema, journalGenerator(journal));
+    if (worldScenario(world) !== journalScenario(journal)) throw new Error('snapshot and journal scenarios differ');
+    const genesis = genesisWorld(journal.seed, journal.starterInventory, journal.schema, journalGenerator(journal), journalScenario(journal));
     if (next === 0 && legacyStoneHash(snapshot) !== canonicalWorldHash(genesis, 0, journal.schema)) {
       throw new Error('genesis snapshot does not match journal configuration');
     }
@@ -813,6 +846,7 @@ export class GameSession {
     const session = GameSession.fromValidatedBoundary(world, {
       schema: journal.schema, seed: journal.seed,
       ...(journal.generatorVersion ? { generatorVersion: journal.generatorVersion } : {}),
+      ...(journal.scenario ? { scenario: journal.scenario } : {}),
       ...(journal.base ? { base: { ...journal.base } } : {}),
       starterInventory: { ...journal.starterInventory }, entries: journal.entries.slice(0, next - first),
     });
@@ -874,6 +908,7 @@ export class GameSession {
     this.journal = {
       schema: j.schema, seed: j.seed,
       ...(j.generatorVersion ? { generatorVersion: j.generatorVersion } : {}),
+      ...(j.scenario ? { scenario: j.scenario } : {}),
       base: { sequence: this.nextSequence, hash: entries[entries.length - 1].hash },
       starterInventory: j.starterInventory, entries: [],
     };
@@ -906,6 +941,10 @@ export class GameSession {
       || command.type !== 'build' && command.type !== 'harvest'
         && this.journal.schema !== CURRENT_JOURNAL_SCHEMA) {
       return this.reject(command.id, 'schema_mismatch', ['command schema does not match this world journal']);
+    }
+    // W1: a wilderness world has no settlement, founder stockpile or founder slice.
+    if (this.journal.scenario === WILDERNESS && !wildernessAllows(command.type)) {
+      return this.reject(command.id, 'wilderness', [wildernessRefusal(command.type)]);
     }
     const prior = this.ids.get(command.id);
     if (prior) {
@@ -1148,10 +1187,10 @@ export class GameSession {
 }
 
 export function genesisWorld(seed: number, starter = inventory(M002_STARTER_INVENTORY),
-  schema: CommandJournal['schema'] = CURRENT_JOURNAL_SCHEMA, generatorVersion = GENERATOR_VERSION): World {
-  const world = generateWorld(seed, 0, generatorVersion);
+  schema: CommandJournal['schema'] = CURRENT_JOURNAL_SCHEMA, generatorVersion = GENERATOR_VERSION, scenario: Scenario = 'settlement'): World {
+  const world = generateWorld(seed, 0, generatorVersion, scenario);
   world.inventory = { ...starter };
-  if (schema === CURRENT_JOURNAL_SCHEMA) world.life = createLifeState();
+  if (schema === CURRENT_JOURNAL_SCHEMA) world.life = createLifeState(scenario);
   return world;
 }
 

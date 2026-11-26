@@ -10,6 +10,8 @@ export interface SettingsOptions {
   /** M015: frame-rate cap (applies at once, no reload). */
   frameCap?: { cap: FrameCap; source: 'url' | 'saved' | 'default' };
   onFrameCap?: (cap: FrameCap) => void;
+  /** W1: the world open now, and how to open the world list. */
+  worlds?: { current: string; open: () => void };
 }
 
 const describe = (l: QualityLevel) => {
@@ -33,6 +35,9 @@ export function mountSettings(o: SettingsOptions): void {
   const capOpt = (v: FrameCap, label: string, sub: string) => `<label class="q-opt"><input type="radio" name="astrix-fpscap" value="${v}" ${o.frameCap?.cap === v ? 'checked' : ''}><span><b>${label}</b><br><span class="dim">${sub}</span></span></label>`;
   const now = `Now: <b>${o.current.level}</b> (${o.current.source === 'url' ? 'set by ?quality= in the address' : o.current.source === 'saved' ? 'your choice' : `automatic: ${o.current.reasons.join(', ')}`})`;
   panel.innerHTML = `<header><h2>Settings</h2><button type="button" data-settings-close aria-label="Close settings">×</button></header>
+    ${o.worlds ? `<h3>Worlds</h3>
+    <p class="dim">Open now: <b>${o.worlds.current}</b>. Your settlement and every wilderness world are kept; switching reloads the page.</p>
+    <button type="button" data-worlds>Your worlds…</button>` : ''}
     <h3>Graphics quality</h3>
     <p class="dim">${now}. Animals, people and buildings look the same at every level.</p>
     <form data-quality>
@@ -58,6 +63,7 @@ export function mountSettings(o: SettingsOptions): void {
   panel.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     if (t.closest('[data-settings-close]')) toggle(false);
+    if (t.closest('[data-worlds]')) { toggle(false); o.worlds?.open(); }
     if (t.closest('[data-perf-toggle]')) {
       const q = new URLSearchParams(location.search);
       if (o.perfOn) q.delete('perf'); else q.set('perf', '1');

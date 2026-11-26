@@ -14,8 +14,9 @@ interface BannerRecord {
   field: BannerPoint | null;
 }
 
-export function bannerKey(seed: number, generatorVersion: number): string {
-  return `astrix:banners:v${BANNER_SCHEMA}:seed:${seed}:gen:${generatorVersion}`;
+/** W1: `world` names a wilderness world's own record; the settlement keeps the pre-W1 key. */
+export function bannerKey(seed: number, generatorVersion: number, world?: string): string {
+  return `astrix:banners:v${BANNER_SCHEMA}:seed:${seed}:gen:${generatorVersion}${world ? `:world:${world}` : ''}`;
 }
 
 const finite = (...v: unknown[]) => v.every((n) => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= BANNER_LIMIT);
@@ -27,8 +28,9 @@ export class BannerStore {
     seed: number,
     generatorVersion: number,
     private readonly spawn: { x: number; z: number },
+    world?: string,
   ) {
-    this.key = bannerKey(seed, generatorVersion);
+    this.key = bannerKey(seed, generatorVersion, world);
   }
 
   /** Saved banners, or the derived home banner and no field banner. Never throws. */

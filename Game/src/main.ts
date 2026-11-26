@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import './styles.css';
 import {
   TimeState, advanceTime, surfaceAt, setVoxel, MAT,
-  nearestHarvestable, residentSurfaceAt, residentVoxelAt, WORLD_SIZE, CHUNK_SIZE, SEA_LEVEL, Entity, LATEST_GENERATOR_VERSION,
+  nearestHarvestable, residentSurfaceAt, residentVoxelAt, WORLD_SIZE, CHUNK_SIZE, SEA_LEVEL, Entity, LATEST_GENERATOR_VERSION, WILDERNESS,
 } from './sim/world';
+import { WorldRegistry, WorldListState, showWorldList } from './app/worlds';
 import { VoxelTerrainView, ViewMode } from './render/terrain';
 import { NatureView, lodCounts } from './render/nature';
 import { buildTreeShowcase } from './render/tree-showcase';
@@ -80,7 +81,17 @@ try {
   const g = JSON.parse(localStorage.getItem('astrix:guest:v1') ?? 'null');
   if (g && Number.isSafeInteger(g.seed) && g.seed >= 0 && g.seed <= 0xffffffff) guestSeed = g.seed;
 } catch { guestSeed = null; }
-const worldSeed = params.has('seed') && seedValid ? seed : guestSeed ?? 1337;
+const settlementSeed = params.has('seed') && seedValid ? seed : guestSeed ?? 1337;
+// W1: the open world. The settlement (seed as above, save key unchanged) unless a
+// local wilderness world was opened from the world list.
+let worldStorage: Storage | null = null;
+try { worldStorage = window.localStorage; } catch { worldStorage = null; }
+const worldRegistry = new WorldRegistry(worldStorage);
+const wild = worldRegistry.active();
+const wilderness = !!wild;
+if (wild && params.has('seed')) paramWarnings.push('?seed= is ignored in a wilderness world (its seed is fixed when it is made)');
+const worldSeed = wild ? wild.seed : settlementSeed;
+const worldList: WorldListState = { registry: worldRegistry, settlementSeed, current: wild ? wild.id : 'settlement' };
 const startT = num('t', 0.42, 0, 1);
 const freeze = params.get('freeze') === '1';
 /**
@@ -176,7 +187,9 @@ const loadT0 = performance.now();
 // New worlds use the latest terrain generator; ?generator=1 creates a classic
 // v1 world. An existing save always restores on its own recorded generator.
 const newWorldGenerator = num('generator', LATEST_GENERATOR_VERSION, 1, LATEST_GENERATOR_VERSION, true);
-const store = new BrowserSaveStore(window.localStorage, worldSeed, newWorldGenerator);
+const store = wild
+  ? new BrowserSaveStore(window.localStorage, worldSeed, wild.generatorVersion, { scenario: WILDERNESS, id: wild.id })
+  : new BrowserSaveStore(window.localStorage, worldSeed, newWorldGenerator);
 // ?newworld=1 archives this seed's existing save (kept, not deleted) and starts
 // a fresh world on the latest generator. The parameter is removed afterwards
 // so a reload does not archive again.
@@ -195,7 +208,9 @@ const session = loaded.session;
 const world = session.world;
 let persistenceMessage = archivedNote ? `${loaded.message} (${archivedNote})` : loaded.message;
 const debugMutations = import.meta.env.DEV && params.get('debugMutations') === '1';
-const sliceX = -42, sliceZ = -40;
+// The default view: the founder slice, or the wilderness spawn.
+const sliceX = wild ? wild.spawn.x : -42, sliceZ = wild ? wild.spawn.z : -40;
+if (wilderness) document.body.classList.add('wilderness');
 const sliceY = surfaceAt(world, sliceX, sliceZ);
 const kitX = 18, kitZ = 30;
 const kitY = surfaceAt(world, kitX, kitZ);
@@ -248,7 +263,7 @@ const saveScheduler = new SaveScheduler(() => {
 });
 let lsForLease: Storage | null = null;
 try { lsForLease = window.localStorage; } catch { lsForLease = null; }
-const lease = new TabLease(lsForLease, `astrix:lease:seed:${worldSeed}`);
+const lease = new TabLease(lsForLease, wild ? `astrix:lease:world:${wild.id}` : `astrix:lease:seed:${worldSeed}`);
 let leaseCheckedAt = 0;
 let lastSimAt = 0;
 let felledSeen = 0;
@@ -302,8 +317,11 @@ if (params.get('animals') === '1') {
 }
 // Construction previews query the settlement envelope several times a second;
 // keep it resident so chunk lifetime sweeps never thrash it.
-for (const r of M002_LAYOUT.envelope) terrainView.pinRect(r.x0, r.z0, r.x1, r.z1);
-terrainView.pinRect(FOUNDER_STOCKPILE.x - 4, FOUNDER_STOCKPILE.z - 4, FOUNDER_STOCKPILE.x + 4, FOUNDER_STOCKPILE.z + 4);
+// (A wilderness world has no settlement envelope or founder stockpile.)
+if (!wilderness) {
+  for (const r of M002_LAYOUT.envelope) terrainView.pinRect(r.x0, r.z0, r.x1, r.z1);
+  terrainView.pinRect(FOUNDER_STOCKPILE.x - 4, FOUNDER_STOCKPILE.z - 4, FOUNDER_STOCKPILE.x + 4, FOUNDER_STOCKPILE.z + 4);
+}
 
 if (isMap) {
   terrainView.update(rig.target, 'map');
@@ -501,6 +519,10 @@ const touch = moveZone ? new TouchControls({
 }) : null;
 const vitals = noUi || isMap || isKit ? null : new VitalsHud();
 function gather(): void {
+  if (wilderness) {
+    lastAction = 'bare hands: nothing you can gather yet (gathering and tools come next)';
+    return;
+  }
   // In walk mode the Use button works the homestead first (water, dig, sow, harvest, feed...).
   if (explore?.active && homesteadGame?.useNearest()) return;
   if (!harvestNearest() && !lastAction.startsWith('harvest rejected')
@@ -683,9 +705,12 @@ const perfOverlay: PerfOverlay | null = perfOn && !isMap && !isKit ? new PerfOve
   frameCap: () => ({ cap: limiter.cap, source: frameCap.source }),
 }) : null;
 if (!noUi && !isMap && !isKit) {
-  mountSettings({ current: quality, perfOn, frameCap,
+  mountSettings({ current: quality, perfOn, frameCap, worlds: { current: wilderness ? `Wilderness ${wild!.id.slice(1)}` : 'Settlement', open: () => showWorldList(worldList) },
     onFrameCap: (cap) => { limiter.set(cap); frameCap.cap = cap; frameCap.source = 'saved'; perfOverlay?.capChanged(cap); } });
 }
+// W1: ?worlds=1 opens the world list at start (also reachable from Settings → Worlds).
+if (!noUi && !isMap && !isKit && params.get('worlds') === '1') showWorldList(worldList);
+if (wilderness) document.title = 'ASTrix — Wilderness';
 
 window.__metrics = metrics();
 
@@ -713,7 +738,7 @@ function frame(timestamp?: number) {
   // non-leader tabs do not advance settlement time.
   const nowMs = Date.now();
   if (nowMs - leaseCheckedAt > 2000) { lease.heartbeat(nowMs); leaseCheckedAt = nowMs; }
-  const simActive = !!lifeGame && !freeze && !time.paused && lease.isLeader
+  const simActive = (!!lifeGame || wilderness) && !freeze && !time.paused && lease.isLeader
     && document.visibilityState === 'visible' && session.journal.schema === 3;
   // Wall-clock delta (the animation dt is clamped to 0.1 s, which would slow
   // settlement time on low frame rates). SimClock caps each step at one tick.
@@ -724,7 +749,7 @@ function frame(timestamp?: number) {
     const tTick = performance.now();
     // STAB-002 S2: the player's quantised presence rides on the tick (rules v7, walking on the settlement grid only).
     lastPresence = playerPresence(world, explore?.active ? explore.character : null, explore?.intent);
-    const r = lifeGame!.realtimeTick(lastPresence);
+    const r = lifeGame ? lifeGame.realtimeTick(lastPresence) : wildernessTick();
     sections.record('tick', performance.now() - tTick);
     // A villager felled a tree (rules v4): redraw nature from the entities, as after the player's harvest.
     // (M013: felled trees, stumps and growth reach the drawing incrementally through NatureView.sync.)
@@ -739,10 +764,10 @@ function frame(timestamp?: number) {
   const tHome = performance.now();
   homesteadGame?.update(dt);
   sections.record('homestead', performance.now() - tHome);
-  realtimeNote = !lifeGame || session.journal.schema !== 3 ? ''
+  realtimeNote = (!lifeGame && !wilderness) || session.journal.schema !== 3 ? ''
     : !lease.isLeader ? 'another tab is running this world — time paused here'
-      : time.paused ? 'settlement paused (P)' : realtimeNote.startsWith('settlement time stopped') ? realtimeNote
-        : `settlement tick ${session.world.life?.tick ?? 0} · next in ${simClock.secondsToNext.toFixed(0)} s`;
+      : time.paused ? `${wilderness ? 'world' : 'settlement'} paused (P)` : realtimeNote.startsWith('settlement time stopped') ? realtimeNote
+        : `${wilderness ? 'world' : 'settlement'} tick ${session.world.life?.tick ?? 0} · next in ${simClock.secondsToNext.toFixed(0)} s`;
   showcase?.update(dt);
   const tFauna = performance.now();
   if (fauna) {
@@ -827,12 +852,17 @@ function frame(timestamp?: number) {
       const m = window.__metrics;
       const walking = !!explore?.active;
       const work = walking ? homesteadGame?.nearest() : null;
-      const reach = work ? `<b>E: ${work.label}</b> · ` : walking && explore?.reachable
+      // W1: bare hands gather nothing yet, so the wilderness shows no gather prompt.
+      const reach = work ? `<b>E: ${work.label}</b> · ` : walking && !wilderness && explore?.reachable
         ? `<b>E: gather ${explore.reachable.resource ?? ''} from ${treeHint(explore.reachable) ?? explore.reachable.kind.replace('styl_', '').replace(/_/g, ' ')}</b> · ` : '';
       const useButton = document.getElementById('gather-nearest');
       const useLabel = work ? work.label : 'Gather';
       if (useButton && useButton.textContent !== useLabel) { useButton.textContent = useLabel; useButton.classList.toggle('work', !!work); }
-      const hint = walking
+      const hint = wilderness
+        ? (walking ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · Jump · Dive · Plant: mark this spot with your banner · Home: hold still to return to where you began'
+          : 'WASD: walk · Shift: run · Space: jump · C: dive · V: plant banner · R: return home · T: return to banner · drag: look · wheel: zoom · Tab: overview · P: pause')
+          : coarse ? 'drag: orbit · two fingers: move + zoom' : 'drag: orbit · WASD: pan · Tab: walk · P: pause')
+        : walking
         ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · tap Jump twice to jump higher, hold to swim up · Dive · Plant: mark this spot with your banner · Home / To banner: hold still to return · Farm: fields, people, animals'
           : 'WASD: walk · Shift: run · Space: jump (tap twice to jump higher, hold to swim up) · C: dive · E: use / gather / open a gate · V: plant banner · R: return home · T: return to banner · F: plan a field · G: build · drag: look · wheel: zoom · Tab: builder view · B/I: panels · P: pause')
         : coarse
@@ -845,12 +875,15 @@ function frame(timestamp?: number) {
       const persistence = m.save.persistent ? m.save.message
         : m.save.status === 'unavailable' ? `VOLATILE — ${m.save.message}` : m.save.message;
       const built = m.m2 ? `${m.m2.projectsBuilt}/${M2_PROJECTS.length} built` : '';
+      const carried = Object.entries(m.inventory as Record<string, number>).filter(([, n]) => n > 0);
       hud.innerHTML =
-        `<strong>ASTrix — Founder Settlement</strong> · seed ${worldSeed} · ${WORLD_SIZE} × ${WORLD_SIZE} m · 1 m voxels<br>` +
+        (wilderness ? `<strong>ASTrix — Wilderness ${wild!.id.slice(1)}</strong> · local only · seed ${worldSeed}<br>`
+          : `<strong>ASTrix — Founder Settlement</strong> · seed ${worldSeed} · ${WORLD_SIZE} × ${WORLD_SIZE} m · 1 m voxels<br>`) +
         `${timeLabel(time.t)} · ${time.paused ? 'paused' : 'day ' + Math.round(time.dayLengthSec) + 's'}` +
         (realtimeNote ? ` · ${realtimeNote}` : '') +
-        ` · wood ${m.inventory.wood ?? 0} · stone ${m.inventory.stone ?? 0}` +
-        ` · ${m.structures} structure${m.structures === 1 ? '' : 's'}${built ? ` (${built})` : ''}` +
+        (wilderness ? ` · <span class="inv">bag: ${carried.length ? carried.map(([k, n]) => `${k} ${n}`).join(', ') : 'empty'} · bare hands</span>`
+          : ` · wood ${m.inventory.wood ?? 0} · stone ${m.inventory.stone ?? 0}` +
+            ` · ${m.structures} structure${m.structures === 1 ? '' : 's'}${built ? ` (${built})` : ''}`) +
         (channel ? `<br><b class="returning">${channel}</b>` : '') +
         `<br><span class="dim">${reach}${lastAction ? lastAction + ' · ' : ''}${hint} · ${persistence}</span>`;
     }
@@ -923,7 +956,7 @@ if (!isMap && devInspect) {
   if (kitGroup) sceneInspector.addRoot(kitGroup);
 }
 
-if (!isMap && !isKit) {
+if (!isMap && !isKit && !wilderness) {
   m2Game = new M2Game({ session, store, scene, terrainView, rig });
   lifeGame = new LifeGame({ session, store, scene, onSaved: () => saveScheduler.saved(Date.now()), toast: (message, kind) => {
     lastAction = message;
@@ -952,9 +985,32 @@ if (!isMap && !isKit) {
   if (params.get('chain') !== '0' && !noUi) {
     import('./chain/chain-view').then(({ startChainView }) => {
       chainView = startChainView({ scene, origin: { x: 6, z: -60 },
-        groundY: (x, z) => residentSurfaceAt(world, x, z) ?? surfaceAt(world, x, z) });
+        groundY: (x, z) => residentSurfaceAt(world, x, z) ?? surfaceAt(world, x, z), worlds: worldList });
     }).catch((e) => { chainError = String(e).slice(0, 120); });
   }
+}
+
+/** W1: one journaled world tick in a wilderness world (no settlement controller there). */
+function wildernessTick(): { ok: boolean; reasons: string[] } {
+  const r = session.dispatch({ schema: 3, id: session.commandId('tick', 'realtime'), type: 'tick', ticks: 1, expectedRevision: world.revision });
+  return r.ok ? { ok: true, reasons: [] } : { ok: false, reasons: r.reasons };
+}
+
+if (!isMap && !isKit && wilderness && !noUi) {
+  // No settlement yet: the Farm button stays, greyed, and says why.
+  const farm = document.createElement('button');
+  farm.id = 'farm-button';
+  farm.type = 'button';
+  farm.className = 'off';
+  farm.textContent = 'Farm';
+  farm.setAttribute('aria-disabled', 'true');
+  farm.setAttribute('aria-label', 'Farm: not available. You have no farm, people or animals in the wilderness yet.');
+  farm.title = 'No farm yet: in the wilderness you start with bare hands.';
+  farm.addEventListener('click', () => { lastAction = 'no farm yet: in the wilderness you start alone, with bare hands and an empty bag'; });
+  document.body.appendChild(farm);
+}
+
+if (!isMap && !isKit) {
 
   // The founder character. Explore is the default way to play; scripted
   // evidence captures (action=, ui=0, explicit camera params) and ?mode=builder
@@ -974,7 +1030,8 @@ if (!isMap && !isKit) {
     fauna?.bodies(x, z, 8, out);
     return out;
   };
-  explore = new ExploreController({ world, scene, rig, storage, spawn: { x: -18, z: -18 }, bodies: bodiesNear });
+  explore = new ExploreController({ world, scene, rig, storage, spawn: wild ? wild.spawn : { x: -18, z: -18 }, bodies: bodiesNear,
+    ...(wild ? { storageScope: wild.id } : {}) });
   explore.onNotice = (message, kind) => {
     lastAction = message;
     m2Game?.toast(message, kind ?? 'good');

@@ -59,7 +59,22 @@ export interface WorldParams {
   yMax: number;
   seaLevel: number;
   generatorVersion: number;
+  /**
+   * W1: the starting-world configuration. Absent means the settlement
+   * scenario (every world made before W1), so its params hash, manifest and
+   * snapshots are byte-identical. Only a non-default scenario is written.
+   */
+  scenario?: typeof WILDERNESS;
 }
+
+/** W1 scenarios: the preserved settlement (founder slice, homestead) and the bare wilderness start. */
+export type Scenario = 'settlement' | 'wilderness';
+export const WILDERNESS = 'wilderness' as const;
+/** The scenario of a world (absent field = settlement). */
+export function worldScenario(world: Pick<World, 'params'>): Scenario {
+  return world.params.scenario === WILDERNESS ? WILDERNESS : 'settlement';
+}
+export const isWildernessWorld = (world: Pick<World, 'params'>): boolean => world.params.scenario === WILDERNESS;
 
 export const DEFAULT_PARAMS: WorldParams = {
   size: WORLD_SIZE,
@@ -215,11 +230,11 @@ export const worldToLocalX = (x: number) => x - (worldToChunkX(x) * CHUNK_SIZE -
 export const worldToLocalZ = (z: number) => z - (worldToChunkZ(z) * CHUNK_SIZE - HALF);
 export const yToIndex = (y: number) => y - Y_MIN;
 
-export function createWorld(seed = 1337, generatorVersion = GENERATOR_VERSION): World {
+export function createWorld(seed = 1337, generatorVersion = GENERATOR_VERSION, scenario: Scenario = 'settlement'): World {
   if (!isSupportedGenerator(generatorVersion)) throw new Error(`unsupported generator version ${generatorVersion}`);
   return {
     seed,
-    params: { ...DEFAULT_PARAMS, generatorVersion },
+    params: { ...DEFAULT_PARAMS, generatorVersion, ...(scenario === WILDERNESS ? { scenario: WILDERNESS } : {}) },
     chunks: new Map(),
     entities: new Map(),
     entityChunks: new Map(),
@@ -240,8 +255,8 @@ export function createWorld(seed = 1337, generatorVersion = GENERATOR_VERSION): 
   };
 }
 
-export function generateWorld(seed = 1337, initialRadius = 0, generatorVersion = GENERATOR_VERSION): World {
-  const world = createWorld(seed, generatorVersion);
+export function generateWorld(seed = 1337, initialRadius = 0, generatorVersion = GENERATOR_VERSION, scenario: Scenario = 'settlement'): World {
+  const world = createWorld(seed, generatorVersion, scenario);
   const centre = Math.floor(CHUNKS_PER_SIDE / 2);
   for (let cz = centre - initialRadius; cz <= centre + initialRadius; cz++) {
     for (let cx = centre - initialRadius; cx <= centre + initialRadius; cx++) {
@@ -1200,8 +1215,11 @@ export function placeAuthoredSites(world: World): void {
   if (world.authoredPlaced) return;
   world.authoredPlaced = true;
   touchNature(world);
+  // W1: a wilderness world has no human-made landmarks (waystone, marker,
+  // cairn). The hero grove, its rock, shrub and ore are natural and stay.
+  const wild = isWildernessWorld(world);
 
-  const sites: Array<{ kind: 'waystone' | 'marker'; x: number; z: number; rot: number }> = [
+  const sites: Array<{ kind: 'waystone' | 'marker'; x: number; z: number; rot: number }> = wild ? [] : [
     { kind: 'waystone', x: -10, z: -14, rot: 0 },
     { kind: 'marker', x: -32, z: -8, rot: Math.PI / 2 },
   ];
@@ -1233,7 +1251,7 @@ export function placeAuthoredSites(world: World): void {
   }
   addAuthoredEntity(world, 'styl_rock_medium', -6, -10, 0, 0, 1.0, 'stone', 8, 3);
   addAuthoredEntity(world, 'styl_shrub', -14, -8, 1, Math.PI / 12, 1.1, 'fiber', 4, 1);
-  addAuthoredEntity(world, 'styl_cairn', -20, -6, 0, 0, 1.0, 'stone', 6, 2);
+  if (!wild) addAuthoredEntity(world, 'styl_cairn', -20, -6, 0, 0, 1.0, 'stone', 6, 2);
   addAuthoredEntity(world, 'styl_ore', -38, -42, 0, Math.PI / 4, 1.1, 'ore', 8, 2);
 }
 
@@ -1368,6 +1386,8 @@ export interface WorldManifest {
   yMax: number;
   seaLevel: number;
   paramsHash: string;
+  /** W1: present only for a non-default scenario, so settlement manifests are unchanged. */
+  scenario?: typeof WILDERNESS;
 }
 
 function fnv1a(text: string): string {
@@ -1391,6 +1411,7 @@ export function worldManifest(world: World): WorldManifest {
     yMax: p.yMax,
     seaLevel: p.seaLevel,
     paramsHash: fnv1a(JSON.stringify(p)),
+    ...(p.scenario === WILDERNESS ? { scenario: WILDERNESS } : {}),
   };
 }
 

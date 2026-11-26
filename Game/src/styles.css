@@ -1114,3 +1114,15 @@ body.clean #perf-overlay { display: none; }
 @media (pointer: coarse) and (min-width: 761px) {
   body:not(.explore) #build-panel { max-height: calc(100dvh - 120px); }
 }
+
+/* ---- W1 world list and wilderness HUD ---- */
+#enter-screen .world-list { margin: 0 0 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+#enter-screen .world-list h2 { margin: 0 0 2px; }
+#enter-screen .world-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid rgba(125, 111, 196, 0.35); }
+#enter-screen .world-row:first-of-type { border-top: 0; }
+#enter-screen .world-row > div { flex: 1; font-size: 13px; color: #E6DFCF; }
+#enter-screen .world-row button { flex: none; }
+#enter-screen .world-row .here { color: #9EE2B8; font-weight: 400; }
+#enter-screen.worlds-only .enter-card { width: min(520px, 100%); }
+#farm-button.off { color: #8D8A80; background: #3A3B40; border-color: #55565C; cursor: default; }
+body.wilderness .drawer-toggle, body.wilderness #gather-nearest { display: none; }

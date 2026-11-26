@@ -1,6 +1,6 @@
 // Schema-3 life loop. All quantities are integers and all mutations are driven
 // by accepted commands; wall-clock time and rendering never advance this state.
-import type { World } from './world';
+import type { Scenario, World } from './world';
 
 /** Every resource a bag or store may hold. M006 adds animal products and carried water buckets. */
 export const LIFE_RESOURCES = ['eggs', 'fiber', 'food', 'milk', 'ore', 'rations', 'seed', 'stone', 'water', 'wood', 'wool'] as const;
@@ -54,9 +54,10 @@ export interface LifeState {
   tick: number;
 }
 
-export function createLifeState(): LifeState {
+/** W1: a wilderness world starts with no founder stockpile (nothing is built there yet). */
+export function createLifeState(scenario: Scenario = 'settlement'): LifeState {
   return {
-    stockpiles: new Map([[FOUNDER_STOCKPILE_ID, {
+    stockpiles: scenario === 'wilderness' ? new Map() : new Map([[FOUNDER_STOCKPILE_ID, {
       id: FOUNDER_STOCKPILE_ID, x: FOUNDER_STOCKPILE.x, z: FOUNDER_STOCKPILE.z,
       capacity: STOCKPILE_CAPACITY, inventory: {},
     }]]), jobs: new Map(), crops: new Map(), tick: 0,

@@ -5,7 +5,7 @@ import {
   CHUNK_SIZE, CHUNK_VOLUME, CHUNKS_PER_SIDE, Entity, EntityKind,
   GENERATOR_VERSION, HALF, MatId, ResourceType, World, WorldManifest,
   createWorld, placeAuthoredSites, worldManifest, ensureChunk, isRetiredStoneKind,
-  markEditsChanged, isSupportedGenerator, MAX_MAT_ID, touchStructures,
+  markEditsChanged, isSupportedGenerator, MAX_MAT_ID, touchStructures, WILDERNESS, worldScenario,
 } from './world';
 import { FOUNDER_DESIGN_VERSION, Structure } from './structures';
 import {
@@ -248,11 +248,13 @@ function stockTotal(value: Record<string, number>): number {
   return Object.values(value).reduce((sum, amount) => sum + amount, 0);
 }
 
-function validateLifeFields(value: Record<string, unknown>): Pick<LifeSnapshot, 'tick' | 'stockpiles' | 'jobs' | 'crops' | 'homestead'> {
+function validateLifeFields(value: Record<string, unknown>, wild = false): Pick<LifeSnapshot, 'tick' | 'stockpiles' | 'jobs' | 'crops' | 'homestead'> {
   if (!uint(value.tick, Number.MAX_SAFE_INTEGER)
-    || !Array.isArray(value.stockpiles) || value.stockpiles.length !== 1
-    || !Array.isArray(value.jobs) || value.jobs.length > MAX_PRODUCTION_JOBS
-    || !Array.isArray(value.crops) || value.crops.length > CROP_PLOT_IDS.length) {
+    || !Array.isArray(value.stockpiles) || value.stockpiles.length !== (wild ? 0 : 1)
+    || !Array.isArray(value.jobs) || value.jobs.length > (wild ? 0 : MAX_PRODUCTION_JOBS)
+    || !Array.isArray(value.crops) || value.crops.length > (wild ? 0 : CROP_PLOT_IDS.length)
+    // W1: a wilderness world has no founder stockpile, jobs, crop plots or homestead.
+    || wild && 'homestead' in value) {
     throw new Error('snapshot has invalid life-loop fields');
   }
   const stockpiles: NonNullable<LifeSnapshot['stockpiles']> = [];
@@ -266,7 +268,7 @@ function validateLifeFields(value: Record<string, unknown>): Pick<LifeSnapshot, 
     stockpiles.push({ id: FOUNDER_STOCKPILE_ID, x: raw.x, z: raw.z,
       capacity: STOCKPILE_CAPACITY, inventory });
   }
-  let reserved = stockTotal(stockpiles[0].inventory);
+  let reserved = stockpiles.length ? stockTotal(stockpiles[0].inventory) : 0;
   const ids = new Set<string>();
   const jobs: NonNullable<LifeSnapshot['jobs']> = [];
   for (const raw of value.jobs) {
@@ -374,9 +376,12 @@ export function validateWorldSnapshot(value: unknown): WorldSnapshot {
     || !isSupportedGenerator(m.generatorVersion)
     || m.size !== params.size || m.chunkSize !== params.chunkSize
     || m.yMin !== params.yMin || m.yMax !== params.yMax || m.seaLevel !== params.seaLevel
-    || !/^[0-9a-f]{8}$/.test(String(m.paramsHash))) {
+    || !/^[0-9a-f]{8}$/.test(String(m.paramsHash))
+    // W1: the scenario key is written only for a wilderness world, and only on current snapshots.
+    || 'scenario' in m && (m.scenario !== WILDERNESS || schema !== CURRENT_SNAPSHOT_SCHEMA)) {
     throw new Error('snapshot generator configuration is unsupported or incompatible');
   }
+  const wild = m.scenario === WILDERNESS;
   if (!uint(value.revision, Number.MAX_SAFE_INTEGER)
     || !uint(value.nextSequence, 10_000_000)
     || typeof value.authoredPlaced !== 'boolean'
@@ -386,7 +391,7 @@ export function validateWorldSnapshot(value: unknown): WorldSnapshot {
     || !Array.isArray(value.entityChunks) || !Array.isArray(value.structures)) {
     throw new Error('snapshot has invalid authoritative-state fields');
   }
-  const world = createWorld(m.seed, params.generatorVersion);
+  const world = createWorld(m.seed, params.generatorVersion, wild ? WILDERNESS : 'settlement');
   // The manifest hash is checked against the actual restored configuration.
   if (worldManifest(world).paramsHash !== m.paramsHash) throw new Error('snapshot manifest hash mismatch');
 
@@ -448,6 +453,7 @@ export function validateWorldSnapshot(value: unknown): WorldSnapshot {
       schema: 1, seed: m.seed, generatorVersion: params.generatorVersion,
       size: params.size, chunkSize: params.chunkSize, yMin: params.yMin,
       yMax: params.yMax, seaLevel: params.seaLevel, paramsHash: m.paramsHash,
+      ...(wild ? { scenario: WILDERNESS } : {}),
     },
     revision: value.revision,
     edits,
@@ -460,7 +466,7 @@ export function validateWorldSnapshot(value: unknown): WorldSnapshot {
     nextSequence: value.nextSequence,
   };
   const result: WorldSnapshot = schema === CURRENT_SNAPSHOT_SCHEMA
-    ? { ...snapshot, schema: CURRENT_SNAPSHOT_SCHEMA, ...validateLifeFields(value) }
+    ? { ...snapshot, schema: CURRENT_SNAPSHOT_SCHEMA, ...validateLifeFields(value, wild) }
     : { ...snapshot, schema: schema as typeof SNAPSHOT_SCHEMA | typeof DESIGN_SNAPSHOT_SCHEMA };
   if (JSON.stringify(result) !== JSON.stringify(value)) {
     throw new Error('snapshot contains unknown, non-canonical or ambiguous fields');
@@ -494,6 +500,7 @@ export function restoreWorldSnapshotExact(world: World, input: WorldSnapshot): v
     yMax: snapshot.manifest.yMax,
     seaLevel: snapshot.manifest.seaLevel,
     generatorVersion: snapshot.manifest.generatorVersion,
+    ...(snapshot.manifest.scenario === WILDERNESS ? { scenario: WILDERNESS } : {}),
   };
   world.chunks.clear();
   world.entities.clear();
@@ -503,7 +510,7 @@ export function restoreWorldSnapshotExact(world: World, input: WorldSnapshot): v
   world.structures.clear();
   world.edits.clear();
   world.inventory = { ...snapshot.inventory };
-  world.life = snapshot.schema === CURRENT_SNAPSHOT_SCHEMA ? createLifeState() : undefined;
+  world.life = snapshot.schema === CURRENT_SNAPSHOT_SCHEMA ? createLifeState(worldScenario(world)) : undefined;
   if (world.life && snapshot.schema === CURRENT_SNAPSHOT_SCHEMA) {
     world.life.tick = snapshot.tick;
     for (const s of snapshot.stockpiles) world.life.stockpiles.set(s.id, { ...s, inventory: { ...s.inventory } });
@@ -577,7 +584,7 @@ export function restoreWorldSnapshotExact(world: World, input: WorldSnapshot): v
 
 export function worldFromSnapshot(snapshot: WorldSnapshot): World {
   const valid = validateWorldSnapshot(snapshot);
-  const world = createWorld(valid.manifest.seed, valid.manifest.generatorVersion);
+  const world = createWorld(valid.manifest.seed, valid.manifest.generatorVersion, valid.manifest.scenario ?? 'settlement');
   restoreWorldSnapshot(world, valid);
   return world;
 }

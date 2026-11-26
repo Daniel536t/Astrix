@@ -30,6 +30,8 @@ export interface ExploreOptions {
   storage: Storage | null;
   /** Where to spawn when there is no saved avatar position. */
   spawn: { x: number; z: number };
+  /** W1: a wilderness world's id; its avatar and banners get their own records. Absent: the settlement's keys, unchanged. */
+  storageScope?: string;
   /**
    * STAB-002 S2: moving bodies near the character (farm animals, villagers,
    * wildlife), as capsules derived from sim state. Read once per frame and
@@ -90,7 +92,7 @@ export class ExploreController {
   onNotice: ((message: string, kind?: 'good' | 'warn') => void) | null = null;
 
   constructor(private readonly o: ExploreOptions) {
-    this.bannerStore = new BannerStore(o.storage, o.world.seed, o.world.params.generatorVersion, o.spawn);
+    this.bannerStore = new BannerStore(o.storage, o.world.seed, o.world.params.generatorVersion, o.spawn, o.storageScope);
     this.banners = this.bannerStore.load();
     // Record the derived home banner, so it stays put even if the default spawn changes later.
     this.bannerStore.save(this.banners);
@@ -98,7 +100,7 @@ export class ExploreController {
     this.figure = buildFigure();
     this.figure.root.visible = false;
     o.scene.add(this.figure.root);
-    this.key = `astrix:avatar:v1:seed:${o.world.seed}:gen:${o.world.params.generatorVersion}`;
+    this.key = `astrix:avatar:v1:seed:${o.world.seed}:gen:${o.world.params.generatorVersion}${o.storageScope ? `:world:${o.storageScope}` : ''}`;
     const ring = new THREE.RingGeometry(0.7, 0.9, 6);
     ring.rotateX(-Math.PI / 2);
     this.marker = new THREE.Mesh(ring, new THREE.MeshBasicMaterial({

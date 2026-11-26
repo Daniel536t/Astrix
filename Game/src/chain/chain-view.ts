@@ -21,6 +21,8 @@ export interface ChainViewOptions {
   scene: THREE.Scene;
   groundY: (x: number, z: number) => number;
   origin: { x: number; z: number };
+  /** W1: the local world list shown on the entry screen. */
+  worlds?: import('../app/worlds').WorldListState;
 }
 
 export function startChainView(o: ChainViewOptions): { metrics: () => Record<string, unknown> } {
@@ -203,6 +205,7 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   const enter = guest.record ? null : showEnterScreen({
     wallets: detectWallets, passkey: passkeySupported(),
     choose: (act) => run(act),
+    worlds: o.worlds,
   });
   panel.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;

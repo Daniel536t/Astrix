@@ -137,7 +137,8 @@ export class HomesteadGame {
    * navigate in old worlds too.
    */
   private ensureFounded(): void {
-    if (!this.available) return;
+    // W1: a wilderness world is never founded automatically (the session refuses it too).
+    if (!this.available || this.o.session.scenario === 'wilderness') return;
     if (!this.world.homestead) {
       const r = this.send({ type: 'found_homestead', rules: HOMESTEAD_LATEST_VERSION });
       if (r.ok) this.o.toast('Settlers arrived: Ada the farmer, Bram the herder and Cora, with animals and supplies. Open Farm to plan a field, give Cora work, or Build (G) a woodshed where you choose.', 'good');
