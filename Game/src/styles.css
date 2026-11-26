@@ -1164,3 +1164,15 @@ body.clean #bag-button, body.kit #bag-button, body.map #bag-button, body.clean #
 @media (max-width: 760px) {
   #wild-panel { top: max(128px, calc(env(safe-area-inset-top) + 120px)); max-height: calc(100dvh - 128px - 250px); }
 }
+
+/* ---- W3 felling: the recent event feed (authoritative events from the simulation) ---- */
+#wild-events {
+  position: fixed; z-index: 8; left: max(14px, env(safe-area-inset-left)); top: max(122px, calc(env(safe-area-inset-top) + 114px));
+  display: none; padding: 5px 9px; color: #F4F0E4; background: rgba(20, 23, 34, 0.62); border-radius: 7px;
+  font: 600 11px/1.45 ui-sans-serif, system-ui, sans-serif; pointer-events: none; text-transform: none;
+}
+#wild-events.on { display: block; }
+#wild-events div:last-child { color: #FFE9A8; }
+body.clean #wild-events, body.kit #wild-events, body.map #wild-events { display: none; }
+/* Phones: the HUD text sits top-left, so the feed goes right, under the Builder view button. */
+@media (max-width: 760px) { #wild-events { left: auto; right: max(14px, env(safe-area-inset-right)); top: max(152px, calc(env(safe-area-inset-top) + 144px)); font-size: 10px; } }

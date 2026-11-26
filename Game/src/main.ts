@@ -863,12 +863,12 @@ function frame(timestamp?: number) {
       const reach = work ? `<b>E: ${work.label}</b> · ` : wildPrompt ? `<b>${wildPrompt}</b> · ` : walking && !wilderness && explore?.reachable
         ? `<b>E: gather ${explore.reachable.resource ?? ''} from ${treeHint(explore.reachable) ?? explore.reachable.kind.replace('styl_', '').replace(/_/g, ' ')}</b> · ` : '';
       const useButton = document.getElementById('gather-nearest');
-      const useLabel = work ? work.label : wilderness ? 'Pick up' : 'Gather';
-      useButton?.classList.toggle('idle', wilderness && !wildGame?.target);
+      const useLabel = work ? work.label : wilderness ? (wildGame ? wildGame.buttonLabel() : 'Pick up') : 'Gather';
+      useButton?.classList.toggle('idle', wilderness && (!wildGame || wildGame.idle));
       if (useButton && useButton.textContent !== useLabel) { useButton.textContent = useLabel; useButton.classList.toggle('work', !!work); }
       const hint = wilderness
-        ? (walking ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · Jump · Dive · Plant: mark this spot with your banner · Home: hold still to return to where you began'
-          : 'WASD: walk · Shift: run · Space: jump · C: dive · E: pick up · I: bag and crafting · V: plant banner · R: return home · T: return to banner · drag: look · wheel: zoom · Tab: overview · P: pause')
+        ? (walking ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look, tap a tree to target it · Chop / Pick up: hold to keep swinging · Jump · Dive · Plant: mark this spot with your banner · Home: hold still to return to where you began'
+          : 'WASD: walk · Shift: run · Space: jump · C: dive · E: pick up / chop / cut log / deliver (hold to keep swinging) · click a tree: target it · I: bag, crafting, stockpile · V: plant banner · R: return home · T: return to banner · drag: look · wheel: zoom · Tab: overview · P: pause')
           : coarse ? 'drag: orbit · two fingers: move + zoom' : 'drag: orbit · WASD: pan · Tab: walk · P: pause')
         : walking
         ? (coarse ? 'left thumb: walk (push to the rim to run) · right: drag to look · tap Jump twice to jump higher, hold to swim up · Dive · Plant: mark this spot with your banner · Home / To banner: hold still to return · Farm: fields, people, animals'
@@ -904,6 +904,8 @@ function frame(timestamp?: number) {
 }
 
 // ---- input ----
+// W3: releasing E stops the repeated axe swings.
+window.addEventListener('keyup', (e) => { if (e.key === 'e' || e.key === 'E') wildGame?.holdEnd(); });
 window.addEventListener('keydown', (e) => {
   const target = e.target;
   // Capture before OrbitRig's listener so UI editing cannot also steer/zoom.
@@ -927,7 +929,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'p' || e.key === 'P') time.paused = !time.paused;
   if (e.code === 'Space' && !explore?.active) e.preventDefault();
   if (e.key === 'Tab' && explore) { e.preventDefault(); toggleMode(); }
-  if ((e.key === 'e' || e.key === 'E') && explore?.active) gather();
+  if ((e.key === 'e' || e.key === 'E') && explore?.active) {
+    // W3: in the wilderness E is held to keep swinging the axe.
+    if (wilderness && wildGame) { if (!e.repeat) wildGame.holdStart(); } else gather();
+  }
   if (e.key === 'b' || e.key === 'B') { document.body.classList.toggle('show-build'); document.body.classList.remove('show-life'); }
   if ((e.key === 'i' || e.key === 'I') && wildGame) wildGame.toggle();
   else if (e.key === 'i' || e.key === 'I') { document.body.classList.toggle('show-life'); document.body.classList.remove('show-build'); }
@@ -1047,6 +1052,7 @@ if (!isMap && !isKit) {
   };
   if (wilderness && !noUi) {
     wildGame = new WildGame({ session, scene, explore: () => explore, groundY: (x, z) => residentSurfaceAt(world, Math.floor(x), Math.floor(z)),
+      camera: rig.camera, canvas: renderer.domElement, nature: () => natureView,
       onChanged: () => { const r = store.save(session); persistenceMessage = r.message; saveScheduler.saved(Date.now()); }, notice: (message) => { lastAction = message; } });
     explore.reachOverride = wildGame.reachTarget;
   }

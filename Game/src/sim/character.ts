@@ -20,6 +20,7 @@ import type { ActiveEntityKind } from './world';
 import { OBSTRUCTION_RADIUS } from './terrain';
 // M010: a sapling's trunk is thinner than a mature tree's (the stage the renderer draws).
 import { LIFE_TRUNK, TreeStage, treeLife } from './woodland';
+import { blockingTrunks, trunkDistance } from './felling';
 // M012: the settlement's structure layer (fence and gate edges, buildings) is the one villagers and animals route on.
 import { settlementCollision } from './homestead';
 import { MAX_STEP, structureHits } from './nav';
@@ -299,6 +300,24 @@ function resolveEntities(world: World, s: CharacterState): void {
       }
     }
   }
+  // W3: a fallen trunk lies on the ground. Thin ones are stepped over; a thick
+  // one blocks below its top, so the player walks around it or jumps over.
+  for (const t of blockingTrunks(world, s.x, s.z, 2)) {
+    const top = t.y + (t.r * 2) / 100;
+    if (s.y >= top - 0.05 || s.y + CHARACTER_HEIGHT < t.y) continue;
+    const c = trunkDistance(t, s.x, s.z);
+    const min = t.r / 100 + CHARACTER_RADIUS;
+    if (c.d >= min) continue;
+    const ox = c.d > 1e-6 ? (s.x - c.px) / c.d : -DIRS_PERP(t)[0], oz = c.d > 1e-6 ? (s.z - c.pz) / c.d : -DIRS_PERP(t)[1];
+    const nx = c.px + ox * min, nz = c.pz + oz * min;
+    if (clear(world, nx, s.y, nz, settlementHits(world, s.x, s.y, s.z))) { s.x = nx; s.z = nz; }
+  }
+}
+
+/** A trunk's sideways direction (for a character exactly on its axis). */
+function DIRS_PERP(t: { dir: number }): [number, number] {
+  const a = (t.dir / 16) * Math.PI * 2;
+  return [-Math.sin(a), Math.cos(a)];
 }
 
 // ---------- STAB-002 S2: soft contact with moving bodies ----------
@@ -720,6 +739,10 @@ export function canStandAt(world: World, x: number, y: number, z: number): boole
         if (Math.hypot(x - e.x, z - e.z) < body + CHARACTER_RADIUS + 0.1) return false;
       }
     }
+  }
+  for (const t of blockingTrunks(world, x, z, 2)) {
+    if (y >= t.y + (t.r * 2) / 100 - 0.05 || y + CHARACTER_HEIGHT < t.y) continue;
+    if (trunkDistance(t, x, z).d < t.r / 100 + CHARACTER_RADIUS + 0.1) return false;
   }
   return true;
 }

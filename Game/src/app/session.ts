@@ -32,7 +32,7 @@ import type { UpgradeVersion } from '../sim/homestead';
 import { HARVEST_MODES, HarvestMode, POLICY_LIMITS, WoodPolicy, speciesFromText } from '../sim/woodland';
 import type { TreeSpecies } from '../sim/vegetation';
 import { plantTree, protectTree, protectZone, removeZone, setWoodlandPolicy } from '../sim/forestry';
-import { LATEST_WILD_CONTENT, WILD_CONTENT_V1, WILD_CONTENT_V2, createWildState, stepWild } from '../sim/gathering';
+import { LATEST_WILD_CONTENT, WILD_CONTENT_V1, WildContent, createWildState, isWildContent, stepWild } from '../sim/gathering';
 import { WildCommand, WildOutcome, dispatchWild, isWildCommandType, validateWildCommand, validateWildOutcome, wildAgrees } from './wild-commands';
 
 export const JOURNAL_SCHEMA = 1 as const;
@@ -216,7 +216,7 @@ export interface CommandJournal {
    * pickups, items or crafting), so every W1 journal keeps its exact bytes; a
    * v1 world gains v2 through the journaled `upgrade_wilderness` command.
    */
-  wildContent?: typeof WILD_CONTENT_V2;
+  wildContent?: WildContent;
   /**
    * Present once history has been compacted: entries before `sequence` were
    * dropped because a snapshot authenticated against `hash` (the state hash at
@@ -592,12 +592,12 @@ export function createJournal(
     throw new Error('legacy journal schemas only exist for generator v1');
   }
   if (scenario === WILDERNESS && schema !== CURRENT_JOURNAL_SCHEMA) throw new Error('a wilderness world needs the current journal schema');
-  if (wildContent !== WILD_CONTENT_V1 && (wildContent !== WILD_CONTENT_V2 || scenario !== WILDERNESS)) throw new Error('wilderness content v2 exists only in a wilderness world');
+  if (wildContent !== WILD_CONTENT_V1 && (!isWildContent(wildContent) || scenario !== WILDERNESS)) throw new Error('wilderness content v2 and v3 exist only in a wilderness world');
   return {
     schema, seed,
     ...(generatorVersion === GENERATOR_V2 ? { generatorVersion: GENERATOR_V2 } : {}),
     ...(scenario === WILDERNESS ? { scenario: WILDERNESS } : {}),
-    ...(wildContent === WILD_CONTENT_V2 ? { wildContent: WILD_CONTENT_V2 } : {}),
+    ...(isWildContent(wildContent) ? { wildContent } : {}),
     starterInventory: inventory(starterInventoryFor(scenario)), entries: [],
   };
 }
@@ -614,7 +614,7 @@ export function journalGenerator(journal: Pick<CommandJournal, 'generatorVersion
 
 /** W2: wilderness content version a journal starts with (absent field = v1). */
 export function journalWildContent(journal: Pick<CommandJournal, 'wildContent'>): number {
-  return journal.wildContent === WILD_CONTENT_V2 ? WILD_CONTENT_V2 : WILD_CONTENT_V1;
+  return isWildContent(journal.wildContent) ? journal.wildContent : WILD_CONTENT_V1;
 }
 
 /** Scenario a journal replays on (absent field = settlement). */
@@ -629,7 +629,7 @@ export function validateJournal(value: unknown): CommandJournal {
     || !Array.isArray(value.entries) || value.entries.length > MAX_JOURNAL_ENTRIES
     || 'generatorVersion' in value && (value.generatorVersion !== GENERATOR_V2 || value.schema !== CURRENT_JOURNAL_SCHEMA)
     || 'scenario' in value && (value.scenario !== WILDERNESS || value.schema !== CURRENT_JOURNAL_SCHEMA)
-    || 'wildContent' in value && (value.wildContent !== WILD_CONTENT_V2 || value.scenario !== WILDERNESS)) {
+    || 'wildContent' in value && (!isWildContent(value.wildContent) || value.scenario !== WILDERNESS)) {
     throw new Error('invalid command journal');
   }
   const scenario: Scenario = value.scenario === WILDERNESS ? WILDERNESS : 'settlement';
@@ -647,7 +647,7 @@ export function validateJournal(value: unknown): CommandJournal {
     schema: value.schema, seed: value.seed,
     ...('generatorVersion' in value ? { generatorVersion: GENERATOR_V2 } : {}),
     ...(scenario === WILDERNESS ? { scenario: WILDERNESS } : {}),
-    ...('wildContent' in value ? { wildContent: WILD_CONTENT_V2 } : {}),
+    ...(isWildContent(value.wildContent) ? { wildContent: value.wildContent } : {}),
     ...(base ? { base } : {}),
     starterInventory: inventory(value.starterInventory), entries: [],
   };
@@ -1233,8 +1233,8 @@ export function genesisWorld(seed: number, starter = inventory(M002_STARTER_INVE
   const world = generateWorld(seed, 0, generatorVersion, scenario);
   world.inventory = { ...starter };
   if (schema === CURRENT_JOURNAL_SCHEMA) world.life = createLifeState(scenario);
-  // W2: wilderness content v2 starts with its pickups in the land and an empty bag.
-  if (scenario === WILDERNESS && wildContent === WILD_CONTENT_V2) world.wild = createWildState();
+  // W2: wilderness content v2 starts with its pickups in the land and an empty bag; W3 (v3) adds felling.
+  if (scenario === WILDERNESS && isWildContent(wildContent)) world.wild = createWildState(wildContent, seed, 0);
   return world;
 }
 

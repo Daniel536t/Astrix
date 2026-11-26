@@ -46,8 +46,8 @@ test('pickup generation is pure, deterministic, load-order independent, and leav
   // Ids are their own namespace and index the chunk's list.
   for (const [cx, cz] of chunks) pickupsInChunk(1337, 2, cx, cz).forEach((p, i) => assert.equal(p.id, `p:${cx},${cz}:${i}`));
   // Natural entities and the state hash do not depend on whether pickups were generated first.
-  const g1 = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
-  const g2 = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const g1 = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2);
+  const g2 = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2);
   pickupsNear(g1.world, SPAWN.x, SPAWN.z, 90);
   for (const s of [g1, g2]) for (let dz = -64; dz <= 64; dz += 32) for (let dx = -64; dx <= 64; dx += 32) surfaceAt(s.world, SPAWN.x + dx, SPAWN.z + dz);
   const ents = (s: GameSession) => JSON.stringify([...s.world.entities.values()].sort((x, y) => x.id.localeCompare(y.id)));
@@ -61,7 +61,7 @@ test('pickup generation is pure, deterministic, load-order independent, and leav
 });
 
 test('placement follows geography: dry land only, stones on rock, gravel and banks, branches under trees', () => {
-  const all: LivePickup[] = pickupsNear(GameSession.genesis(1337, GENERATOR_V2, 'wilderness').world, SPAWN.x, SPAWN.z, 200);
+  const all: LivePickup[] = pickupsNear(GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2).world, SPAWN.x, SPAWN.z, 200);
   assert.ok(all.length > 500, `${all.length} pickups within 200 m`);
   let branchesInWoods = 0, branches = 0;
   for (const p of all) {
@@ -93,12 +93,12 @@ test('settlement worlds have no pickups, refuse the wilderness commands, and kee
   }
   assert.equal(s.stateHash, 'e659504b056654dc');
   // A wilderness state block is refused in a settlement snapshot.
-  const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2);
   const bad = clone(GameSession.genesis(1337, GENERATOR_V2).snapshot) as unknown as Record<string, unknown>;
   bad.wild = clone((w.snapshot as unknown as Record<string, unknown>).wild);
   assert.throws(() => validateWorldSnapshot(bad), /life-loop fields/);
   // A settlement journal cannot carry a pickup.
-  const t = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const t = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2);
   const near = pickupsNear(t.world, SPAWN.x, SPAWN.z, 20)[0];
   assert.ok(take(t, near).ok);
   const j = clone(GameSession.genesis(1337, GENERATOR_V2).journal) as unknown as { entries: unknown[] };
@@ -142,7 +142,7 @@ test('a W1 wilderness save made by the 69296e9 code loads, replays and keeps pla
 
 test('the first stone axe is reachable fast from the seed-1337 spawn: branch, stone and 2 fibre within 40 m', () => {
   assert.deepEqual((({ x, z }) => ({ x, z }))(wildernessSpawn(1337, 2)), { x: -82, z: -172 });
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2);
   const near = pickupsNear(s.world, SPAWN.x, SPAWN.z, 40);
   const count = (k: string) => near.filter((p) => p.kind === k).reduce((n, p) => n + p.qty, 0);
   assert.ok(count('branch') >= 3 && count('loose_stone') >= 3 && count('fiber_plant') >= 4, JSON.stringify({ b: count('branch'), s: count('loose_stone'), f: count('fiber_plant') }));
@@ -162,7 +162,7 @@ test('the first stone axe is reachable fast from the seed-1337 spawn: branch, st
   assert.ok(send(s, { type: 'equip', item: 'stone_axe' }).ok);
   assert.equal(s.world.wild!.equipped, 'tool:1');
   assert.equal(s.world.wild!.tools[0].durability, 60);
-  // Tree felling stays refused until W3 (physical felling), even with the axe in hand.
+  // One-step harvest stays refused (W3: trees are felled swing by swing with `chop`), even with the axe in hand.
   const tree = [...s.world.entities.values()].find((e) => e.kind.startsWith('styl_tree'))!;
   const h = send(s, { type: 'harvest', entityId: tree.id });
   assert.equal(h.ok, false);
@@ -170,7 +170,7 @@ test('the first stone axe is reachable fast from the seed-1337 spawn: branch, st
 });
 
 test('no axe without its materials: crafting refuses missing inputs and changes nothing', () => {
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2);
   const before = s.stateHash;
   for (const recipe of WILD_RECIPES.map((r) => r.id)) {
     const r = send(s, { type: 'craft', recipe });
@@ -197,7 +197,7 @@ test('no axe without its materials: crafting refuses missing inputs and changes 
 });
 
 test('reach and carry capacity are enforced; a multi-unit pickup is partly taken and keeps the rest', () => {
-  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+  const s = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 2);
   const stone = pickupsNear(s.world, SPAWN.x, SPAWN.z, 60).find((p) => p.kind === 'loose_stone')!;
   const far = send(s, { type: 'pickup', entityId: stone.id, at: at({ x: stone.x + PICKUP_REACH + 0.5, z: stone.z }) });
   assert.equal((far as { code: string }).code, 'out_of_reach');
@@ -231,7 +231,8 @@ test('pickup, drop, craft, equip and eat are journaled and replay; saves restore
   const loaded = store.load();
   assert.equal(loaded.status, 'new');
   const s = loaded.session;
-  assert.equal(s.journal.wildContent, 2);
+  // W3: a new world now starts with the latest content (v3); the W2 commands are unchanged there.
+  assert.equal(s.journal.wildContent, 3);
   ticks(s, 3);
   const taken: string[] = [];
   for (const kind of ['branch', 'loose_stone', 'fiber_plant', 'fiber_plant', 'grass_tuft', 'grass_tuft', 'berry_bush']) {
@@ -269,7 +270,7 @@ test('pickup, drop, craft, equip and eat are journaled and replay; saves restore
     assert.equal((again as { code: string }).code, 'not_found');
   }
   s.compact();
-  assert.equal(s.journal.wildContent, 2);
+  assert.equal(s.journal.wildContent, 3);
   assert.equal(GameSession.restore(clone(s.snapshot), clone(s.journal)).stateHash, hash);
   // Tampering: a recorded outcome that disagrees, an item that does not exist, an overweight bag.
   const j = clone(s.journal.entries.length ? s.journal : mid.journal) as unknown as { entries: Array<{ command: Record<string, unknown>; outcome: Record<string, unknown> }> };

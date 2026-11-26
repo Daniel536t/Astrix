@@ -9,8 +9,15 @@ import { Block, blocksGeometry } from './vegetation-kit';
 import { natureMaterial } from './nature';
 import type { LivePickup, PickupKind } from '../sim/gathering';
 
-type DrawKind = PickupKind | 'pile';
-const KINDS: DrawKind[] = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom', 'pile'];
+// W3: logs (a single log, and a stack for a pile of several, e.g. at a stockpile).
+type DrawKind = PickupKind | 'pile' | 'log' | 'log_stack';
+const KINDS: DrawKind[] = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom', 'pile', 'log', 'log_stack'];
+const LOG = '#7A5638', LOG_CUT = '#E2C997';
+const log = (x: number, y: number, z: number, len = 1.1, r = 0.34): Block[] => [
+  { x, y, z, w: len, h: r, d: r, hex: LOG },
+  { x: x - len / 2 - 0.01, y, z, w: 0.03, h: r * 0.86, d: r * 0.86, hex: LOG_CUT },
+  { x: x + len / 2 + 0.01, y, z, w: 0.03, h: r * 0.86, d: r * 0.86, hex: LOG_CUT },
+];
 const MAX_PER_KIND = 256;
 
 const BARK = '#7A5638', BARK_D = '#5E412A', STONE = '#9A9890', STONE_D = '#7E7C76', FIBRE = '#9DB45A', FIBRE_D = '#7E9A44',
@@ -54,6 +61,8 @@ function plan(kind: DrawKind): Block[] {
       { x: 0, y: 0.08, z: 0, w: 0.6, h: 0.16, d: 0.5, hex: SOIL },
       { x: 0.05, y: 0.2, z: 0, w: 0.36, h: 0.1, d: 0.3, hex: BARK },
     ];
+    case 'log': return log(0, 0.17, 0);
+    case 'log_stack': return [...log(0, 0.17, -0.19), ...log(0, 0.17, 0.19), ...log(0, 0.48, 0)];
   }
 }
 
@@ -87,16 +96,17 @@ export class PickupView {
     const counts = new Map<DrawKind, number>();
     this.count = 0;
     for (const p of list) {
-      const mesh = this.meshes.get(p.kind)!;
-      const i = counts.get(p.kind) ?? 0;
+      const kind: DrawKind = p.kind === 'pile' && p.item === 'log' ? (p.qty > 1 ? 'log_stack' : 'log') : p.kind;
+      const mesh = this.meshes.get(kind)!;
+      const i = counts.get(kind) ?? 0;
       if (i >= MAX_PER_KIND) continue;
       const y = groundY(p.x, p.z) ?? p.y;
-      this.q.setFromAxisAngle(this.up, p.rot);
+      this.q.setFromAxisAngle(this.up, kind === 'log' || kind === 'log_stack' ? pileTurn(p.id) : p.rot);
       // A partly picked bush or plant looks a little smaller.
       const s = p.kind === 'berry_bush' || p.kind === 'fiber_plant' ? 0.8 + 0.1 * Math.min(2, p.qty - 1) : 0.9 + 0.08 * p.variant;
       this.m.compose(this.pos.set(p.x, y, p.z), this.q, this.one.set(s, s, s));
       mesh.setMatrixAt(i, this.m);
-      counts.set(p.kind, i + 1);
+      counts.set(kind, i + 1);
       this.count++;
     }
     for (const [kind, mesh] of this.meshes) {
@@ -105,6 +115,13 @@ export class PickupView {
       mesh.instanceMatrix.needsUpdate = true;
     }
   }
+}
+
+/** A fixed turn per pile id, so logs do not all lie parallel. */
+function pileTurn(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return (h % 628) / 100;
 }
 
 /** The stone axe: a haft and a lashed stone head, for the right hand (arm space, the hand at y ≈ -0.6). */

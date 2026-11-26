@@ -15,7 +15,7 @@
 // only swaps the model and its shadow casting.
 import * as THREE from 'three';
 import { Entity, World, chunkOriginX, chunkOriginZ } from '../sim/world';
-import { TreeStage, treeChangesSince, treeLife, woodlandOf } from '../sim/woodland';
+import { TreeStage, livingWoodlandOf, treeChangesSince, treeLife } from '../sim/woodland';
 import { growthStage, isVegetationKind, treeSpecies, vegetationVariant } from '../sim/vegetation';
 import { DEFAULT_LOD_BANDS, LOD_FAR, LOD_MID, LOD_NEAR, LodBand, LodBands, LodBatch, LodGeometry, LodSet, LodTarget, TiledLodMesh, Vec3Like } from './lod';
 import { VegetationPlan, blocksGeometry, cairnPlan, orePlan, planBlocks, vegetationPlan } from './vegetation-kit';
@@ -167,6 +167,9 @@ export class NatureView {
   private scan: string[] = [];
   private scanAt = 0;
   private lastTick = -1;
+  /** W3: trees drawn by a presentation proxy (shaking, falling) instead of the batch. */
+  private readonly hidden = new Set<string>();
+  private readonly hiddenDirty: string[] = [];
 
   constructor(private readonly world: World, private readonly options: NatureBuildOptions = {}) {
     this.group.name = 'styl_nature';
@@ -207,7 +210,15 @@ export class NatureView {
     this.group.add(...this.lod.objects);
   }
 
+  /** W3: hide or show one tree's batch instance (presentation only; applied on the next sync). */
+  setHidden(id: string, on: boolean): void {
+    if (this.hidden.has(id) === on) return;
+    if (on) this.hidden.add(id); else this.hidden.delete(id);
+    this.hiddenDirty.push(id);
+  }
+
   private modelOf(e: Entity): ResolvedModel | null {
+    if (this.hidden.has(e.id)) return null;
     if (e.harvested && !e.kind.startsWith('styl_tree_')) return null;
     return natureModel(e, this.world.seed, this.world);
   }
@@ -310,10 +321,11 @@ export class NatureView {
     this.changeSeq = ch.seq;
     const ids = ch.ids ?? [...this.entries.keys()];
     for (const id of ids) changed = this.refresh(id, camera) || changed;
+    for (const id of this.hiddenDirty.splice(0)) changed = this.refresh(id, camera) || changed;
     // Time-driven growth: a rotating scan of every drawn entity, a slice per call, restarted when the tick moves.
     const tick = world.life?.tick ?? 0;
     // Only a living woodland (rules v5) changes over time; older worlds have nothing to scan for.
-    if (woodlandOf(world) && tick !== this.lastTick && this.scanAt >= this.scan.length) {
+    if (livingWoodlandOf(world) && tick !== this.lastTick && this.scanAt >= this.scan.length) {
       this.lastTick = tick;
       this.scan = [...this.entries.keys()];
       this.scanAt = 0;

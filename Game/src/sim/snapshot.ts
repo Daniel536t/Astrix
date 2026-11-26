@@ -310,7 +310,7 @@ function validateLifeFields(value: Record<string, unknown>, wild = false): Pick<
     const stored = homestead!.sites!.reduce((n, x) => n + (x.stock?.[k] ?? 0), 0);
     if (held > (stockpiles[0].inventory[k] ?? 0) + stored) throw new Error('building-site reservations exceed the store');
   }
-  const wildState = value.wild === undefined ? undefined : validateWildSnapshot(value.wild);
+  const wildState = value.wild === undefined ? undefined : validateWildSnapshot(value.wild, value.tick);
   return { tick: value.tick, stockpiles, jobs, crops, ...(homestead ? { homestead } : {}), ...(wildState ? { wild: wildState } : {}) };
 }
 

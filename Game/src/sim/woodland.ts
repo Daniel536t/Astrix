@@ -242,13 +242,19 @@ export const woodlandOf = (world: World): WoodlandState | null =>
   world.homestead && world.homestead.version >= WOODLAND_VERSION && world.homestead.woodland ? world.homestead.woodland : null;
 
 /**
+ * The woodland whose lifecycle drives the trees: the homestead's (rules v5)
+ * or, W3, the wilderness's (content v3, `world.wild.fell.woodland`).
+ */
+export const livingWoodlandOf = (world: World): WoodlandState | null => woodlandOf(world) ?? world.wild?.fell?.woodland ?? null;
+
+/**
  * The single source of a tree's species, stage and presence for the sim
  * (nav, felling, woodcutter), the player's collision, the renderer and the
  * inspector. Without rules v5 it is the M008 visual stage, unchanged.
  */
 export function treeLife(world: World, e: Entity): TreeLife | null {
   if (!isTreeKind(e.kind)) return null;
-  const w = woodlandOf(world);
+  const w = livingWoodlandOf(world);
   if (!w) {
     const species = treeSpecies(e, world.seed) as TreeSpecies;
     return { species, stage: growthStage(e)!, present: !e.harvested, age: null, nextIn: null, legacy: true };

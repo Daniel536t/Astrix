@@ -21,16 +21,20 @@ import {
   chunkOriginX, chunkOriginZ, forestScore, rockScore, surfaceAt, worldToChunkX, worldToChunkZ,
 } from './world';
 import { hash2i, mulberry32 } from './noise';
+import { FellSnapshot, FellState, WILD_CONTENT_V3, createFell, fellFromSnapshot, fellSnapshot, stepFelling, validateFell } from './felling';
 
-/** Wilderness content versions. v1 (W1): no pickups, items or crafting. v2 (W2): this file. */
+/** Wilderness content versions. v1 (W1): no pickups, items or crafting. v2 (W2): this file. v3 (W3): physical tree felling (sim/felling.ts). */
 export const WILD_CONTENT_V1 = 1 as const;
 export const WILD_CONTENT_V2 = 2 as const;
-export const LATEST_WILD_CONTENT = WILD_CONTENT_V2;
+export { WILD_CONTENT_V3 };
+export const LATEST_WILD_CONTENT = 3 as const;
+export type WildContent = typeof WILD_CONTENT_V2 | typeof WILD_CONTENT_V3;
+export const isWildContent = (v: unknown): v is WildContent => v === WILD_CONTENT_V2 || v === 3;
 
 export const PICKUP_KINDS = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom'] as const;
 export type PickupKind = (typeof PICKUP_KINDS)[number];
 /** Carried count items. */
-export const WILD_ITEMS = ['berries', 'branch', 'cord', 'fiber', 'grass', 'mushroom', 'stone'] as const;
+export const WILD_ITEMS = ['berries', 'branch', 'cord', 'fiber', 'grass', 'log', 'mushroom', 'stone'] as const;
 export type WildItem = (typeof WILD_ITEMS)[number];
 export const TOOL_KINDS = ['stone_axe'] as const;
 export type ToolKind = (typeof TOOL_KINDS)[number];
@@ -40,15 +44,15 @@ export const PICKUP_ITEM: Record<PickupKind, WildItem> = {
   branch: 'branch', loose_stone: 'stone', fiber_plant: 'fiber', grass_tuft: 'grass', berry_bush: 'berries', mushroom: 'mushroom',
 };
 export const ITEM_LABEL: Record<WildItem | ToolKind, string> = {
-  berries: 'berries', branch: 'branch', cord: 'cord', fiber: 'plant fibre', grass: 'grass', mushroom: 'mushroom', stone: 'stone', stone_axe: 'stone axe',
+  berries: 'berries', branch: 'branch', cord: 'cord', fiber: 'plant fibre', grass: 'grass', log: 'log', mushroom: 'mushroom', stone: 'stone', stone_axe: 'stone axe',
 };
 export const PICKUP_LABEL: Record<PickupKind, string> = {
   branch: 'branch', loose_stone: 'stone', fiber_plant: 'fibre plant', grass_tuft: 'grass', berry_bush: 'berries', mushroom: 'mushroom',
 };
 
-/** Carry weight per unit; the bag holds CARRY_CAPACITY in total (tools included). */
+/** Carry weight per unit; the bag holds CARRY_CAPACITY in total (tools included). W3: a log weighs 9, so 1 to 3 at a time. */
 export const ITEM_WEIGHT: Record<WildItem | ToolKind, number> = {
-  berries: 1, branch: 2, cord: 1, fiber: 1, grass: 1, mushroom: 1, stone: 2, stone_axe: 3,
+  berries: 1, branch: 2, cord: 1, fiber: 1, grass: 1, log: 9, mushroom: 1, stone: 2, stone_axe: 3,
 };
 export const CARRY_CAPACITY = 30;
 /** Reach from the player's reported position to a pickup (metres). */
@@ -95,7 +99,7 @@ export interface Pile { id: string; item: WildItem; qty: number; x: number; y: n
 export interface WildTool { id: string; kind: ToolKind; durability: number }
 
 export interface WildState {
-  content: typeof WILD_CONTENT_V2;
+  content: WildContent;
   hunger: number;
   items: Record<string, number>;
   tools: WildTool[];
@@ -105,13 +109,21 @@ export interface WildState {
   /** Generated pickups partly taken: units left. */
   left: Map<string, number>;
   piles: Map<string, Pile>;
-  /** Next id for tools and piles. */
+  /** Next id for tools, piles, trunks and stockpiles. */
   nextId: number;
+  /** W3 (content v3): felling, trunks, stockpiles, events and the wilderness woodland. */
+  fell?: FellState;
 }
 
-export function createWildState(): WildState {
-  return { content: WILD_CONTENT_V2, hunger: HUNGER_START, items: {}, tools: [], equipped: null,
-    taken: new Set(), left: new Map(), piles: new Map(), nextId: 1 };
+export function createWildState(content: WildContent = WILD_CONTENT_V2, seed = 0, tick = 0): WildState {
+  return { content, hunger: HUNGER_START, items: {}, tools: [], equipped: null,
+    taken: new Set(), left: new Map(), piles: new Map(), nextId: 1, ...(content === WILD_CONTENT_V3 ? { fell: createFell(seed, tick) } : {}) };
+}
+
+/** A content-v2 state gains W3 felling (journaled `upgrade_wilderness {content: 3}`). */
+export function upgradeWildState(w: WildState, seed: number, tick: number): void {
+  w.content = WILD_CONTENT_V3;
+  w.fell = createFell(seed, tick);
 }
 
 export const PICKUP_ID = /^p:(\d{1,2}),(\d{1,2}):(\d{1,3})$/;
@@ -346,10 +358,11 @@ export function eat(world: World, item: WildItem): WildResult<{ hunger: number }
   return { ok: true, value: { hunger: w.hunger } };
 }
 
-/** One world tick of wilderness life (hunger). */
+/** One world tick of wilderness life (hunger; W3: the woodland's stumps and regrowth). */
 export function stepWild(world: World, tick: number): void {
   const w = world.wild;
   if (w && tick % HUNGER_TICKS === 0) w.hunger = Math.min(100, w.hunger + 1);
+  if (w?.fell) stepFelling(world, tick);
 }
 
 function sortBag(bag: Record<string, number>): Record<string, number> {
@@ -358,8 +371,9 @@ function sortBag(bag: Record<string, number>): Record<string, number> {
 
 // ---------- snapshot form ----------
 export interface WildSnapshot {
-  content: typeof WILD_CONTENT_V2;
+  content: WildContent;
   equipped?: string;
+  fell?: FellSnapshot;
   hunger: number;
   items: Record<string, number>;
   left: Record<string, number>;
@@ -373,6 +387,7 @@ export function wildSnapshot(w: WildState): WildSnapshot {
   return {
     content: w.content,
     ...(w.equipped ? { equipped: w.equipped } : {}),
+    ...(w.fell ? { fell: fellSnapshot(w.fell) } : {}),
     hunger: w.hunger,
     items: sortBag(w.items),
     left: Object.fromEntries([...w.left.entries()].sort(([a], [b]) => a.localeCompare(b))),
@@ -388,15 +403,19 @@ const uintMax = (v: unknown, max: number): v is number => typeof v === 'number' 
 const fin = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 /** Strict: the canonical form only (the caller compares bytes). Throws on anything else. */
-export function validateWildSnapshot(value: unknown): WildSnapshot {
+export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
   const bad = (what: string): never => { throw new Error(`snapshot wilderness state: invalid ${what}`); };
-  if (!isObj(value) || value.content !== WILD_CONTENT_V2) bad('content');
+  if (!isObj(value) || !isWildContent(value.content)) bad('content');
   const v = value as Record<string, unknown>;
+  const v3 = v.content === WILD_CONTENT_V3;
+  if (v3 !== (v.fell !== undefined)) bad('felling block');
+  // Logs exist only with felling (content v3).
+  const itemOk = (k: unknown) => WILD_ITEMS.includes(k as WildItem) && (v3 || k !== 'log');
   if (!uintMax(v.hunger, 100) || !uintMax(v.nextId, 9_999_999) || v.nextId < 1) bad('counters');
   if (!isObj(v.items) || !isObj(v.left) || !Array.isArray(v.piles) || !Array.isArray(v.taken) || !Array.isArray(v.tools)) bad('fields');
   const items: Record<string, number> = {};
   for (const [k, n] of Object.entries(v.items as Record<string, unknown>)) {
-    if (!WILD_ITEMS.includes(k as WildItem) || !uintMax(n, 10_000) || n < 1) bad('item');
+    if (!itemOk(k) || !uintMax(n, 10_000) || n < 1) bad('item');
     items[k] = n as number;
   }
   const taken = v.taken as unknown[];
@@ -416,7 +435,7 @@ export function validateWildSnapshot(value: unknown): WildSnapshot {
   const pileIds = new Set<string>();
   for (const p of v.piles as unknown[]) {
     if (!isObj(p) || typeof p.id !== 'string' || !PILE_ID.test(p.id) || pileIds.has(p.id) || Number(p.id.slice(2)) >= (v.nextId as number)
-      || !WILD_ITEMS.includes(p.item as WildItem) || !uintMax(p.qty, 10_000) || p.qty < 1
+      || !itemOk(p.item) || !uintMax(p.qty, 10_000) || p.qty < 1
       || !fin(p.x) || !fin(p.y) || !fin(p.z) || Math.abs(p.x) >= HALF || Math.abs(p.z) >= HALF) bad('pile');
     const q = p as unknown as Pile;
     pileIds.add(q.id);
@@ -433,9 +452,11 @@ export function validateWildSnapshot(value: unknown): WildSnapshot {
   }
   if (tools.length > 64) bad('tools');
   if (v.equipped !== undefined && (typeof v.equipped !== 'string' || !toolIds.has(v.equipped))) bad('equipped tool');
+  const fell = v3 ? validateFell(v.fell, tick, v.nextId as number) : undefined;
   const s: WildSnapshot = {
-    content: WILD_CONTENT_V2,
+    content: v.content as WildContent,
     ...(v.equipped !== undefined ? { equipped: v.equipped as string } : {}),
+    ...(fell ? { fell } : {}),
     hunger: v.hunger as number, items, left, nextId: v.nextId as number, piles, taken: taken as string[], tools,
   };
   const weight = carriedWeight(wildFromSnapshot(s));
@@ -445,7 +466,7 @@ export function validateWildSnapshot(value: unknown): WildSnapshot {
 
 export function wildFromSnapshot(s: WildSnapshot): WildState {
   return {
-    content: WILD_CONTENT_V2, hunger: s.hunger, items: { ...s.items },
+    content: s.content, ...(s.fell ? { fell: fellFromSnapshot(s.fell) } : {}), hunger: s.hunger, items: { ...s.items },
     tools: s.tools.map((t) => ({ ...t })), equipped: s.equipped ?? null,
     taken: new Set(s.taken), left: new Map(Object.entries(s.left)),
     piles: new Map(s.piles.map((p) => [p.id, { ...p }])), nextId: s.nextId,

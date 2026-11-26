@@ -48,6 +48,8 @@ interface SavedAvatar {
 export const CAMERA_WATER_CLEARANCE = 0.35;
 /** Seconds the death screen shows before the character respawns. */
 export const RESPAWN_DELAY = 3;
+/** W3: one axe swing, wind-up to recovery (s). */
+export const SWING_S = 0.5;
 /** A return to a far banner waits this long for its terrain to stream in, then gives up. */
 export const RETURN_STREAM_TIMEOUT_MS = 30_000;
 
@@ -92,6 +94,19 @@ export class ExploreController {
   reachOverride: ((x: number, z: number) => { x: number; y: number; z: number } | null) | null = null;
   /** W2: the right arm joint, for a held tool. */
   get rightHand(): THREE.Object3D { return this.figure.armR; }
+  /** W3: an accepted axe swing (presentation): start time and the direction to face. */
+  private swingStart = -1;
+  private swingFace: number | null = null;
+  /** Swings drawn this session (metrics). */
+  swings = 0;
+  /** W3: play the axe swing toward (x, z): wind-up over the head, strike, recover (SWING_S). */
+  swing(x: number, z: number): void {
+    const s = this.state;
+    this.swingStart = performance.now();
+    this.swingFace = s ? Math.atan2(x - s.x, z - s.z) : null;
+    this.swings++;
+  }
+  get swinging(): boolean { return this.swingStart >= 0 && performance.now() - this.swingStart < SWING_S * 1000; }
   /** Player-facing messages (planted, returning, cancelled...). */
   onNotice: ((message: string, kind?: 'good' | 'warn') => void) | null = null;
 
@@ -348,6 +363,7 @@ export class ExploreController {
     const x = p.x + (s.x - p.x) * a, y = p.y + (s.y - p.y) * a, z = p.z + (s.z - p.z) * a;
     placeFigure(this.figure, x, y, z, s.heading);
     animateFigure(this.figure, s, frameDt, y);
+    this.poseSwing(s);
 
     // Follow camera: smooth the target (snappier horizontally than vertically
     // so stepping up a voxel does not jolt the view).
@@ -385,6 +401,23 @@ export class ExploreController {
 
     this.saveTimer += frameDt;
     if (this.saveTimer > 3) { this.saveTimer = 0; this.persist(); }
+  }
+
+  /** W3: the two-handed axe swing laid over the walk pose. */
+  private poseSwing(s: CharacterState): void {
+    if (this.swingStart < 0) return;
+    const t = (performance.now() - this.swingStart) / 1000 / SWING_S;
+    if (t >= 1) { this.swingStart = -1; return; }
+    if (this.swingFace !== null) { s.heading = this.swingFace; this.figure.root.rotation.y = this.swingFace; }
+    const f = this.figure;
+    // Wind-up to over the head (0-40 %), strike down and forward (40-62 %), recover.
+    const up = -2.8, down = -0.45, rest = f.armR.rotation.x;
+    const ease = (k: number) => k * k * (3 - 2 * k);
+    const arm = t < 0.4 ? rest + (up - rest) * ease(t / 0.4) : t < 0.62 ? up + (down - up) * ((t - 0.4) / 0.22) ** 2 : down + (rest - down) * ease((t - 0.62) / 0.38);
+    f.armR.rotation.x = arm; f.armL.rotation.x = arm;
+    f.armR.rotation.z = -0.12; f.armL.rotation.z = 0.32;
+    const lean = t < 0.4 ? -0.12 * ease(t / 0.4) : t < 0.62 ? -0.12 + 0.42 * ((t - 0.4) / 0.22) : 0.3 * (1 - ease((t - 0.62) / 0.38));
+    f.torso.rotation.x += lean;
   }
 
   /** Free distance along the camera arm before resident terrain blocks it. */
