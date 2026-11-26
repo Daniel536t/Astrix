@@ -109,3 +109,46 @@ Scripts: `fm-a-setup.js`, `fm-b-taps.js`, `fm-c-walk.js`, `fm-d-phone.js`, `fm-t
 - The live site has not been deployed or tested. **NOT VERIFIED.**
 - Tapping the minimap opens the full map. It does not set a destination.
 - Routes are the W5 coarse 8 m routes, so long straight segments can appear (for example 330 m), as before.
+
+## Orchestrator verification and deployment (recorded after the results were read)
+
+**Pre-commit check**
+- I ran the full suite myself on the final working tree: **585 tests, 585 pass, 0 fail**.
+- Typecheck was clean and the build passed.
+- `git diff -- Game/src/sim` was empty, so no sim rule changed.
+
+**Commit**
+- `c28cd1d3cb49bd66de1989b88a6094a4010a28ad`.
+- Confirmed on the remote by `git fetch` and by the GitHub branches API before deploying.
+
+**Deploy attempt 1**
+- Stopped at its own test step: 585 tests, 584 pass, 1 fail. Nothing was uploaded.
+- The failure was the m004 wall-clock check "v2 chunk generation stays within budget per chunk", which measured 60.1 ms against its 60 ms limit.
+- Host load average was about 14. This is the same flake recorded in W5 and W7, and the threshold was not relaxed.
+
+**Deploy attempt 2** (same commit, no changes)
+- Exit 0, and its own suite run passed 585 / 585.
+- Release: `20261126T224414Z-c28cd1d`, and the server's `current` link resolves to it.
+- Bundle: `assets/index-BYLgLfLr.js`, stamped `commit:"c28cd1d", dirty:false`. The worker bundle `assets/map-survey.worker-CCxMv2em.js` returns HTTP 200.
+
+**Live check**
+Fresh headless Chromium, desktop 1000x600, software GL, a new wilderness world on seed 1337 with no cache, observed for 60 s.
+
+| Item | Result |
+|---|---|
+| Wilderness content | 9 |
+| Survey workers | 3 running, none failed |
+| Places | all 40, in 696 ms |
+| Terrain overview | done in 29.5 s |
+| Deposits within 300 m | done in 31.6 s |
+| All deposits | 1,039, done in 44.5 s |
+| Worker time per chunk | at most 63.7 ms |
+| Main-thread sync | max 0 ms |
+| Draw calls / triangles | 56 / 152,068 |
+| Errors | 0 page errors, 0 console errors, 0 failed requests, 0 HTTP ≥ 400 responses |
+
+Deposit fill-in on the live site took **44.5 s** on a first load. That is slower than the 23 s measured locally, on a host under load and with software rendering.
+
+**NOT VERIFIED on the live site:** tapping to set a route, waypoint replacement and the trail. These were verified on the local build, as reported above.
+
+**Status:** Implemented and Verified (local), deployed. **Not owner-accepted.**
