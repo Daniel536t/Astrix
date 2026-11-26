@@ -76,7 +76,7 @@ test('the Build menu lists the catalogue honestly; choosing a building opens the
   const menu = el(ui.menu);
   for (const d of BUILD_CATALOGUE) assert.ok(menu.innerHTML.includes(`<b>${d.label}</b>`), d.label);
   assert.match(menu.innerHTML, /data-choose="cabin" disabled/, 'later buildings are locked');
-  assert.match(menu.innerHTML, /Locked: arrives with a later milestone \(W6\)/);
+  assert.match(menu.innerHTML, /Locked: arrives with a later milestone \(needs smithed iron nails\)/);
   assert.ok(!/warm/i.test(menu.innerHTML), 'no warmth is claimed anywhere in the catalogue');
   assert.match(menu.innerHTML, /stone knife \(no use yet\)/);
   assert.match(menu.innerHTML, /placing reserves all its materials/);

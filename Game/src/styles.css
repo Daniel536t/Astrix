@@ -1242,6 +1242,8 @@ body.wilderness #build-menu-button { left: calc(max(14px, env(safe-area-inset-le
 /* Phones, portrait: sheets sit below the HUD text, left of the right-hand column, above the joystick ring. */
 @media (max-width: 760px) and (orientation: portrait) {
   body.wilderness #mode-button { top: max(128px, calc(env(safe-area-inset-top) + 122px)); }
+  /* W6: the event feed (mining and smelting events) starts below the Builder view button, not over it. */
+  body.wilderness #wild-events { top: max(176px, calc(env(safe-area-inset-top) + 170px)); }
   body.wilderness .wild-sheet, body.wilderness #wild-site-panel, body.wilderness #wild-panel {
     left: max(8px, env(safe-area-inset-left)); right: auto;
     top: max(128px, calc(var(--hud-bottom, 0px) + 8px));
@@ -1259,6 +1261,8 @@ body.wilderness #build-menu-button { left: calc(max(14px, env(safe-area-inset-le
     width: calc(100vw - min(46vw, 380px) - 204px); max-height: calc(100dvh - 90px);
   }
   body.wilderness.building #mode-button { display: none; }
+  /* W6: the event feed sits in the middle column too (it stepped onto the joystick ring under the HUD text). */
+  body.wilderness #wild-events { left: calc(max(12px, env(safe-area-inset-left)) + min(46vw, 380px) + 8px); right: auto; top: 82px; }
   body.wilderness #build-bar { left: calc(max(14px, env(safe-area-inset-left)) + 262px); transform: none; top: max(8px, env(safe-area-inset-top)); width: calc(100vw - 460px); max-height: 46vh; }
 }
 /* Tablets in landscape: the bag and the catalogue start below the HUD text, above the joystick ring. */
@@ -1322,6 +1326,7 @@ body.wilderness #world-map:not([hidden]) {
 #world-map .legend i { width: 16px; height: 12px; border-radius: 3px; display: inline-block; }
 .lg-fog { background: #1c232d; border: 1px solid #555; } .lg-deep { background: #213d63; } .lg-shallow { background: #609ebe; }
 .lg-place { background: #fff3d6; transform: rotate(45deg) scale(0.7); } .lg-ore { background: #e0904a; border-radius: 50% !important; }
+.lg-dep { transform: scale(0.8); } .lg-dep.lg-out { background: transparent; border: 2px solid #c0643a; }
 .lg-wp { background: #5ec8ff; border-radius: 50% !important; } .lg-route { background: #ffd34d; height: 4px !important; } .lg-you { background: #ff4f3a; }
 .map-popup { position: absolute; z-index: 2; max-width: 260px; padding: 8px 10px; border-radius: 10px; background: rgba(28, 35, 45, 0.96); border: 1px solid #5a6472;
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

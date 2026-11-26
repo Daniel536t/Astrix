@@ -19,13 +19,16 @@ import type { GameSession } from './session';
 import type { ExploreController } from './explore';
 import {
   CARRY_CAPACITY, CARRY_CAPACITY_V5, FOOD_VALUE, ITEM_LABEL, ITEM_WEIGHT, LATEST_WILD_CONTENT, LivePickup, PICKUP_LABEL, PICKUP_REACH, TOOL_DURABILITY,
-  WILD_CONTENT_V5, WILD_CONTENT_V6, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
+  WILD_CONTENT_V5, WILD_CONTENT_V7, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
 } from '../sim/gathering';
 import {
   CHOP_REACH, EventRecord, FellEvent, NearTree, SWING_COOLDOWN_MS, Trunk, choppable, stockpileAt, stockpileLogs, treeDistance,
   treesNear, trunkDistance, trunksNear,
 } from '../sim/felling';
-import { PickupView, buildHeldAxe } from '../render/pickups';
+import { PickupView, buildHeldAxe, buildHeldPickaxe } from '../render/pickups';
+import { DepositView } from '../render/deposits';
+import { DEPOSIT_LABEL, Deposit, typedDepositsNear } from '../sim/deposits';
+import { DEPOSIT_ITEM, MINE_REACH, MINE_SWINGS, depositLeft, depositWork, isDiscovered } from '../sim/mining';
 import { FellingView, NatureHider } from '../render/felling';
 import { WildBuildUI } from './wild-build-ui';
 import { SITE_REACH, WildSite, buildingsNear, deliverable, freeIn, homeShelter, reservationsInSource, reservedTotalsIn, siteSpotOf, stageNeeds, stationNear } from '../sim/wild-build';
@@ -53,6 +56,7 @@ const DRAW_RADIUS = 48;
 /** The prompt uses a little less than the simulation's reach, so a shown prompt is always accepted. */
 const PROMPT_REACH = PICKUP_REACH - 0.25;
 const CHOP_PROMPT = CHOP_REACH - 0.3;
+const MINE_PROMPT = MINE_REACH - 0.4;
 /** A tapped tree stays targeted within this distance. */
 const SELECT_KEEP = 25;
 
@@ -62,6 +66,7 @@ const EVENT_LABEL: Record<FellEvent, string> = {
   SITE_PLACED: 'site placed', MATERIALS_DELIVERED: 'materials delivered', CONSTRUCTION_PROGRESS: 'construction', BUILDING_COMPLETED: 'building completed',
   SITE_CANCELLED: 'site cancelled', SHELTER_CLAIMED: 'shelter claimed', FIRE_FUELED: 'fire fuelled', FOOD_COOKED: 'food cooked',
   ITEMS_STORED: 'items stored', ITEMS_TAKEN: 'items taken', RESPAWNED: 'respawned', DIED: 'died',
+  MINE_STARTED: 'mining started', DEPOSIT_MINED: 'unit mined', DEPOSIT_EXHAUSTED: 'deposit worked out', SMELT_STARTED: 'smelting started', SMELT_DONE: 'ingots ready',
 };
 
 type Action =
@@ -71,16 +76,20 @@ type Action =
   | { kind: 'cut'; trunk: Trunk }
   | { kind: 'deliver'; stockpileId: string; n: number }
   | { kind: 'site_deliver'; s: WildSite; need: Record<string, number> }
-  | { kind: 'site_work'; s: WildSite };
+  | { kind: 'site_work'; s: WildSite }
+  | { kind: 'mine'; d: Deposit };
 
 export class WildGame {
   readonly view = new PickupView();
   readonly felling = new FellingView();
+  /** W6: deposits in the land (mounds, seams, veins on ore outcrops, worked-out scars). */
+  readonly deposits = new DepositView();
   /** W4: the Build menu, ghost, construction and building panels. */
   readonly build: WildBuildUI;
   /** W5: minimap, full map, waypoints, routes and the trail. */
   readonly map: WildMap;
   private readonly axe = buildHeldAxe();
+  private readonly pickaxe = buildHeldPickaxe();
   private readonly toastEl: HTMLElement;
   private toastTimer = 0;
   private readonly panel: HTMLElement;
@@ -105,11 +114,11 @@ export class WildGame {
   private feedKey = '';
   /** Felling evidence: accepted swings and refusals, first chop and fall times. */
   readonly stats = { chops: 0, cuts: 0, refused: 0, fells: 0, firstChopMs: null as number | null, lastFellMs: null as number | null, lastRefusal: '',
-    works: 0, deaths: 0, lastDeath: null as null | { dropped: Record<string, number>; piles: number } | { refused: string },
+    works: 0, mines: 0, unitsMined: 0, firstMineMs: null as number | null, deaths: 0, lastDeath: null as null | { dropped: Record<string, number>; piles: number } | { refused: string },
     lastRespawn: null as null | { point: string; x: number; z: number; refused: string[] } };
 
   constructor(private readonly o: WildGameOptions) {
-    o.scene.add(this.view.group, this.felling.group);
+    o.scene.add(this.view.group, this.felling.group, this.deposits.group);
     this.toastEl = document.createElement('div');
     this.toastEl.className = 'toast';
     this.toastEl.id = 'wild-toast';
@@ -233,13 +242,14 @@ export class WildGame {
 
   private get world() { return this.o.session.world; }
 
-  /** A world with older wilderness content (v1-v5) gains the latest (v6) through one journaled command. */
+  /** A world with older wilderness content (v1-v6) gains the latest (v7) through one journaled command. */
   private ensureContent(): void {
     const w = this.world.wild;
     if (w && w.content >= LATEST_WILD_CONTENT) return;
-    const had = !!w, fell = !!w?.fell, built = !!w?.build, big = !!w && w.content >= WILD_CONTENT_V5;
-    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V6 }, 'v6');
-    if (r) this.toast(big ? 'You now have a map: tap the small map (or press M) to open it, set waypoints and get a walking route. What you have not seen stays hidden.'
+    const had = !!w, fell = !!w?.fell, built = !!w?.build, big = !!w && w.content >= WILD_CONTENT_V5, mapped = !!w?.map;
+    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V7 }, 'v7');
+    if (r) this.toast(mapped ? 'Deposits can now be mined: explore to find iron, copper, coal, clay, sand and gravel, equip a stone pickaxe and swing (E). Clay, sand and gravel build a clay smelter for ingots.'
+      : big ? 'You now have a map: tap the small map (or press M) to open it, set waypoints and get a walking route. What you have not seen stays hidden.'
       : built ? `Your bag now holds ${CARRY_CAPACITY_V5} weight (was ${CARRY_CAPACITY}). At a building site, free materials in your bag can now be delivered in place of ones reserved in piles.`
       : fell ? 'You can now build anywhere: open Build (G) for a shelter, a fire, a workbench and storage.'
       : had ? 'Trees can now be felled and you can build: craft a stone axe, fell a tree, then open Build (G).'
@@ -277,7 +287,7 @@ export class WildGame {
   /** Press: act now; while held, swings repeat at the swing pace. */
   holdStart(): void {
     // Only a press that swings keeps swinging: holding after a pickup or delivery must not start chopping.
-    this.held = this.action.kind === 'chop' || this.action.kind === 'cut' || this.action.kind === 'site_work';
+    this.held = this.action.kind === 'chop' || this.action.kind === 'cut' || this.action.kind === 'site_work' || this.action.kind === 'mine';
     this.act(false);
   }
   holdEnd(): void { this.held = false; }
@@ -293,6 +303,7 @@ export class WildGame {
     if (performance.now() - this.lastSwing < SWING_COOLDOWN_MS) return;
     this.lastSwing = performance.now();
     if (a.kind === 'chop') this.chop(a.tree);
+    else if (a.kind === 'mine') this.mine(a.d);
     else if (a.kind === 'site_work') this.work(a.s);
     else this.cut(a.trunk);
   }
@@ -329,6 +340,34 @@ export class WildGame {
       this.felling.hit(t.e.id, 200);
       this.toast(`${o.events.includes('CHOP_STARTED') ? 'chop started · ' : ''}${t.sp} (${t.stage}) ${o.hp}/${o.max} · axe ${o.durability}/${TOOL_DURABILITY.stone_axe}`);
     }
+  }
+
+  /**
+   * W6: one pickaxe swing at a deposit. A deposit in sight that the map does not have yet is reported first
+   * (a journaled explore): only a discovered deposit is mined.
+   */
+  private mine(d: Deposit): void {
+    const at = this.at();
+    const ch = this.o.explore()?.character;
+    if (!at || !ch) return;
+    if (!isDiscovered(this.world, d.id)) this.map.reportNow({ x: ch.x, z: ch.z });
+    const s = this.o.session;
+    const r = s.dispatch({ schema: 3, id: s.commandId('mine' as never, d.id), expectedRevision: s.world.revision, type: 'mine', depositId: d.id, at });
+    if (!r.ok) { this.refused(r, ''); this.toast(`can't mine: ${r.reasons.join('; ')}`, 'warn'); this.held = r.code === 'too_fast' && this.held; return; }
+    this.version++;
+    this.o.onChanged();
+    this.stats.mines++;
+    this.stats.firstMineMs ??= Math.round(performance.now() - this.startedAt);
+    this.o.explore()?.swing(d.x, d.z);
+    const o = r.outcome;
+    if (o.type !== 'mine') return;
+    const item = DEPOSIT_ITEM[d.type], w = this.world.wild!;
+    if (o.amount) {
+      this.stats.unitsMined++;
+      if (o.left === 0) this.held = false;
+      this.toast(`+1 ${ITEM_LABEL[item]} · ${o.left ? `${o.left}/${d.qty} left in the deposit` : 'the deposit is worked out (it does not regrow)'} · bag ${carriedWeight(w)}/${carryCapacity(w)}`, 'good');
+      if (carriedWeight(w) + ITEM_WEIGHT[item] > carryCapacity(w)) this.held = false;
+    } else this.toast(`mining ${DEPOSIT_LABEL[d.type]} ${o.work}/${MINE_SWINGS[d.type]} · ${o.left}/${d.qty} left · pickaxe ${o.durability}/${TOOL_DURABILITY.stone_pickaxe}`);
   }
 
   /** One swing of construction work on a site. */
@@ -471,11 +510,28 @@ export class WildGame {
       const c = trunkDistance(t, ch.x, ch.z);
       consider(t.id, c.px, (this.o.groundY(c.px, c.pz) ?? t.y) + 0.3, c.pz);
     }
+    // W6: deposits in view (inspected: type and what is left, once discovered).
+    if (this.world.wild.mine) for (const d of typedDepositsNear(this.world, ch.x, ch.z, SELECT_KEEP)) consider(d.id, d.x, (this.o.groundY(d.x, d.z) ?? d.y) + 0.5, d.z);
     const hit = best as { id: string; d: number } | null;
     if (!hit) return false;
     this.selected = hit.id;
+    if (this.isDeposit(hit.id)) {
+      this.toast(this.inspectText(hit.id));
+      return true;
+    }
     this.toast(hit.id.startsWith('t:') ? 'trunk targeted: walk up to it and swing (E / Cut log)' : 'tree targeted: walk up to it and swing (E / Chop)');
     return true;
+  }
+
+  private isDeposit(id: string): boolean { return !!this.world.wild?.mine && typedDepositsNear(this.world, this.o.explore()?.character?.x ?? 0, this.o.explore()?.character?.z ?? 0, SELECT_KEEP + 2).some((d) => d.id === id); }
+  /** W6: what a deposit is, honestly: its type and what is left only once it is discovered. */
+  inspectText(id: string): string {
+    const d = typedDepositsNear(this.world, this.o.explore()?.character?.x ?? 0, this.o.explore()?.character?.z ?? 0, SELECT_KEEP + 2).find((x) => x.id === id);
+    if (!d) return 'nothing there';
+    if (!isDiscovered(this.world, d.id)) return 'a deposit: walk closer to see what it is (it goes on your map)';
+    const left = depositLeft(this.world, d);
+    const item = DEPOSIT_ITEM[d.type];
+    return `${DEPOSIT_LABEL[d.type]} deposit · ${left ? `${left}/${d.qty} units left` : 'worked out (it does not regrow)'} · ${MINE_SWINGS[d.type]} pickaxe swings a unit · ${ITEM_LABEL[item]} weighs ${ITEM_WEIGHT[item]}`;
   }
 
   /** What E / Use does now, nearest and most deliberate first. */
@@ -525,7 +581,15 @@ export class WildGame {
         }
       }
     }
+    // W6: a targeted deposit in reach, or the nearest one with the pickaxe in hand.
+    const dep = w.mine ? typedDepositsNear(this.world, ch.x, ch.z, MINE_PROMPT + 1.5).map((d) => ({ d, r: Math.hypot(d.x - ch.x, d.z - ch.z) }))
+      .filter((x) => x.r <= MINE_PROMPT && depositLeft(this.world, x.d) > 0).sort((a, b) => a.r - b.r || a.d.id.localeCompare(b.d.id)) : [];
+    const picked = dep.find((x) => x.d.id === this.selected);
+    if (picked) return { kind: 'mine', d: picked.d };
+    const pick = equippedTool(this.world)?.kind === 'stone_pickaxe';
+    if (dep[0] && pick) return { kind: 'mine', d: dep[0].d };
     if (fits) return { kind: 'pickup', p: fits };
+    if (dep[0]) return { kind: 'mine', d: dep[0].d };
     if (f) {
       const trunk = trunksNear(this.world, ch.x, ch.z, CHOP_PROMPT)[0];
       if (trunk && equippedTool(this.world)) return { kind: 'cut', trunk: trunk.t };
@@ -569,7 +633,7 @@ export class WildGame {
     if (this.wake && ex?.wakeAt(this.wake)) this.wake = null;
     this.action = this.decide();
     this.target = this.action.kind === 'pickup' ? this.action.p : null;
-    if (this.held && (this.action.kind === 'chop' || this.action.kind === 'cut' || this.action.kind === 'site_work')) this.act(true);
+    if (this.held && (this.action.kind === 'chop' || this.action.kind === 'cut' || this.action.kind === 'site_work' || this.action.kind === 'mine')) this.act(true);
     // The drawn set follows the player (or the camera target in the overview) and every accepted command.
     const fx = ch ? ch.x : this.drawn.x, fz = ch ? ch.z : this.drawn.z;
     if (Number.isFinite(fx) && (this.version !== this.drawn.version || Math.hypot(fx - this.drawn.x, fz - this.drawn.z) > 6)) {
@@ -577,10 +641,12 @@ export class WildGame {
       this.drawn = { x: fx, z: fz, version: this.version };
     }
     this.felling.update(this.world, ch ? { x: ch.x, z: ch.z } : Number.isFinite(fx) ? { x: fx, z: fz } : null, this.o.groundY, this.o.nature?.() ?? null);
+    this.deposits.sync(this.world, Number.isFinite(fx) ? { x: fx, z: fz } : null, this.o.groundY, this.o.nature?.() ?? null);
     // The axe in the hand.
     const hand = ex?.rightHand ?? null;
-    if (hand && this.axeParent !== hand) { hand.add(this.axe); this.axeParent = hand; }
+    if (hand && this.axeParent !== hand) { hand.add(this.axe, this.pickaxe); this.axeParent = hand; }
     this.axe.visible = equippedTool(this.world)?.kind === 'stone_axe';
+    this.pickaxe.visible = equippedTool(this.world)?.kind === 'stone_pickaxe';
     this.build.update(performance.now() / 1000);
     this.renderPanel();
     this.renderFeed();
@@ -591,6 +657,7 @@ export class WildGame {
     const a = this.action;
     if (a.kind === 'pickup') return { x: a.p.x, y: this.o.groundY(a.p.x, a.p.z) ?? a.p.y, z: a.p.z };
     if (a.kind === 'chop') return { x: a.tree.e.x, y: this.o.groundY(a.tree.e.x, a.tree.e.z) ?? a.tree.e.y, z: a.tree.e.z };
+    if (a.kind === 'mine') return { x: a.d.x, y: this.o.groundY(a.d.x, a.d.z) ?? a.d.y, z: a.d.z };
     if (a.kind === 'cut') {
       const ch = this.o.explore()?.character;
       const c = ch ? trunkDistance(a.trunk, ch.x, ch.z) : { px: a.trunk.x, pz: a.trunk.z };
@@ -608,6 +675,7 @@ export class WildGame {
       case 'cut': return 'Cut log';
       case 'deliver': case 'site_deliver': return 'Deliver';
       case 'site_work': return 'Build';
+      case 'mine': return 'Mine';
       default: return 'Pick up';
     }
   }
@@ -636,6 +704,12 @@ export class WildGame {
         return `${k}chop ${a.tree.sp} (${a.tree.stage})${dmg ? ` ${dmg.hp}/${dmg.max}` : ''}${tool ? '' : ' · needs an axe in hand'}${coarse ? '' : ' · hold to keep swinging'}`;
       }
       case 'cut': return `${k}cut log · ${a.trunk.left} left in the ${a.trunk.sp} trunk`;
+      case 'mine': {
+        const d = a.d, tool = equippedTool(this.world);
+        if (!isDiscovered(this.world, d.id)) return `${k}mine the deposit here${coarse ? '' : ' (it goes on your map first)'}`;
+        const work = depositWork(this.world, d);
+        return `${k}mine ${DEPOSIT_LABEL[d.type]} · ${work}/${MINE_SWINGS[d.type]} swings · ${depositLeft(this.world, d)}/${d.qty} left${tool?.kind === 'stone_pickaxe' ? ` · pickaxe ${tool.durability}/${TOOL_DURABILITY.stone_pickaxe}` : ' · needs a pickaxe in hand'}${coarse ? '' : ' · hold to keep swinging'}`;
+      }
       case 'deliver': return `${k}deliver ${a.n} log${a.n === 1 ? '' : 's'} to the stockpile`;
       case 'site_deliver': return `${k}deliver ${Object.entries(a.need).map(([m, n]) => `${n} ${ITEM_LABEL[m as WildItem] ?? m}`).join(', ')} to the ${buildingDef(a.s.kind)!.label.toLowerCase()}`;
       case 'site_work': { const d = buildingDef(a.s.kind)!; return `${k}build ${d.label.toLowerCase()} · ${d.stages[Math.min(a.s.stage, d.stages.length - 1)].label}${coarse ? '' : ' · hold to keep working'}`; }
@@ -659,7 +733,7 @@ export class WildGame {
     const key = last.map((e) => e.seq).join(',');
     if (key === this.feedKey) return;
     this.feedKey = key;
-    this.feed.innerHTML = last.map((e) => `<div>${EVENT_LABEL[e.type]}${e.n !== undefined && e.type !== 'TREE_DAMAGED' && e.type !== 'TRUNK_CREATED' ? ` ×${e.n}` : ''}</div>`).join('');
+    this.feed.innerHTML = last.map((e) => `<div>${EVENT_LABEL[e.type]}${e.type === 'DEPOSIT_MINED' ? ` · ${e.n} left` : e.n !== undefined && e.type !== 'TREE_DAMAGED' && e.type !== 'TRUNK_CREATED' && e.type !== 'SMELT_STARTED' ? ` ×${e.n}` : ''}</div>`).join('');
     this.feed.classList.toggle('on', last.length > 0);
   }
 
@@ -694,7 +768,7 @@ export class WildGame {
     const used = carriedWeight(w), cap = carryCapacity(w);
     this.panel.innerHTML = `<header><h2>Bag</h2><span class="dim" data-capacity>weight ${used}/${cap} · hunger ${w.hunger}/100</span><button type="button" data-close aria-label="Close bag">×</button></header>`
       + `<div class="bar" role="progressbar" aria-label="Bag weight" aria-valuemin="0" aria-valuemax="${cap}" aria-valuenow="${used}"><i style="width:${Math.min(100, Math.round(used / cap * 100))}%"></i></div>`
-      + `<p class="dim" data-capacity-help>Carries ${cap} weight, ${cap - used} free · log ${ITEM_WEIGHT.log}, plank ${ITEM_WEIGHT.plank}, branch ${ITEM_WEIGHT.branch}, stone ${ITEM_WEIGHT.stone}, fibre ${ITEM_WEIGHT.fiber}, axe ${ITEM_WEIGHT.stone_axe}${cap > CARRY_CAPACITY ? '' : ' (this world has the old bag: it gains the bigger one when loaded)'}</p>`
+      + `<p class="dim" data-capacity-help>Carries ${cap} weight, ${cap - used} free · log ${ITEM_WEIGHT.log}, plank ${ITEM_WEIGHT.plank}, branch ${ITEM_WEIGHT.branch}, stone ${ITEM_WEIGHT.stone}, fibre ${ITEM_WEIGHT.fiber}, axe ${ITEM_WEIGHT.stone_axe}${w.mine ? `, ore ${ITEM_WEIGHT.iron_ore}, clay ${ITEM_WEIGHT.clay}, coal/sand/gravel ${ITEM_WEIGHT.coal}, ingot ${ITEM_WEIGHT.iron_ingot}` : ''}${cap > CARRY_CAPACITY ? '' : ' (this world has the old bag: it gains the bigger one when loaded)'}</p>`
       + `<h3>Items</h3><ul>${rows}</ul><h3>Tools</h3><ul>${tools}</ul>${piles}<h3>${bench ? 'Craft (by hand and at the workbench)' : 'Craft by hand'}</h3><ul>${recipes}</ul>${bench ? '' : '<p class="dim">Stand by a workbench for planks, pickaxe, hammer, knife and chest.</p>'}`;
   }
 
@@ -721,6 +795,7 @@ export class WildGame {
       drawn: this.view.count, target: this.target ? { id: this.target.id, kind: this.target.kind, x: this.target.x, z: this.target.z } : null,
       firstAxeMs: this.firstAxeMs, axeVisible: this.axe.visible,
       action: a.kind === 'chop' ? { kind: 'chop', id: a.tree.e.id, sp: a.tree.sp, stage: a.tree.stage, x: a.tree.e.x, z: a.tree.e.z }
+        : a.kind === 'mine' ? { kind: 'mine', id: a.d.id, type: a.d.type, left: depositLeft(this.world, a.d), qty: a.d.qty, work: depositWork(this.world, a.d) }
         : a.kind === 'cut' ? { kind: 'cut', id: a.trunk.id, left: a.trunk.left } : a.kind === 'pickup' ? { kind: 'pickup', id: a.p.id, item: a.p.item }
           : a.kind === 'deliver' ? { kind: 'deliver', id: a.stockpileId, n: a.n }
             : a.kind === 'site_deliver' ? { kind: 'site_deliver', id: a.s.id, need: a.need } : a.kind === 'site_work' ? { kind: 'site_work', id: a.s.id } : { kind: 'none', hint: a.hint },
@@ -737,6 +812,8 @@ export class WildGame {
       stats: { ...this.stats },
       build: this.build.metrics(),
       map: this.map.metrics(),
+      mining: w?.mine ? { worked: [...w.mine.deposits.values()].map((r) => ({ ...r })), drawn: { ...this.deposits.drawn },
+        near: this.o.explore()?.character ? typedDepositsNear(this.world, this.o.explore()!.character!.x, this.o.explore()!.character!.z, 40).map((d) => ({ id: d.id, type: d.type, x: d.x, z: d.z, qty: d.qty, left: depositLeft(this.world, d), discovered: isDiscovered(this.world, d.id) })) : [] } : null,
     };
   }
 }

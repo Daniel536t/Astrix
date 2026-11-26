@@ -5,6 +5,8 @@
 //    as one byte a cell in memory, saved as sorted runs of explored cells);
 //  - places: ids of discovered named places (sim/places.ts);
 //  - deposits: ids of discovered ore outcrops (the existing styl_ore entities);
+//    W6 (content v7): ids of discovered typed deposits (sim/deposits.ts), the
+//    ore outcrops (now iron or copper) and the coal, clay, sand and gravel ones;
 //  - waypoints: up to MAX_WAYPOINTS named points the player placed.
 //
 // Exploration is driven by the player's movement: the journaled `explore`
@@ -25,10 +27,9 @@
 // cell (the Home and banner returns go only where the player has been); the
 // spawn and the claimed lean-to; and the respawn landing point. Anything else
 // is refused (`implausible`) and changes nothing. No three.js.
-import {
-  CHUNKS_PER_SIDE, CHUNK_SIZE, HALF, MatId, Y_MIN, World, baseColumnAt, baseHeightAt, chunkOriginX, chunkOriginZ, planNaturalEntities, worldToChunkX, worldToChunkZ,
-} from './world';
+import { HALF, World, baseHeightAt, worldToChunkX, worldToChunkZ } from './world';
 import { PLACE_ID, placesNear } from './places';
+import { ANY_DEPOSIT_ID, oreInChunk, typedDepositsNear } from './deposits';
 
 export const FOG_CELL = 16;
 export const FOG_N = 2048 / FOG_CELL;
@@ -44,7 +45,8 @@ const ANCHOR_REACH = 8;
 export const MAX_WAYPOINTS = 32;
 export const WAYPOINT_ID = /^w:\d{1,6}$/;
 export const WAYPOINT_NAME = /^[A-Za-z0-9](?:[A-Za-z0-9 '.,()-]{0,22}[A-Za-z0-9.')])?$/;
-export const DEPOSIT_ID = /^e:\d{1,2},\d{1,2}:\d{1,4}$/;
+/** Deposit ids: ore outcrops (`e:`, W5) and, from content v7, the W6 deposits (`k:`). */
+export const DEPOSIT_ID = ANY_DEPOSIT_ID;
 
 export interface Waypoint { id: string; name: string; x: number; z: number }
 export interface ExploreAnchor { x: number; z: number; tick: number; credit: number }
@@ -87,34 +89,8 @@ export function cellsWithin(x: number, z: number, r: number): number[] {
   return out;
 }
 
-const oreCache = new Map<string, Array<{ id: string; x: number; z: number }>>();
-/**
- * The ore outcrops (styl_ore) natural generation places in a chunk, from the
- * same pure planner as `generateEntityChunk` (the same ids and positions) but
- * reading only the base columns it needs: no voxels are generated, so a
- * report (or its replay) costs a few column samples, not chunk generation.
- */
-export function oreInChunk(seed: number, gen: number, cx: number, cz: number): Array<{ id: string; x: number; z: number }> {
-  if (cx < 0 || cz < 0 || cx >= CHUNKS_PER_SIDE || cz >= CHUNKS_PER_SIDE) return [];
-  const key = `${seed}:${gen}:${cx},${cz}`;
-  const hit = oreCache.get(key);
-  if (hit) return hit;
-  const cols = new Map<number, { stored: number; top: MatId }>();
-  const col = (lx: number, lz: number) => {
-    const k = lz * CHUNK_SIZE + lx;
-    let c = cols.get(k);
-    if (!c) { c = baseColumnAt(seed, gen, chunkOriginX(cx) + lx, chunkOriginZ(cz) + lz); cols.set(k, c); }
-    return c;
-  };
-  const out: Array<{ id: string; x: number; z: number }> = [];
-  planNaturalEntities(seed, cx, cz, (lx, lz) => col(lx, lz).stored + Y_MIN, (lx, lz) => col(lx, lz).top, false, {
-    entity: (e) => { if (e.kind === 'styl_ore') out.push({ id: e.id, x: e.x, z: e.z }); },
-    stat: () => {},
-  });
-  if (oreCache.size > 4096) oreCache.delete(oreCache.keys().next().value!);
-  oreCache.set(key, out);
-  return out;
-}
+/** The ore outcrops (styl_ore) natural generation places in a chunk (now computed in sim/deposits.ts, unchanged). */
+export { oreInChunk };
 
 /** The outcrop with this id (its position), or null. */
 export function depositById(seed: number, gen: number, id: string): { id: string; x: number; z: number } | null {
@@ -145,7 +121,9 @@ export function exploreGain(world: World, m: MapState, x: number, z: number): Ex
   const fresh = new Set(cells);
   const places = placesNear(world.seed, world.params.generatorVersion, x, z, r + FOG_CELL)
     .filter((p) => !m.places.has(p.id) && (fresh.has(fogIndex(p.x, p.z)) || m.explored[fogIndex(p.x, p.z)] === 1)).map((p) => p.id);
-  const deposits = depositsNear(world, x, z, DEPOSIT_SIGHT).filter((d) => !m.deposits.has(d.id)).map((d) => d.id);
+  // W6 (content v7): every typed deposit (ore outcrops as iron or copper, and coal, clay, sand, gravel); before, ore outcrops only.
+  const near = (world.wild?.content ?? 0) >= 7 ? typedDepositsNear(world, x, z, DEPOSIT_SIGHT) : depositsNear(world, x, z, DEPOSIT_SIGHT);
+  const deposits = near.filter((d) => !m.deposits.has(d.id)).map((d) => d.id);
   return { cells, places, deposits };
 }
 

@@ -83,15 +83,15 @@ test('the Build catalogue: every definition is complete and consistent; early bu
     const why = lockReasons(s.world, d);
     assert.equal(why.length === 0, d.tier === 'early', `${d.id}: ${why.join('; ')}`);
   }
-  assert.match(lockReasons(s.world, buildingDef('stone_house')!).join(';'), /cut stone .*W6/);
+  assert.match(lockReasons(s.world, buildingDef('stone_house')!).join(';'), /cut stone \(not obtainable yet: stone cutting arrives later\)/);
   assert.match(lockReasons(s.world, buildingDef('storage_shed')!).join(';'), /finished workbench.*hammer/);
   // Station recipes are data: planks, pickaxe, hammer, knife, chest at the workbench.
   assert.deepEqual(WILD_RECIPES.filter((r) => r.station === 'workbench').map((r) => r.id).sort(), ['hammer', 'knife', 'planks', 'stone_pickaxe', 'wooden_chest']);
 });
 
 test('content v4 genesis is pinned; v3 and settlement pins unchanged; the settlement refuses wilderness building', () => {
-  // A new world now starts at content v6 (W5: world navigation and map); v5 (W4 owner report 1) and v4 keep their pins.
-  assert.equal(GameSession.genesis(1337, GENERATOR_V2, 'wilderness').journal.wildContent, 6);
+  // A new world now starts at content v7 (W6: deposits, mining and processing); v5 (W4 owner report 1) and v4 keep their pins.
+  assert.equal(GameSession.genesis(1337, GENERATOR_V2, 'wilderness').journal.wildContent, 7);
   const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 5);
   assert.equal(w.journal.wildContent, 5);
   assert.equal(w.stateHash, W5_PIN, 'v5 genesis');

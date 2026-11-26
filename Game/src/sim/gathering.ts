@@ -24,6 +24,7 @@ import { hash2i, mulberry32 } from './noise';
 import { FellSnapshot, FellState, WILD_CONTENT_V3, createFell, fellFromSnapshot, fellSnapshot, stepFelling, validateFell } from './felling';
 import { MapSnapshot, MapState, createMap, mapFromSnapshot, mapSnapshot, validateMap } from './map';
 import { BuildSnapshot, BuildState, bagRefusal, buildFromSnapshot, buildSnapshot, createBuild, notePileTaken, pileTakeable, stepBuild, validateBuild } from './wild-build';
+import { MineSnapshot, MineState, WILD_CONTENT_V7, createMine, mineFromSnapshot, mineSnapshot, validateMine } from './mining';
 
 /**
  * Wilderness content versions. v1 (W1): no pickups, items or crafting. v2 (W2): this file. v3 (W3): physical
@@ -39,17 +40,26 @@ export const WILD_CONTENT_V4 = 4 as const;
 export const WILD_CONTENT_V5 = 5 as const;
 /** v6 (W5): world navigation and map: exploration (fog), discovered places and ore, waypoints (sim/map.ts). Rules of v5 otherwise. */
 export const WILD_CONTENT_V6 = 6 as const;
-export const LATEST_WILD_CONTENT = 6 as const;
-export type WildContent = typeof WILD_CONTENT_V2 | typeof WILD_CONTENT_V3 | typeof WILD_CONTENT_V4 | typeof WILD_CONTENT_V5 | typeof WILD_CONTENT_V6;
-export const isWildContent = (v: unknown): v is WildContent => v === WILD_CONTENT_V2 || v === 3 || v === 4 || v === 5 || v === 6;
+/**
+ * v7 (W6): deposits, mining and processing: typed natural deposits (sim/deposits.ts) mined with a pickaxe
+ * (sim/mining.ts), their ores and soft materials as items, the clay smelter (sim/catalogue.ts) and smelting
+ * (sim/wild-build.ts). Rules of v6 otherwise.
+ */
+export { WILD_CONTENT_V7 };
+export const LATEST_WILD_CONTENT = 7 as const;
+export type WildContent = typeof WILD_CONTENT_V2 | typeof WILD_CONTENT_V3 | typeof WILD_CONTENT_V4 | typeof WILD_CONTENT_V5 | typeof WILD_CONTENT_V6 | typeof WILD_CONTENT_V7;
+export const isWildContent = (v: unknown): v is WildContent => v === WILD_CONTENT_V2 || v === 3 || v === 4 || v === 5 || v === 6 || v === 7;
 
 export const PICKUP_KINDS = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom'] as const;
 export type PickupKind = (typeof PICKUP_KINDS)[number];
 /** Carried count items. */
-export const WILD_ITEMS = ['berries', 'branch', 'chest', 'cooked_mushroom', 'cord', 'fiber', 'grass', 'log', 'mushroom', 'plank', 'stone'] as const;
+export const WILD_ITEMS = ['berries', 'branch', 'chest', 'clay', 'coal', 'cooked_mushroom', 'copper_ingot', 'copper_ore', 'cord', 'fiber', 'grass', 'gravel',
+  'iron_ingot', 'iron_ore', 'log', 'mushroom', 'plank', 'sand', 'stone'] as const;
 export type WildItem = (typeof WILD_ITEMS)[number];
 /** W4 (content v4) items: made at the workbench and the campfire. */
 export const V4_ITEMS: readonly WildItem[] = ['chest', 'cooked_mushroom', 'plank'];
+/** W6 (content v7) items: mined from deposits and smelted. */
+export const V7_ITEMS: readonly WildItem[] = ['clay', 'coal', 'copper_ingot', 'copper_ore', 'gravel', 'iron_ingot', 'iron_ore', 'sand'];
 export const TOOL_KINDS = ['hammer', 'knife', 'stone_axe', 'stone_pickaxe'] as const;
 export type ToolKind = (typeof TOOL_KINDS)[number];
 /** W4 (content v4) tools: made at the workbench. */
@@ -64,6 +74,7 @@ export const PICKUP_ITEM: Record<PickupKind, WildItem> = {
 export const ITEM_LABEL: Record<WildItem | ToolKind, string> = {
   berries: 'berries', branch: 'branch', cord: 'cord', fiber: 'plant fibre', grass: 'grass', log: 'log', mushroom: 'mushroom', stone: 'stone', stone_axe: 'stone axe',
   chest: 'wooden chest', cooked_mushroom: 'cooked mushroom', plank: 'plank', hammer: 'hammer', knife: 'knife', stone_pickaxe: 'stone pickaxe',
+  clay: 'clay', coal: 'coal', copper_ingot: 'copper ingot', copper_ore: 'copper ore', gravel: 'gravel', iron_ingot: 'iron ingot', iron_ore: 'iron ore', sand: 'sand',
 };
 export const PICKUP_LABEL: Record<PickupKind, string> = {
   branch: 'branch', loose_stone: 'stone', fiber_plant: 'fibre plant', grass_tuft: 'grass', berry_bush: 'berries', mushroom: 'mushroom',
@@ -73,6 +84,8 @@ export const PICKUP_LABEL: Record<PickupKind, string> = {
 export const ITEM_WEIGHT: Record<WildItem | ToolKind, number> = {
   berries: 1, branch: 2, cord: 1, fiber: 1, grass: 1, log: 9, mushroom: 1, stone: 2, stone_axe: 3,
   chest: 8, cooked_mushroom: 1, plank: 3, hammer: 3, knife: 1, stone_pickaxe: 4,
+  // W6: ore is heavy (a full bag of 60 holds about 14 with a pickaxe); coal, sand and gravel are lighter.
+  iron_ore: 4, copper_ore: 4, coal: 2, clay: 3, sand: 2, gravel: 2, iron_ingot: 3, copper_ingot: 3,
 };
 /** Bag capacity (weight) in content v2-v4. Journals made then replay with it until their `upgrade_wilderness` to v5. */
 export const CARRY_CAPACITY = 30;
@@ -115,7 +128,7 @@ export const WILD_RECIPES: readonly WildRecipe[] = [
   { id: 'grass_cord', label: 'Cord (braided grass)', station: 'hand', input: { grass: 3 }, output: { items: { cord: 1 } } },
   { id: 'planks', label: 'Planks (split a log)', station: 'workbench', input: { log: 1 }, tool: 'stone_axe', output: { items: { plank: 2 } } },
   { id: 'stone_pickaxe', label: 'Stone pickaxe', station: 'workbench', input: { branch: 1, stone: 2, cord: 1 }, output: { tool: 'stone_pickaxe' },
-    note: 'Needed for later buildings; breaking rock and mining arrive with W6.' },
+    note: 'Mines deposits (iron, copper, coal, clay, sand, gravel): equip it and swing at a deposit you have found.' },
   { id: 'hammer', label: 'Hammer', station: 'workbench', input: { branch: 1, stone: 1, cord: 1 }, output: { tool: 'hammer' } },
   { id: 'knife', label: 'Stone knife', station: 'workbench', input: { stone: 1, branch: 1, fiber: 1 }, output: { tool: 'knife' },
     note: 'A tool for later: it has no use yet. Butchering arrives with hunting (W8).' },
@@ -157,21 +170,25 @@ export interface WildState {
   build?: BuildState;
   /** W5 (content v6): explored fog cells, discovered places and ore, waypoints. */
   map?: MapState;
+  /** W6 (content v7): what has been mined out of deposits. */
+  mine?: MineState;
 }
 
 export function createWildState(content: WildContent = WILD_CONTENT_V2, seed = 0, tick = 0): WildState {
   return { content, hunger: HUNGER_START, items: {}, tools: [], equipped: null,
     taken: new Set(), left: new Map(), piles: new Map(), nextId: 1,
     ...(content >= WILD_CONTENT_V3 ? { fell: createFell(seed, tick) } : {}), ...(content >= WILD_CONTENT_V4 ? { build: createBuild() } : {}),
-    ...(content >= WILD_CONTENT_V6 ? { map: createMap() } : {}) };
+    ...(content >= WILD_CONTENT_V6 ? { map: createMap() } : {}), ...(content >= WILD_CONTENT_V7 ? { mine: createMine() } : {}) };
 }
 
-/** A content-v2 state gains W3 felling (v3), a v3 state W4 building (v4), a v4 state the v5 rules, a v5 state the W5 map (v6), through journaled `upgrade_wilderness`. */
+/** A content-v2 state gains W3 felling (v3), a v3 state W4 building (v4), a v4 state the v5 rules, a v5 state the W5 map (v6), a v6 state W6 mining (v7), through journaled `upgrade_wilderness`. */
 export function upgradeWildState(w: WildState, seed: number, tick: number, to: WildContent = WILD_CONTENT_V3): void {
   if (!w.fell && to >= WILD_CONTENT_V3) w.fell = createFell(seed, tick);
   if (!w.build && to >= WILD_CONTENT_V4) w.build = createBuild();
   // Nothing is explored by the upgrade itself: the map starts empty, and the first report is anchored where the player stands.
   if (!w.map && to >= WILD_CONTENT_V6) w.map = createMap();
+  // W6: deposits are generated; nothing is mined or discovered by the upgrade itself (ore outcrops seen in v6 stay discovered).
+  if (!w.mine && to >= WILD_CONTENT_V7) w.mine = createMine();
   w.content = to;
 }
 
@@ -439,7 +456,7 @@ export function stepWild(world: World, tick: number): void {
   const w = world.wild;
   if (w && tick % HUNGER_TICKS === 0) w.hunger = Math.min(100, w.hunger + 1);
   if (w?.fell) stepFelling(world, tick);
-  if (w?.build) stepBuild(world);
+  if (w?.build) stepBuild(world, tick);
 }
 
 function sortBag(bag: Record<string, number>): Record<string, number> {
@@ -456,6 +473,7 @@ export interface WildSnapshot {
   items: Record<string, number>;
   left: Record<string, number>;
   map?: MapSnapshot;
+  mine?: MineSnapshot;
   nextId: number;
   piles: Pile[];
   taken: string[];
@@ -472,6 +490,7 @@ export function wildSnapshot(w: WildState): WildSnapshot {
     items: sortBag(w.items),
     left: Object.fromEntries([...w.left.entries()].sort(([a], [b]) => a.localeCompare(b))),
     ...(w.map ? { map: mapSnapshot(w.map) } : {}),
+    ...(w.mine ? { mine: mineSnapshot(w.mine) } : {}),
     nextId: w.nextId,
     piles: [...w.piles.values()].sort((a, b) => a.id.localeCompare(b.id)).map((p) => ({ id: p.id, item: p.item, qty: p.qty, x: p.x, y: p.y, z: p.z })),
     taken: [...w.taken].sort((a, b) => a.localeCompare(b)),
@@ -493,8 +512,10 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
   if (v4 !== (v.build !== undefined)) bad('building block');
   const v6 = (v.content as number) >= WILD_CONTENT_V6;
   if (v6 !== (v.map !== undefined)) bad('map block');
-  // Logs exist only with felling (content v3); planks, chests and cooked food with building (v4).
-  const itemOk = (k: unknown) => WILD_ITEMS.includes(k as WildItem) && (v3 || k !== 'log') && (v4 || !V4_ITEMS.includes(k as WildItem));
+  const v7 = (v.content as number) >= WILD_CONTENT_V7;
+  if (v7 !== (v.mine !== undefined)) bad('mining block');
+  // Logs exist only with felling (content v3); planks, chests and cooked food with building (v4); ores, ingots and soft materials with mining (v7).
+  const itemOk = (k: unknown) => WILD_ITEMS.includes(k as WildItem) && (v3 || k !== 'log') && (v4 || !V4_ITEMS.includes(k as WildItem)) && (v7 || !V7_ITEMS.includes(k as WildItem));
   if (!uintMax(v.hunger, 100) || !uintMax(v.nextId, 9_999_999) || v.nextId < 1) bad('counters');
   if (!isObj(v.items) || !isObj(v.left) || !Array.isArray(v.piles) || !Array.isArray(v.taken) || !Array.isArray(v.tools)) bad('fields');
   const items: Record<string, number> = {};
@@ -537,14 +558,17 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
   if (tools.length > 64) bad('tools');
   if (v.equipped !== undefined && (typeof v.equipped !== 'string' || !toolIds.has(v.equipped))) bad('equipped tool');
   const fell = v3 ? validateFell(v.fell, tick, v.nextId as number) : undefined;
-  const build = v4 ? validateBuild(v.build, tick, v.nextId as number, (k) => itemOk(k), { items, piles }) : undefined;
+  const build = v4 ? validateBuild(v.build, tick, v.nextId as number, (k) => itemOk(k), { items, piles, content: v.content as number }) : undefined;
   const map = v6 ? validateMap(v.map, tick) : undefined;
+  // W6 deposit ids (`k:`) are discovered only in content v7.
+  if (map && !v7 && map.deposits.some((id) => !id.startsWith('e:'))) bad('map block (a deposit only content v7 has)');
+  const mine = v7 ? validateMine(v.mine) : undefined;
   const s: WildSnapshot = {
     ...(build ? { build } : {}),
     content: v.content as WildContent,
     ...(v.equipped !== undefined ? { equipped: v.equipped as string } : {}),
     ...(fell ? { fell } : {}),
-    hunger: v.hunger as number, items, left, ...(map ? { map } : {}), nextId: v.nextId as number, piles, taken: taken as string[], tools,
+    hunger: v.hunger as number, items, left, ...(map ? { map } : {}), ...(mine ? { mine } : {}), nextId: v.nextId as number, piles, taken: taken as string[], tools,
   };
   const weight = carriedWeight(wildFromSnapshot(s));
   if (weight > carryCapacity(s)) bad('carried weight');
@@ -554,7 +578,7 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
 export function wildFromSnapshot(s: WildSnapshot): WildState {
   return {
     content: s.content, ...(s.fell ? { fell: fellFromSnapshot(s.fell) } : {}), ...(s.build ? { build: buildFromSnapshot(s.build) } : {}),
-    ...(s.map ? { map: mapFromSnapshot(s.map) } : {}), hunger: s.hunger, items: { ...s.items },
+    ...(s.map ? { map: mapFromSnapshot(s.map) } : {}), ...(s.mine ? { mine: mineFromSnapshot(s.mine) } : {}), hunger: s.hunger, items: { ...s.items },
     tools: s.tools.map((t) => ({ ...t })), equipped: s.equipped ?? null,
     taken: new Set(s.taken), left: new Map(Object.entries(s.left)),
     piles: new Map(s.piles.map((p) => [p.id, { ...p }])), nextId: s.nextId,

@@ -1,0 +1,32 @@
+// Second generated leg (journaled commands only, W6 working-tree code), continuing the browser's own save:
+// walk (explore reports at walking pace, a tick each) from the spawn to the iron outcrop e:31,16:6, mine 2 iron ore,
+// walk to the coal seam k:25,15:0, mine 3 coal, walk back to the spawn. Stated in the W6 report as generated.
+import { readFileSync, writeFileSync } from 'node:fs';
+import { BrowserSaveStore, KeyValueStorage } from '../../../Astrix/Game/src/app/persistence';
+import { GENERATOR_V2, WILDERNESS } from '../../../Astrix/Game/src/sim/world';
+import { depositOf } from '../../../Astrix/Game/src/sim/deposits';
+import { SPAWN, dm, load, ok, send, swing, tick } from '../../../Astrix/Game/tests/w4-harness';
+class MemoryStorage implements KeyValueStorage {
+  readonly map = new Map<string, string>();
+  getItem(k: string) { return this.map.get(k) ?? null; } setItem(k: string, v: string) { this.map.set(k, v); }
+  removeItem(k: string) { this.map.delete(k); } key(i: number) { return [...this.map.keys()][i] ?? null; } get length() { return this.map.size; }
+}
+const b = JSON.parse(readFileSync('browser-save.json', 'utf8'));
+const storage = new MemoryStorage(); storage.setItem(b.key, b.record);
+const store = new BrowserSaveStore(storage, 1337, GENERATOR_V2, { scenario: WILDERNESS, id: 'w1' });
+const l = store.load(); if (l.status !== 'restored') throw new Error(l.status + l.message);
+const s = l.session; load(s);
+const before = s.stateHash, n0 = s.journal.entries.length;
+const walk = (a: { x: number; z: number }, c: { x: number; z: number }) => { const n = Math.ceil(Math.hypot(c.x - a.x, c.z - a.z) / 16); for (let k = 1; k <= n; k++) { tick(s); ok(send(s, { type: 'explore', at: dm({ x: a.x + (c.x - a.x) * k / n, z: a.z + (c.z - a.z) * k / n }) }), 'walk'); } };
+const iron = depositOf(1337, 2, 'e:31,16:6')!, coal = depositOf(1337, 2, 'k:25,15:0')!;
+const at1 = { x: iron.x - 1, z: iron.z + 1 }, at2 = { x: coal.x + 1, z: coal.z };
+const last = s.world.wild!.map!.last!;
+walk({ x: last.x / 10, z: last.z / 10 }, at1);
+const mineN = (id: string, at: { x: number; z: number }, item: string, n: number) => { const w = s.world.wild!; const g = (w.items[item] ?? 0) + n; while ((w.items[item] ?? 0) < g) ok(swing(s, { type: 'mine', depositId: id, at: dm(at) }), 'mine'); };
+mineN(iron.id, at1, 'iron_ore', 2);
+walk(at1, at2);
+mineN(coal.id, at2, 'coal', 3);
+walk(at2, SPAWN);
+const r = store.save(s); if (!r.ok) throw new Error('save');
+writeFileSync('save2.json', JSON.stringify({ key: b.key, record: storage.getItem(b.key) }));
+console.log('from', before, 'entries', n0, '->', s.journal.entries.length, 'hash', s.stateHash, 'bag', JSON.stringify(s.world.wild!.items), JSON.stringify(s.world.wild!.tools), 'mined', JSON.stringify([...s.world.wild!.mine!.deposits.values()]));

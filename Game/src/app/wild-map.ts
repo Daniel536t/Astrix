@@ -13,6 +13,11 @@ import * as THREE from 'three';
 import type { World } from '../sim/world';
 import { HALF, forestScore } from '../sim/world';
 import { EXPLORE_STEP, FOG_CELL, FOG_N, MAX_WAYPOINTS, WAYPOINT_NAME, depositById, exploreGain, exploredCount } from '../sim/map';
+import { DEPOSIT_LABEL, DepositType, depositOf } from '../sim/deposits';
+import { depositLeft } from '../sim/mining';
+
+/** W6: map colours of the deposit types (shown only for discovered deposits). */
+export const DEPOSIT_COLOR: Record<DepositType, string> = { iron: '#c0643a', copper: '#3fae9a', coal: '#2b2b2b', clay: '#b0704a', sand: '#e8d79a', gravel: '#9a968c' };
 import { Place, placeById } from '../sim/places';
 import {
   RouteResult, RouteSearch, RoutePoint, TILE, distanceToRoute, pointAlong, refineStart, routeGround, terrainCache,
@@ -156,6 +161,21 @@ export class WildMap {
     this.updatePill(p);
   }
 
+  /**
+   * W6: report the player's position now when it would discover something (a deposit within sight that the
+   * map does not have yet), ahead of the walking queue. Returns true when nothing is left to discover there.
+   */
+  reportNow(p: { x: number; z: number }): boolean {
+    const m = this.map;
+    if (!m) return false;
+    const g = exploreGain(this.world, m, p.x, p.z);
+    if (!g.deposits.length && !g.places.length && !g.cells.length) return true;
+    this.queue.unshift({ x: p.x, z: p.z });
+    this.refusedTick = -1;
+    this.reportExploration(p);
+    return exploreGain(this.world, m, p.x, p.z).deposits.length === 0;
+  }
+
   /** Journal an exploration report every EXPLORE_STEP metres that would discover something; refused ones wait for the next tick. */
   private reportExploration(p: { x: number; z: number }): void {
     const m = this.map!;
@@ -185,7 +205,10 @@ export class WildMap {
     const o = r.outcome as unknown as { places: string[]; deposits: string[] };
     const names = o.places.map((id) => placeById(this.world.seed, this.world.params.generatorVersion, id)?.name).filter(Boolean);
     if (names.length) this.o.toast(`Discovered: ${names.join(', ')} (on your map)`, 'good');
-    else if (o.deposits.length) this.o.toast(`You spot ${o.deposits.length === 1 ? 'an ore outcrop' : `${o.deposits.length} ore outcrops`}: marked on your map`, 'good');
+    else if (o.deposits.length && (this.world.wild?.content ?? 0) >= 7) {
+      const ds = o.deposits.map((id) => depositOf(this.world.seed, this.world.params.generatorVersion, id)).filter((d): d is NonNullable<typeof d> => !!d);
+      this.o.toast(`You find ${ds.map((d) => `a ${DEPOSIT_LABEL[d.type]} deposit (${depositLeft(this.world, d)} units)`).join(', ')}: marked on your map`, 'good');
+    } else if (o.deposits.length) this.o.toast(`You spot ${o.deposits.length === 1 ? 'an ore outcrop' : `${o.deposits.length} ore outcrops`}: marked on your map`, 'good');
   }
 
   // ---------- terrain tiles ----------
@@ -285,14 +308,20 @@ export class WildMap {
       ctx.strokeStyle = '#ffd34d'; ctx.lineWidth = full ? 3 : 2.5; ctx.stroke();
       ctx.restore();
     }
-    // Discovered ore outcrops.
+    // Discovered ore outcrops (v6), or typed deposits (W6, content v7: a colour per type; a worked-out one hollow).
+    const typed = (w.wild?.content ?? 0) >= 7;
     for (const id of m.deposits) {
-      const e = depositById(w.seed, w.params.generatorVersion, id);
+      const d = typed ? depositOf(w.seed, w.params.generatorVersion, id) : null;
+      const e = d ?? depositById(w.seed, w.params.generatorVersion, id);
       if (!e) continue;
       const [x, y] = this.toScreen(v, e.x, e.z);
       if (x < -8 || y < -8 || x > v.w + 8 || y > v.h + 8) continue;
-      ctx.fillStyle = '#e0904a'; ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(x, y, full ? 4 : 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      const out = d ? depositLeft(w, d) <= 0 : false;
+      ctx.fillStyle = d ? DEPOSIT_COLOR[d.type] : '#e0904a'; ctx.strokeStyle = d?.type === 'coal' ? '#d8d8d8' : '#3a2410'; ctx.lineWidth = out ? 2 : 1;
+      const r = full ? 4.5 : 3;
+      ctx.beginPath();
+      if (d && d.type !== 'iron' && d.type !== 'copper') ctx.rect(x - r, y - r, r * 2, r * 2); else ctx.arc(x, y, r, 0, Math.PI * 2);
+      if (out) { ctx.strokeStyle = ctx.fillStyle as string; ctx.stroke(); } else { ctx.fill(); ctx.stroke(); }
     }
     // Discovered places.
     ctx.font = `${full ? 13 : 10}px system-ui, sans-serif`;
@@ -512,9 +541,24 @@ export class WildMap {
       : '<li class="dim">none yet: tap the map, then Add waypoint</li>'}</ul></details>`
       + `<details${places.length ? ' open' : ''}><summary>Discovered places (${places.length})</summary><ul>${places.length ? places.map((q) => `<li><button type="button" data-focus="${q.x},${q.z}">${esc(q.name)}<span class="dim">${far(q.x, q.z)}</span></button></li>`).join('')
       : '<li class="dim">none yet: explore to find named places</li>'}</ul></details>`
+      + ((w.wild?.content ?? 0) >= 7 ? this.depositList(far) : '')
       + `<details><summary>Legend</summary><ul class="legend"><li><i class="lg-fog"></i>unexplored (fog)</li><li><i class="lg-deep"></i>deep water: not walkable</li><li><i class="lg-shallow"></i>shallow water (fordable, up to 1 m)</li>`
-      + `<li><i class="lg-place"></i>discovered place</li><li><i class="lg-ore"></i>ore outcrop you have seen</li><li><i class="lg-wp"></i>waypoint</li><li><i class="lg-route"></i>route (hidden over unexplored land)</li><li><i class="lg-you"></i>you</li></ul></details>`;
+      + `<li><i class="lg-place"></i>discovered place</li>${(w.wild?.content ?? 0) >= 7
+        ? (Object.keys(DEPOSIT_COLOR) as DepositType[]).map((t) => `<li><i class="lg-dep" style="background:${DEPOSIT_COLOR[t]}${t === 'iron' || t === 'copper' ? ';border-radius:50%' : ''}"></i>${DEPOSIT_LABEL[t]} deposit you have found</li>`).join('') + '<li><i class="lg-dep lg-out"></i>worked out (hollow)</li>'
+        : '<li><i class="lg-ore"></i>ore outcrop you have seen</li>'}<li><i class="lg-wp"></i>waypoint</li><li><i class="lg-route"></i>route (hidden over unexplored land)</li><li><i class="lg-you"></i>you</li></ul></details>`;
     this.renderStatus();
+  }
+
+  /** W6: the deposits the player has found, with what is left in each. */
+  private depositList(far: (x: number, z: number) => string): string {
+    const w = this.world, m = this.map!;
+    const ds = [...m.deposits].map((id) => depositOf(w.seed, w.params.generatorVersion, id)).filter((d): d is NonNullable<typeof d> => !!d);
+    const p = this.o.player();
+    ds.sort((a, b) => (p ? Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z) : 0) || a.id.localeCompare(b.id));
+    return `<details${ds.length ? '' : ''}><summary>Deposits found (${ds.length})</summary><ul data-deposits>${ds.length ? ds.slice(0, 40).map((d) => {
+      const left = depositLeft(w, d);
+      return `<li><button type="button" data-focus="${Math.round(d.x)},${Math.round(d.z)}">${DEPOSIT_LABEL[d.type]} <span class="dim">${left ? `${left}/${d.qty} left` : 'worked out'}${far(d.x, d.z)}</span></button></li>`;
+    }).join('') : '<li class="dim">none yet: deposits show once you come within 24 m of one</li>'}</ul></details>`;
   }
 
   private renderStatus(): void {

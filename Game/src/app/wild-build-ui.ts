@@ -5,7 +5,7 @@
 // simulation's own (`checkWildSite`, the function `place_site` runs).
 import * as THREE from 'three';
 import type { World } from '../sim/world';
-import { BUILD_CATALOGUE, BuildingDef, CATEGORY_LABEL, MATERIAL_LABEL, buildingDef } from '../sim/catalogue';
+import { BUILD_CATALOGUE, BuildingDef, CATEGORY_LABEL, MATERIAL_LABEL, SMELT_RECIPES, buildingDef, smeltRecipe } from '../sim/catalogue';
 import {
   MAX_FUEL, RESERVE_REACH, SITE_REACH, WildSite, affordability, buildingsNear, canSwap, checkWildSite, deliverable, freeIn, freeInBag, homeShelter, lockReasons,
   remoteReservations, reservationsInSource, reservedTotalsIn, siteNeeds, siteProgress, siteSizeOf, stageNeeds, stockWeight,
@@ -259,6 +259,11 @@ export class WildBuildUI {
     else if (d.store) this.act({ type: 'store_items', siteId: s.id, item: d.store, n: Number(d.n) }, `${s.id}:${d.store}`, () => this.h.toast(`stored ${d.n} ${label(d.store!)}`));
     else if (d.take) this.act({ type: 'take_items', siteId: s.id, item: d.take, n: Number(d.n), ...(d.for ? { forSite: d.for } : {}) }, `${s.id}:${d.take}:${d.for ?? ''}`, () => this.h.toast(`took ${d.n} ${label(d.take!)}${d.for ? ' (still reserved for its site)' : ''}`));
     else if (d.craft) this.onCraft?.(d.craft);
+    else if (d.smelt) {
+      const rec = smeltRecipe(d.smelt);
+      this.act({ type: 'smelt', siteId: s.id, recipe: d.smelt }, `${s.id}:${d.smelt}`,
+        () => this.h.toast(`smelting: ${rec ? `${Object.entries(rec.input).map(([k, n]) => `${n} ${label(k)}`).join(' + ')} in; ${Object.entries(rec.output).map(([k, n]) => `${n} ${label(k)}`).join(', ')} at the door in ${rec.ticks * 2} s` : ''}`, 'good'));
+    }
   }
   /** Set by the host: one swing of work (shared with E / Use and its pacing). */
   onWork: ((s: WildSite) => void) | null = null;
@@ -271,7 +276,9 @@ export class WildBuildUI {
     const w = this.world.wild!;
     const at = this.h.at();
     const away = this.nearPile !== null;
+    const tickNow = this.world.life?.tick ?? 0;
     const key = JSON.stringify([s.id, s.state, s.stage, s.work, s.delivered, s.reserved, s.fuel ? Math.ceil(s.fuel / 15) : 0, s.stock, w.items, w.build?.home, this.cancelArmed,
+      s.job ? [s.job.recipe, s.job.end - tickNow] : null,
       [...(w.build?.sites.values() ?? [])].map((x) => x.reserved), at ? deliverable(this.world, s, at).length : 0, this.nearPile, w.content,
       s.state !== 'done' && at ? [Math.round(at.x / 10), Math.round(at.z / 10)] : null]);
     this.site.hidden = false;
@@ -345,6 +352,23 @@ export class WildBuildUI {
           return `<li data-recipe="${r.id}"><div><b>${r.label}</b><br><small>${need}${r.tool ? ` · <span class="${toolOk ? 'ok' : 'miss'}">${label(r.tool)}</span>` : ''}</small>${r.note ? `<br><small class="dim" data-note>${r.note}</small>` : ''}</div><button type="button" data-craft="${r.id}" ${carried ? '' : 'disabled'}>Craft</button></li>`;
         }).join('');
         body = `<div class="dim">${fn.summary}</div><ul>${rows}</ul>`;
+      } else if (fn.kind === 'smelter') {
+        // W6: recipes with what they take (free in the bag), the fuel, the time and what they make; the batch in it, with its time left.
+        const have = (k: string) => freeInBag(this.world, k);
+        const job = s.job;
+        const running = job ? smeltRecipe(job.recipe) : undefined;
+        const status = job && running
+          ? `<div data-smelting><b class="ok">Smelting</b> ${Object.entries(running.output).map(([k, n]) => `${n} ${label(k)}`).join(', ')} · ${Math.max(0, job.end - tickNow) * 2} s left`
+            + `<div class="bar" role="progressbar" aria-label="Smelting progress" aria-valuemin="0" aria-valuemax="${running.ticks}" aria-valuenow="${Math.min(running.ticks, tickNow - job.start)}"><i style="width:${Math.round(Math.min(1, (tickNow - job.start) / running.ticks) * 100)}%"></i></div>`
+            + `<span class="dim">holds ${Object.entries(job.charge).map(([k, n]) => `${n} ${label(k)}`).join(', ')}; the ingots come out at its door.</span></div>`
+          : '<div class="dim" data-smelting>Cold: no batch in it.</div>';
+        const rows = SMELT_RECIPES.map((r) => {
+          const need = Object.entries(r.input).map(([k, n]) => `<span class="${have(k) >= n ? 'ok' : 'miss'}">${label(k)} ${Math.min(have(k), n)}/${n}${k === r.fuel ? ' (fuel)' : ''}</span>`).join(' · ');
+          const carried = Object.entries(r.input).every(([k, n]) => (w.items[k] ?? 0) >= n);
+          return `<li data-smelt-recipe="${r.id}"><div><b>${r.label}</b><br><small>${need} · ${r.ticks * 2} s makes ${Object.entries(r.output).map(([k, n]) => `${n} ${label(k)}`).join(', ')}</small></div>`
+            + `<button type="button" data-smelt="${r.id}" ${carried && !job ? '' : 'disabled'}>Smelt</button></li>`;
+        }).join('');
+        body = `<div class="dim">${fn.summary}</div>${status}<ul>${rows}</ul><div class="dim">Ore and coal come from your bag (not items reserved for a site). Iron ingots are for the forge, which stays locked: it needs a workshop and cut stone, and the workshop needs smithed iron nails.</div>`;
       } else if (fn.kind === 'storage') {
         const stock = Object.entries(s.stock ?? {});
         const used = stockWeight(s.stock);

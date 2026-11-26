@@ -12,7 +12,8 @@ import type { WildSite } from '../sim/wild-build';
 import { B, boxes } from './homestead';
 
 const LOG = '#7A5534', LOG_D = '#5C3F26', CUT = '#D9BD8A', STONE = '#8E8E88', STONE_D = '#74746F', BRANCH = '#6E5B3B', LEAVES = '#5F7D3A',
-  CORD = '#C9B27C', PLANK = '#B98C57', PLANK_D = '#9C7446', STAKE = '#E2D3A6', LINE = '#F1E6C0', ASH = '#3A3530', IRON = '#55585C';
+  CORD = '#C9B27C', PLANK = '#B98C57', PLANK_D = '#9C7446', STAKE = '#E2D3A6', LINE = '#F1E6C0', ASH = '#3A3530', IRON = '#55585C',
+  CLAY = '#A8694A', CLAY_D = '#8E5638', CLAY_L = '#C08562', GRAVEL = '#9A968C';
 const MAX_FIRES = 8;
 /** Triangles in one box part (non-indexed: 12). */
 const BOX_TRIANGLES = 12;
@@ -91,6 +92,17 @@ function stageParts(kind: string, W: number, D: number, s: WildSite): B[][] {
         box(0.75, 0.25, 2.75, 1.0, 1.95, 0.1, PLANK), box(2.25, 0.25, 2.75, 1.0, 1.95, 0.1, PLANK), box(1.5, 2.3, 1.5, 3.3, 0.16, 3.3, PLANK_D),
         box(1.5, 0.25, 1.2, 0.9, 0.6, 0.6, PLANK)],
     ];
+    case 'smelter': return [
+      // Hearth: a stone ring on a gravel bed.
+      [box(1, 0, 1, 1.8, 0.1, 1.8, GRAVEL), box(1, 0.1, 0.35, 1.4, 0.3, 0.3, STONE), box(1, 0.1, 1.65, 1.4, 0.3, 0.3, STONE_D),
+        box(0.35, 0.1, 1, 0.3, 0.3, 1.0, STONE_D), box(1.65, 0.1, 1, 0.3, 0.3, 1.0, STONE)],
+      // Shaft: clay walls narrowing upwards, a charging door at the front (+z).
+      [box(1, 0.4, 0.5, 1.2, 0.9, 0.22, CLAY), box(0.5, 0.4, 1, 0.22, 0.9, 1.0, CLAY_D), box(1.5, 0.4, 1, 0.22, 0.9, 1.0, CLAY_D),
+        box(0.62, 0.4, 1.5, 0.36, 0.9, 0.22, CLAY), box(1.38, 0.4, 1.5, 0.36, 0.9, 0.22, CLAY), box(1, 0.8, 1.5, 0.4, 0.5, 0.22, CLAY_L)],
+      // Dome and chimney, a branch-and-clay tuyere at the side.
+      [box(1, 1.3, 1, 1.0, 0.3, 1.0, CLAY_L), box(1, 1.6, 1, 0.55, 0.25, 0.55, CLAY), box(1, 1.85, 1, 0.3, 0.12, 0.3, ASH),
+        box(1.75, 0.55, 1, 0.5, 0.12, 0.12, BRANCH)],
+    ];
   }
   // Unknown (later) kinds are never placed; draw a plain block per stage.
   const d = buildingDef(kind);
@@ -165,7 +177,7 @@ export class WildBuildingsView {
   sync(world: World): void {
     const b = world.wild?.build;
     const sites = b ? [...b.sites.values()].sort((a, c) => a.id.localeCompare(c.id)) : [];
-    const key = sites.map((s) => `${s.id}:${s.kind}:${s.x},${s.z},${s.rot}:${s.y}:${s.state}:${s.stage}:${s.work}:${(s.fuel ?? 0) > 0 ? 1 : 0}:${Math.min(6, s.stock?.log ?? 0)}`).join('|');
+    const key = sites.map((s) => `${s.id}:${s.kind}:${s.x},${s.z},${s.rot}:${s.y}:${s.state}:${s.stage}:${s.work}:${(s.fuel ?? 0) > 0 ? 1 : 0}:${Math.min(6, s.stock?.log ?? 0)}:${s.job ? 1 : 0}`).join('|');
     if (key === this.key) return;
     this.key = key;
     if (this.mesh) { this.mesh.geometry.dispose(); this.group.remove(this.mesh); this.mesh = null; }
@@ -179,6 +191,12 @@ export class WildBuildingsView {
     this.fires = sites.filter((s) => s.state === 'done' && (s.fuel ?? 0) > 0 && buildingDef(s.kind)?.function.kind === 'fire').slice(0, MAX_FIRES)
       // The campfire is square (2 x 2): its fire is at the footprint's centre whatever the rotation.
       .map((s, i) => ({ x: s.x + 1, y: s.y + 0.2, z: s.z + 1, seed: i * 1.7 }));
+    // W6: a smelter with a batch in it glows at its charging door (2 x 2: the door is at the middle of the +z side before rotation).
+    for (const s of sites) {
+      if (this.fires.length >= MAX_FIRES || s.kind !== 'smelter' || !s.job) continue;
+      const [dx, dz] = [[0, 0.62], [0.62, 0], [0, -0.62], [-0.62, 0]][s.rot] ?? [0, 0.62];
+      this.fires.push({ x: s.x + 1 + dx, y: s.y + 0.45, z: s.z + 1 + dz, seed: this.fires.length * 1.7 });
+    }
     this.drawn = { sites: sites.length, triangles: this.mesh ? this.mesh.geometry.attributes.position.count / 3 : 0, fires: this.fires.length, rebuilds: this.drawn.rebuilds + 1,
       meshes: this.group.children.filter((c) => (c as THREE.Mesh).isMesh).length };
   }

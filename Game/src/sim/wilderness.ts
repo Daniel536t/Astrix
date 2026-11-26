@@ -23,7 +23,8 @@ export const WILDERNESS_STARTER_INVENTORY: Readonly<Record<string, number>> = Ob
  * felling: `chop`, `cut_log` and `mark_stockpile`. W4 (content v4) adds
  * building: `place_site`, `deliver_site`, `build_work`, `cancel_site`,
  * `claim_shelter`, `fuel_fire`, `cook`, `store_items`, `take_items`, `died`
- * and `respawn`. `harvest` stays refused: a tree is never turned into wood in
+ * and `respawn`. W5 (content v6) adds `explore`, `set_waypoint` and
+ * `remove_waypoint`; W6 (content v7) `mine` and `smelt`. `harvest` stays refused: a tree is never turned into wood in
  * one step, and breaking rock needs a pickaxe.
  *
  * This is the one allow-list. `place_site` and `cancel_site` share their
@@ -33,7 +34,7 @@ export const WILDERNESS_STARTER_INVENTORY: Readonly<Record<string, number>> = Ob
  */
 export const WILDERNESS_COMMANDS: readonly string[] = ['tick', 'pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness', 'chop', 'cut_log', 'mark_stockpile',
   'place_site', 'deliver_site', 'build_work', 'cancel_site', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn',
-  'explore', 'set_waypoint', 'remove_waypoint'];
+  'explore', 'set_waypoint', 'remove_waypoint', 'mine', 'smelt'];
 /** Commands a wilderness world shares with the settlement by name only. */
 export const SHARED_WITH_SETTLEMENT: readonly string[] = ['place_site', 'cancel_site'];
 

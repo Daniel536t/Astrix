@@ -30,6 +30,12 @@
 // position the player could not have walked to), `set_waypoint` and
 // `remove_waypoint`. Routes are derived and never journaled.
 //
+// Content v7 (W6 deposits, mining and processing): `mine` (one pickaxe swing
+// at a discovered deposit; a unit of ore, coal, clay, sand or gravel comes out
+// into the bag after the deposit's swings) and `smelt` (start a batch at a
+// finished clay smelter; its ore and coal leave the bag at once and the
+// ingots come out at the smelter's door when the batch is done, in a tick).
+//
 // Reach: the avatar is player-local physics, so `pickup`, `drop`, `chop`,
 // `cut_log` and `mark_stockpile` carry the player's position (integer
 // decimetres) like the S2 tick presence, and the simulation checks reach
@@ -51,7 +57,11 @@ import {
 import { WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6 } from '../sim/gathering';
 import { DEPOSIT_ID, WAYPOINT_ID, WAYPOINT_NAME, exploreAt, noteLanding, removeWaypoint, setWaypoint } from '../sim/map';
 import { PLACE_ID } from '../sim/places';
-import { homeShelter, siteSpotOf, spawnPoint } from '../sim/wild-build';
+import { homeShelter, siteSpotOf, smeltAt, spawnPoint } from '../sim/wild-build';
+import { ANY_DEPOSIT_ID } from '../sim/deposits';
+import { mineDeposit } from '../sim/mining';
+import { smeltRecipe } from '../sim/catalogue';
+import { WILD_CONTENT_V7 } from '../sim/gathering';
 const siteSpotDm = (s: Parameters<typeof siteSpotOf>[0]) => { const p = siteSpotOf(s); return { x: Math.round(p.x * 10), z: Math.round(p.z * 10) }; };
 import type { World } from '../sim/world';
 
@@ -92,10 +102,15 @@ export interface ExploreCommand extends Envelope { type: 'explore'; at: At }
 /** W5: a named waypoint at (x, z) whole metres. */
 export interface SetWaypointCommand extends Envelope { type: 'set_waypoint'; x: number; z: number; name: string }
 export interface RemoveWaypointCommand extends Envelope { type: 'remove_waypoint'; waypointId: string }
+/** W6 (content v7): one pickaxe swing at a deposit. */
+export interface MineCommand extends Envelope { type: 'mine'; depositId: string; at: At }
+/** W6: start a smelting batch at a finished clay smelter. */
+export interface SmeltCommand extends Envelope { type: 'smelt'; siteId: string; recipe: string; at: At }
 export type WildCommand = PickupCommand | DropCommand | CraftCommand | EquipCommand | EatCommand | UpgradeWildernessCommand
   | ChopCommand | CutLogCommand | MarkStockpileCommand
   | WildPlaceSiteCommand | DeliverSiteCommand | BuildWorkCommand | WildCancelSiteCommand | ClaimShelterCommand | FuelFireCommand | CookCommand
-  | StoreItemsCommand | TakeItemsCommand | DiedCommand | RespawnCommand | ExploreCommand | SetWaypointCommand | RemoveWaypointCommand;
+  | StoreItemsCommand | TakeItemsCommand | DiedCommand | RespawnCommand | ExploreCommand | SetWaypointCommand | RemoveWaypointCommand
+  | MineCommand | SmeltCommand;
 
 export type WildOutcome =
   | { type: 'pickup'; entityId: string; item: WildItem; amount: number; events?: FellEvent[] }
@@ -120,12 +135,16 @@ export type WildOutcome =
   | { type: 'respawn'; point: string; x: number; z: number; events: FellEvent[] }
   | { type: 'explore'; revealed: number; places: string[]; deposits: string[] }
   | { type: 'set_waypoint'; waypointId: string }
-  | { type: 'remove_waypoint'; waypointId: string };
+  | { type: 'remove_waypoint'; waypointId: string }
+  | { type: 'mine'; depositId: string; left: number; work: number; durability: number; item?: WildItem; amount?: number; events: FellEvent[] }
+  | { type: 'smelt'; siteId: string; recipe: string; spent: Record<string, number>; end: number; events: FellEvent[] };
 
 /** Commands only the wilderness has. */
 export const WILD_COMMAND_TYPES: readonly string[] = ['pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness', 'chop', 'cut_log', 'mark_stockpile',
   'deliver_site', 'build_work', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn',
-  'explore', 'set_waypoint', 'remove_waypoint'];
+  'explore', 'set_waypoint', 'remove_waypoint', 'mine', 'smelt'];
+/** W6 (content v7) commands. */
+export const MINING_COMMAND_TYPES: readonly string[] = ['mine', 'smelt'];
 /** W5 (content v6) commands. */
 export const MAP_COMMAND_TYPES: readonly string[] = ['explore', 'set_waypoint', 'remove_waypoint'];
 /** Command names shared with the settlement (M014): told apart by shape. */
@@ -258,6 +277,14 @@ export function validateWildCommand(value: Record<string, unknown>, base: Envelo
         ? { ...base, type: 'set_waypoint', x: value.x as number, z: value.z as number, name: value.name } : null;
     case 'remove_waypoint':
       return typeof value.waypointId === 'string' && WAYPOINT_ID.test(value.waypointId) ? { ...base, type: 'remove_waypoint', waypointId: value.waypointId } : null;
+    case 'mine': {
+      const at = atOf(value.at);
+      return typeof value.depositId === 'string' && ANY_DEPOSIT_ID.test(value.depositId) && at ? { ...base, type: 'mine', depositId: value.depositId, at } : null;
+    }
+    case 'smelt': {
+      const at = atOf(value.at);
+      return siteIdOf(value.siteId) && typeof value.recipe === 'string' && smeltRecipe(value.recipe) && at ? { ...base, type: 'smelt', siteId: value.siteId, recipe: value.recipe, at } : null;
+    }
   }
   return null;
 }
@@ -271,6 +298,10 @@ const chopOutcome = (entityId: string, hp: number, max: number, durability: numb
   ({ type: 'chop', entityId, hp, max, durability, events, ...(trunk ? { trunkId: trunk } : {}), ...(branchPile ? { branchPile } : {}) });
 const deliverOutcome = (siteId: string, item: WildItem, n: number, events: FellEvent[], swapped?: Record<string, number>): WildOutcome =>
   ({ type: 'deliver_site', siteId, item, n, ...(swapped ? { swapped: { ...swapped } } : {}), events });
+const mineOutcome = (depositId: string, left: number, work: number, durability: number, events: FellEvent[], item?: WildItem, amount?: number): WildOutcome =>
+  ({ type: 'mine', depositId, left, work, durability, ...(item !== undefined ? { item } : {}), ...(amount !== undefined ? { amount } : {}), events });
+const smeltOutcome = (siteId: string, recipe: string, spent: Record<string, number>, end: number, events: FellEvent[]): WildOutcome =>
+  ({ type: 'smelt', siteId, recipe, spent: { ...spent }, end, events });
 const cutOutcome = (trunk: string, left: number, work: number, durability: number, events: FellEvent[], pileId?: string): WildOutcome =>
   ({ type: 'cut_log', trunkId: trunk, left, work, durability, events, ...(pileId ? { pileId } : {}) });
 
@@ -385,6 +416,18 @@ export function validateWildOutcome(value: Record<string, unknown>): WildOutcome
     }
     case 'set_waypoint': case 'remove_waypoint':
       return typeof value.waypointId === 'string' && WAYPOINT_ID.test(value.waypointId) ? { type: value.type, waypointId: value.waypointId } as WildOutcome : null;
+    case 'mine': {
+      const ev = eventsOf(value.events, 3);
+      if (typeof value.depositId !== 'string' || !ANY_DEPOSIT_ID.test(value.depositId) || !uint(value.left, 100) || !uint(value.work, 10) || !uint(value.durability, 1000) || !ev) return null;
+      // A unit came out exactly when the outcome names it (one unit of an item), and the work on the next unit starts at 0.
+      if ((value.item === undefined) !== (value.amount === undefined) || value.amount !== undefined && (value.amount !== 1 || !itemOf(value.item) || value.work !== 0)) return null;
+      return mineOutcome(value.depositId, value.left, value.work, value.durability, ev, value.item as WildItem | undefined, value.amount as number | undefined);
+    }
+    case 'smelt': {
+      const ev = eventsOf(value.events, 1), spent = bagOf(value.spent);
+      return siteIdOf(value.siteId) && typeof value.recipe === 'string' && smeltRecipe(value.recipe) && spent && uint(value.end, Number.MAX_SAFE_INTEGER) && ev && ev[0] === 'SMELT_STARTED'
+        ? smeltOutcome(value.siteId, value.recipe, spent, value.end, ev) : null;
+    }
   }
   return null;
 }
@@ -414,6 +457,8 @@ export function wildAgrees(c: WildCommand, o: WildOutcome): boolean {
     case 'explore': return true;
     case 'set_waypoint': return o.type === 'set_waypoint';
     case 'remove_waypoint': return o.type === 'remove_waypoint' && o.waypointId === c.waypointId;
+    case 'mine': return o.type === 'mine' && o.depositId === c.depositId;
+    case 'smelt': return o.type === 'smelt' && o.siteId === c.siteId && o.recipe === c.recipe;
   }
 }
 
@@ -442,6 +487,9 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
   }
   if (MAP_COMMAND_TYPES.includes(c.type) && !world.wild.map) {
     return { ok: false, code: 'wilderness', reasons: ['this world predates the map (wilderness content v5); it needs upgrade_wilderness first'] };
+  }
+  if (MINING_COMMAND_TYPES.includes(c.type) && (world.wild.content < WILD_CONTENT_V7 || !world.wild.mine)) {
+    return { ok: false, code: 'wilderness', reasons: ['this world predates mining (wilderness content v6); it needs upgrade_wilderness first'] };
   }
   // A recorded death waits for its respawn: nothing else is done by a dead character.
   if (world.wild.build?.death && c.type !== 'respawn' && c.type !== 'died') {
@@ -488,6 +536,14 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
     case 'remove_waypoint': {
       const r = removeWaypoint(world.wild.map!, c.waypointId);
       return r.ok ? { ok: true, value: { type: 'remove_waypoint', waypointId: r.value.waypointId } } : r;
+    }
+    case 'mine': {
+      const r = mineDeposit(world, c.depositId, c.at);
+      return r.ok ? { ok: true, value: mineOutcome(c.depositId, r.value.left, r.value.work, r.value.durability, r.value.events, r.value.item, r.value.amount) } : r;
+    }
+    case 'smelt': {
+      const r = smeltAt(world, c.siteId, c.recipe, c.at);
+      return r.ok ? { ok: true, value: smeltOutcome(c.siteId, c.recipe, r.value.spent, r.value.end, r.value.events) } : r;
     }
     case 'pickup': {
       const r = pickUp(world, c.entityId, c.at, c.forSite);
@@ -542,4 +598,4 @@ export function dispatchWild(world: World, c: WildCommand): WildDispatch {
   }
 }
 
-export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6 };
+export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6, WILD_CONTENT_V7 };

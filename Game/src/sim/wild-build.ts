@@ -68,8 +68,9 @@ import type { NavGrid } from './nav';
 import { distanceField, emptyFeatures, navGrid } from './nav';
 import { CHARACTER_RADIUS } from './character';
 import {
-  BUILD_CATALOGUE, BuildingDef, FUTURE_MATERIALS, MATERIAL_LABEL, SolidBox, buildingDef,
+  BUILD_CATALOGUE, BuildingDef, MATERIAL_LABEL, SMELT_RECIPES, SolidBox, buildingDef, materialUnavailable, smeltRecipe,
 } from './catalogue';
+import { DEPOSIT_LABEL, typedDepositsNear } from './deposits';
 import {
   PlacementCheck, checkEntranceOpen, checkFences, checkGround, checkNatural, checkTrees, clearGrowth, entranceRoutes,
   footprintCells, footprintEntrance, footprintSize, inZoneOf,
@@ -120,7 +121,11 @@ export interface WildSite {
   fuel?: number;
   /** Storage: what it holds. */
   stock?: Bag;
+  /** W6 smelter: the batch in it (its charge was taken from the bag when it started), if any. */
+  job?: SmeltJob;
 }
+/** A smelting batch: the recipe, the tick it started and the tick it is done, and the inputs it holds (consumed by it). */
+export interface SmeltJob { recipe: string; start: number; end: number; charge: Bag }
 /** A recorded death not yet woken from. `x`, `z`: where the character last stood on dry ground (dm). */
 export interface DeathRecord { cause: 'drowned'; x: number; z: number; tick: number }
 export interface BuildState {
@@ -187,8 +192,10 @@ export function siteSpotOf(s: Pick<WildSite, 'kind' | 'x' | 'z' | 'rot'>): { x: 
 export function lockReasons(world: World, d: BuildingDef): string[] {
   const w = world.wild, b = w?.build;
   const out: string[] = [];
+  const content = w?.content ?? 0;
   if (!d.implemented) out.push(`arrives with a later milestone (${d.milestone ?? 'later'})`);
-  for (const k of Object.keys(d.materials)) if (FUTURE_MATERIALS[k]) out.push(`needs ${label(k)} (not obtainable yet: ${FUTURE_MATERIALS[k]})`);
+  if (d.minContent && content < d.minContent) out.push(`arrives with wilderness content v${d.minContent} (W6 mining): this world has not been upgraded yet`);
+  for (const k of Object.keys(d.materials)) { const why = materialUnavailable(k, content); if (why) out.push(`needs ${label(k)} (not obtainable yet: ${why})`); }
   for (const p of d.prerequisites.buildings) {
     if (![...(b?.sites.values() ?? [])].some((s) => s.kind === p && s.state === 'done')) out.push(`needs a finished ${buildingDef(p)?.label.toLowerCase() ?? p}`);
   }
@@ -384,6 +391,12 @@ export function checkWildSite(world: World, kind: string, x: number, z: number, 
   const cx = (cells.x0 + cells.x1) / 2, cz = (cells.z0 + cells.z1) / 2;
   const loose = pickupsNear(world, cx, cz, Math.hypot(cells.x1 - cells.x0, cells.z1 - cells.z0) / 2 + 2).find((p) => zone(p));
   if (loose) reasons.push(`${loose.kind === 'pile' ? `your ${label(loose.item)} pile` : `a ${label(loose.item)}`} lies here (pick it up first)`);
+  // W6 (content v7): a deposit is part of the ground; no building is put over one (worked out or not).
+  if (w.content >= 7) {
+    const dep = typedDepositsNear(world, cx, cz, Math.hypot(cells.x1 - cells.x0, cells.z1 - cells.z0) / 2 + 1.5)
+      .find((p) => p.x > cells.x0 - 0.8 && p.x < cells.x1 + 0.8 && p.z > cells.z0 - 0.8 && p.z < cells.z1 + 0.8);
+    if (dep) reasons.push(`a ${DEPOSIT_LABEL[dep.type]} deposit is here: build beside it`);
+  }
   // The scenario-neutral rules.
   const region = siteWindow(cells);
   const g = windowGrid(world, region, ignoreId);
@@ -774,6 +787,61 @@ export function cookAtFire(world: World, siteId: string, item: string, at: At): 
   return { ok: true, value: { made, fuel: r.s.fuel, events: [noteEvent(world, 'FOOD_COOKED', siteId, 1)] } };
 }
 
+/**
+ * W6: start a smelting batch at a finished clay smelter. Its inputs (ore and
+ * coal) must be free in the bag (not reserved for a site): they leave the bag
+ * into the smelter's charge at once, so nothing else can use them. The
+ * ingots come out at the smelter's door when the batch is done (`stepBuild`).
+ */
+export function smeltAt(world: World, siteId: string, recipeId: string, at: At): WildResult<{ spent: Bag; end: number; events: FellEvent[] }> {
+  const r = doneOf(world, siteId, at, 'smelter');
+  if (!r.ok) return r;
+  const recipe = smeltRecipe(recipeId);
+  if (!recipe) return fail('unknown_recipe', `the smelter has no recipe ${recipeId}`);
+  const tick = tickOf(world);
+  if (r.s.job) {
+    const left = Math.max(0, r.s.job.end - tick) * 2;
+    return fail('busy', `the smelter is already smelting ${label(Object.keys(smeltRecipe(r.s.job.recipe)?.output ?? {})[0] ?? 'a batch')} (${left} s left): one batch at a time`);
+  }
+  const w = world.wild!;
+  const missing = Object.entries(recipe.input).filter(([k, n]) => (w.items[k] ?? 0) < n).map(([k, n]) => `${n - (w.items[k] ?? 0)} ${label(k)}`);
+  if (missing.length) return fail('missing', `${recipe.label} needs ${bagText(recipe.input)} in your bag: missing ${missing.join(', ')}`);
+  for (const [k, n] of Object.entries(recipe.input)) {
+    const no = bagRefusal(world, k, n, 'smelt them');
+    if (no) return { ok: false, ...no };
+  }
+  for (const [k, n] of Object.entries(recipe.input)) takeItem(w, k, n);
+  r.s.job = { recipe: recipe.id, start: tick, end: tick + recipe.ticks, charge: sortBag({ ...recipe.input }) };
+  return { ok: true, value: { spent: sortBag({ ...recipe.input }), end: r.s.job.end, events: [noteEvent(world, 'SMELT_STARTED', siteId, recipe.ticks)] } };
+}
+
+/** Where a smelter puts its ingots (m): its door step. */
+export const smelterOutSpot = (s: WildSite): { x: number; z: number } => { const p = siteSpotOf(s); return { x: Math.round(p.x * 100) / 100, z: Math.round(p.z * 100) / 100 }; };
+
+/** A finished batch: its charge is consumed and the ingots lie at the door (joining a pile of the same item there). False when no pile can be made. */
+function finishSmelt(world: World, s: WildSite): boolean {
+  const w = world.wild!;
+  const recipe = smeltRecipe(s.job!.recipe)!;
+  const sp = smelterOutSpot(s);
+  for (const [item, n] of Object.entries(recipe.output)) {
+    const pile = [...w.piles.values()].find((p) => p.item === item && p.x === sp.x && p.z === sp.z);
+    if (!pile && w.piles.size >= MAX_PILES) return false;
+  }
+  let made = 0;
+  for (const [item, n] of Object.entries(sortBag(recipe.output))) {
+    const pile = [...w.piles.values()].find((p) => p.item === item && p.x === sp.x && p.z === sp.z);
+    if (pile) pile.qty += n;
+    else {
+      const id = `d:${w.nextId++}`;
+      w.piles.set(id, { id, item: item as WildItem, qty: n, x: sp.x, y: surfaceAt(world, Math.floor(sp.x), Math.floor(sp.z)), z: sp.z });
+    }
+    made += n;
+  }
+  delete s.job;
+  noteEvent(world, 'SMELT_DONE', s.id, made);
+  return true;
+}
+
 export function stockWeight(stock: Record<string, number> | undefined): number {
   let n = 0;
   for (const [k, v] of Object.entries(stock ?? {})) n += (ITEM_WEIGHT[k as WildItem] ?? 0) * v;
@@ -929,11 +997,12 @@ export function respawnPlayer(world: World, to: string): WildResult<{ point: str
   return { ok: true, value: { point: to, x: p.x, z: p.z, events: [noteEvent(world, 'RESPAWNED', to)] } };
 }
 
-/** One world tick: lit campfires burn their fuel. */
-export function stepBuild(world: World): void {
+/** One world tick: lit campfires burn their fuel; W6: smelting batches that are due finish (in id order). */
+export function stepBuild(world: World, tick = world.life?.tick ?? 0): void {
   const b = world.wild?.build;
   if (!b) return;
   for (const s of b.sites.values()) if (s.fuel && s.fuel > 0) s.fuel--;
+  for (const s of [...b.sites.values()].filter((x) => x.job && x.job.end <= tick).sort((a, c) => a.id.localeCompare(c.id))) finishSmelt(world, s);
 }
 
 // ---------- queries ----------
@@ -998,7 +1067,9 @@ export function buildSnapshot(b: BuildState): BuildSnapshot {
       id: s.id, kind: s.kind, x: s.x, z: s.z, rot: s.rot, y: s.y, state: s.state,
       reserved: Object.fromEntries(Object.entries(sortSources(s.reserved))), delivered: sortBag(s.delivered), consumed: sortBag(s.consumed),
       stage: s.stage, work: s.work, placed: s.placed,
-      ...(s.done !== undefined ? { done: s.done } : {}), ...(s.fuel !== undefined ? { fuel: s.fuel } : {}), ...(s.stock !== undefined ? { stock: sortBag(s.stock) } : {}),
+      ...(s.done !== undefined ? { done: s.done } : {}), ...(s.fuel !== undefined ? { fuel: s.fuel } : {}),
+      ...(s.job !== undefined ? { job: { recipe: s.job.recipe, start: s.job.start, end: s.job.end, charge: sortBag(s.job.charge) } } : {}),
+      ...(s.stock !== undefined ? { stock: sortBag(s.stock) } : {}),
     })),
   };
 }
@@ -1011,7 +1082,7 @@ const same = (a: Bag, b: Bag) => JSON.stringify(sortBag(a)) === JSON.stringify(s
 const minTicks = (swings: number) => Math.max(0, Math.ceil(swings / SWINGS_PER_TICK) - 1);
 
 /** What the rest of the wilderness snapshot holds (for the reservation sources). */
-export interface BuildContext { items: Bag; piles: ReadonlyArray<{ id: string; item: string; qty: number }> }
+export interface BuildContext { items: Bag; piles: ReadonlyArray<{ id: string; item: string; qty: number }>; content?: number }
 
 /**
  * Strict canonical form; throws otherwise. Beyond the shape, a site must have
@@ -1039,7 +1110,7 @@ export function validateBuild(raw: unknown, tick: number, nextId: number, itemOk
     if (!isObj(r) || typeof r.id !== 'string' || !SITE_ID.test(r.id) || ids.has(r.id) || Number(r.id.slice(2)) >= nextId) bad('site id');
     const s = r as Record<string, unknown>;
     const d = buildingDef(String(s.kind));
-    if (!d || !d.implemented || !int(s.x, -HALF, HALF) || !int(s.z, -HALF, HALF) || !int(s.rot, 0, 3) || !fin(s.y)
+    if (!d || !d.implemented || (d.minContent ?? 0) > (ctx.content ?? 0) || !int(s.x, -HALF, HALF) || !int(s.z, -HALF, HALF) || !int(s.rot, 0, 3) || !fin(s.y)
       || !['planned', 'building', 'done'].includes(String(s.state)) || !int(s.stage, 0, d.stages.length) || !int(s.work, 0, 1000)
       || !int(s.placed, 0, tick)) bad('site');
     if (!isObj(s.reserved)) bad('reservations');
@@ -1071,12 +1142,21 @@ export function validateBuild(raw: unknown, tick: number, nextId: number, itemOk
     if (fire !== (s.fuel !== undefined) || (s.fuel !== undefined && !int(s.fuel, 0, MAX_FUEL))) bad('fuel');
     if (store !== (s.stock !== undefined)) bad('stock');
     const stock = s.stock !== undefined ? bag(s.stock, 10_000) : undefined;
+    // W6: a smelter's batch: a known recipe, started after the smelter was finished and not in the future, its time and charge the recipe's.
+    let job: SmeltJob | undefined;
+    if (s.job !== undefined) {
+      const j = s.job as Record<string, unknown>;
+      const rec = isObj(j) ? smeltRecipe(String(j.recipe)) : undefined;
+      if (!done || d!.function.kind !== 'smelter' || !rec || !int(j.start, s.done as number, tick) || j.end !== (j.start as number) + rec.ticks
+        || !same(bag(j.charge, 10_000), rec.input)) bad('smelting batch');
+      job = { recipe: rec!.id, start: j.start as number, end: j.end as number, charge: sortBag({ ...rec!.input }) };
+    }
     if (stock && stockWeight(stock) > (d!.function as { capacity: number }).capacity) bad('stock weight');
     ids.add(s.id as string);
     return {
       id: s.id as string, kind: d!.id, x: s.x as number, z: s.z as number, rot: s.rot as number, y: s.y as number, state: s.state as SiteState,
       reserved, delivered, consumed, stage: s.stage as number, work: s.work as number, placed: s.placed as number,
-      ...(s.done !== undefined ? { done: s.done as number } : {}), ...(s.fuel !== undefined ? { fuel: s.fuel as number } : {}), ...(stock ? { stock } : {}),
+      ...(s.done !== undefined ? { done: s.done as number } : {}), ...(s.fuel !== undefined ? { fuel: s.fuel as number } : {}), ...(job ? { job } : {}), ...(stock ? { stock } : {}),
     };
   });
   // Every reservation is backed: the source exists and holds what all live sites reserve in it.
@@ -1113,11 +1193,12 @@ export function validateBuild(raw: unknown, tick: number, nextId: number, itemOk
 export function buildFromSnapshot(s: BuildSnapshot): BuildState {
   return {
     home: s.home ?? null, death: s.death ? { ...s.death } : null,
-    sites: new Map(s.sites.map((x) => [x.id, { ...x, reserved: clone2(x.reserved), delivered: { ...x.delivered }, consumed: { ...x.consumed }, ...(x.stock ? { stock: { ...x.stock } } : {}) }])),
+    sites: new Map(s.sites.map((x) => [x.id, { ...x, reserved: clone2(x.reserved), delivered: { ...x.delivered }, consumed: { ...x.consumed }, ...(x.stock ? { stock: { ...x.stock } } : {}),
+      ...(x.job ? { job: { ...x.job, charge: { ...x.job.charge } } } : {}) }])),
   };
 }
 
-export { BUILD_CATALOGUE };
+export { BUILD_CATALOGUE, SMELT_RECIPES };
 
 /**
  * A spot near `from` (dm) where the player standing at `from` may place this

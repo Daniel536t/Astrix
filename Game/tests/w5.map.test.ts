@@ -33,7 +33,8 @@ class MemoryStorage implements KeyValueStorage {
   key(i: number) { return [...this.map.keys()][i] ?? null; }
   get length() { return this.map.size; }
 }
-const v6 = () => GameSession.genesis(1337, GENERATOR_V2, 'wilderness');
+// W6: new worlds start at v7; the W5 tests keep testing exactly the v6 rules.
+const v6 = () => GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 6);
 const mapOf = (s: GameSession) => s.world.wild!.map!;
 const explore = (s: GameSession, p: { x: number; z: number }) => send(s, { type: 'explore', at: dm(p) });
 /** Walk from a to b reporting every `step` m, with a world tick every `perTick` reports (16 m per tick: 8 m/s at most). */
