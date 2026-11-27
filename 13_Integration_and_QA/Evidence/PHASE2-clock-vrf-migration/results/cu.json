@@ -1,0 +1,240 @@
+[
+ {
+  "name": "OLD binary tick (1 step, v1 account)",
+  "programCu": 4947,
+  "perIx": [
+   4947
+  ],
+  "txCu": 5097,
+  "note": ""
+ },
+ {
+  "name": "claim_world (legacy) on v2 slot",
+  "txCu": 22490
+ },
+ {
+  "name": "settle no-op (nothing due)",
+  "programCu": 6305,
+  "perIx": [
+   6305
+  ],
+  "txCu": 6455,
+  "note": ""
+ },
+ {
+  "name": "settle 1 step",
+  "programCu": 7516,
+  "perIx": [
+   7516
+  ],
+  "txCu": 7666,
+  "note": ""
+ },
+ {
+  "name": "tick alias 1 step",
+  "programCu": 7514,
+  "perIx": [
+   7514
+  ],
+  "txCu": 7664,
+  "note": ""
+ },
+ {
+  "name": "settle 15 steps (30 s crank)",
+  "programCu": 9333,
+  "perIx": [
+   9333
+  ],
+  "txCu": 9483,
+  "note": ""
+ },
+ {
+  "name": "settle 30 steps (60 s crank)",
+  "programCu": 11058,
+  "perIx": [
+   11058
+  ],
+  "txCu": 11208,
+  "note": ""
+ },
+ {
+  "name": "settle 300 steps (cap)",
+  "programCu": 43867,
+  "perIx": [
+   43867
+  ],
+  "txCu": 44017,
+  "note": ""
+ },
+ {
+  "name": "harvest (settle + action)",
+  "programCu": 8028,
+  "perIx": [
+   8028
+  ],
+  "txCu": 8178,
+  "note": ""
+ },
+ {
+  "name": "build/plant: plant (settle + action)",
+  "programCu": 7936,
+  "perIx": [
+   7936
+  ],
+  "txCu": 8086,
+  "note": ""
+ },
+ {
+  "name": "prospect (settle + VRF request CPI)",
+  "programCu": 21880,
+  "perIx": [
+   21880
+  ],
+  "txCu": 22030,
+  "note": ""
+ },
+ {
+  "name": "vrf_callback via mock (mock VRF + ASTrix callback)",
+  "programCu": 7810,
+  "perIx": [
+   7810
+  ],
+  "txCu": 16112,
+  "note": "perIx = ASTrix callback only (inner)",
+  "callbackOnly": [
+   7810
+  ]
+ },
+ {
+  "name": "cancel_prospect (after timeout)",
+  "programCu": 18947,
+  "perIx": [
+   18947
+  ],
+  "txCu": 19097,
+  "note": ""
+ },
+ {
+  "name": "migrate_world (v1 -> v2, incl. rent transfer)",
+  "programCu": 16276,
+  "perIx": [
+   16276
+  ],
+  "txCu": 16426,
+  "note": ""
+ },
+ {
+  "name": "claim_world_vrf (commit + VRF request)",
+  "programCu": 32813,
+  "perIx": [
+   32813
+  ],
+  "txCu": 32963,
+  "note": ""
+ },
+ {
+  "name": "vrf_callback genesis via mock",
+  "programCu": 7574,
+  "perIx": [
+   7574
+  ],
+  "txCu": 15876,
+  "note": ""
+ },
+ {
+  "name": "16-world crank, 15 steps each (30 s cadence)",
+  "programCu": 148706,
+  "perIx": [
+   9331,
+   9312,
+   9226,
+   9312,
+   9331,
+   9312,
+   9226,
+   9312,
+   9331,
+   9312,
+   9217,
+   9303,
+   9322,
+   9303,
+   9217,
+   9339
+  ],
+  "txCu": 148856,
+  "note": ""
+ },
+ {
+  "name": "16-world crank, 30 steps each (60 s cadence)",
+  "programCu": 177876,
+  "perIx": [
+   11067,
+   11172,
+   11172,
+   11067,
+   11067,
+   11172,
+   11172,
+   11067,
+   11067,
+   11172,
+   11172,
+   11067,
+   11058,
+   11163,
+   11163,
+   11058
+  ],
+  "txCu": 178026,
+  "note": ""
+ },
+ {
+  "name": "16-world crank, 300 steps each (cap; backlog)",
+  "programCu": 701864,
+  "perIx": [
+   43861,
+   43865,
+   43867,
+   43867,
+   43867,
+   43867,
+   43867,
+   43867,
+   43867,
+   43867,
+   43867,
+   43867,
+   43867,
+   43867,
+   43867,
+   43867
+  ],
+  "txCu": 702014,
+  "note": ""
+ },
+ {
+  "name": "16-world crank, old-style 2 s tick alias (1 step each)",
+  "programCu": 120816,
+  "perIx": [
+   7623,
+   7527,
+   7527,
+   7527,
+   7623,
+   7527,
+   7527,
+   7527,
+   7623,
+   7527,
+   7527,
+   7527,
+   7623,
+   7527,
+   7527,
+   7527
+  ],
+  "txCu": 120966,
+  "note": ""
+ }
+]

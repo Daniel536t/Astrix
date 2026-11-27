@@ -1,0 +1,13 @@
+[package]
+name = "mock-vrf"
+version = "0.1.0"
+edition = "2021"
+description = "TEST ONLY: stands in for MagicBlock VRF (Vrf1RNU...) on a local SVM so callback binding can be tested. Not a VRF."
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+solana-program = "=3.0.0"
+
+[workspace]

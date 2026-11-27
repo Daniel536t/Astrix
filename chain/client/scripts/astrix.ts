@@ -20,6 +20,15 @@
 //   schedule-checkpoints <from> <task> <ms>      checkpoint crank for 8 slots
 //   checkpoint <slot>          run a checkpoint now (no-op unless due)
 //   worlds <n> / passports <n> tables of world and passport state
+// Layout v2 / PHASE2 (see 13_Integration_and_QA/Evidence/PHASE2-clock-vrf-migration/REPORT.md):
+//   settle <slot|settlement>                     catch one world up to the ER clock (ER, permissionless)
+//   schedule-world-settles <task> <ms> <count> [from] [iterations]   settle crank (new task ids, 30-60 s)
+//   undelegate-worlds <from> <count> [batch]     ER, admin: commit+undelegate world slots in small batches
+//   migrate-worlds <from> <count>                base, admin pays rent: v1 -> v2 for undelegated slots
+//   migrate-settlement                           base: v1 -> v2 for the demo settlement (after `undelegate`)
+//   request-undelegation <kind> <index>          base escape hatch (kind 0 settlement,1 registry,2 slot,3 passport,4 treasury)
+//   rollback-undelegation <kind> <index>         base escape hatch after 9,000 slots: last committed state
+//   v2 <n>                                       read-only table of the v2 tail (clock, VRF, journal)
 // Keys are read from ASTRIX_WALLET (never printed, never written to the repo).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -262,6 +271,80 @@ if (cmd === 'setup-worlds') {
   const ix = await (cmd === 'commit' ? m.commitSettlement() : m.undelegate())
     .accountsPartial({ payer: owner.publicKey, settlement, magicProgram: MAGIC_PROGRAM_ID, magicContext: MAGIC_CONTEXT_ID }).instruction();
   out(erTx(await erSend(ix)));
+} else if (cmd === 'settle') {
+  const w = a1 === 'settlement' ? settlement : slotPda(Number(a1 ?? 0));
+  const ix = await program(er).methods.settle().accountsPartial({ settlement: w }).instruction();
+  out(erTx(await erSend(ix)));
+} else if (cmd === 'schedule-world-settles') {
+  // New clock crank: `settle` every 30-60 s. Use NEW task ids (e.g. 744001/744101/744117); never the 742xxx tick ids.
+  const n = Number(a3 ?? 16), from = Number(process.argv[6] ?? 0), iterations = Number(process.argv[7] ?? 100000);
+  const ms = Number(a2 ?? 30000);
+  if (ms < 30000 || ms > 60000) throw new Error('settle crank interval must be 30000-60000 ms');
+  if (Number(a1) >= 742000 && Number(a1) < 743000) throw new Error('742xxx are the legacy tick crank ids; use new ids');
+  const worlds = process.env.ASTRIX_INCLUDE_SETTLEMENT === '1' ? [settlement] : [];
+  for (let i = 0; i < n; i++) worlds.push(slotPda(from + i));
+  const ix = await program(er).methods.scheduleWorldSettles(new BN(a1), new BN(ms), new BN(iterations))
+    .accountsPartial({ magicProgram: MAGIC_PROGRAM_ID, payer: owner.publicKey, registry: registryPda, program: PROGRAM_ID })
+    .remainingAccounts(worlds.slice(0, 16).map((pubkey) => ({ pubkey, isSigner: false, isWritable: true }))).instruction();
+  out(erTx(await erSend(ix)));
+} else if (cmd === 'undelegate-worlds') {
+  // ER, admin: commit+undelegate world slots [from, from+count) in batches (default 2) so each commit fits
+  // inline (a 10-account intent failed buffer preparation on the local ER 2.0.3). The registry, passports and
+  // treasury do not need migration and stay delegated.
+  const from = Number(a1 ?? 0), n = Number(a2 ?? 1), batch = Number(a3 ?? 2);
+  const sigs = [];
+  for (let i = from; i < from + n; i += batch) {
+    const metas = []; for (let j = i; j < Math.min(from + n, i + batch); j++) metas.push({ pubkey: slotPda(j), isSigner: false, isWritable: true });
+    const ix = await program(er).methods.undelegateWorlds(false)
+      .accountsPartial({ payer: owner.publicKey, registry: registryPda, magicProgram: MAGIC_PROGRAM_ID, magicContext: MAGIC_CONTEXT_ID })
+      .remainingAccounts(metas).instruction();
+    sigs.push(await erSend(ix));
+  }
+  out({ batches: sigs.length, sigs });
+} else if (cmd === 'migrate-worlds' || cmd === 'migrate-settlement') {
+  // Base layer, after undelegation: grow v1 world accounts to layout v2 (payer = this wallet pays the rent delta).
+  const keys = cmd === 'migrate-settlement' ? [settlement] : Array.from({ length: Number(a2 ?? 1) }, (_, k) => slotPda(Number(a1 ?? 0) + k));
+  const log = [];
+  for (const w of keys) {
+    const info = await base.getAccountInfo(w);
+    if (!info || !info.owner.equals(PROGRAM_ID)) { log.push({ world: w.toBase58(), skipped: info ? `owner ${info.owner.toBase58()} (still delegated?)` : 'missing' }); continue; }
+    if (info.data.length !== 240) { log.push({ world: w.toBase58(), skipped: `len ${info.data.length}` }); continue; }
+    const sig = await program(base).methods.migrateWorld().accountsPartial({ world: w, payer: owner.publicKey, systemProgram: SystemProgram.programId }).rpc();
+    log.push({ world: w.toBase58(), ...baseTx(sig) });
+  }
+  out(log);
+} else if (cmd === 'request-undelegation' || cmd === 'rollback-undelegation') {
+  // Base-layer escape hatch (DLP RequestUndelegation / UndelegateWithRollbackAfterTimeout via this program).
+  const kind = Number(a1), index = Number(a2 ?? 0);
+  const target = [settlement, registryPda, slotPda(index), passportPda(slotPda(index)), treasuryPda][kind];
+  if (!target) throw new Error('kind must be 0..4');
+  const dlp = (tag: string) => PublicKey.findProgramAddressSync([Buffer.from(tag), target.toBuffer()], DELEGATION_PROGRAM_ID)[0];
+  const m = program(base).methods;
+  const sig = cmd === 'request-undelegation'
+    ? await m.requestUndelegation(kind, index).accountsPartial({ payer: owner.publicKey, delegated: target, ownerProgram: PROGRAM_ID,
+      undelegationRequest: dlp('undelegation-request'), delegationRecord: delegationRecordPdaFromDelegatedAccount(target),
+      delegationMetadata: delegationMetadataPdaFromDelegatedAccount(target), delegationProgram: DELEGATION_PROGRAM_ID, systemProgram: SystemProgram.programId }).rpc()
+    : await m.rollbackUndelegation(kind, index).accountsPartial({ payer: owner.publicKey, delegated: target, ownerProgram: PROGRAM_ID,
+      undelegationRequest: dlp('undelegation-request'), delegationRecord: delegationRecordPdaFromDelegatedAccount(target),
+      delegationMetadata: delegationMetadataPdaFromDelegatedAccount(target), commitState: dlp('state-diff'), commitRecord: dlp('commit-state-record'),
+      commitReimbursement: ER_VALIDATOR, delegationProgram: DELEGATION_PROGRAM_ID }).rpc();
+  out({ target: target.toBase58(), ...baseTx(sig) });
+} else if (cmd === 'v2') {
+  // Read-only: layout v2 tail (offsets in chain/docs/ACCOUNT_LAYOUTS.md).
+  const n = Number(a1 ?? 16);
+  const rows = [];
+  for (let i = -1; i < n; i++) {
+    const key = i < 0 ? settlement : slotPda(i);
+    const info = await er.getAccountInfo(key);
+    if (!info) { rows.push({ i, missing: true }); continue; }
+    const d = Buffer.from(info.data);
+    const v2 = d.length >= 876 && d.subarray(240, 244).toString() === 'AXv2';
+    const e = d.subarray(240);
+    rows.push({ i: i < 0 ? 'settlement' : i, len: d.length, layout: v2 ? 2 : 1, tick: Number(d.readBigUInt64LE(46)), lastSettled: Number(d.readBigInt64LE(54)),
+      ...(v2 ? { seedOrigin: ['legacy', 'vrf', 'awaiting'][e[6]], stateEpoch: e.readUInt32LE(8), epochStart: Number(e.readBigInt64LE(12)), regressions: e.readUInt32LE(28),
+        pendingKind: e[96], nextRequestId: Number(e.readBigUInt64LE(68)), journalSeq: Number(e.readBigUInt64LE(116)) } : {}) });
+  }
+  console.table(rows);
 } else {
   console.error('unknown command; see header');
   process.exit(2);

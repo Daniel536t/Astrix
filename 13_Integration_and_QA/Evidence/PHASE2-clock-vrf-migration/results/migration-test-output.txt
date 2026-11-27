@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: MIGRATION: all 33 world accounts + 32 passports + registry + treasury from the backup copy
+ok 1 - MIGRATION: all 33 world accounts + 32 passports + registry + treasury from the backup copy
+  ---
+  duration_ms: 923.234915
+  type: 'test'
+  ...
+# Subtest: MIGRATION: the base-layer (stale, delegated) copies also migrate once undelegated; data preserved
+ok 2 - MIGRATION: the base-layer (stale, delegated) copies also migrate once undelegated; data preserved
+  ---
+  duration_ms: 265.932087
+  type: 'test'
+  ...
+# Subtest: ROLLBACK: the dumped devnet binary works on migrated (v2) accounts; re-upgrade continues correctly
+ok 3 - ROLLBACK: the dumped devnet binary works on migrated (v2) accounts; re-upgrade continues correctly
+  ---
+  duration_ms: 251.162314
+  type: 'test'
+  ...
+# Subtest: ESCAPE HATCH (devnet DLP binary): request_undelegation, refused before 9,000 slots, rollback after; data restored
+ok 4 - ESCAPE HATCH (devnet DLP binary): request_undelegation, refused before 9,000 slots, rollback after; data restored
+  ---
+  duration_ms: 319.046609
+  type: 'test'
+  ...
+# Subtest: ESCAPE HATCH on a migrated v2 world: re-delegate via DLP, rollback -> state_epoch + 1, ROLLBACK journaled, still playable
+ok 5 - ESCAPE HATCH on a migrated v2 world: re-delegate via DLP, rollback -> state_epoch + 1, ROLLBACK journaled, still playable
+  ---
+  duration_ms: 96.70258
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3258.467207
