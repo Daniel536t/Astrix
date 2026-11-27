@@ -1,0 +1,3275 @@
+{
+ "probe": "m008-views-b3.js",
+ "build": "dist",
+ "viewport": "1000x600",
+ "results": [
+  {
+   "view": "farm-300",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=300",
+   "build": "dist",
+   "screenshots": [
+    "views-farm-300.png",
+    "views-farm-300-clean.png"
+   ],
+   "warmupMs": 30375,
+   "stableSamples": 3,
+   "errs": [],
+   "rendererCalls": 89,
+   "rendererTriangles": 148736,
+   "metrics": {
+    "natureInstances": 42,
+    "vegetation": {
+     "near": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "mid": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "far": {
+      "instances": 42,
+      "triangles": 1224
+     },
+     "drawnTriangles": 1224,
+     "evaluations": 1,
+     "switches": 42
+    },
+    "nearTriangles": 101402,
+    "macroTriangles": 74396,
+    "macroVisibleTriangles": 36882,
+    "macroTilesInView": 12,
+    "nearDisplayRadius": 2,
+    "displayedChunks": 25,
+    "nearDisplayedTriangles": 52684,
+    "viewAnchor": {
+     "nearGround": -129.4,
+     "shadowLead": -37.4,
+     "coverOffset": -85.4
+    },
+    "groundCover": {
+     "pieces": 274,
+     "triangles": 6186,
+     "rebuilds": 1
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 0.16,
+      "p95Ms": 0.2,
+      "maxMs": 14.5,
+      "n": 241
+     },
+     "fauna": {
+      "meanMs": 0.18,
+      "p95Ms": 0.5,
+      "maxMs": 0.8,
+      "n": 241
+     },
+     "terrain": {
+      "meanMs": 0.27,
+      "p95Ms": 0.2,
+      "maxMs": 48.6,
+      "n": 241
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 241
+     },
+     "groundcover": {
+      "meanMs": 0.06,
+      "p95Ms": 0.1,
+      "maxMs": 11,
+      "n": 241
+     },
+     "render": {
+      "meanMs": 2.03,
+      "p95Ms": 1.9,
+      "maxMs": 181.5,
+      "n": 241
+     },
+     "tick": {
+      "meanMs": 1.24,
+      "p95Ms": 1.4,
+      "maxMs": 2.7,
+      "n": 12
+     }
+    },
+    "frameWork": {
+     "frames": 241,
+     "p50Ms": 1.6,
+     "p95Ms": 3.4,
+     "p99Ms": 6.2,
+     "maxMs": 261,
+     "longFrames": 1,
+     "hitches": 1,
+     "windowFrames": 241,
+     "heapMB": 55
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 69,
+     "triangles": 125568
+    },
+    "shadow": {
+     "draws": 20,
+     "triangles": 23168
+    },
+    "all": {
+     "draws": 89,
+     "triangles": 148736
+    }
+   },
+   "owners": {
+    "voxel_world": {
+     "mainDraws": 46,
+     "mainTris": 94030,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "homestead": {
+     "mainDraws": 10,
+     "mainTris": 11436,
+     "shadowDraws": 10,
+     "shadowTris": 11436
+    },
+    "fauna": {
+     "mainDraws": 4,
+     "mainTris": 11328,
+     "shadowDraws": 4,
+     "shadowTris": 11328
+    },
+    "life_state": {
+     "mainDraws": 2,
+     "mainTris": 128,
+     "shadowDraws": 2,
+     "shadowTris": 128
+    },
+    "noxel_sites": {
+     "mainDraws": 4,
+     "mainTris": 276,
+     "shadowDraws": 4,
+     "shadowTris": 276
+    },
+    "ground_cover": {
+     "mainDraws": 1,
+     "mainTris": 6186,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "styl_nature": {
+     "mainDraws": 1,
+     "mainTris": 1224,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sky_dome": {
+     "mainDraws": 1,
+     "mainTris": 960,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sun_disc": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "character": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "Mesh": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     25,
+     49372,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_chunk_#_#",
+     16,
+     6624,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     4,
+     36882,
+     0,
+     0
+    ],
+    [
+     "homestead/character_body",
+     2,
+     516,
+     2,
+     516
+    ],
+    [
+     "fauna/fauna_rabbit",
+     1,
+     9384,
+     1,
+     9384
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     1,
+     4548
+    ],
+    [
+     "homestead/herd_sheep",
+     1,
+     2448,
+     1,
+     2448
+    ],
+    [
+     "homestead/herd_chicken",
+     1,
+     960,
+     1,
+     960
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     816,
+     1,
+     816
+    ],
+    [
+     "homestead/herd_goat",
+     1,
+     696,
+     1,
+     696
+    ],
+    [
+     "homestead/herd_cattle",
+     1,
+     672,
+     1,
+     672
+    ],
+    [
+     "homestead/herd_horse",
+     1,
+     624,
+     1,
+     624
+    ],
+    [
+     "fauna/fauna_trout",
+     1,
+     600,
+     1,
+     600
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     528,
+     1,
+     528
+    ],
+    [
+     "homestead/herd_pig",
+     1,
+     504,
+     1,
+     504
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     1,
+     468
+    ],
+    [
+     "life_state/stockpile_frame",
+     1,
+     100,
+     1,
+     100
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     1,
+     96,
+     1,
+     96
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     1,
+     84,
+     1,
+     84
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     1,
+     60,
+     1,
+     60
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     1,
+     36,
+     1,
+     36
+    ],
+    [
+     "life_state/stockpile_resources",
+     1,
+     28,
+     1,
+     28
+    ],
+    [
+     "ground_cover/ground_cover_batch",
+     1,
+     6186,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_batch_far",
+     1,
+     1224,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ]
+   ],
+   "pan": null
+  },
+  {
+   "view": "farm-600",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=600",
+   "build": "dist",
+   "screenshots": [
+    "views-farm-600.png",
+    "views-farm-600-clean.png"
+   ],
+   "warmupMs": 29715,
+   "stableSamples": 3,
+   "errs": [],
+   "rendererCalls": 44,
+   "rendererTriangles": 115128,
+   "metrics": {
+    "natureInstances": 42,
+    "vegetation": {
+     "near": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "mid": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "far": {
+      "instances": 42,
+      "triangles": 1224
+     },
+     "drawnTriangles": 1224,
+     "evaluations": 1,
+     "switches": 42
+    },
+    "nearTriangles": 101402,
+    "macroTriangles": 75562,
+    "macroVisibleTriangles": 62286,
+    "macroTilesInView": 26,
+    "nearDisplayRadius": 1,
+    "displayedChunks": 9,
+    "nearDisplayedTriangles": 15068,
+    "viewAnchor": {
+     "nearGround": -258.8,
+     "shadowLead": -166.8,
+     "coverOffset": -214.8
+    },
+    "groundCover": {
+     "pieces": 0,
+     "triangles": 0,
+     "rebuilds": 1
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 0.15,
+      "p95Ms": 0.2,
+      "maxMs": 18.6,
+      "n": 295
+     },
+     "fauna": {
+      "meanMs": 0.18,
+      "p95Ms": 0.4,
+      "maxMs": 3.7,
+      "n": 295
+     },
+     "terrain": {
+      "meanMs": 0.32,
+      "p95Ms": 0.2,
+      "maxMs": 66.4,
+      "n": 295
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 295
+     },
+     "groundcover": {
+      "meanMs": 0.01,
+      "p95Ms": 0.1,
+      "maxMs": 0.7,
+      "n": 295
+     },
+     "render": {
+      "meanMs": 1.51,
+      "p95Ms": 1.5,
+      "maxMs": 166.4,
+      "n": 295
+     },
+     "tick": {
+      "meanMs": 1.36,
+      "p95Ms": 2.2,
+      "maxMs": 2.4,
+      "n": 12
+     }
+    },
+    "frameWork": {
+     "frames": 295,
+     "p50Ms": 1.3,
+     "p95Ms": 3.3,
+     "p99Ms": 5.4,
+     "maxMs": 258.8,
+     "longFrames": 1,
+     "hitches": 1,
+     "windowFrames": 295,
+     "heapMB": 56
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 41,
+     "triangles": 104616
+    },
+    "shadow": {
+     "draws": 3,
+     "triangles": 10512
+    },
+    "all": {
+     "draws": 44,
+     "triangles": 115128
+    }
+   },
+   "owners": {
+    "voxel_world": {
+     "mainDraws": 19,
+     "mainTris": 79264,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "fauna": {
+     "mainDraws": 4,
+     "mainTris": 11328,
+     "shadowDraws": 3,
+     "shadowTris": 10512
+    },
+    "homestead": {
+     "mainDraws": 10,
+     "mainTris": 11436,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "styl_nature": {
+     "mainDraws": 1,
+     "mainTris": 1224,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sky_dome": {
+     "mainDraws": 1,
+     "mainTris": 960,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "life_state": {
+     "mainDraws": 2,
+     "mainTris": 128,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "noxel_sites": {
+     "mainDraws": 4,
+     "mainTris": 276,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "ground_cover": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sun_disc": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "character": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "Mesh": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     9,
+     14310,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_chunk_#_#",
+     6,
+     1516,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     3,
+     62286,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_rabbit",
+     1,
+     9384,
+     1,
+     9384
+    ],
+    [
+     "fauna/fauna_trout",
+     1,
+     600,
+     1,
+     600
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     528,
+     1,
+     528
+    ],
+    [
+     "homestead/character_body",
+     2,
+     516,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_sheep",
+     1,
+     2448,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_batch_far",
+     1,
+     1224,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_chicken",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     816,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_goat",
+     1,
+     696,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_cattle",
+     1,
+     672,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_horse",
+     1,
+     624,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_pig",
+     1,
+     504,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_frame",
+     1,
+     100,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     1,
+     96,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     1,
+     84,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     1,
+     60,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     1,
+     36,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_resources",
+     1,
+     28,
+     0,
+     0
+    ]
+   ],
+   "pan": null
+  },
+  {
+   "view": "farm-1400",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=1400",
+   "build": "dist",
+   "screenshots": [
+    "views-farm-1400.png",
+    "views-farm-1400-clean.png"
+   ],
+   "warmupMs": 29714,
+   "stableSamples": 3,
+   "errs": [],
+   "rendererCalls": 39,
+   "rendererTriangles": 117892,
+   "metrics": {
+    "natureInstances": 42,
+    "vegetation": {
+     "near": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "mid": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "far": {
+      "instances": 42,
+      "triangles": 1224
+     },
+     "drawnTriangles": 1224,
+     "evaluations": 1,
+     "switches": 42
+    },
+    "nearTriangles": 101402,
+    "macroTriangles": 75562,
+    "macroVisibleTriangles": 75562,
+    "macroTilesInView": 40,
+    "nearDisplayRadius": 1,
+    "displayedChunks": 9,
+    "nearDisplayedTriangles": 15068,
+    "viewAnchor": {
+     "nearGround": -603.9,
+     "shadowLead": -511.9,
+     "coverOffset": -559.9
+    },
+    "groundCover": {
+     "pieces": 0,
+     "triangles": 0,
+     "rebuilds": 1
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 0.16,
+      "p95Ms": 0.2,
+      "maxMs": 17.8,
+      "n": 289
+     },
+     "fauna": {
+      "meanMs": 0.19,
+      "p95Ms": 0.4,
+      "maxMs": 3.5,
+      "n": 289
+     },
+     "terrain": {
+      "meanMs": 0.3,
+      "p95Ms": 0.2,
+      "maxMs": 61.6,
+      "n": 289
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 289
+     },
+     "groundcover": {
+      "meanMs": 0.02,
+      "p95Ms": 0.1,
+      "maxMs": 0.5,
+      "n": 289
+     },
+     "render": {
+      "meanMs": 1.41,
+      "p95Ms": 1.5,
+      "maxMs": 159.1,
+      "n": 289
+     },
+     "tick": {
+      "meanMs": 1.15,
+      "p95Ms": 1.2,
+      "maxMs": 2.8,
+      "n": 12
+     }
+    },
+    "frameWork": {
+     "frames": 289,
+     "p50Ms": 1.2,
+     "p95Ms": 3.1,
+     "p99Ms": 4.4,
+     "maxMs": 244.5,
+     "longFrames": 1,
+     "hitches": 1,
+     "windowFrames": 289,
+     "heapMB": 46
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 39,
+     "triangles": 117892
+    },
+    "shadow": {
+     "draws": 0,
+     "triangles": 0
+    },
+    "all": {
+     "draws": 39,
+     "triangles": 117892
+    }
+   },
+   "owners": {
+    "voxel_world": {
+     "mainDraws": 17,
+     "mainTris": 92540,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "homestead": {
+     "mainDraws": 10,
+     "mainTris": 11436,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "fauna": {
+     "mainDraws": 4,
+     "mainTris": 11328,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "styl_nature": {
+     "mainDraws": 1,
+     "mainTris": 1224,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sky_dome": {
+     "mainDraws": 1,
+     "mainTris": 960,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "life_state": {
+     "mainDraws": 2,
+     "mainTris": 128,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "noxel_sites": {
+     "mainDraws": 4,
+     "mainTris": 276,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "ground_cover": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sun_disc": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "character": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "Mesh": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     9,
+     14310,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_chunk_#_#",
+     6,
+     1516,
+     0,
+     0
+    ],
+    [
+     "homestead/character_body",
+     2,
+     516,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     1,
+     75562,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_rabbit",
+     1,
+     9384,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_sheep",
+     1,
+     2448,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_batch_far",
+     1,
+     1224,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_chicken",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     816,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_goat",
+     1,
+     696,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_cattle",
+     1,
+     672,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_horse",
+     1,
+     624,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_trout",
+     1,
+     600,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     528,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_pig",
+     1,
+     504,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_frame",
+     1,
+     100,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     1,
+     96,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     1,
+     84,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     1,
+     60,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     1,
+     36,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_resources",
+     1,
+     28,
+     0,
+     0
+    ]
+   ],
+   "pan": null
+  },
+  {
+   "view": "farm-1400-low",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=20&dist=1400",
+   "build": "dist",
+   "screenshots": [],
+   "warmupMs": 26022,
+   "stableSamples": 3,
+   "errs": [],
+   "rendererCalls": 39,
+   "rendererTriangles": 117892,
+   "metrics": {
+    "natureInstances": 42,
+    "vegetation": {
+     "near": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "mid": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "far": {
+      "instances": 42,
+      "triangles": 1224
+     },
+     "drawnTriangles": 1224,
+     "evaluations": 1,
+     "switches": 42
+    },
+    "nearTriangles": 101402,
+    "macroTriangles": 75562,
+    "macroVisibleTriangles": 75562,
+    "macroTilesInView": 40,
+    "nearDisplayRadius": 1,
+    "displayedChunks": 9,
+    "nearDisplayedTriangles": 15068,
+    "viewAnchor": {
+     "nearGround": -724.3,
+     "shadowLead": -632.3,
+     "coverOffset": -680.3
+    },
+    "groundCover": {
+     "pieces": 0,
+     "triangles": 0,
+     "rebuilds": 1
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 0.14,
+      "p95Ms": 0.2,
+      "maxMs": 15.4,
+      "n": 295
+     },
+     "fauna": {
+      "meanMs": 0.15,
+      "p95Ms": 0.4,
+      "maxMs": 1.1,
+      "n": 295
+     },
+     "terrain": {
+      "meanMs": 0.26,
+      "p95Ms": 0.2,
+      "maxMs": 51,
+      "n": 295
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 295
+     },
+     "groundcover": {
+      "meanMs": 0.02,
+      "p95Ms": 0.1,
+      "maxMs": 0.5,
+      "n": 295
+     },
+     "render": {
+      "meanMs": 1.36,
+      "p95Ms": 1.3,
+      "maxMs": 167.5,
+      "n": 295
+     },
+     "tick": {
+      "meanMs": 1.21,
+      "p95Ms": 1.3,
+      "maxMs": 2.6,
+      "n": 12
+     }
+    },
+    "frameWork": {
+     "frames": 295,
+     "p50Ms": 1.1,
+     "p95Ms": 2.9,
+     "p99Ms": 4,
+     "maxMs": 238.8,
+     "longFrames": 1,
+     "hitches": 1,
+     "windowFrames": 295,
+     "heapMB": 40
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 39,
+     "triangles": 117892
+    },
+    "shadow": {
+     "draws": 0,
+     "triangles": 0
+    },
+    "all": {
+     "draws": 39,
+     "triangles": 117892
+    }
+   },
+   "owners": {
+    "voxel_world": {
+     "mainDraws": 17,
+     "mainTris": 92540,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "homestead": {
+     "mainDraws": 10,
+     "mainTris": 11436,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "fauna": {
+     "mainDraws": 4,
+     "mainTris": 11328,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "styl_nature": {
+     "mainDraws": 1,
+     "mainTris": 1224,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sky_dome": {
+     "mainDraws": 1,
+     "mainTris": 960,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "life_state": {
+     "mainDraws": 2,
+     "mainTris": 128,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "noxel_sites": {
+     "mainDraws": 4,
+     "mainTris": 276,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "ground_cover": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sun_disc": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "character": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "Mesh": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     9,
+     14310,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_chunk_#_#",
+     6,
+     1516,
+     0,
+     0
+    ],
+    [
+     "homestead/character_body",
+     2,
+     516,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     1,
+     75562,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_rabbit",
+     1,
+     9384,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_sheep",
+     1,
+     2448,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_batch_far",
+     1,
+     1224,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_chicken",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     816,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_goat",
+     1,
+     696,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_cattle",
+     1,
+     672,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_horse",
+     1,
+     624,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_trout",
+     1,
+     600,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     528,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_pig",
+     1,
+     504,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_frame",
+     1,
+     100,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     1,
+     96,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     1,
+     84,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     1,
+     60,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     1,
+     36,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_resources",
+     1,
+     28,
+     0,
+     0
+    ]
+   ],
+   "pan": null
+  },
+  {
+   "view": "forest-300",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=300",
+   "build": "dist",
+   "screenshots": [
+    "views-forest-300.png",
+    "views-forest-300-clean.png"
+   ],
+   "warmupMs": 30436,
+   "stableSamples": 3,
+   "errs": [],
+   "rendererCalls": 54,
+   "rendererTriangles": 180714,
+   "metrics": {
+    "natureInstances": 500,
+    "vegetation": {
+     "near": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "mid": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "far": {
+      "instances": 500,
+      "triangles": 15360
+     },
+     "drawnTriangles": 15360,
+     "evaluations": 1,
+     "switches": 500
+    },
+    "nearTriangles": 90020,
+    "macroTriangles": 75562,
+    "macroVisibleTriangles": 43808,
+    "macroTilesInView": 16,
+    "nearDisplayRadius": 2,
+    "displayedChunks": 25,
+    "nearDisplayedTriangles": 43552,
+    "viewAnchor": {
+     "nearGround": -133.5,
+     "shadowLead": -41.5,
+     "coverOffset": -89.5
+    },
+    "groundCover": {
+     "pieces": 190,
+     "triangles": 5146,
+     "rebuilds": 1
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 0.18,
+      "p95Ms": 0.2,
+      "maxMs": 18.6,
+      "n": 223
+     },
+     "fauna": {
+      "meanMs": 0.29,
+      "p95Ms": 0.5,
+      "maxMs": 2.2,
+      "n": 223
+     },
+     "terrain": {
+      "meanMs": 0.3,
+      "p95Ms": 0.2,
+      "maxMs": 50.6,
+      "n": 223
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 223
+     },
+     "groundcover": {
+      "meanMs": 0.07,
+      "p95Ms": 0.1,
+      "maxMs": 11.7,
+      "n": 223
+     },
+     "render": {
+      "meanMs": 1.45,
+      "p95Ms": 1.4,
+      "maxMs": 94.1,
+      "n": 223
+     },
+     "tick": {
+      "meanMs": 1.58,
+      "p95Ms": 2.4,
+      "maxMs": 4.9,
+      "n": 12
+     }
+    },
+    "frameWork": {
+     "frames": 223,
+     "p50Ms": 1.5,
+     "p95Ms": 3.4,
+     "p99Ms": 5.4,
+     "maxMs": 180.5,
+     "longFrames": 1,
+     "hitches": 1,
+     "windowFrames": 223,
+     "heapMB": 47
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 35,
+     "triangles": 139426
+    },
+    "shadow": {
+     "draws": 19,
+     "triangles": 41288
+    },
+    "all": {
+     "draws": 54,
+     "triangles": 180714
+    }
+   },
+   "owners": {
+    "voxel_world": {
+     "mainDraws": 29,
+     "mainTris": 88512,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "fauna": {
+     "mainDraws": 3,
+     "mainTris": 29448,
+     "shadowDraws": 3,
+     "shadowTris": 29448
+    },
+    "homestead": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 10,
+     "shadowTris": 11436
+    },
+    "styl_nature": {
+     "mainDraws": 1,
+     "mainTris": 15360,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "ground_cover": {
+     "mainDraws": 1,
+     "mainTris": 5146,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sky_dome": {
+     "mainDraws": 1,
+     "mainTris": 960,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "life_state": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 2,
+     "shadowTris": 128
+    },
+    "noxel_sites": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 4,
+     "shadowTris": 276
+    },
+    "sun_disc": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "character": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "Mesh": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     25,
+     43552,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     3,
+     43808,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     19584,
+     1,
+     19584
+    ],
+    [
+     "fauna/fauna_wolf",
+     1,
+     9600,
+     1,
+     9600
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     264,
+     1,
+     264
+    ],
+    [
+     "homestead/character_body",
+     0,
+     0,
+     2,
+     516
+    ],
+    [
+     "styl_nature/styl_nature_batch_far",
+     1,
+     15360,
+     0,
+     0
+    ],
+    [
+     "ground_cover/ground_cover_batch",
+     1,
+     5146,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_statics",
+     0,
+     0,
+     1,
+     4548
+    ],
+    [
+     "homestead/herd_sheep",
+     0,
+     0,
+     1,
+     2448
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_chicken",
+     0,
+     0,
+     1,
+     960
+    ],
+    [
+     "homestead/herd_goat",
+     0,
+     0,
+     1,
+     696
+    ],
+    [
+     "homestead/herd_cattle",
+     0,
+     0,
+     1,
+     672
+    ],
+    [
+     "homestead/herd_horse",
+     0,
+     0,
+     1,
+     624
+    ],
+    [
+     "homestead/herd_pig",
+     0,
+     0,
+     1,
+     504
+    ],
+    [
+     "homestead/homestead_troughs",
+     0,
+     0,
+     1,
+     468
+    ],
+    [
+     "life_state/stockpile_frame",
+     0,
+     0,
+     1,
+     100
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     0,
+     0,
+     1,
+     96
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     0,
+     0,
+     1,
+     84
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     0,
+     0,
+     1,
+     60
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     0,
+     0,
+     1,
+     36
+    ],
+    [
+     "life_state/stockpile_resources",
+     0,
+     0,
+     1,
+     28
+    ]
+   ],
+   "pan": null
+  },
+  {
+   "view": "forest-600",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=600",
+   "build": "dist",
+   "screenshots": [
+    "views-forest-600.png",
+    "views-forest-600-clean.png"
+   ],
+   "warmupMs": 30058,
+   "stableSamples": 3,
+   "errs": [],
+   "rendererCalls": 51,
+   "rendererTriangles": 179072,
+   "metrics": {
+    "natureInstances": 500,
+    "vegetation": {
+     "near": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "mid": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "far": {
+      "instances": 500,
+      "triangles": 15360
+     },
+     "drawnTriangles": 15360,
+     "evaluations": 1,
+     "switches": 500
+    },
+    "nearTriangles": 90020,
+    "macroTriangles": 76560,
+    "macroVisibleTriangles": 64458,
+    "macroTilesInView": 26,
+    "nearDisplayRadius": 1,
+    "displayedChunks": 9,
+    "nearDisplayedTriangles": 14694,
+    "viewAnchor": {
+     "nearGround": -267.1,
+     "shadowLead": -175.1,
+     "coverOffset": -223.1
+    },
+    "groundCover": {
+     "pieces": 0,
+     "triangles": 0,
+     "rebuilds": 1
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 0.17,
+      "p95Ms": 0.2,
+      "maxMs": 18.7,
+      "n": 247
+     },
+     "fauna": {
+      "meanMs": 0.28,
+      "p95Ms": 0.5,
+      "maxMs": 2.3,
+      "n": 247
+     },
+     "terrain": {
+      "meanMs": 0.27,
+      "p95Ms": 0.2,
+      "maxMs": 48.6,
+      "n": 247
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 247
+     },
+     "groundcover": {
+      "meanMs": 0.02,
+      "p95Ms": 0.1,
+      "maxMs": 0.5,
+      "n": 247
+     },
+     "render": {
+      "meanMs": 1.48,
+      "p95Ms": 1.4,
+      "maxMs": 130.2,
+      "n": 247
+     },
+     "tick": {
+      "meanMs": 1.23,
+      "p95Ms": 1.6,
+      "maxMs": 2.6,
+      "n": 12
+     }
+    },
+    "frameWork": {
+     "frames": 247,
+     "p50Ms": 1.4,
+     "p95Ms": 3.3,
+     "p99Ms": 5.6,
+     "maxMs": 203,
+     "longFrames": 1,
+     "hitches": 1,
+     "windowFrames": 247,
+     "heapMB": 83
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 34,
+     "triangles": 137912
+    },
+    "shadow": {
+     "draws": 17,
+     "triangles": 41160
+    },
+    "all": {
+     "draws": 51,
+     "triangles": 179072
+    }
+   },
+   "owners": {
+    "voxel_world": {
+     "mainDraws": 13,
+     "mainTris": 80304,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "homestead": {
+     "mainDraws": 10,
+     "mainTris": 11436,
+     "shadowDraws": 10,
+     "shadowTris": 11436
+    },
+    "fauna": {
+     "mainDraws": 3,
+     "mainTris": 29448,
+     "shadowDraws": 3,
+     "shadowTris": 29448
+    },
+    "noxel_sites": {
+     "mainDraws": 4,
+     "mainTris": 276,
+     "shadowDraws": 4,
+     "shadowTris": 276
+    },
+    "styl_nature": {
+     "mainDraws": 1,
+     "mainTris": 15360,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sky_dome": {
+     "mainDraws": 1,
+     "mainTris": 960,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "life_state": {
+     "mainDraws": 2,
+     "mainTris": 128,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "ground_cover": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sun_disc": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "character": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "Mesh": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     9,
+     14694,
+     0,
+     0
+    ],
+    [
+     "homestead/character_body",
+     2,
+     516,
+     2,
+     516
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     3,
+     64458,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     19584,
+     1,
+     19584
+    ],
+    [
+     "fauna/fauna_wolf",
+     1,
+     9600,
+     1,
+     9600
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     1,
+     4548
+    ],
+    [
+     "homestead/herd_sheep",
+     1,
+     2448,
+     1,
+     2448
+    ],
+    [
+     "homestead/herd_chicken",
+     1,
+     960,
+     1,
+     960
+    ],
+    [
+     "homestead/herd_goat",
+     1,
+     696,
+     1,
+     696
+    ],
+    [
+     "homestead/herd_cattle",
+     1,
+     672,
+     1,
+     672
+    ],
+    [
+     "homestead/herd_horse",
+     1,
+     624,
+     1,
+     624
+    ],
+    [
+     "homestead/herd_pig",
+     1,
+     504,
+     1,
+     504
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     1,
+     468
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     264,
+     1,
+     264
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     1,
+     96,
+     1,
+     96
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     1,
+     84,
+     1,
+     84
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     1,
+     60,
+     1,
+     60
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     1,
+     36,
+     1,
+     36
+    ],
+    [
+     "styl_nature/styl_nature_batch_far",
+     1,
+     15360,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_frame",
+     1,
+     100,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_resources",
+     1,
+     28,
+     0,
+     0
+    ]
+   ],
+   "pan": null
+  },
+  {
+   "view": "forest-1400",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=1400",
+   "build": "dist",
+   "screenshots": [
+    "views-forest-1400.png",
+    "views-forest-1400-clean.png"
+   ],
+   "warmupMs": 29961,
+   "stableSamples": 3,
+   "errs": [],
+   "rendererCalls": 32,
+   "rendererTriangles": 150014,
+   "metrics": {
+    "natureInstances": 500,
+    "vegetation": {
+     "near": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "mid": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "far": {
+      "instances": 500,
+      "triangles": 15360
+     },
+     "drawnTriangles": 15360,
+     "evaluations": 1,
+     "switches": 500
+    },
+    "nearTriangles": 90020,
+    "macroTriangles": 76560,
+    "macroVisibleTriangles": 76560,
+    "macroTilesInView": 37,
+    "nearDisplayRadius": 1,
+    "displayedChunks": 9,
+    "nearDisplayedTriangles": 14694,
+    "viewAnchor": {
+     "nearGround": -623.2,
+     "shadowLead": -531.2,
+     "coverOffset": -579.2
+    },
+    "groundCover": {
+     "pieces": 0,
+     "triangles": 0,
+     "rebuilds": 1
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 0.15,
+      "p95Ms": 0.2,
+      "maxMs": 18.1,
+      "n": 259
+     },
+     "fauna": {
+      "meanMs": 0.27,
+      "p95Ms": 0.5,
+      "maxMs": 2.2,
+      "n": 259
+     },
+     "terrain": {
+      "meanMs": 0.25,
+      "p95Ms": 0.2,
+      "maxMs": 46.7,
+      "n": 259
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 259
+     },
+     "groundcover": {
+      "meanMs": 0.01,
+      "p95Ms": 0.1,
+      "maxMs": 0.6,
+      "n": 259
+     },
+     "render": {
+      "meanMs": 1.26,
+      "p95Ms": 1.1,
+      "maxMs": 130.5,
+      "n": 259
+     },
+     "tick": {
+      "meanMs": 1.35,
+      "p95Ms": 2.4,
+      "maxMs": 2.8,
+      "n": 12
+     }
+    },
+    "frameWork": {
+     "frames": 259,
+     "p50Ms": 1.2,
+     "p95Ms": 3.3,
+     "p99Ms": 4.3,
+     "maxMs": 200.7,
+     "longFrames": 1,
+     "hitches": 1,
+     "windowFrames": 259,
+     "heapMB": 44
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 32,
+     "triangles": 150014
+    },
+    "shadow": {
+     "draws": 0,
+     "triangles": 0
+    },
+    "all": {
+     "draws": 32,
+     "triangles": 150014
+    }
+   },
+   "owners": {
+    "voxel_world": {
+     "mainDraws": 11,
+     "mainTris": 92406,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "homestead": {
+     "mainDraws": 10,
+     "mainTris": 11436,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "fauna": {
+     "mainDraws": 3,
+     "mainTris": 29448,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "styl_nature": {
+     "mainDraws": 1,
+     "mainTris": 15360,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sky_dome": {
+     "mainDraws": 1,
+     "mainTris": 960,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "life_state": {
+     "mainDraws": 2,
+     "mainTris": 128,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "noxel_sites": {
+     "mainDraws": 4,
+     "mainTris": 276,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "ground_cover": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sun_disc": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "character": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "Mesh": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     9,
+     14694,
+     0,
+     0
+    ],
+    [
+     "homestead/character_body",
+     2,
+     516,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     1,
+     76560,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     19584,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_batch_far",
+     1,
+     15360,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_wolf",
+     1,
+     9600,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_sheep",
+     1,
+     2448,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_chicken",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_goat",
+     1,
+     696,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_cattle",
+     1,
+     672,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_horse",
+     1,
+     624,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_pig",
+     1,
+     504,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     264,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_frame",
+     1,
+     100,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     1,
+     96,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     1,
+     84,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     1,
+     60,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     1,
+     36,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_resources",
+     1,
+     28,
+     0,
+     0
+    ]
+   ],
+   "pan": null
+  },
+  {
+   "view": "forest-1400-low",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=20&dist=1400",
+   "build": "dist",
+   "screenshots": [],
+   "warmupMs": 26233,
+   "stableSamples": 3,
+   "errs": [],
+   "rendererCalls": 32,
+   "rendererTriangles": 150014,
+   "metrics": {
+    "natureInstances": 500,
+    "vegetation": {
+     "near": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "mid": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "far": {
+      "instances": 500,
+      "triangles": 15360
+     },
+     "drawnTriangles": 15360,
+     "evaluations": 1,
+     "switches": 500
+    },
+    "nearTriangles": 90020,
+    "macroTriangles": 76560,
+    "macroVisibleTriangles": 76560,
+    "macroTilesInView": 37,
+    "nearDisplayRadius": 1,
+    "displayedChunks": 9,
+    "nearDisplayedTriangles": 14694,
+    "viewAnchor": {
+     "nearGround": -724.3,
+     "shadowLead": -632.3,
+     "coverOffset": -680.3
+    },
+    "groundCover": {
+     "pieces": 0,
+     "triangles": 0,
+     "rebuilds": 1
+    },
+    "multiDraw": true,
+    "sections": {
+     "homestead": {
+      "meanMs": 0.16,
+      "p95Ms": 0.2,
+      "maxMs": 18.9,
+      "n": 259
+     },
+     "fauna": {
+      "meanMs": 0.28,
+      "p95Ms": 0.5,
+      "maxMs": 5.8,
+      "n": 259
+     },
+     "terrain": {
+      "meanMs": 0.28,
+      "p95Ms": 0.2,
+      "maxMs": 50.8,
+      "n": 259
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 259
+     },
+     "groundcover": {
+      "meanMs": 0.02,
+      "p95Ms": 0.1,
+      "maxMs": 0.6,
+      "n": 259
+     },
+     "render": {
+      "meanMs": 1.27,
+      "p95Ms": 1.2,
+      "maxMs": 132.7,
+      "n": 259
+     },
+     "tick": {
+      "meanMs": 1.25,
+      "p95Ms": 1.3,
+      "maxMs": 2.6,
+      "n": 11
+     }
+    },
+    "frameWork": {
+     "frames": 259,
+     "p50Ms": 1.2,
+     "p95Ms": 3.3,
+     "p99Ms": 5.5,
+     "maxMs": 208.4,
+     "longFrames": 1,
+     "hitches": 1,
+     "windowFrames": 259,
+     "heapMB": 41
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 32,
+     "triangles": 150014
+    },
+    "shadow": {
+     "draws": 0,
+     "triangles": 0
+    },
+    "all": {
+     "draws": 32,
+     "triangles": 150014
+    }
+   },
+   "owners": {
+    "voxel_world": {
+     "mainDraws": 11,
+     "mainTris": 92406,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "homestead": {
+     "mainDraws": 10,
+     "mainTris": 11436,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "fauna": {
+     "mainDraws": 3,
+     "mainTris": 29448,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "styl_nature": {
+     "mainDraws": 1,
+     "mainTris": 15360,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sky_dome": {
+     "mainDraws": 1,
+     "mainTris": 960,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "life_state": {
+     "mainDraws": 2,
+     "mainTris": 128,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "noxel_sites": {
+     "mainDraws": 4,
+     "mainTris": 276,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "ground_cover": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sun_disc": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "character": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "Mesh": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    }
+   },
+   "entries": [
+    [
+     "voxel_world/voxel_chunk_#_#",
+     9,
+     14694,
+     0,
+     0
+    ],
+    [
+     "homestead/character_body",
+     2,
+     516,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     1,
+     76560,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     19584,
+     0,
+     0
+    ],
+    [
+     "styl_nature/styl_nature_batch_far",
+     1,
+     15360,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_wolf",
+     1,
+     9600,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_sheep",
+     1,
+     2448,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_chicken",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_goat",
+     1,
+     696,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_cattle",
+     1,
+     672,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_horse",
+     1,
+     624,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_pig",
+     1,
+     504,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     264,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_frame",
+     1,
+     100,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     1,
+     96,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     1,
+     84,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     1,
+     60,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     1,
+     36,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_resources",
+     1,
+     28,
+     0,
+     0
+    ]
+   ],
+   "pan": null
+  },
+  {
+   "view": "forest-1400-low-multidraw0",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=20&dist=1400&multidraw=0",
+   "build": "dist",
+   "screenshots": [],
+   "warmupMs": 26153,
+   "stableSamples": 3,
+   "errs": [],
+   "rendererCalls": 40,
+   "rendererTriangles": 150014,
+   "metrics": {
+    "natureInstances": 500,
+    "vegetation": {
+     "near": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "mid": {
+      "instances": 0,
+      "triangles": 0
+     },
+     "far": {
+      "instances": 500,
+      "triangles": 15360
+     },
+     "drawnTriangles": 15360,
+     "evaluations": 1,
+     "switches": 500,
+     "tileBuilds": 9,
+     "meshBakes": 18,
+     "pendingBakes": 0
+    },
+    "nearTriangles": 90020,
+    "macroTriangles": 76560,
+    "macroVisibleTriangles": 76560,
+    "macroTilesInView": 37,
+    "nearDisplayRadius": 1,
+    "displayedChunks": 9,
+    "nearDisplayedTriangles": 14694,
+    "viewAnchor": {
+     "nearGround": -724.3,
+     "shadowLead": -632.3,
+     "coverOffset": -680.3
+    },
+    "groundCover": {
+     "pieces": 0,
+     "triangles": 0,
+     "rebuilds": 1
+    },
+    "multiDraw": false,
+    "sections": {
+     "homestead": {
+      "meanMs": 0.16,
+      "p95Ms": 0.2,
+      "maxMs": 17.6,
+      "n": 259
+     },
+     "fauna": {
+      "meanMs": 0.26,
+      "p95Ms": 0.5,
+      "maxMs": 2.8,
+      "n": 259
+     },
+     "terrain": {
+      "meanMs": 0.27,
+      "p95Ms": 0.2,
+      "maxMs": 51.5,
+      "n": 259
+     },
+     "vegetation": {
+      "meanMs": 0,
+      "p95Ms": 0,
+      "maxMs": 0.1,
+      "n": 259
+     },
+     "groundcover": {
+      "meanMs": 0.02,
+      "p95Ms": 0.1,
+      "maxMs": 0.8,
+      "n": 259
+     },
+     "render": {
+      "meanMs": 1.04,
+      "p95Ms": 1,
+      "maxMs": 115.9,
+      "n": 259
+     },
+     "tick": {
+      "meanMs": 1.29,
+      "p95Ms": 1.5,
+      "maxMs": 2.7,
+      "n": 11
+     }
+    },
+    "frameWork": {
+     "frames": 259,
+     "p50Ms": 1,
+     "p95Ms": 3,
+     "p99Ms": 4.3,
+     "maxMs": 191.3,
+     "longFrames": 1,
+     "hitches": 1,
+     "windowFrames": 259,
+     "heapMB": 100
+    },
+    "loadedChunks": 49,
+    "pendingChunkBuilds": 0
+   },
+   "multiDrawExt": true,
+   "totals": {
+    "main": {
+     "draws": 40,
+     "triangles": 150014
+    },
+    "shadow": {
+     "draws": 0,
+     "triangles": 0
+    },
+    "all": {
+     "draws": 40,
+     "triangles": 150014
+    }
+   },
+   "owners": {
+    "styl_nature": {
+     "mainDraws": 9,
+     "mainTris": 15360,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "voxel_world": {
+     "mainDraws": 11,
+     "mainTris": 92406,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "homestead": {
+     "mainDraws": 10,
+     "mainTris": 11436,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "fauna": {
+     "mainDraws": 3,
+     "mainTris": 29448,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sky_dome": {
+     "mainDraws": 1,
+     "mainTris": 960,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "life_state": {
+     "mainDraws": 2,
+     "mainTris": 128,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "noxel_sites": {
+     "mainDraws": 4,
+     "mainTris": 276,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "ground_cover": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "sun_disc": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "character": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    },
+    "Mesh": {
+     "mainDraws": 0,
+     "mainTris": 0,
+     "shadowDraws": 0,
+     "shadowTris": 0
+    }
+   },
+   "entries": [
+    [
+     "styl_nature/styl_nature_tile_far",
+     9,
+     15360,
+     0,
+     0
+    ],
+    [
+     "voxel_world/voxel_chunk_#_#",
+     9,
+     14694,
+     0,
+     0
+    ],
+    [
+     "homestead/character_body",
+     2,
+     516,
+     0,
+     0
+    ],
+    [
+     "voxel_world/macro_lod_tile_#_#",
+     1,
+     76560,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_deer",
+     1,
+     19584,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_wolf",
+     1,
+     9600,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_statics",
+     1,
+     4548,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_sheep",
+     1,
+     2448,
+     0,
+     0
+    ],
+    [
+     "voxel_world/water_surface",
+     1,
+     1152,
+     0,
+     0
+    ],
+    [
+     "sky_dome/sky_dome",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_chicken",
+     1,
+     960,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_goat",
+     1,
+     696,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_cattle",
+     1,
+     672,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_horse",
+     1,
+     624,
+     0,
+     0
+    ],
+    [
+     "homestead/herd_pig",
+     1,
+     504,
+     0,
+     0
+    ],
+    [
+     "homestead/homestead_troughs",
+     1,
+     468,
+     0,
+     0
+    ],
+    [
+     "fauna/fauna_fox",
+     1,
+     264,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_frame",
+     1,
+     100,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone",
+     1,
+     96,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_waystone_glow",
+     1,
+     84,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker",
+     1,
+     60,
+     0,
+     0
+    ],
+    [
+     "noxel_sites/noxel_marker_glow",
+     1,
+     36,
+     0,
+     0
+    ],
+    [
+     "life_state/stockpile_resources",
+     1,
+     28,
+     0,
+     0
+    ]
+   ],
+   "pan": null
+  }
+ ]
+}

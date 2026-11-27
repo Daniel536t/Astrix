@@ -1,0 +1,16 @@
+{
+  "build": "Game/dist from the working tree (deploy/boxd, after FEAT-003), fresh browser context, software GL",
+  "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=40",
+  "frames": 42, "spanMs": 43392, "pageErrors": [],
+  "instancesAndMovement": {
+    "fauna_rabbit": {"count": 46, "movedOfFirstEightComparable": "4 of 8 (the first frame had only 4 drawn, so 4 compared)"},
+    "fauna_deer": {"count": 2, "note": "not drawn on the first frame (chunk spawn is capped per frame), so no comparison"},
+    "fauna_fox": {"count": 2, "note": "not drawn on the first frame, so no comparison"},
+    "fauna_trout": {"count": 10, "note": "not drawn on the first frame, so no comparison"},
+    "fauna_wolf": {"count": 0},
+    "herd_cattle": {"count": 2, "moved": 2}, "herd_chicken": {"count": 4, "moved": 2},
+    "herd_goat": {"count": 2, "moved": 1}, "herd_horse": {"count": 2, "moved": 2},
+    "herd_pig": {"count": 2, "moved": 1}, "herd_sheep": {"count": 3, "moved": 3}
+  },
+  "predatorPreyInteractionObserved": false
+}

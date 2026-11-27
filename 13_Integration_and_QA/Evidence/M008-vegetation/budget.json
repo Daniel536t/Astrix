@@ -1,0 +1,283 @@
+{
+ "milestone": "M008-vegetation",
+ "kind": "FEAT-003 budget after ground cover and world-asset optimisation",
+ "build": "local Game/dist built from deploy/boxd working tree (FEAT-003), not deployed",
+ "environment": "Playwright Chromium, software GL (about 1.4 fps), desktop viewport 1000x600, served from a local copy of Game/dist at https://astrix.local/. Desktop only; WEBGL_multi_draw present, ?multidraw=0 forces the bounded fallback. No mobile measurement in this file.",
+ "probe": "/projects/sandbox/.kiro/artifacts/screenshots/probe/m008-budget-c.js (earlier iterations m008-budget-a.js, m008-budget-b.js)",
+ "method": "Same cameras and warm-up as baseline.json. rendererInfo is window.__metrics (last 6-frame sample); breakdown is window.__renderBreakdown() of the last frame. Owner rows are [draws, triangles].",
+ "target": "farm and forest <= 95 draw calls and <= 200,000 triangles, also with ?multidraw=0",
+ "views": [
+  {
+   "view": "farm",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=40",
+   "screenshot": "budget-farm.png",
+   "multiDraw": true,
+   "rendererInfo": {
+    "calls": 80,
+    "triangles": 116530
+   },
+   "breakdown": {
+    "main": [
+     59,
+     91822
+    ],
+    "shadow": [
+     21,
+     24664
+    ]
+   },
+   "owners": {
+    "voxel_chunk (19 of 49 drawn)": [
+     19,
+     36310
+    ],
+    "water_chunk (6 chunks x 2 passes)": [
+     12,
+     5772
+    ],
+    "macro_lod_tile (4 of 14 visible)": [
+     4,
+     13274
+    ],
+    "ground_cover_batch": [
+     1,
+     10334
+    ],
+    "fauna (rabbit 46, deer 2, trout 10, fox 2), both passes": [
+     8,
+     22656
+    ],
+    "homestead (statics 1, villagers 2, herds 6, troughs 1), both passes": [
+     20,
+     22872
+    ],
+    "styl_nature_batch main/shadow": [
+     2,
+     2348
+    ],
+    "water_surface": [
+     1,
+     1152
+    ]
+   },
+   "groundCover": {
+    "pieces": 422,
+    "triangles": 10334,
+    "byKind": {
+     "grass": 233,
+     "flower": 128,
+     "stone": 35,
+     "fern": 26
+    }
+   }
+  },
+  {
+   "view": "forest",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=50",
+   "screenshot": "budget-forest.png",
+   "multiDraw": true,
+   "rendererInfo": {
+    "calls": 43,
+    "triangles": 162456
+   },
+   "breakdown": {
+    "main": [
+     37,
+     113650
+    ],
+    "shadow": [
+     6,
+     48806
+    ]
+   },
+   "owners": {
+    "voxel_chunk (26 of 49 drawn)": [
+     26,
+     48694
+    ],
+    "macro_lod_tile (4 of 14 visible)": [
+     4,
+     13656
+    ],
+    "fauna deer 48 + wolf 32 instances, both passes": [
+     4,
+     58368
+    ],
+    "ground_cover_batch": [
+     1,
+     13676
+    ],
+    "water_surface": [
+     1,
+     1152
+    ],
+    "styl_nature_batch + _far, main and shadow": [
+     3,
+     25354
+    ]
+   },
+   "vegetationBands": {
+    "near": 120,
+    "mid": 252,
+    "far": 128
+   },
+   "groundCover": {
+    "pieces": 509,
+    "triangles": 13676,
+    "byKind": {
+     "fern": 178,
+     "grass": 110,
+     "mushroom": 62,
+     "stone": 44,
+     "flower": 44,
+     "bush": 29,
+     "log": 28,
+     "sapling": 14
+    }
+   }
+  },
+  {
+   "view": "grove-close",
+   "url": "?chain=0&mode=builder&tx=-27&ty=19&tz=-30&yaw=0&pitch=16&dist=15",
+   "screenshot": "budget-grove-close.png",
+   "multiDraw": true,
+   "rendererInfo": {
+    "calls": 59,
+    "triangles": 109034
+   },
+   "breakdown": {
+    "main": [
+     38,
+     83862
+    ],
+    "shadow": [
+     21,
+     25148
+    ]
+   },
+   "owners": {
+    "voxel_chunk": [
+     15,
+     29524
+    ],
+    "macro_lod_tile (14 visible, horizon in view)": [
+     14,
+     24750
+    ],
+    "ground_cover_batch": [
+     1,
+     10804
+    ]
+   }
+  },
+  {
+   "view": "farm-multidraw0",
+   "url": "?chain=0&mode=builder&tx=-28&ty=14&tz=4&yaw=0&pitch=30&dist=40&multidraw=0",
+   "screenshot": "budget-farm-multidraw0.png",
+   "multiDraw": false,
+   "rendererInfo": {
+    "calls": 86,
+    "triangles": 113054
+   },
+   "breakdown": {
+    "main": [
+     60,
+     91526
+    ],
+    "shadow": [
+     26,
+     24384
+    ]
+   },
+   "owners": {
+    "styl_nature_tile (TiledLodMesh, 96 m tiles) main / shadow": [
+     9,
+     2972
+    ]
+   },
+   "note": "fauna count differs from the farm run (51 vs 60): ambient rabbits spawn and despawn over time; models and caps unchanged"
+  },
+  {
+   "view": "forest-multidraw0",
+   "url": "?chain=0&mode=builder&tx=220&ty=14&tz=-110&yaw=20&pitch=28&dist=50&multidraw=0",
+   "screenshot": "budget-forest-multidraw0.png",
+   "multiDraw": false,
+   "rendererInfo": {
+    "calls": 52,
+    "triangles": 182160
+   },
+   "breakdown": {
+    "main": [
+     42,
+     128808
+    ],
+    "shadow": [
+     9,
+     52884
+    ]
+   },
+   "owners": {
+    "styl_nature_tile main / shadow": [
+     11,
+     41942
+    ],
+    "styl_nature_tile_far": [
+     3,
+     3244
+    ]
+   }
+  }
+ ],
+ "comparison": {
+  "baseline": {
+   "farm": [
+    106,
+    248364
+   ],
+   "forest": [
+    74,
+    403068
+   ],
+   "grove": [
+    66,
+    228826
+   ]
+  },
+  "feat002": {
+   "farm": [
+    106,
+    239754
+   ],
+   "forest": [
+    75,
+    304354
+   ],
+   "grove": [
+    66,
+    220934
+   ]
+  },
+  "feat003": {
+   "farm": [
+    80,
+    116530
+   ],
+   "forest": [
+    43,
+    162456
+   ],
+   "grove": [
+    59,
+    109034
+   ],
+   "farm_multidraw0": [
+    86,
+    113054
+   ],
+   "forest_multidraw0": [
+    52,
+    182160
+   ]
+  }
+ }
+}

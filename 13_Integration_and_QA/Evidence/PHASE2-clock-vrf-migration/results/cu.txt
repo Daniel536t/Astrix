@@ -1,0 +1,20 @@
+    4947     5097 OLD binary tick (1 step, v1 account) 
+            22490 claim_world (legacy) on v2 slot 
+    6305     6455 settle no-op (nothing due) 
+    7516     7666 settle 1 step 
+    7514     7664 tick alias 1 step 
+    9333     9483 settle 15 steps (30 s crank) 
+   11058    11208 settle 30 steps (60 s crank) 
+   43867    44017 settle 300 steps (cap) 
+    8028     8178 harvest (settle + action) 
+    7936     8086 build/plant: plant (settle + action) 
+   21880    22030 prospect (settle + VRF request CPI) 
+    7810    16112 vrf_callback via mock (mock VRF + ASTrix callback) callback-only 7810
+   18947    19097 cancel_prospect (after timeout) 
+   16276    16426 migrate_world (v1 -> v2, incl. rent transfer) 
+   32813    32963 claim_world_vrf (commit + VRF request) 
+    7574    15876 vrf_callback genesis via mock 
+  148706   148856 16-world crank, 15 steps each (30 s cadence) 
+  177876   178026 16-world crank, 30 steps each (60 s cadence) 
+  701864   702014 16-world crank, 300 steps each (cap; backlog) 
+  120816   120966 16-world crank, old-style 2 s tick alias (1 step each) 

@@ -19,6 +19,7 @@ import { buildStructureMesh } from '../src/render/structures';
 import { FOUNDER_STOCKPILE_ID } from '../src/sim/economy';
 import { canonicalWorldHash } from '../src/sim/snapshot';
 import { EntityKind, isRetiredStoneKind } from '../src/sim/world';
+import { vegetationLabel } from '../src/sim/vegetation';
 
 const ALL_KINDS: EntityKind[] = [
   'styl_tree_spire', 'styl_tree_table', 'styl_tree_cluster', 'styl_tree_blossom',
@@ -43,7 +44,8 @@ test('every retained entity kind has a distinct identity; all retired stones are
     const entity = [...session.world.entities.values()].find((entity) => entity.kind === kind);
     assert.ok(entity, kind);
     const info = resolveInspection(session.world, { entityId: entity.id })!;
-    assert.equal(info.name, INSPECTION_CATALOG[kind].name);
+    // M008: trees and bushes are named by species and growth stage.
+    assert.equal(info.name, vegetationLabel(entity, session.world.seed) ?? INSPECTION_CATALOG[kind].name);
     assert.equal(info.category, 'Natural resource');
     hashes.push(canonicalWorldHash(session.world, session.nextSequence, 3));
     assert.match(info.facts.find((fact) => fact.label === 'Remaining')!.value,

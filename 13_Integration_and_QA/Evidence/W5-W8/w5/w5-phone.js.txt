@@ -1,0 +1,55 @@
+async (page) => {
+  const DIR = '/projects/sandbox/.kiro/artifacts/screenshots/probe/dist', SH = '/projects/sandbox/.kiro/artifacts/screenshots/w5/';
+  const VP = globalThis.W5VP || { width: 390, height: 844, tag: 'phone390' };
+  const out = { vp: VP, steps: {} };
+  const ctx = await page.context().browser().newContext({ viewport: { width: VP.width, height: VP.height }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  await ctx.route(/^https:\/\/astrix\.local\//, async (route) => { let p = route.request().url().replace(/^https:\/\/astrix\.local/, '').split('?')[0]; if (p === '/' || p === '') p = '/index.html'; await route.fulfill({ path: DIR + p }); });
+  await ctx.addInitScript(() => { if (!localStorage.getItem('astrix:worlds:v1')) { localStorage.setItem('astrix:entered:v1', '1'); localStorage.setItem('astrix:worlds:v1', JSON.stringify({ v: 1, worlds: [{ id: 'w1', seed: 1337, generatorVersion: 2, created: 1764000000000, spawn: { x: -82, z: -172 } }] })); localStorage.setItem('astrix:world:active:v1', 'w1'); } });
+  await ctx.addInitScript({ path: '/projects/sandbox/.kiro/artifacts/screenshots/probe/w4-helpers.js' });
+  const pg = await ctx.newPage();
+  const L = { console: [], pageerror: [], failed: [], http: [] };
+  pg.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') L.console.push(m.type() + ': ' + m.text().slice(0, 200)); });
+  pg.on('pageerror', (e) => L.pageerror.push(String(e).slice(0, 300)));
+  pg.on('requestfailed', (r) => L.failed.push(r.url()));
+  pg.on('response', (r) => { if (r.status() >= 400) L.http.push(r.status() + ' ' + r.url()); });
+  const rects = () => pg.evaluate(() => {
+    const vis = (el) => { const cs = getComputedStyle(el); const b = el.getBoundingClientRect(); return b.width > 0 && b.height > 0 && cs.display !== 'none' && cs.visibility !== 'hidden' && !el.closest('[hidden]'); };
+    const r = {};
+    const add = (k, el) => { const b = el.getBoundingClientRect(); r[k] = [b.left, b.top, b.right, b.bottom].map(Math.round); };
+    for (const el of document.querySelectorAll('body > button, #controls button, #hud, #vitals, #wild-events, #minimap, #route-pill, #mode-button')) if (vis(el)) add(el.id || (el.textContent || '').trim().slice(0, 10) || el.className, el);
+    const mz = document.getElementById('move-zone');
+    if (mz && vis(mz)) { const b = mz.getBoundingClientRect(), a = getComputedStyle(mz, '::after'); if (a.content !== 'none') { const left = b.left + parseFloat(a.left), w = parseFloat(a.width), h = parseFloat(a.height); const bottom = b.bottom - parseFloat(a.bottom); r['joystick ring'] = [left, bottom - h, left + w, bottom].map(Math.round); } }
+    const keys = Object.keys(r), ov = [], small = [];
+    for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) { const a = r[keys[i]], b = r[keys[j]]; const w = Math.min(a[2], b[2]) - Math.max(a[0], b[0]), h = Math.min(a[3], b[3]) - Math.max(a[1], b[1]); if (w > 0 && h > 0) ov.push(`${keys[i]} x ${keys[j]}: ${w * h}`); }
+    for (const k of keys) { const a = r[k]; if (k !== 'hud' && k !== 'vitals' && k !== 'wild-events' && k !== 'joystick ring' && ((a[2] - a[0]) < 40 || (a[3] - a[1]) < 40)) small.push(k); }
+    return { r, overlaps: ov, small };
+  });
+  await pg.goto('https://astrix.local/?chain=0&metrics=1&quality=low');
+  await pg.waitForFunction(() => window.__metrics?.explore?.spawned === true, null, { timeout: 120000 });
+  await pg.waitForTimeout(2500);
+  out.steps.spawn = { layout: await rects(), map: await pg.evaluate(() => { const m = window.__metrics.wild.map; return { explored: m.explored, minimap: m.minimap, stats: m.stats }; }), budget: await pg.evaluate(() => window.__metrics.sceneBudget) };
+  await pg.screenshot({ path: SH + `w5-m-${VP.tag}-spawn.png` });
+  // Open the full map by tapping the minimap.
+  await pg.tap('#minimap'); await pg.waitForTimeout(700);
+  out.steps.open = await pg.evaluate(() => ({ open: window.__metrics.wild.map.open, ms: window.__metrics.wild.map.stats.mapOpenMs }));
+  let v = await pg.evaluate(() => window.__metrics.wild.map.view);
+  const T = (x, z) => ({ x: v.left + v.w / 2 + (x - v.cx) * v.s, y: v.top + v.h / 2 + (z - v.cz) * v.s });
+  let p = T(-160, -185);
+  await pg.touchscreen.tap(p.x, p.y); await pg.waitForTimeout(400);
+  out.steps.popup = await pg.evaluate(() => { const el = document.querySelector('.map-popup'); const b = el.getBoundingClientRect(); return { text: el.innerText, rect: [b.left, b.top, b.right, b.bottom].map(Math.round), buttons: [...el.querySelectorAll('button')].map((x) => { const q = x.getBoundingClientRect(); return [x.textContent, Math.round(q.width), Math.round(q.height)]; }) }; });
+  await pg.tap('.map-popup [data-route-to]');
+  await pg.waitForFunction(() => { const m = window.__metrics.wild.map; return m.route || m.refusal; }, null, { timeout: 60000 });
+  await pg.waitForTimeout(600);
+  out.steps.route = await pg.evaluate(() => { const m = window.__metrics.wild.map; return { route: m.route, text: m.routeText, routeMs: m.stats.routeMs, cpu: m.stats.routeCpuMs, refine: m.stats.refineMs }; });
+  await pg.screenshot({ path: SH + `w5-n-${VP.tag}-map-route.png` });
+  out.steps.mapLayout = await pg.evaluate(() => { const r = {}; for (const s of ['#world-map header', '#world-map canvas', '#world-map aside']) { const b = document.querySelector(s).getBoundingClientRect(); r[s] = [b.left, b.top, b.right, b.bottom].map(Math.round); } r.buttons = [...document.querySelectorAll('#world-map header button')].map((x) => { const q = x.getBoundingClientRect(); return [x.getAttribute('aria-label'), Math.round(q.width), Math.round(q.height)]; }); return r; });
+  await pg.tap('#world-map [data-close]'); await pg.waitForTimeout(800);
+  out.steps.withRoute = { layout: await rects(), trail: await pg.evaluate(() => ({ vis: window.__metrics.wild.map.trailVisible, tris: window.__metrics.wild.map.trailTriangles })), budget: await pg.evaluate(() => window.__metrics.sceneBudget) };
+  await pg.screenshot({ path: SH + `w5-o-${VP.tag}-trail.png` });
+  // Walk a little: the fog clears on the minimap.
+  out.steps.walk = await pg.evaluate(async () => { const b = window.__metrics.wild.map.explored; const w = await window.__h.walk(-95, -150, 2, 20000); await window.__h.sleep(800); const m = window.__metrics.wild.map; return { ok: w.ok, before: b, after: m.explored, reports: m.stats.reports, minimapMs: m.stats.minimapMs, minimapMaxMs: m.stats.minimapMaxMs, draws: m.stats.minimapDraws }; });
+  out.steps.budgetWalk = await pg.evaluate(() => window.__metrics.sceneBudget);
+  out.log = L;
+  await ctx.close();
+  return out;
+}

@@ -1,0 +1,134 @@
+base passport-00 v=1 owner=FWh6pe kind=0 cps=33 lct=64336 due=False reserved_nonzero=False
+base passport-01 v=1 owner=5EBnU2 kind=0 cps=32 lct=62596 due=False reserved_nonzero=False
+base passport-02 v=1 owner=BreUFn kind=0 cps=32 lct=62548 due=False reserved_nonzero=False
+base passport-03 v=1 owner=G7LAdo kind=0 cps=32 lct=62391 due=False reserved_nonzero=False
+base passport-04 v=1 owner=D2JSk2 kind=0 cps=32 lct=62342 due=False reserved_nonzero=False
+base passport-05 v=1 owner=8NwXYh kind=0 cps=32 lct=62294 due=False reserved_nonzero=False
+base passport-06 v=1 owner=3zeA5v kind=0 cps=32 lct=62105 due=False reserved_nonzero=False
+base passport-07 v=1 owner=5djFy2 kind=0 cps=32 lct=56005 due=False reserved_nonzero=False
+base passport-08 v=1 owner=2U4irU kind=1 cps=33 lct=57876 due=False reserved_nonzero=False
+base passport-09 v=1 owner=4tkXqG kind=1 cps=33 lct=57875 due=False reserved_nonzero=False
+base passport-10 v=1 owner=Ud1inu kind=2 cps=33 lct=56380 due=False reserved_nonzero=False
+base passport-11 v=1 owner=HZmikX kind=2 cps=33 lct=57832 due=False reserved_nonzero=False
+base passport-12 v=1 owner=EaEtqN kind=0 cps=31 lct=56016 due=False reserved_nonzero=False
+base passport-13 v=1 owner=GVg2rC kind=0 cps=30 lct=54235 due=False reserved_nonzero=False
+base passport-14 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-15 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-16 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-17 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-18 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-19 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-20 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-21 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-22 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-23 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-24 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-25 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-26 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-27 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-28 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-29 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-30 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base passport-31 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+base registry admin=GVbuuo slots=16 claims=0 last_claim_ts=0 cooldown=10
+base settlement owner=GVbuuo seed=1337 tick=430 last_ts=1795484853 int=2 pop=8 food=284 pend=False prospects=5 sawmill=True
+base slot-00 owner=FWh6pe seed=1422761687 tick=64336 last_ts=1795616110 int=2 pop=10 food=10000 pend=False prospects=0 sawmill=False
+base slot-01 owner=5EBnU2 seed=1145747086 tick=62596 last_ts=1795612488 int=2 pop=1 food=0 pend=False prospects=0 sawmill=True
+base slot-02 owner=BreUFn seed=64798657 tick=62548 last_ts=1795612488 int=2 pop=10 food=10000 pend=False prospects=1 sawmill=False
+base slot-03 owner=G7LAdo seed=1691554800 tick=62391 last_ts=1795612488 int=2 pop=10 food=9990 pend=False prospects=0 sawmill=False
+base slot-04 owner=D2JSk2 seed=1330726770 tick=62342 last_ts=1795612488 int=2 pop=10 food=10000 pend=False prospects=0 sawmill=False
+base slot-05 owner=8NwXYh seed=2780676125 tick=62294 last_ts=1795612488 int=2 pop=1 food=0 pend=False prospects=0 sawmill=True
+base slot-06 owner=3zeA5v seed=2301796620 tick=62105 last_ts=1795612488 int=2 pop=10 food=9996 pend=False prospects=0 sawmill=False
+base slot-07 owner=5djFy2 seed=3687520971 tick=56005 last_ts=1795613329 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+base slot-08 owner=2U4irU seed=3906842737 tick=57876 last_ts=1795617313 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+base slot-09 owner=4tkXqG seed=1346703825 tick=57875 last_ts=1795617613 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+base slot-10 owner=Ud1inu seed=3053296915 tick=56380 last_ts=1795615032 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+base slot-11 owner=HZmikX seed=1438487729 tick=57832 last_ts=1795618453 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+base slot-12 owner=EaEtqN seed=2096322546 tick=56016 last_ts=1795615212 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+base slot-13 owner=GVg2rC seed=2478542917 tick=54235 last_ts=1795616292 int=2 pop=10 food=10000 pend=False prospects=0 sawmill=False
+base slot-14 owner=111111 seed=0 tick=0 last_ts=1795486313 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-15 owner=111111 seed=0 tick=0 last_ts=1795486352 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-16 owner=111111 seed=0 tick=0 last_ts=1795500087 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-17 owner=111111 seed=0 tick=0 last_ts=1795500092 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-18 owner=111111 seed=0 tick=0 last_ts=1795500096 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-19 owner=111111 seed=0 tick=0 last_ts=1795500101 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-20 owner=111111 seed=0 tick=0 last_ts=1795500106 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-21 owner=111111 seed=0 tick=0 last_ts=1795500110 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-22 owner=111111 seed=0 tick=0 last_ts=1795500117 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-23 owner=111111 seed=0 tick=0 last_ts=1795500124 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-24 owner=111111 seed=0 tick=0 last_ts=1795500129 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-25 owner=111111 seed=0 tick=0 last_ts=1795500134 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-26 owner=111111 seed=0 tick=0 last_ts=1795500139 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-27 owner=111111 seed=0 tick=0 last_ts=1795500143 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-28 owner=111111 seed=0 tick=0 last_ts=1795500148 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-29 owner=111111 seed=0 tick=0 last_ts=1795500153 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-30 owner=111111 seed=0 tick=0 last_ts=1795500158 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base slot-31 owner=111111 seed=0 tick=0 last_ts=1795500162 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+base treasury admin=GVbuuo bump=253 lamports=200858520
+er passport-00 v=1 owner=FWh6pe kind=0 cps=33 lct=64336 due=False reserved_nonzero=False
+er passport-01 v=1 owner=5EBnU2 kind=0 cps=32 lct=62596 due=False reserved_nonzero=False
+er passport-02 v=1 owner=BreUFn kind=0 cps=32 lct=62548 due=False reserved_nonzero=False
+er passport-03 v=1 owner=G7LAdo kind=0 cps=32 lct=62391 due=False reserved_nonzero=False
+er passport-04 v=1 owner=D2JSk2 kind=0 cps=32 lct=62342 due=False reserved_nonzero=False
+er passport-05 v=1 owner=8NwXYh kind=0 cps=32 lct=62294 due=False reserved_nonzero=False
+er passport-06 v=1 owner=3zeA5v kind=0 cps=32 lct=62105 due=False reserved_nonzero=False
+er passport-07 v=1 owner=5djFy2 kind=0 cps=32 lct=56005 due=False reserved_nonzero=False
+er passport-08 v=1 owner=2U4irU kind=1 cps=33 lct=57876 due=False reserved_nonzero=False
+er passport-09 v=1 owner=4tkXqG kind=1 cps=33 lct=57875 due=False reserved_nonzero=False
+er passport-10 v=1 owner=Ud1inu kind=2 cps=33 lct=56380 due=False reserved_nonzero=False
+er passport-11 v=1 owner=HZmikX kind=2 cps=33 lct=57832 due=False reserved_nonzero=False
+er passport-12 v=1 owner=EaEtqN kind=0 cps=31 lct=56016 due=False reserved_nonzero=False
+er passport-13 v=1 owner=GVg2rC kind=0 cps=30 lct=54235 due=False reserved_nonzero=False
+er passport-14 v=1 owner=7JVdFk kind=2 cps=0 lct=0 due=True reserved_nonzero=False
+er passport-15 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-16 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-17 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-18 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-19 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-20 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-21 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-22 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-23 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-24 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-25 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-26 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-27 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-28 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-29 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-30 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er passport-31 v=1 owner=111111 kind=0 cps=0 lct=0 due=False reserved_nonzero=False
+er registry admin=GVbuuo slots=16 claims=16 last_claim_ts=1795727980 cooldown=10
+er settlement owner=GVbuuo seed=1337 tick=123539 last_ts=1795733364 int=2 pop=10 food=10000 pend=False prospects=5 sawmill=True
+er slot-00 owner=FWh6pe seed=1422761687 tick=122697 last_ts=1795733365 int=2 pop=10 food=10000 pend=False prospects=0 sawmill=False
+er slot-01 owner=5EBnU2 seed=1145747086 tick=122691 last_ts=1795733365 int=2 pop=1 food=0 pend=False prospects=0 sawmill=True
+er slot-02 owner=BreUFn seed=64798657 tick=122643 last_ts=1795733365 int=2 pop=10 food=9990 pend=False prospects=1 sawmill=False
+er slot-03 owner=G7LAdo seed=1691554800 tick=122486 last_ts=1795733365 int=2 pop=10 food=10000 pend=False prospects=0 sawmill=False
+er slot-04 owner=D2JSk2 seed=1330726770 tick=122437 last_ts=1795733365 int=2 pop=10 food=10000 pend=False prospects=0 sawmill=False
+er slot-05 owner=8NwXYh seed=2780676125 tick=122389 last_ts=1795733365 int=2 pop=1 food=0 pend=False prospects=0 sawmill=True
+er slot-06 owner=3zeA5v seed=2301796620 tick=122200 last_ts=1795733365 int=2 pop=10 food=9990 pend=False prospects=0 sawmill=False
+er slot-07 owner=5djFy2 seed=3687520971 tick=115680 last_ts=1795733365 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+er slot-08 owner=2U4irU seed=3906842737 tick=115636 last_ts=1795733365 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+er slot-09 owner=4tkXqG seed=1346703825 tick=115485 last_ts=1795733365 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+er slot-10 owner=Ud1inu seed=3053296915 tick=115279 last_ts=1795733365 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+er slot-11 owner=HZmikX seed=1438487729 tick=115022 last_ts=1795733365 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+er slot-12 owner=EaEtqN seed=2096322546 tick=114825 last_ts=1795733365 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+er slot-13 owner=GVg2rC seed=2478542917 tick=112505 last_ts=1795733365 int=2 pop=10 food=10000 pend=False prospects=0 sawmill=False
+er slot-14 owner=7JVdFk seed=3676078092 tick=2687 last_ts=1795733365 int=2 pop=1 food=0 pend=False prospects=0 sawmill=False
+er slot-15 owner=111111 seed=0 tick=0 last_ts=1795486352 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-16 owner=111111 seed=0 tick=0 last_ts=1795500087 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-17 owner=111111 seed=0 tick=0 last_ts=1795500092 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-18 owner=111111 seed=0 tick=0 last_ts=1795500096 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-19 owner=111111 seed=0 tick=0 last_ts=1795500101 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-20 owner=111111 seed=0 tick=0 last_ts=1795500106 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-21 owner=111111 seed=0 tick=0 last_ts=1795500110 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-22 owner=111111 seed=0 tick=0 last_ts=1795500117 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-23 owner=111111 seed=0 tick=0 last_ts=1795500124 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-24 owner=111111 seed=0 tick=0 last_ts=1795500129 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-25 owner=111111 seed=0 tick=0 last_ts=1795500134 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-26 owner=111111 seed=0 tick=0 last_ts=1795500139 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-27 owner=111111 seed=0 tick=0 last_ts=1795500143 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-28 owner=111111 seed=0 tick=0 last_ts=1795500148 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-29 owner=111111 seed=0 tick=0 last_ts=1795500153 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-30 owner=111111 seed=0 tick=0 last_ts=1795500158 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er slot-31 owner=111111 seed=0 tick=0 last_ts=1795500162 int=2 pop=0 food=0 pend=False prospects=0 sawmill=False
+er treasury admin=GVbuuo bump=253 lamports=858520

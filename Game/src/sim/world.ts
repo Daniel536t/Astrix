@@ -11,7 +11,14 @@
 // separately and re-applied when a chunk is regenerated.
 import type { Structure } from './structures';
 import type { LifeState } from './economy';
+import type { HomesteadState } from './homestead';
+import type { WildState } from './gathering';
 import { isStoneReplay } from './stone-compat';
+import { Hydrology } from './hydrology';
+import { TerrainV2, V2Column } from './terrain-v2';
+import { treeTimber } from './vegetation';
+import { lifeTimber, noteTreeChange, treeLife } from './woodland';
+import { woodlandCut } from './forestry';
 
 export const WORLD_SIZE = 2048;
 export const HALF = WORLD_SIZE / 2;
@@ -22,105 +29,28 @@ export const Y_MAX = 112;
 export const WORLD_HEIGHT = Y_MAX - Y_MIN;
 export const SEA_LEVEL = 0;
 export const WATER = SEA_LEVEL;
+/** Generator v1: the original 2048 m island. Default for createWorld and all legacy saves. */
 export const GENERATOR_VERSION = 1;
+/** Generator v2: valley-with-mountains geography with a mountain river (see terrain-v2.ts). */
+export const GENERATOR_V2 = 2;
+/** The generator new browser worlds use by default. */
+export const LATEST_GENERATOR_VERSION = GENERATOR_V2;
+export const SUPPORTED_GENERATOR_VERSIONS: readonly number[] = [GENERATOR_VERSION, GENERATOR_V2];
+export const isSupportedGenerator = (v: unknown): v is number =>
+  typeof v === 'number' && SUPPORTED_GENERATOR_VERSIONS.includes(v);
 export const CHUNK_VOLUME = CHUNK_SIZE * CHUNK_SIZE * WORLD_HEIGHT;
 export const CHUNK_AREA = CHUNK_SIZE * CHUNK_SIZE;
 
-export const MAT = {
-  AIR: 0,
-  GRASS: 1,
-  SOIL: 2,
-  SAND: 3,
-  GRAVEL: 4,
-  STONE: 5,
-  ORE: 6,
-  WATER: 7,
-  BEDROCK: 8,
-  MOSS: 9,
-} as const;
-export type MatId = (typeof MAT)[keyof typeof MAT];
+export { MAT, isSolid, isOpaque, MAX_MAT_ID } from './materials';
+export type { MatId } from './materials';
+import { MAT, isSolid, MatId } from './materials';
 
-export const isSolid = (m: number): boolean => m !== MAT.AIR && m !== MAT.WATER;
-export const isOpaque = isSolid;
-
-export const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
-export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const smoothstep = (e0: number, e1: number, x: number) => {
-  const t = clamp((x - e0) / (e1 - e0), 0, 1);
-  return t * t * (3 - 2 * t);
-};
-
-// ---------- deterministic hash / noise ----------
-export function hash2i(x: number, y: number, seed: number): number {
-  let h = seed ^ Math.imul(x, 374761393) ^ Math.imul(y, 668265263);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
-
-export function hash3i(x: number, y: number, z: number, seed: number): number {
-  let h = seed ^ Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(z, 2246822519);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
-
-export function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-const smooth = (t: number) => t * t * (3 - 2 * t);
-
-function valueNoise2(x: number, y: number, seed: number): number {
-  const xi = Math.floor(x), yi = Math.floor(y);
-  const xf = smooth(x - xi), yf = smooth(y - yi);
-  const a = hash2i(xi, yi, seed), b = hash2i(xi + 1, yi, seed);
-  const c = hash2i(xi, yi + 1, seed), d = hash2i(xi + 1, yi + 1, seed);
-  const top = a + (b - a) * xf;
-  const bottom = c + (d - c) * xf;
-  return top + (bottom - top) * yf;
-}
-
-export function fbm2(x: number, y: number, seed: number, octaves: number): number {
-  let sum = 0, amp = 1, freq = 1, norm = 0;
-  for (let i = 0; i < octaves; i++) {
-    sum += amp * valueNoise2(x * freq, y * freq, seed + i * 131);
-    norm += amp;
-    amp *= 0.5; freq *= 2;
-  }
-  return sum / norm;
-}
-
-function valueNoise3(x: number, y: number, z: number, seed: number): number {
-  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
-  const xf = smooth(x - xi), yf = smooth(y - yi), zf = smooth(z - zi);
-  const c000 = hash3i(xi, yi, zi, seed), c100 = hash3i(xi + 1, yi, zi, seed);
-  const c010 = hash3i(xi, yi + 1, zi, seed), c110 = hash3i(xi + 1, yi + 1, zi, seed);
-  const c001 = hash3i(xi, yi, zi + 1, seed), c101 = hash3i(xi + 1, yi, zi + 1, seed);
-  const c011 = hash3i(xi, yi + 1, zi + 1, seed), c111 = hash3i(xi + 1, yi + 1, zi + 1, seed);
-  const x00 = c000 + (c100 - c000) * xf;
-  const x10 = c010 + (c110 - c010) * xf;
-  const x01 = c001 + (c101 - c001) * xf;
-  const x11 = c011 + (c111 - c011) * xf;
-  const y0 = x00 + (x10 - x00) * yf;
-  const y1 = x01 + (x11 - x01) * yf;
-  return y0 + (y1 - y0) * zf;
-}
-
-function fbm3(x: number, y: number, z: number, seed: number, octaves: number): number {
-  let sum = 0, amp = 1, freq = 1, norm = 0;
-  for (let i = 0; i < octaves; i++) {
-    sum += amp * valueNoise3(x * freq, y * freq, z * freq, seed + i * 131);
-    norm += amp;
-    amp *= 0.5; freq *= 2;
-  }
-  return sum / norm;
-}
+export {
+  clamp, lerp, hash2i, hash3i, mulberry32, fbm2,
+} from './noise';
+import {
+  clamp, lerp, smoothstep, hash2i, hash3i, mulberry32, valueNoise3, fbm2, fbm3,
+} from './noise';
 
 // ---------- world types ----------
 export interface WorldParams {
@@ -130,7 +60,22 @@ export interface WorldParams {
   yMax: number;
   seaLevel: number;
   generatorVersion: number;
+  /**
+   * W1: the starting-world configuration. Absent means the settlement
+   * scenario (every world made before W1), so its params hash, manifest and
+   * snapshots are byte-identical. Only a non-default scenario is written.
+   */
+  scenario?: typeof WILDERNESS;
 }
+
+/** W1 scenarios: the preserved settlement (founder slice, homestead) and the bare wilderness start. */
+export type Scenario = 'settlement' | 'wilderness';
+export const WILDERNESS = 'wilderness' as const;
+/** The scenario of a world (absent field = settlement). */
+export function worldScenario(world: Pick<World, 'params'>): Scenario {
+  return world.params.scenario === WILDERNESS ? WILDERNESS : 'settlement';
+}
+export const isWildernessWorld = (world: Pick<World, 'params'>): boolean => world.params.scenario === WILDERNESS;
 
 export const DEFAULT_PARAMS: WorldParams = {
   size: WORLD_SIZE,
@@ -262,6 +207,10 @@ export interface World {
   inventory: Record<string, number>;
   /** Present only after schema-3 genesis/restoration. */
   life?: LifeState;
+  /** M006 living homestead; present once founded (schema 3 only). */
+  homestead?: HomesteadState;
+  /** W2: wilderness content v2 (pickups, items, tools, hunger). Absent in settlement and W1 (content v1) worlds. */
+  wild?: WildState;
   dirty: Set<string>;
   stats: WorldStats;
   authoredPlaced: boolean;
@@ -284,10 +233,11 @@ export const worldToLocalX = (x: number) => x - (worldToChunkX(x) * CHUNK_SIZE -
 export const worldToLocalZ = (z: number) => z - (worldToChunkZ(z) * CHUNK_SIZE - HALF);
 export const yToIndex = (y: number) => y - Y_MIN;
 
-export function createWorld(seed = 1337): World {
+export function createWorld(seed = 1337, generatorVersion = GENERATOR_VERSION, scenario: Scenario = 'settlement'): World {
+  if (!isSupportedGenerator(generatorVersion)) throw new Error(`unsupported generator version ${generatorVersion}`);
   return {
     seed,
-    params: { ...DEFAULT_PARAMS },
+    params: { ...DEFAULT_PARAMS, generatorVersion, ...(scenario === WILDERNESS ? { scenario: WILDERNESS } : {}) },
     chunks: new Map(),
     entities: new Map(),
     entityChunks: new Map(),
@@ -308,8 +258,8 @@ export function createWorld(seed = 1337): World {
   };
 }
 
-export function generateWorld(seed = 1337, initialRadius = 0): World {
-  const world = createWorld(seed);
+export function generateWorld(seed = 1337, initialRadius = 0, generatorVersion = GENERATOR_VERSION, scenario: Scenario = 'settlement'): World {
+  const world = createWorld(seed, generatorVersion, scenario);
   const centre = Math.floor(CHUNKS_PER_SIDE / 2);
   for (let cz = centre - initialRadius; cz <= centre + initialRadius; cz++) {
     for (let cx = centre - initialRadius; cx <= centre + initialRadius; cx++) {
@@ -481,6 +431,7 @@ export function baseTopMaterial(
 
 function subsoilFor(top: MatId): MatId {
   if (top === MAT.GRASS || top === MAT.MOSS) return MAT.SOIL;
+  if (top === MAT.SNOW) return MAT.STONE;
   if (top === MAT.SAND) return MAT.SAND;
   if (top === MAT.GRAVEL) return MAT.GRAVEL;
   return MAT.STONE;
@@ -500,6 +451,66 @@ function caveAt(seed: number, x: number, y: number, z: number): boolean {
 
 function overhangAt(seed: number, x: number, y: number, z: number): boolean {
   return valueNoise3(x * 0.18, y * 0.22, z * 0.18, seed + 141) > 0.62;
+}
+
+// ---------- versioned generator dispatch ----------
+const v2Cache = new Map<number, TerrainV2>();
+const hydroCache = new Map<string, Hydrology>();
+
+/** Deterministic hydrology network for a seed and generator version. */
+export function hydrologyFor(seed: number, version: number): Hydrology {
+  if (version >= GENERATOR_V2) return terrainV2(seed).hydrology;
+  const key = `${seed}:${version}`;
+  let hydro = hydroCache.get(key);
+  if (!hydro) {
+    hydro = new Hydrology({ seed, version, v1Height: (x, z) => surfaceHeightAt(seed, x, z) });
+    hydroCache.set(key, hydro);
+  }
+  return hydro;
+}
+
+/** @internal The v2 generator for a seed (cached; pure function of the seed). */
+export function terrainV2(seed: number): TerrainV2 {
+  let gen = v2Cache.get(seed);
+  if (!gen) {
+    const hydrology = new Hydrology({ seed, version: GENERATOR_V2, v1Height: (x, z) => surfaceHeightAt(seed, x, z) });
+    gen = new TerrainV2(seed, surfaceHeightAt, hydrology);
+    v2Cache.set(seed, gen);
+  }
+  return gen;
+}
+
+/** Base generated height (top solid + 1) for any supported generator version. */
+export function baseHeightAt(seed: number, version: number, x: number, z: number): number {
+  return version >= GENERATOR_V2 ? terrainV2(seed).height(x, z) : surfaceHeightAt(seed, x, z);
+}
+
+/** Base generated water surface: water fills cells [height, level). */
+export function baseWaterLevelAt(seed: number, version: number, x: number, z: number): number {
+  if (version >= GENERATOR_V2) return terrainV2(seed).column(x, z).level;
+  const h = surfaceHeightAt(seed, x, z);
+  return h < SEA_LEVEL ? SEA_LEVEL : h;
+}
+
+function versionedSlope(seed: number, version: number, x: number, z: number, h: number): number {
+  return Math.max(
+    Math.abs(h - baseHeightAt(seed, version, x - 1, z)),
+    Math.abs(h - baseHeightAt(seed, version, x + 1, z)),
+    Math.abs(h - baseHeightAt(seed, version, x, z - 1)),
+    Math.abs(h - baseHeightAt(seed, version, x, z + 1)),
+  );
+}
+
+/** Base top material for any generator version (macro LOD, entity placement). */
+export function baseTopMaterialFor(
+  seed: number, version: number, x: number, z: number, h: number, slope: number, nearWater?: boolean,
+): MatId {
+  if (version >= GENERATOR_V2) {
+    const gen = terrainV2(seed);
+    return gen.topMaterial(x, z, gen.column(x, z), slope,
+      (hh, ss) => topMaterialAt(seed, x, z, hh, ss, nearWater));
+  }
+  return topMaterialAt(seed, x, z, h, slope, nearWater);
 }
 
 export interface SurfaceSample {
@@ -526,24 +537,52 @@ export function ensureChunk(world: World, cx: number, cz: number): VoxelChunk | 
 
 export function generateChunk(world: World, cx: number, cz: number): VoxelChunk | null {
   if (cx < 0 || cz < 0 || cx >= CHUNKS_PER_SIDE || cz >= CHUNKS_PER_SIDE) return null;
-  const key = chunkKey(cx, cz);
-  const existing = world.chunks.get(key);
+  const existing = world.chunks.get(chunkKey(cx, cz));
   if (existing) return existing;
-
   const t0 = performance.now();
+  const base = generateBaseChunk(world.seed, world.params.generatorVersion, cx, cz);
+  return installBaseChunk(world, base, performance.now() - t0);
+}
+
+/**
+ * Base generated contents of a chunk before durable edits. A pure function of
+ * (seed, generator version, cx, cz): safe to compute in a Web Worker, and the
+ * bytes are identical wherever it runs.
+ */
+export interface BaseChunk {
+  cx: number;
+  cz: number;
+  seed: number;
+  version: number;
+  data: Uint8Array;
+  heights: Uint8Array;
+  topMaterials: Uint8Array;
+  nonAir: number;
+}
+
+export function generateBaseChunk(seed: number, version: number, cx: number, cz: number): BaseChunk {
   const data = new Uint8Array(CHUNK_VOLUME);
   const heights = new Uint8Array(CHUNK_AREA);
   const topMaterials = new Uint8Array(CHUNK_AREA);
   const ox = chunkOriginX(cx), oz = chunkOriginZ(cz);
-  const seed = world.seed;
+  const v2 = version >= GENERATOR_V2 ? terrainV2(seed) : null;
 
   // Padded height cache: a three-cell border covers slope, beach and ledges.
   const P = 3;
   const PW = CHUNK_SIZE + P * 2;
   const baseH = new Int16Array(PW * PW);
+  const v2Cols: V2Column[] | null = v2 ? new Array(CHUNK_AREA) : null;
   for (let pz = 0; pz < PW; pz++) {
     for (let px = 0; px < PW; px++) {
-      baseH[pz * PW + px] = surfaceHeightAt(seed, ox + px - P, oz + pz - P);
+      const wx = ox + px - P, wz = oz + pz - P;
+      if (v2) {
+        const col = v2.column(wx, wz);
+        baseH[pz * PW + px] = col.h;
+        const lx = px - P, lz = pz - P;
+        if (lx >= 0 && lz >= 0 && lx < CHUNK_SIZE && lz < CHUNK_SIZE) v2Cols![lz * CHUNK_SIZE + lx] = col;
+      } else {
+        baseH[pz * PW + px] = surfaceHeightAt(seed, wx, wz);
+      }
     }
   }
 
@@ -563,7 +602,10 @@ export function generateChunk(world: World, cx: number, cz: number): VoxelChunk 
         baseH[(lz + P) * PW + (lx + P + 3)] < SEA_LEVEL + 1 ||
         baseH[(lz + P - 3) * PW + (lx + P)] < SEA_LEVEL + 1 ||
         baseH[(lz + P + 3) * PW + (lx + P)] < SEA_LEVEL + 1;
-      const top = topMaterialAt(seed, wx, wz, h, slope, nearWater);
+      const v2Col = v2Cols ? v2Cols[lz * CHUNK_SIZE + lx] : null;
+      const top = v2 && v2Col
+        ? v2.topMaterial(wx, wz, v2Col, slope, (hh, ss) => topMaterialAt(seed, wx, wz, hh, ss, nearWater))
+        : topMaterialAt(seed, wx, wz, h, slope, nearWater);
       const sub = subsoilFor(top);
       const orePotential = fbm2(wx / 55, wz / 55, seed + 130, 2) > 0.57;
       const col = lz * CHUNK_SIZE + lx;
@@ -598,9 +640,11 @@ export function generateChunk(world: World, cx: number, cz: number): VoxelChunk 
         }
       }
 
-      // Water volume: everything above the solid surface up to sea level.
-      if (h < SEA_LEVEL) {
-        for (let y = Math.max(Y_MIN, h); y < SEA_LEVEL; y++) {
+      // Water volume: everything above the solid surface up to the column's
+      // water level (sea level in v1; the hydrological level in v2).
+      const waterLevel = v2Col ? Math.min(Y_MAX, v2Col.level) : SEA_LEVEL;
+      if (h < waterLevel) {
+        for (let y = Math.max(Y_MIN, h); y < waterLevel; y++) {
           const idx = localIndex(lx, yToIndex(y), lz);
           if (data[idx] === MAT.AIR) {
             data[idx] = MAT.WATER;
@@ -660,6 +704,23 @@ export function generateChunk(world: World, cx: number, cz: number): VoxelChunk 
     }
   }
 
+  return { cx, cz, seed, version, data, heights, topMaterials, nonAir };
+}
+
+/**
+ * Install base contents as a resident chunk: apply durable edits, update
+ * stats, and run deterministic entity generation. Main-thread only; this is
+ * the single writer of World. Returns the already-resident chunk if one exists.
+ */
+export function installBaseChunk(world: World, base: BaseChunk, generationMs = 0): VoxelChunk | null {
+  if (base.seed !== world.seed || base.version !== world.params.generatorVersion) {
+    throw new Error('base chunk belongs to a different world configuration');
+  }
+  const { cx, cz, data, heights, topMaterials, nonAir } = base;
+  if (cx < 0 || cz < 0 || cx >= CHUNKS_PER_SIDE || cz >= CHUNKS_PER_SIDE) return null;
+  const key = chunkKey(cx, cz);
+  const existing = world.chunks.get(key);
+  if (existing) return existing;
   const chunk: VoxelChunk = {
     cx, cz, key, data, heights, topMaterials, nonAir,
     dirty: true,
@@ -686,7 +747,7 @@ export function generateChunk(world: World, cx: number, cz: number): VoxelChunk 
   world.chunks.set(key, chunk);
   world.stats.chunksGenerated++;
   world.stats.voxelsFilled += nonAir;
-  world.stats.generationMs += performance.now() - t0;
+  world.stats.generationMs += generationMs;
   world.dirty.add(key);
 
   generateEntities(world, chunk);
@@ -698,24 +759,90 @@ export function generateChunk(world: World, cx: number, cz: number): VoxelChunk 
  * a harvested chunk without materializing unrelated neighbouring chunks. */
 const baseColumnCache = new WeakMap<World, Map<string, { heights: Uint8Array; topMaterials: Uint8Array }>>();
 
-function baseColumns(world: World, chunk: VoxelChunk): { heights: Uint8Array; topMaterials: Uint8Array } {
+export interface BaseColumns { heights: Uint8Array; topMaterials: Uint8Array; }
+
+/** Base (pre-carve, pre-edit) column heights/materials used for entity placement. Pure. */
+export function computeBaseColumns(seed: number, version: number, cx: number, cz: number): BaseColumns {
+  const columns = { heights: new Uint8Array(CHUNK_AREA), topMaterials: new Uint8Array(CHUNK_AREA) };
+  for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      const c = baseColumnAt(seed, version, chunkOriginX(cx) + lx, chunkOriginZ(cz) + lz);
+      const index = lz * CHUNK_SIZE + lx;
+      columns.heights[index] = c.stored;
+      columns.topMaterials[index] = c.top;
+    }
+  }
+  return columns;
+}
+
+/** One base column as `computeBaseColumns` stores it: height (offset by Y_MIN, clamped) and top material. Pure. */
+export function baseColumnAt(seed: number, version: number, x: number, z: number): { stored: number; top: MatId } {
+  const h = baseHeightAt(seed, version, x, z);
+  const slope = version >= GENERATOR_V2
+    ? versionedSlope(seed, version, x, z, h) : slopeAt(seed, x, z, h);
+  return {
+    stored: clamp(h - Y_MIN, 0, WORLD_HEIGHT - 1),
+    top: version >= GENERATOR_V2 ? baseTopMaterialFor(seed, version, x, z, h, slope) : topMaterialAt(seed, x, z, h, slope),
+  };
+}
+
+/** Provide precomputed base columns (for example from a worker) before installing a chunk. */
+export function seedBaseColumns(world: World, key: string, columns: BaseColumns): void {
+  let cache = baseColumnCache.get(world);
+  if (!cache) { cache = new Map(); baseColumnCache.set(world, cache); }
+  if (!cache.has(key)) cache.set(key, columns);
+}
+
+function baseColumns(world: World, chunk: VoxelChunk): BaseColumns {
   let cache = baseColumnCache.get(world);
   if (!cache) { cache = new Map(); baseColumnCache.set(world, cache); }
   const cached = cache.get(chunk.key);
   if (cached) return cached;
-  const columns = { heights: new Uint8Array(chunk.heights), topMaterials: new Uint8Array(chunk.topMaterials) };
-  for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-      const x = chunkOriginX(chunk.cx) + lx, z = chunkOriginZ(chunk.cz) + lz;
-      const h = surfaceHeightAt(world.seed, x, z);
-      const slope = slopeAt(world.seed, x, z, h);
-      const index = lz * CHUNK_SIZE + lx;
-      columns.heights[index] = clamp(h - Y_MIN, 0, WORLD_HEIGHT - 1);
-      columns.topMaterials[index] = topMaterialAt(world.seed, x, z, h, slope);
-    }
-  }
+  const columns = computeBaseColumns(world.seed, world.params.generatorVersion, chunk.cx, chunk.cz);
   cache.set(chunk.key, columns);
   return columns;
+}
+
+// ---------- derived change tracking (not authoritative state) ----------
+// Renderers need to know when the edit overlay changed without walking every
+// edit each frame. The counter lives outside World so it never enters a
+// snapshot or canonical hash.
+const editVersions = new WeakMap<World, number>();
+
+/** Monotonic count of edit-overlay changes for this World object. */
+export function editVersion(world: World): number {
+  return editVersions.get(world) ?? 0;
+}
+
+/** Call after replacing or bulk-changing `world.edits` outside setVoxel. */
+export function markEditsChanged(world: World): void {
+  editVersions.set(world, editVersion(world) + 1);
+}
+
+// ---------- non-generating queries ----------
+// Moving presentation (characters, animals, camera) must never trigger chunk
+// generation as a side effect of asking about terrain. These return null when
+// the column's chunk is not resident.
+
+export function residentChunkAt(world: World, x: number, z: number): VoxelChunk | null {
+  if (x < -HALF || z < -HALF || x >= HALF || z >= HALF) return null;
+  return world.chunks.get(chunkKey(worldToChunkX(x), worldToChunkZ(z))) ?? null;
+}
+
+/** Like surfaceAt, but null instead of generating a missing chunk. */
+export function residentSurfaceAt(world: World, x: number, z: number): number | null {
+  const chunk = residentChunkAt(world, x, z);
+  if (!chunk) return null;
+  return chunk.heights[worldToLocalZ(z) * CHUNK_SIZE + worldToLocalX(x)] + Y_MIN + 1;
+}
+
+/** Like getVoxel, but null instead of generating a missing chunk. */
+export function residentVoxelAt(world: World, x: number, y: number, z: number): MatId | null {
+  if (y < Y_MIN) return MAT.BEDROCK;
+  if (y >= Y_MAX) return MAT.AIR;
+  const chunk = residentChunkAt(world, x, z);
+  if (!chunk) return null;
+  return chunk.data[localIndex(worldToLocalX(x), yToIndex(y), worldToLocalZ(z))] as MatId;
 }
 
 export function evictChunk(world: World, key: string): boolean {
@@ -760,6 +887,7 @@ export function setVoxel(world: World, x: number, y: number, z: number, m: MatId
   }
   chunk.data[idx] = m;
   edits.set(idx, m);
+  markEditsChanged(world);
   chunk.dirty = true;
   world.dirty.add(chunk.key);
   world.revision++;
@@ -808,11 +936,54 @@ export function heightAt(world: World, x: number, z: number): number {
 }
 
 export function waterDepthAt(world: World, x: number, z: number): number {
-  const h = surfaceAt(world, x, z);
-  return h < SEA_LEVEL ? SEA_LEVEL - h : 0;
+  if (world.params.generatorVersion < GENERATOR_V2) {
+    const h = surfaceAt(world, x, z);
+    return h < SEA_LEVEL ? SEA_LEVEL - h : 0;
+  }
+  return waterSurfaceAt(world, x, z) - surfaceAt(world, x, z);
+}
+
+/**
+ * Top of the water column standing on the solid surface (equal to the surface
+ * when dry). Reads the authoritative voxels, so edits and dug pits are exact.
+ */
+export function waterSurfaceAt(world: World, x: number, z: number): number {
+  let y = surfaceAt(world, x, z);
+  while (y < Y_MAX && getVoxel(world, x, y, z) === MAT.WATER) y++;
+  return y;
 }
 
 // ---------- entities ----------
+
+// M013: derived-cache counters (never saved or hashed). `natureVersion` moves
+// whenever an entity's existence, depletion or lifecycle record changes, and
+// `structureVersion` when built structures change, so the walking grid can
+// tell "nothing changed" from "these trees changed" without a full rebuild.
+const natureVersions = new WeakMap<World, number>();
+const structureVersions = new WeakMap<World, number>();
+export function natureVersion(world: World): number { return natureVersions.get(world) ?? 0; }
+export function touchNature(world: World): void { natureVersions.set(world, natureVersion(world) + 1); }
+export function structureVersion(world: World): number { return structureVersions.get(world) ?? 0; }
+export function touchStructures(world: World): void { structureVersions.set(world, structureVersion(world) + 1); touchNature(world); }
+
+/**
+ * M013: a tree the simulation itself adds (a seedling, a planted sapling).
+ * Its chunk becomes a changed chunk, so the snapshot carries the record and a
+ * restore installs it exactly like any other changed natural entity.
+ */
+export function addSimEntity(world: World, e: Entity): void {
+  if (world.entities.has(e.id)) throw new Error(`entity ${e.id} already exists`);
+  ensureChunk(world, worldToChunkX(Math.floor(e.x)), worldToChunkZ(Math.floor(e.z)));
+  world.entities.set(e.id, e);
+  let list = world.entityChunks.get(e.chunk);
+  if (!list) { list = []; world.entityChunks.set(e.chunk, list); }
+  list.push(e.id);
+  world.entityChanges.add(e.chunk);
+  if (e.kind.startsWith('styl_tree')) world.stats.trees++;
+  world.stats.entities = world.entities.size;
+  touchNature(world);
+}
+
 function addEntity(world: World, e: Entity): void {
   if (world.entities.has(e.id) || (isRetiredStoneKind(e.kind) && !isStoneReplay(world))
     || world.entityRemovals.has(e.id)) return;
@@ -848,6 +1019,7 @@ export function removeEntity(world: World, id: string): boolean {
   if (e.kind === 'styl_tree_blossom') world.stats.pinkTrees = Math.max(0, world.stats.pinkTrees - 1);
   world.stats.entities = world.entities.size;
   world.revision++;
+  touchNature(world);
   return true;
 }
 
@@ -855,7 +1027,11 @@ function entityId(chunk: string, i: number): string {
   return `e:${chunk}:${i}`;
 }
 
-function forestScore(wx: number, wz: number, seed: number): number {
+/**
+ * Pure forest-density field used by entity generation. Exported read-only for
+ * render decoration (render/ground-cover.ts); changing it changes worlds.
+ */
+export function forestScore(wx: number, wz: number, seed: number): number {
   const east = Math.exp(-(((wx - 220) / 260) ** 2 + ((wz + 110) / 220) ** 2));
   const north = Math.exp(-(((wx - 20) / 300) ** 2 + ((wz + 300) / 190) ** 2));
   const west = Math.exp(-(((wx + 340) / 200) ** 2 + ((wz - 120) / 180) ** 2));
@@ -866,7 +1042,8 @@ function forestScore(wx: number, wz: number, seed: number): number {
     + moisture * 0.38 - 0.22 - valley * 0.34;
 }
 
-function rockScore(wx: number, wz: number, seed: number): number {
+/** Pure rockiness field used by entity generation (same contract as forestScore). */
+export function rockScore(wx: number, wz: number, seed: number): number {
   const mountain = fbm2(wx / 330, wz / 330, seed + 202, 3);
   const ridge = 1 - Math.abs(2 * fbm2(wx / 140, wz / 140, seed + 203, 3) - 1);
   return mountain * 0.55 + ridge * 0.45;
@@ -882,20 +1059,33 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
   if (world.entityChunks.has(key)) return;
   const chunk = ensureChunk(world, cx, cz);
   if (!chunk) return;
-
-  const rnd = mulberry32((hash2i(chunk.cx, chunk.cz, world.seed + 900) * 4294967296) >>> 0);
-  const ox = chunkOriginX(chunk.cx), oz = chunkOriginZ(chunk.cz);
   const columns = baseColumns(world, chunk);
+  planNaturalEntities(world.seed, chunk.cx, chunk.cz,
+    (lx, lz) => columns.heights[lz * CHUNK_SIZE + lx] + Y_MIN,
+    (lx, lz) => columns.topMaterials[lz * CHUNK_SIZE + lx] as MatId,
+    isStoneReplay(world),
+    {
+      entity: (e) => addEntity(world, e),
+      stat: (k) => { world.stats[k]++; },
+    });
+}
+
+/**
+ * W5: the natural entities a chunk's generation places, as a pure function of
+ * (seed, chunk) and the chunk's base columns (`localSurface`, `localTop`).
+ * `generateEntityChunk` adds them to the world (the same records, in the same
+ * order, with the same random draws as before this was split out); the map's
+ * ore discovery reads them without generating the chunk's voxels.
+ */
+export function planNaturalEntities(seed: number, cx: number, cz: number,
+  localSurface: (lx: number, lz: number) => number, localTop: (lx: number, lz: number) => MatId, stoneReplay: boolean,
+  sink: { entity: (e: Entity) => void; stat: (k: 'trees' | 'pinkTrees' | 'pinkOverflow') => void }): void {
+  const chunk = { cx, cz, key: chunkKey(cx, cz) };
+  const rnd = mulberry32((hash2i(chunk.cx, chunk.cz, seed + 900) * 4294967296) >>> 0);
+  const ox = chunkOriginX(chunk.cx), oz = chunkOriginZ(chunk.cz);
   let n = 0;
   let naturalTrees = 0;
   let naturalPinkTrees = 0;
-
-  const localSurface = (lx: number, lz: number): number => {
-    return columns.heights[lz * CHUNK_SIZE + lx] + Y_MIN;
-  };
-  const localTop = (lx: number, lz: number): MatId => {
-    return columns.topMaterials[lz * CHUNK_SIZE + lx] as MatId;
-  };
   const localSlope = (lx: number, lz: number): number => {
     const h = localSurface(lx, lz);
     return Math.max(
@@ -917,8 +1107,8 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
       const slope = localSlope(lx, lz);
       const top = localTop(lx, lz);
       if (top === MAT.WATER) continue;
-      const forest = forestScore(wx, wz, world.seed);
-      const rocky = rockScore(wx, wz, world.seed);
+      const forest = forestScore(wx, wz, seed);
+      const rocky = rockScore(wx, wz, seed);
       const roll = rnd();
 
       const treeChance = forest > 0.50 ? 0.72 : forest > 0.30 ? 0.25 : 0.05;
@@ -932,12 +1122,12 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
           if ((naturalPinkTrees + 1) > 0.25 * (naturalTrees + 1)) {
             kind = 'styl_tree_cluster';
             variant = Math.floor(rnd() * 3);
-            world.stats.pinkOverflow++;
+            sink.stat('pinkOverflow');
           } else {
             kind = 'styl_tree_blossom';
             variant = Math.floor(rnd() * 2);
             naturalPinkTrees++;
-            world.stats.pinkTrees++;
+            sink.stat('pinkTrees');
           }
         } else if (speciesRoll < 0.40) {
           kind = 'styl_tree_spire';
@@ -950,8 +1140,8 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
           variant = Math.floor(rnd() * 3);
         }
         naturalTrees++;
-        world.stats.trees++;
-        addEntity(world, {
+        sink.stat('trees');
+        sink.entity({
           id: entityId(chunk.key, n++),
           kind, chunk: chunk.key, x: wx + 0.5, y: h, z: wz + 0.5,
           rot: Math.floor(rnd() * 24) * (Math.PI / 12),
@@ -979,11 +1169,11 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
         };
         // Only entities that existed in an accepted old save get tombstones,
         // during explicit migration. Ordinary generation must restore exactly.
-        if (isStoneReplay(world)) addEntity(world, record);
+        if (stoneReplay) sink.entity(record);
         continue;
       }
       if (top === MAT.STONE && rocky > 0.58 && roll < 0.18) {
-        addEntity(world, {
+        sink.entity({
           id: entityId(chunk.key, n++),
           kind: 'styl_ore', chunk: chunk.key, x: wx + 0.5, y: h, z: wz + 0.5,
           rot: Math.floor(rnd() * 24) * (Math.PI / 12),
@@ -994,7 +1184,7 @@ export function generateEntityChunk(world: World, cx: number, cz: number): void 
         continue;
       }
       if (top === MAT.GRASS && slope <= 1 && roll < 0.30) {
-        addEntity(world, {
+        sink.entity({
           id: entityId(chunk.key, n++),
           kind: 'styl_shrub', chunk: chunk.key, x: wx + 0.5, y: h, z: wz + 0.5,
           rot: Math.floor(rnd() * 24) * (Math.PI / 12),
@@ -1046,8 +1236,12 @@ function addAuthoredEntity(world: World, kind: EntityKind, x: number, z: number,
 export function placeAuthoredSites(world: World): void {
   if (world.authoredPlaced) return;
   world.authoredPlaced = true;
+  touchNature(world);
+  // W1: a wilderness world has no human-made landmarks (waystone, marker,
+  // cairn). The hero grove, its rock, shrub and ore are natural and stay.
+  const wild = isWildernessWorld(world);
 
-  const sites: Array<{ kind: 'waystone' | 'marker'; x: number; z: number; rot: number }> = [
+  const sites: Array<{ kind: 'waystone' | 'marker'; x: number; z: number; rot: number }> = wild ? [] : [
     { kind: 'waystone', x: -10, z: -14, rot: 0 },
     { kind: 'marker', x: -32, z: -8, rot: Math.PI / 2 },
   ];
@@ -1079,7 +1273,7 @@ export function placeAuthoredSites(world: World): void {
   }
   addAuthoredEntity(world, 'styl_rock_medium', -6, -10, 0, 0, 1.0, 'stone', 8, 3);
   addAuthoredEntity(world, 'styl_shrub', -14, -8, 1, Math.PI / 12, 1.1, 'fiber', 4, 1);
-  addAuthoredEntity(world, 'styl_cairn', -20, -6, 0, 0, 1.0, 'stone', 6, 2);
+  if (!wild) addAuthoredEntity(world, 'styl_cairn', -20, -6, 0, 0, 1.0, 'stone', 6, 2);
   addAuthoredEntity(world, 'styl_ore', -38, -42, 0, Math.PI / 4, 1.1, 'ore', 8, 2);
 }
 
@@ -1093,6 +1287,8 @@ export function nearestHarvestable(
       || e.harvested || !e.resource || e.remaining <= 0) continue;
     if (resource && e.resource !== resource) continue;
     const d = (e.x - x) ** 2 + (e.z - z) ** 2;
+    // M013: a tree in an empty spot of its lifecycle has nothing to gather.
+    if (d < bestD && e.kind.startsWith('styl_tree_')) { const life = treeLife(world, e); if (life && (!life.present || !lifeTimber(life))) continue; }
     if (d < bestD) { bestD = d; best = e; }
   }
   return best;
@@ -1100,18 +1296,86 @@ export function nearestHarvestable(
 
 export interface HarvestResult { entity: Entity; resource: ResourceType; amount: number; }
 
-export function harvestEntity(world: World, id: string): HarvestResult | null {
+/**
+ * Settlement rules v2 (M010): growth stage sets tree yield and footprint, and
+ * villagers navigate. Active once the world's homestead is version 2 (founded
+ * or upgraded by a journaled command); earlier worlds keep legacy rules, so
+ * their replays and hashes are unchanged.
+ */
+export function stageRulesActive(world: World): boolean {
+  return (world.homestead?.version ?? 0) >= 2;
+}
+
+/**
+ * Under stage rules a tree's first cut sets its record to the stage's timber
+ * (a sapling holds 2 wood, an old tree 16). Idempotent after the first cut.
+ */
+export function applyStageTimber(world: World, e: Entity): void {
+  if (!stageRulesActive(world) || e.harvestedOnce) return;
+  const t = treeTimber(e);
+  if (!t) return;
+  e.remaining = t.total;
+  e.yieldPerHarvest = t.cut;
+}
+
+/**
+ * One cut from an entity: the single rule for depleting a tree, bush or
+ * deposit, shared by the player's harvest and (M012 rules v4) the woodcutter.
+ * `room` is how much the receiving bag or load can still take; nothing changes
+ * when the cut does not fit. The caller puts `amount` into that bag or load.
+ * A depleted entity is `harvested`: it stops being drawn and leaves the
+ * walking grid on its next rebuild (the revision changes).
+ */
+export function cutEntity(world: World, id: string, room: number): HarvestResult | null {
   const e = liveEntity(world, id);
-  if (!e || e.harvested || !e.resource || e.remaining <= 0) return null;
+  if (!e || !e.resource) return null;
+  // M013 rules v5: a tree's timber, and whether anything stands to cut, follow its lifecycle stage.
+  const life = e.kind.startsWith('styl_tree_') ? treeLife(world, e) : null;
+  if (life && !life.legacy) {
+    if (!life.present || e.harvested || e.remaining <= 0 && e.harvestedOnce) return null;
+    const first = !e.harvestedOnce;
+    if (first) {
+      const t = lifeTimber(life);
+      if (!t || Math.min(t.cut, t.total) > room) return null;
+      e.remaining = t.total;
+      e.yieldPerHarvest = t.cut;
+    }
+    const amount = Math.min(e.yieldPerHarvest, e.remaining);
+    if (amount <= 0 || amount > room) return null;
+    e.remaining -= amount;
+    if (!e.authored) world.entityChanges.add(e.chunk);
+    e.harvestedOnce = true;
+    if (e.remaining <= 0) e.harvested = true;
+    woodlandCut(world, e, life, first);
+    world.revision++;
+    touchNature(world);
+    noteTreeChange(world, e.id);
+    return { entity: e, resource: e.resource, amount };
+  }
+  if (e.harvested || e.remaining <= 0) return null;
+  // Capacity is checked against the stage yield, then the record changes.
+  if (stageRulesActive(world) && !e.harvestedOnce && treeTimber(e)) {
+    const t = treeTimber(e)!;
+    if (Math.min(t.cut, t.total) > room) return null;
+    applyStageTimber(world, e);
+  }
   const amount = Math.min(e.yieldPerHarvest, e.remaining);
-  if (world.life && Object.values(world.inventory).reduce((sum, n) => sum + n, 0) + amount > 120) return null;
+  if (amount > room) return null;
   e.remaining -= amount;
   if (!e.authored) world.entityChanges.add(e.chunk);
   e.harvestedOnce = true;
   if (e.remaining <= 0) e.harvested = true;
-  world.inventory[e.resource] = (world.inventory[e.resource] ?? 0) + amount;
   world.revision++;
+  touchNature(world);
+  noteTreeChange(world, e.id);
   return { entity: e, resource: e.resource, amount };
+}
+
+export function harvestEntity(world: World, id: string): HarvestResult | null {
+  const room = world.life ? 120 - Object.values(world.inventory).reduce((sum, n) => sum + n, 0) : Infinity;
+  const r = cutEntity(world, id, room);
+  if (r) world.inventory[r.resource] = (world.inventory[r.resource] ?? 0) + r.amount;
+  return r;
 }
 
 /** Remove every retired source after verified historical replay. This migration
@@ -1130,6 +1394,7 @@ export function retireStoneEntities(world: World): void {
     else world.entityChunks.delete(key);
   }
   world.stats.entities = world.entities.size;
+  touchNature(world);
 }
 
 // ---------- persistence / authority boundary ----------
@@ -1143,6 +1408,8 @@ export interface WorldManifest {
   yMax: number;
   seaLevel: number;
   paramsHash: string;
+  /** W1: present only for a non-default scenario, so settlement manifests are unchanged. */
+  scenario?: typeof WILDERNESS;
 }
 
 function fnv1a(text: string): string {
@@ -1166,6 +1433,7 @@ export function worldManifest(world: World): WorldManifest {
     yMax: p.yMax,
     seaLevel: p.seaLevel,
     paramsHash: fnv1a(JSON.stringify(p)),
+    ...(p.scenario === WILDERNESS ? { scenario: WILDERNESS } : {}),
   };
 }
 

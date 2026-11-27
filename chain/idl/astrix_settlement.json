@@ -1,0 +1,2278 @@
+{
+  "address": "Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy",
+  "metadata": {
+    "name": "astrix_settlement",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "ASTrix settlement economy on MagicBlock Ephemeral Rollups"
+  },
+  "instructions": [
+    {
+      "name": "initialize",
+      "docs": [
+        "Base layer: found a settlement bound to a world seed and terrain generator."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "world_seed",
+          "type": "u32"
+        },
+        {
+          "name": "generator",
+          "type": "u8"
+        },
+        {
+          "name": "tick_interval_s",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "delegate",
+      "docs": [
+        "Base layer: hand the settlement to an Ephemeral Rollup validator."
+      ],
+      "discriminator": [
+        90,
+        147,
+        75,
+        178,
+        85,
+        88,
+        4,
+        137
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "buffer_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_record_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_metadata_pda",
+          "writable": true
+        },
+        {
+          "name": "pda",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "delegation_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_session",
+      "docs": [
+        "Owner only: authorise a session key with an expiry and an action budget."
+      ],
+      "discriminator": [
+        156,
+        135,
+        126,
+        111,
+        184,
+        206,
+        194,
+        141
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "session_key",
+          "type": "pubkey"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        },
+        {
+          "name": "budget",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "revoke_session",
+      "docs": [
+        "Owner only: end the current session immediately."
+      ],
+      "discriminator": [
+        86,
+        92,
+        198,
+        120,
+        144,
+        2,
+        7,
+        194
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "harvest",
+      "docs": [
+        "Gather a resource into the stockpile (owner or session key)."
+      ],
+      "discriminator": [
+        228,
+        241,
+        31,
+        182,
+        53,
+        169,
+        59,
+        199
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "docs": [
+            "Any settlement or world slot of this program (owner + discriminator checked",
+            "by Anchor); who may act is decided by `authorise`."
+          ],
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "resource",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "plant",
+      "docs": [
+        "Plant one seed in an empty plot (owner or session key)."
+      ],
+      "discriminator": [
+        200,
+        121,
+        224,
+        150,
+        235,
+        239,
+        156,
+        246
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "docs": [
+            "Any settlement or world slot of this program (owner + discriminator checked",
+            "by Anchor); who may act is decided by `authorise`."
+          ],
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "plot",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "build_sawmill",
+      "docs": [
+        "Build the sawmill: afterwards each tick turns 2 wood into 1 plank."
+      ],
+      "discriminator": [
+        115,
+        64,
+        162,
+        70,
+        78,
+        156,
+        132,
+        106
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "docs": [
+            "Any settlement or world slot of this program (owner + discriminator checked",
+            "by Anchor); who may act is decided by `authorise`."
+          ],
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "tick",
+      "docs": [
+        "Kept for the live cranks (742001/742101/742117): same name, same single",
+        "writable account, same discriminator. Since layout v2 it is an alias for",
+        "`settle`, so old and new cranks firing together cannot double-apply time."
+      ],
+      "discriminator": [
+        92,
+        79,
+        44,
+        8,
+        101,
+        80,
+        63,
+        15
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "schedule_ticks",
+      "docs": [
+        "Owner only, on the ER: schedule `tick` with a MagicBlock crank."
+      ],
+      "discriminator": [
+        243,
+        206,
+        0,
+        155,
+        207,
+        136,
+        85,
+        251
+      ],
+      "accounts": [
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "settlement"
+        },
+        {
+          "name": "settlement_info",
+          "writable": true
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "task_id",
+          "type": "i64"
+        },
+        {
+          "name": "interval_ms",
+          "type": "i64"
+        },
+        {
+          "name": "iterations",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "prospect",
+      "docs": [
+        "Prospect for minerals: spend food, ask MagicBlock VRF for the outcome.",
+        "Layout v2 only. The request gets a unique request id, the world id (its",
+        "address), a prospect id and a nonce; all four travel through the VRF",
+        "`callback_args` and the callback settles only that exact request."
+      ],
+      "discriminator": [
+        131,
+        86,
+        158,
+        130,
+        25,
+        239,
+        113,
+        87
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "oracle_queue",
+          "writable": true
+        },
+        {
+          "name": "program_identity"
+        },
+        {
+          "name": "vrf_program"
+        },
+        {
+          "name": "slot_hashes"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "client_seed",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "prospect_callback",
+      "docs": [
+        "Legacy VRF callback (pre-v2 requests carried no ticket). Applies only to a",
+        "v1 (unmigrated) world with a legacy prospect pending, exactly as before. On",
+        "a v2 world it is always rejected: an unbound result can never settle a",
+        "v2 request."
+      ],
+      "discriminator": [
+        174,
+        244,
+        89,
+        29,
+        10,
+        221,
+        200,
+        37
+      ],
+      "accounts": [
+        {
+          "name": "vrf_program_identity",
+          "docs": [
+            "The VRF program's scoped identity for this program; only it can deliver randomness."
+          ],
+          "signer": true
+        },
+        {
+          "name": "settlement",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "randomness",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "cancel_prospect",
+      "docs": [
+        "Owner only: clear a prospect whose randomness never arrived. v2: allowed only",
+        "once VRF_TIMEOUT_S has passed since the request (after MagicBlock's purge",
+        "window), so a cancel can never race a still-valid result. The cancelled",
+        "request id is burnt; a late result for it is rejected. Food is not refunded."
+      ],
+      "discriminator": [
+        203,
+        80,
+        148,
+        93,
+        236,
+        100,
+        31,
+        90
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_registry",
+      "docs": [
+        "Base layer, admin: create the registry that governs world slots."
+      ],
+      "discriminator": [
+        131,
+        22,
+        4,
+        103,
+        24,
+        94,
+        163,
+        239
+      ],
+      "accounts": [
+        {
+          "name": "registry",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "slots",
+          "type": "u8"
+        },
+        {
+          "name": "claim_cooldown_s",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "init_slot",
+      "docs": [
+        "Base layer, admin: pre-fund one empty world slot (rent paid by the admin)."
+      ],
+      "discriminator": [
+        197,
+        55,
+        186,
+        36,
+        93,
+        96,
+        225,
+        37
+      ],
+      "accounts": [
+        {
+          "name": "slot",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "delegate_registry",
+      "docs": [
+        "Base layer, admin: delegate the registry to the ER."
+      ],
+      "discriminator": [
+        164,
+        96,
+        87,
+        155,
+        123,
+        127,
+        156,
+        111
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "buffer_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_record_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_metadata_pda",
+          "writable": true
+        },
+        {
+          "name": "pda",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "delegation_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "delegate_slot",
+      "docs": [
+        "Base layer, admin: delegate one world slot to the ER."
+      ],
+      "discriminator": [
+        156,
+        156,
+        126,
+        176,
+        152,
+        51,
+        15,
+        85
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "buffer_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_record_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_metadata_pda",
+          "writable": true
+        },
+        {
+          "name": "pda",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "delegation_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "claim_world",
+      "docs": [
+        "ER, permissionless: a guest key claims an empty slot and becomes the sole",
+        "owner of that world. Each claim needs a proof of work bound to the key and",
+        "slot. The world seed is derived from the claimant's key, so every world differs."
+      ],
+      "discriminator": [
+        102,
+        48,
+        167,
+        118,
+        226,
+        152,
+        81,
+        50
+      ],
+      "accounts": [
+        {
+          "name": "registry",
+          "writable": true
+        },
+        {
+          "name": "slot",
+          "writable": true
+        },
+        {
+          "name": "passport",
+          "writable": true
+        },
+        {
+          "name": "guest",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "nonce",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "release_world",
+      "docs": [
+        "ER, owner only: delete your own world and return the slot to the pool.",
+        "Claimed worlds are never recycled by the operator, however long inactive."
+      ],
+      "discriminator": [
+        123,
+        239,
+        141,
+        46,
+        254,
+        93,
+        12,
+        38
+      ],
+      "accounts": [
+        {
+          "name": "slot",
+          "writable": true
+        },
+        {
+          "name": "passport",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_passport",
+      "docs": [
+        "Base, admin: create the passport (durable identity record) for one of the",
+        "admin's world slots."
+      ],
+      "discriminator": [
+        5,
+        43,
+        191,
+        224,
+        103,
+        76,
+        234,
+        26
+      ],
+      "accounts": [
+        {
+          "name": "world"
+        },
+        {
+          "name": "passport",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "_index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "delegate_passport",
+      "docs": [
+        "Base, admin: delegate a passport to the ER."
+      ],
+      "discriminator": [
+        106,
+        137,
+        112,
+        173,
+        234,
+        121,
+        33,
+        197
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "world"
+        },
+        {
+          "name": "buffer_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_record_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_metadata_pda",
+          "writable": true
+        },
+        {
+          "name": "pda",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "delegation_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "_index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "link_passport",
+      "docs": [
+        "ER, permissionless: link a world claimed before passports existed. Copies",
+        "the world's current owner; does nothing once linked."
+      ],
+      "discriminator": [
+        231,
+        170,
+        250,
+        139,
+        239,
+        143,
+        67,
+        244
+      ],
+      "accounts": [
+        {
+          "name": "world"
+        },
+        {
+          "name": "passport",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "transfer_world",
+      "docs": [
+        "ER: move ownership to a new identity (passkey or wallet). Both the current",
+        "owner and the new owner must sign, so a world cannot be pushed to a key",
+        "nobody controls, and the old key loses all control (session cleared)."
+      ],
+      "discriminator": [
+        34,
+        37,
+        249,
+        168,
+        55,
+        37,
+        157,
+        185
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "writable": true
+        },
+        {
+          "name": "passport",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "new_owner",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "kind",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "checkpoint",
+      "docs": [
+        "ER, permissionless: commit the world and its passport to Solana, paid by",
+        "the operator's delegated checkpoint treasury. Rate-limited per world: once",
+        "every CHECKPOINT_MIN_TICKS of simulation, or after an ownership transfer",
+        "once CHECKPOINT_MIN_GAP_S has passed since the last checkpoint.",
+        "Records a hash of the committed world so restores can be verified."
+      ],
+      "discriminator": [
+        213,
+        200,
+        19,
+        204,
+        240,
+        143,
+        184,
+        252
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "writable": true
+        },
+        {
+          "name": "passport",
+          "writable": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "magic_fee_vault",
+          "writable": true
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_treasury",
+      "docs": [
+        "Base, admin: create and fund the checkpoint treasury."
+      ],
+      "discriminator": [
+        105,
+        152,
+        173,
+        51,
+        158,
+        151,
+        49,
+        14
+      ],
+      "accounts": [
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "delegate_treasury",
+      "docs": [
+        "Base, admin: delegate the treasury so it can pay commit fees on the ER."
+      ],
+      "discriminator": [
+        220,
+        230,
+        45,
+        56,
+        92,
+        223,
+        162,
+        169
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "buffer_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_record_pda",
+          "writable": true
+        },
+        {
+          "name": "delegation_metadata_pda",
+          "writable": true
+        },
+        {
+          "name": "pda",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "delegation_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "schedule_world_ticks",
+      "docs": [
+        "ER, admin: one crank ticks up to 16 independent worlds. Each scheduled",
+        "instruction is a separate `tick` on one world account; no state is shared."
+      ],
+      "discriminator": [
+        1,
+        175,
+        36,
+        162,
+        2,
+        81,
+        86,
+        212
+      ],
+      "accounts": [
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "registry"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "task_id",
+          "type": "i64"
+        },
+        {
+          "name": "interval_ms",
+          "type": "i64"
+        },
+        {
+          "name": "iterations",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "schedule_checkpoints",
+      "docs": [
+        "ER, admin: one crank runs `checkpoint` for up to MAX_WORLDS_PER_CHECKPOINT_CRANK",
+        "worlds. Remaining accounts are (world, passport) pairs. Each call is",
+        "self-rate-limited, so most crank runs are cheap no-ops."
+      ],
+      "discriminator": [
+        235,
+        36,
+        201,
+        186,
+        41,
+        96,
+        7,
+        83
+      ],
+      "accounts": [
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "registry"
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "magic_fee_vault",
+          "writable": true
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "task_id",
+          "type": "i64"
+        },
+        {
+          "name": "interval_ms",
+          "type": "i64"
+        },
+        {
+          "name": "iterations",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "commit_worlds",
+      "docs": [
+        "ER, admin: commit a set of world slots (and the registry) to Solana."
+      ],
+      "discriminator": [
+        241,
+        254,
+        85,
+        165,
+        130,
+        154,
+        39,
+        42
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "registry",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "commit_settlement",
+      "docs": [
+        "Owner only, on the ER: commit the current settlement state to Solana."
+      ],
+      "discriminator": [
+        231,
+        94,
+        46,
+        142,
+        36,
+        100,
+        154,
+        183
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "undelegate",
+      "docs": [
+        "Owner only, on the ER: commit and return the settlement to Solana."
+      ],
+      "discriminator": [
+        131,
+        148,
+        180,
+        198,
+        91,
+        104,
+        42,
+        238
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "process_undelegation",
+      "discriminator": [
+        196,
+        28,
+        41,
+        206,
+        48,
+        37,
+        51,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "base_account",
+          "writable": true
+        },
+        {
+          "name": "buffer"
+        },
+        {
+          "name": "payer",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "account_seeds",
+          "type": {
+            "vec": "bytes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "claim_world_vrf",
+      "docs": [
+        "ER, permissionless, layout v2: claim an empty slot as a ranked world. The",
+        "claimant commits to the configuration (owner, slot, generator, rules",
+        "version, `config_hash` of any creator settings) first; the seed is then",
+        "revealed by MagicBlock VRF in `vrf_callback`. Until then the world cannot be",
+        "played and its clock does not run. Re-rolling means releasing the world and",
+        "claiming again: each attempt costs a proof of work, honours the registry",
+        "cooldown and leaves a public GENESIS record in the journal."
+      ],
+      "discriminator": [
+        215,
+        59,
+        215,
+        60,
+        215,
+        206,
+        12,
+        43
+      ],
+      "accounts": [
+        {
+          "name": "registry",
+          "writable": true
+        },
+        {
+          "name": "slot",
+          "writable": true
+        },
+        {
+          "name": "passport",
+          "writable": true
+        },
+        {
+          "name": "guest",
+          "docs": [
+            "Claimant; also the VRF request payer (the ER queue charges no fee)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "oracle_queue",
+          "writable": true
+        },
+        {
+          "name": "program_identity"
+        },
+        {
+          "name": "vrf_program"
+        },
+        {
+          "name": "slot_hashes"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u8"
+        },
+        {
+          "name": "nonce",
+          "type": "u64"
+        },
+        {
+          "name": "config_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "migrate_world",
+      "docs": [
+        "Permissionless, idempotent: grow a v1 world account (240 bytes) to layout",
+        "v2 in place. The 240-byte v1 prefix is not modified (byte-identical), so",
+        "all existing data survives and old readers keep working. The payer funds",
+        "the extra rent. Requires the account to be owned by this program where it",
+        "runs and the payer to be a writable system account there: on Solana this",
+        "means after undelegation (see the PHASE2 report). Existing seeds are kept",
+        "and marked legacy/unranked. Already-v2 accounts are a no-op."
+      ],
+      "discriminator": [
+        15,
+        193,
+        84,
+        182,
+        174,
+        124,
+        255,
+        169
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "writable": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "request_undelegation",
+      "docs": [
+        "Base layer, admin (the delegation rent payer): ask the delegation program",
+        "to undelegate one of our delegated accounts (`DLP RequestUndelegation`).",
+        "The ER validator may honour it with a normal commit+undelegate; if it does",
+        "not respond within 9,000 slots, `rollback_undelegation` takes the account",
+        "back with its last committed (base-chain) state. Idempotent in DLP."
+      ],
+      "discriminator": [
+        112,
+        95,
+        76,
+        186,
+        67,
+        33,
+        59,
+        199
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Delegation rent payer recorded by DLP (the admin / settlement owner)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "delegated",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "undelegation_request",
+          "writable": true
+        },
+        {
+          "name": "delegation_record"
+        },
+        {
+          "name": "delegation_metadata",
+          "writable": true
+        },
+        {
+          "name": "delegation_program"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "kind",
+          "type": "u8"
+        },
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "retry_genesis",
+      "docs": [
+        "World owner: re-request the genesis randomness after VRF_TIMEOUT_S without a",
+        "result. The committed configuration is unchanged; the old request id is",
+        "burnt, so its late result is rejected. Accounts as `prospect`."
+      ],
+      "discriminator": [
+        224,
+        26,
+        32,
+        164,
+        207,
+        34,
+        187,
+        187
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "settlement",
+          "writable": true
+        },
+        {
+          "name": "oracle_queue",
+          "writable": true
+        },
+        {
+          "name": "program_identity"
+        },
+        {
+          "name": "vrf_program"
+        },
+        {
+          "name": "slot_hashes"
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "rollback_undelegation",
+      "docs": [
+        "Base layer, admin: after the undelegation request expired (9,000 slots),",
+        "take the account back with its last base-chain state",
+        "(`DLP UndelegateWithRollbackAfterTimeout`). DLP empties the account during",
+        "the CPI; the data is preserved and restored here as DLP requires. World",
+        "accounts in layout v2 get `state_epoch += 1` and a ROLLBACK journal record,",
+        "so clients can tell that ER state newer than the last commit was discarded."
+      ],
+      "discriminator": [
+        26,
+        196,
+        199,
+        213,
+        60,
+        67,
+        145,
+        154
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Delegation rent payer recorded by DLP (receives the closed DLP PDAs' rent)."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "delegated",
+          "writable": true
+        },
+        {
+          "name": "owner_program"
+        },
+        {
+          "name": "undelegation_request",
+          "writable": true
+        },
+        {
+          "name": "delegation_record",
+          "writable": true
+        },
+        {
+          "name": "delegation_metadata",
+          "writable": true
+        },
+        {
+          "name": "commit_state",
+          "writable": true
+        },
+        {
+          "name": "commit_record",
+          "writable": true
+        },
+        {
+          "name": "commit_reimbursement",
+          "writable": true
+        },
+        {
+          "name": "delegation_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "kind",
+          "type": "u8"
+        },
+        {
+          "name": "index",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "schedule_world_settles",
+      "docs": [
+        "ER, registry admin: one crank runs `settle` on up to 16 worlds (any",
+        "program-owned world accounts, including the demo settlement). Use new task",
+        "ids (e.g. 744xxx) and a 30-60 s interval; liveness only."
+      ],
+      "discriminator": [
+        165,
+        53,
+        77,
+        57,
+        191,
+        232,
+        144,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "registry"
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "task_id",
+          "type": "i64"
+        },
+        {
+          "name": "interval_ms",
+          "type": "i64"
+        },
+        {
+          "name": "iterations",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "settle",
+      "docs": [
+        "Permissionless: catch the world up to the rollup clock in at most",
+        "MAX_SETTLE_STEPS steps. Idempotent; never moves time backwards. Works on",
+        "v1 (unmigrated) and v2 accounts. Call repeatedly to drain a large backlog."
+      ],
+      "discriminator": [
+        175,
+        42,
+        185,
+        87,
+        144,
+        131,
+        102,
+        212
+      ],
+      "accounts": [
+        {
+          "name": "settlement",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "undelegate_worlds",
+      "docs": [
+        "ER, registry admin: commit and return the given world, passport and treasury",
+        "accounts (and the registry itself when `include_registry`) to Solana, for the",
+        "migration path and planned exits. Send small batches (2-4 accounts) so each",
+        "commit fits inline; undelegate the registry last. Cancel cranks that touch",
+        "these accounts first, or accept that they stall until re-delegation."
+      ],
+      "discriminator": [
+        141,
+        250,
+        188,
+        130,
+        191,
+        125,
+        185,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "registry",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "include_registry",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "vrf_callback",
+      "docs": [
+        "VRF callback for layout v2 (prospect and world genesis). Only the VRF",
+        "program's scoped identity can call it (checked by address + signer), and",
+        "only the exact outstanding request matches the ticket: a late response to",
+        "a cancelled, released or superseded request is rejected and changes nothing.",
+        "Every accepted result is appended to the world's hash-chained journal and",
+        "emitted as a `JournalEvent`."
+      ],
+      "discriminator": [
+        248,
+        224,
+        55,
+        227,
+        56,
+        10,
+        108,
+        36
+      ],
+      "accounts": [
+        {
+          "name": "vrf_program_identity",
+          "docs": [
+            "The VRF program's scoped identity for this program; only it can deliver randomness."
+          ],
+          "signer": true
+        },
+        {
+          "name": "settlement",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "randomness",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "ticket",
+          "type": {
+            "defined": {
+              "name": "VrfTicket"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Passport",
+      "discriminator": [
+        18,
+        61,
+        245,
+        239,
+        6,
+        15,
+        18,
+        34
+      ]
+    },
+    {
+      "name": "Registry",
+      "discriminator": [
+        47,
+        174,
+        110,
+        246,
+        184,
+        182,
+        252,
+        218
+      ]
+    },
+    {
+      "name": "Settlement",
+      "discriminator": [
+        55,
+        11,
+        219,
+        33,
+        36,
+        136,
+        40,
+        182
+      ]
+    },
+    {
+      "name": "Treasury",
+      "discriminator": [
+        238,
+        239,
+        123,
+        238,
+        89,
+        1,
+        168,
+        253
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "JournalEvent",
+      "discriminator": [
+        109,
+        93,
+        26,
+        173,
+        1,
+        158,
+        83,
+        105
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "UnsupportedGenerator",
+      "msg": "unsupported terrain generator"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidInterval",
+      "msg": "tick interval too short"
+    },
+    {
+      "code": 6002,
+      "name": "Unauthorised",
+      "msg": "signer is neither the owner nor the active session key"
+    },
+    {
+      "code": 6003,
+      "name": "SessionExpired",
+      "msg": "session key expired"
+    },
+    {
+      "code": 6004,
+      "name": "SessionBudgetExhausted",
+      "msg": "session action budget exhausted"
+    },
+    {
+      "code": 6005,
+      "name": "NotOwner",
+      "msg": "only the owner may do this"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidResource",
+      "msg": "resource cannot be harvested"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidAmount",
+      "msg": "invalid amount"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidPlot",
+      "msg": "invalid plot"
+    },
+    {
+      "code": 6009,
+      "name": "PlotOccupied",
+      "msg": "plot already planted"
+    },
+    {
+      "code": 6010,
+      "name": "InsufficientResources",
+      "msg": "not enough resources"
+    },
+    {
+      "code": 6011,
+      "name": "AlreadyBuilt",
+      "msg": "already built"
+    },
+    {
+      "code": 6012,
+      "name": "ProspectPending",
+      "msg": "a prospect is already waiting for randomness"
+    },
+    {
+      "code": 6013,
+      "name": "NoProspect",
+      "msg": "no prospect is pending"
+    },
+    {
+      "code": 6014,
+      "name": "NotInitialised",
+      "msg": "settlement is not initialised"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidSlot",
+      "msg": "invalid world slot"
+    },
+    {
+      "code": 6016,
+      "name": "SlotTaken",
+      "msg": "world slot already has an owner"
+    },
+    {
+      "code": 6017,
+      "name": "ClaimCooldown",
+      "msg": "too many worlds created recently; try again shortly"
+    },
+    {
+      "code": 6018,
+      "name": "ProofOfWork",
+      "msg": "proof of work too weak"
+    },
+    {
+      "code": 6019,
+      "name": "RateLimited",
+      "msg": "too many actions in this world right now"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidIdentity",
+      "msg": "unknown identity kind"
+    },
+    {
+      "code": 6021,
+      "name": "MigrationRequired",
+      "msg": "this world must be migrated to layout v2 first"
+    },
+    {
+      "code": 6022,
+      "name": "CatchUpRequired",
+      "msg": "world is catching up after an outage; call settle until caught up"
+    },
+    {
+      "code": 6023,
+      "name": "VrfTicketMismatch",
+      "msg": "VRF result does not match the outstanding request (late or foreign)"
+    },
+    {
+      "code": 6024,
+      "name": "VrfNotTimedOut",
+      "msg": "the VRF request has not timed out yet"
+    },
+    {
+      "code": 6025,
+      "name": "WorldNotReady",
+      "msg": "world is waiting for its genesis randomness"
+    },
+    {
+      "code": 6026,
+      "name": "LegacyCallbackRejected",
+      "msg": "legacy VRF callback rejected for a layout v2 world"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidKind",
+      "msg": "unknown account kind"
+    }
+  ],
+  "types": [
+    {
+      "name": "JournalEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "world",
+            "type": "pubkey"
+          },
+          {
+            "name": "seq",
+            "type": "u64"
+          },
+          {
+            "name": "kind",
+            "type": "u8"
+          },
+          {
+            "name": "request_id",
+            "type": "u64"
+          },
+          {
+            "name": "prospect_id",
+            "type": "u32"
+          },
+          {
+            "name": "outcome",
+            "type": "u8"
+          },
+          {
+            "name": "find",
+            "type": "u8"
+          },
+          {
+            "name": "world_tick",
+            "type": "u64"
+          },
+          {
+            "name": "ts",
+            "type": "i64"
+          },
+          {
+            "name": "randomness",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "state_epoch",
+            "type": "u32"
+          },
+          {
+            "name": "journal_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Passport",
+      "docs": [
+        "World identity record: survives browsers, devices, wallets and sessions."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "identity_kind",
+            "type": "u8"
+          },
+          {
+            "name": "checkpoint_due",
+            "type": "bool"
+          },
+          {
+            "name": "world",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_ts",
+            "type": "i64"
+          },
+          {
+            "name": "transfers",
+            "type": "u32"
+          },
+          {
+            "name": "checkpoints",
+            "type": "u32"
+          },
+          {
+            "name": "last_checkpoint_tick",
+            "type": "u64"
+          },
+          {
+            "name": "last_checkpoint_ts",
+            "type": "i64"
+          },
+          {
+            "name": "state_hash",
+            "docs": [
+              "sha256 of the world account bytes at the last checkpoint."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "reserved",
+            "docs": [
+              "Reserved for members, permissions, governance and agent policy (v2+),",
+              "so those features do not need another layout migration."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                192
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Registry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "slots",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "claims",
+            "type": "u32"
+          },
+          {
+            "name": "last_claim_ts",
+            "type": "i64"
+          },
+          {
+            "name": "claim_cooldown_s",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Settlement",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "world_seed",
+            "type": "u32"
+          },
+          {
+            "name": "generator",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "tick",
+            "type": "u64"
+          },
+          {
+            "name": "last_tick_ts",
+            "type": "i64"
+          },
+          {
+            "name": "tick_interval_s",
+            "type": "i64"
+          },
+          {
+            "name": "stock",
+            "type": {
+              "array": [
+                "u32",
+                8
+              ]
+            }
+          },
+          {
+            "name": "plots",
+            "type": {
+              "array": [
+                "u64",
+                9
+              ]
+            }
+          },
+          {
+            "name": "population",
+            "type": "u16"
+          },
+          {
+            "name": "sawmill",
+            "type": "bool"
+          },
+          {
+            "name": "prospect_pending",
+            "type": "bool"
+          },
+          {
+            "name": "prospects",
+            "type": "u32"
+          },
+          {
+            "name": "last_find",
+            "type": "u8"
+          },
+          {
+            "name": "last_roll",
+            "type": "u8"
+          },
+          {
+            "name": "rare_finds",
+            "type": "u32"
+          },
+          {
+            "name": "session_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "session_expires",
+            "type": "i64"
+          },
+          {
+            "name": "session_budget",
+            "type": "u32"
+          },
+          {
+            "name": "actions",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Treasury",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VrfTicket",
+      "docs": [
+        "Passed through MagicBlock VRF as `callback_args` and checked in the callback."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "world",
+            "type": "pubkey"
+          },
+          {
+            "name": "request_id",
+            "type": "u64"
+          },
+          {
+            "name": "prospect_id",
+            "type": "u32"
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "kind",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

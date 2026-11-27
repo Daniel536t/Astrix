@@ -1,407 +1,366 @@
-// Styl natural assets — [PROVISIONAL art direction, documented geometry].
+// Styl natural assets: block-built trees, bushes and stone props.
 //
 // The project has three distinct authored languages (ADB §2):
 //   * voxel terrain   — 1 m occupancy/material volume, this directory's terrain;
 //   * Noxel           — human-made architecture and props (`noxel.ts`);
 //   * Styl (`nat_`)   — organic natural assets, implemented here.
 //
-// AS-001 v2 supersedes the old stacked-cuboid trees: canopies are faceted
-// NatMass ellipsoids (7–11 sides, flat shaded) and trunks are 6-gon NatColumn
-// prisms. Rocks and ore hosts stay blocky by design. The owner's reference
-// images are still absent, so the set remains provisional.
+// M008 replaces the faceted NatMass crowns of AS-001 v2 with stacked-cube
+// species (render/vegetation-kit.ts), as the owner's REF-004 references ask.
+// Species and growth stage come from sim/vegetation.ts, pure functions of the
+// existing entity data, so generation and saves are unchanged.
 //
 // Entities are the source of truth. A harvested entity is not rendered; the
-// renderer never decides whether a tree exists.
+// renderer never decides whether a tree exists. Distance LOD (render/lod.ts)
+// only swaps the model and its shadow casting.
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import palette from '../data/palette.json';
-import { Entity, EntityKind, World, mulberry32 } from '../sim/world';
+import { Entity, World, chunkOriginX, chunkOriginZ } from '../sim/world';
+import { TreeStage, livingWoodlandOf, treeChangesSince, treeLife } from '../sim/woodland';
+import { growthStage, isVegetationKind, treeSpecies, vegetationVariant } from '../sim/vegetation';
+import { DEFAULT_LOD_BANDS, LOD_FAR, LOD_MID, LOD_NEAR, LodBand, LodBands, LodBatch, LodGeometry, LodSet, LodTarget, TiledLodMesh, Vec3Like } from './lod';
+import { VegetationPlan, blocksGeometry, cairnPlan, orePlan, planBlocks, vegetationPlan } from './vegetation-kit';
 
-const M = palette.materials as Record<string, { hex: string }>;
-const H = (k: string) => M[k].hex;
+interface ResolvedModel { key: string; plan: VegetationPlan }
 
-const GREEN = [H('canopy_green_a'), H('canopy_green_b'), H('canopy_green_c')];
-const PINK = [H('canopy_pink_b'), H('canopy_pink')];
-const TRUNK = H('trunk');
-const BARK = H('bark_dark');
-const STONE = H('stone_top');
-const STONE_B = H('stone_body_b');
-const STONE_SHADE = H('stone_shade');
-const ORE = H('ore_crystal');
-const ORE_B = H('ore_crystal_b');
-const OCHRE = H('strata_ochre');
-
-type Vec3 = [number, number, number];
-
-interface MassSpec {
-  cx: number; cy: number; cz: number;
-  rx: number; ry: number; rz: number;
-  sides: number;
-  shape: 'orb' | 'dome' | 'drum';
-  yawDeg: number;
-  hex: string;
-}
-
-interface TreeSpec {
-  trunkR: number;
-  trunkH: number;
-  flareR: number;
-  flareH: number;
-  masses: MassSpec[];
-  satellite?: { cx: number; cy: number; cz: number; sx: number; sy: number; sz: number; hex: string };
-}
-
-// ---------- primitives ----------
-function paint(geo: THREE.BufferGeometry, hex: string): THREE.BufferGeometry {
-  const g = geo.index ? geo.toNonIndexed() : geo;
-  g.deleteAttribute('uv');
-  const color = new THREE.Color(hex);
-  const n = g.attributes.position.count;
-  const arr = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) {
-    arr[i * 3] = color.r;
-    arr[i * 3 + 1] = color.g;
-    arr[i * 3 + 2] = color.b;
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(arr, 3));
-  return g;
-}
-
-function box(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, hex: string): THREE.BufferGeometry {
-  const g = new THREE.BoxGeometry(sx, sy, sz);
-  g.translate(cx, cy, cz);
-  const out = paint(g, hex);
-  out.computeVertexNormals();
-  return out;
-}
-
-function column(cx: number, cz: number, y0: number, h: number, r: number, sides: number, yawDeg: number, hex: string): THREE.BufferGeometry {
-  const g = new THREE.CylinderGeometry(r, r, h, sides, 1, false);
-  g.translate(cx, y0 + h / 2, cz);
-  g.rotateY(yawDeg * Math.PI / 180);
-  const out = paint(g, hex);
-  out.computeVertexNormals();
-  return out;
-}
+const propPlans = new Map<string, VegetationPlan>();
 
 /**
- * Literal implementation of AS-001 §3.1: ellipsoid tessellation with flat
- * face normals, outward winding, and authored facet phase.
+ * The model of one entity, or null when nothing is drawn. With `world`, a
+ * tree's species and stage come from the simulation's lifecycle (M013 rules
+ * v5: growing, dying, dead snags, stumps; a gap draws nothing); without it,
+ * or under older rules, they are the M008 visual stage.
  */
-function massGeometry(m: MassSpec): THREE.BufferGeometry {
-  const pos: number[] = [];
-  const nrm: number[] = [];
-  const D = Math.PI / 180;
-  const lon = (k: number) => m.yawDeg * D + k * 2 * Math.PI / m.sides;
-  const row = (phiDeg: number): Vec3[] => {
-    const phi = phiDeg * D, c = Math.cos(phi), s = Math.sin(phi);
-    const out: Vec3[] = [];
-    for (let k = 0; k < m.sides; k++) {
-      const t = lon(k);
-      out.push([
-        m.cx + m.rx * c * Math.cos(t),
-        m.cy + m.ry * s,
-        m.cz + m.rz * c * Math.sin(t),
-      ]);
-    }
-    return out;
-  };
-  const pole = (sign: number): Vec3 => [m.cx, m.cy + sign * m.ry, m.cz];
-  const capCentre = (phiDeg: number): Vec3 => [m.cx, m.cy + m.ry * Math.sin(phiDeg * D), m.cz];
+/**
+ * M014: the multidraw=0 fallback (TiledLodMesh) bakes every near instance into
+ * its tiles, so it drew 15-28k more triangles than multi-draw in the same
+ * forest views (M013: peaks of 237k against the 250k budget). It switches to
+ * mid detail at 70 m instead of 90 m; mid and far are unchanged.
+ */
+export const FALLBACK_LOD_BANDS: LodBands = { ...DEFAULT_LOD_BANDS, near: 70 };
 
-  const tri = (a: Vec3, b: Vec3, c: Vec3): void => {
-    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
-    const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
-    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-    const L = Math.hypot(nx, ny, nz) || 1;
-    nx /= L; ny /= L; nz /= L;
-    const fx = (a[0] + b[0] + c[0]) / 3 - m.cx;
-    const fy = (a[1] + b[1] + c[1]) / 3 - m.cy;
-    const fz = (a[2] + b[2] + c[2]) / 3 - m.cz;
-    if (nx * fx + ny * fy + nz * fz < 0) {
-      const t = b; b = c; c = t;
-      nx = -nx; ny = -ny; nz = -nz;
-    }
-    for (const p of [a, b, c]) {
-      pos.push(p[0], p[1], p[2]);
-      nrm.push(nx, ny, nz);
-    }
-  };
-  const band = (r0: Vec3[], r1: Vec3[]): void => {
-    for (let k = 0; k < m.sides; k++) {
-      const j = (k + 1) % m.sides;
-      tri(r0[k], r0[j], r1[k]);
-      tri(r0[j], r1[j], r1[k]);
-    }
-  };
-  const fan = (ring: Vec3[], apex: Vec3): void => {
-    for (let k = 0; k < m.sides; k++) tri(ring[k], ring[(k + 1) % m.sides], apex);
-  };
-  const cap = (ring: Vec3[], centre: Vec3): void => {
-    for (let k = 0; k < m.sides; k++) tri(ring[(k + 1) % m.sides], ring[k], centre);
-  };
-
-  if (m.shape === 'orb') {
-    const r = [row(-45), row(0), row(45)];
-    band(r[0], r[1]); band(r[1], r[2]);
-    fan(r[0], pole(-1)); fan(r[2], pole(+1));
-  } else if (m.shape === 'dome') {
-    const r = [row(0), row(45)];
-    band(r[0], r[1]);
-    fan(r[1], pole(+1));
-    cap(r[0], capCentre(0));
-  } else {
-    const r = [row(-45), row(0), row(45)];
-    band(r[0], r[1]); band(r[1], r[2]);
-    cap(r[0], capCentre(-45)); cap(r[2], capCentre(+45));
+export function natureModel(e: Entity, seed: number, world?: World): ResolvedModel | null {
+  if (e.kind.startsWith('styl_tree_') && world) {
+    const life = treeLife(world, e);
+    if (!life || !life.present) return null;
+    const variant = vegetationVariant(e);
+    return { key: `${life.species}:${life.stage}:${variant}`, plan: vegetationPlan(life.species, life.stage as TreeStage, variant) };
   }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
-  return paint(geo, m.hex);
-}
-
-function assembly(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
-  const g = mergeGeometries(parts, false);
-  if (!g) throw new Error('Styl geometry merge failed');
-  g.computeBoundingBox();
-  g.computeBoundingSphere();
-  return g;
-}
-
-// ---------- authored species (AS-001 §6.3) ----------
-const T1: TreeSpec = {
-  trunkR: 0.28, trunkH: 4.90, flareR: 0.38, flareH: 0.30,
-  masses: [
-    { cx: 0.00, cy: 5.45, cz: 0.00, rx: 2.10, ry: 1.00, rz: 2.05, sides: 9, shape: 'orb', yawDeg: 0, hex: GREEN[0] },
-    { cx: 0.20, cy: 6.85, cz: -0.20, rx: 1.45, ry: 0.95, rz: 1.35, sides: 7, shape: 'orb', yawDeg: 15, hex: GREEN[1] },
-    { cx: -0.15, cy: 7.85, cz: 0.15, rx: 0.95, ry: 0.65, rz: 0.90, sides: 7, shape: 'orb', yawDeg: 30, hex: GREEN[2] },
-  ],
-  satellite: { cx: 2.40, cy: 5.55, cz: 0.75, sx: 0.80, sy: 0.50, sz: 0.80, hex: GREEN[2] },
-};
-
-const T2: TreeSpec = {
-  trunkR: 0.34, trunkH: 3.85, flareR: 0.46, flareH: 0.28,
-  masses: [
-    { cx: 0.00, cy: 3.50, cz: 0.00, rx: 2.95, ry: 1.30, rz: 2.30, sides: 11, shape: 'dome', yawDeg: 0, hex: GREEN[0] },
-    { cx: 1.35, cy: 4.00, cz: -0.60, rx: 1.45, ry: 0.95, rz: 1.25, sides: 9, shape: 'dome', yawDeg: 15, hex: GREEN[1] },
-    { cx: -0.35, cy: 5.20, cz: 0.25, rx: 1.35, ry: 0.95, rz: 1.25, sides: 9, shape: 'orb', yawDeg: 30, hex: GREEN[2] },
-    { cx: -1.45, cy: 4.05, cz: 0.95, rx: 1.10, ry: 0.75, rz: 1.00, sides: 7, shape: 'dome', yawDeg: 45, hex: GREEN[1] },
-  ],
-};
-
-const T3: TreeSpec = {
-  trunkR: 0.26, trunkH: 3.60, flareR: 0.36, flareH: 0.26,
-  masses: [
-    { cx: 0.00, cy: 4.55, cz: 0.00, rx: 1.45, ry: 1.30, rz: 1.40, sides: 9, shape: 'orb', yawDeg: 0, hex: GREEN[0] },
-    { cx: 1.25, cy: 4.05, cz: 0.30, rx: 0.95, ry: 0.80, rz: 0.90, sides: 7, shape: 'orb', yawDeg: 15, hex: GREEN[1] },
-    { cx: -1.30, cy: 4.45, cz: -0.45, rx: 0.85, ry: 0.75, rz: 0.85, sides: 7, shape: 'orb', yawDeg: 30, hex: GREEN[1] },
-    { cx: 0.10, cy: 5.70, cz: -0.10, rx: 1.00, ry: 0.90, rz: 0.95, sides: 7, shape: 'orb', yawDeg: 45, hex: GREEN[2] },
-  ],
-  satellite: { cx: 2.35, cy: 3.90, cz: -0.25, sx: 0.70, sy: 0.45, sz: 0.70, hex: GREEN[2] },
-};
-
-const T4: TreeSpec = {
-  trunkR: 0.30, trunkH: 4.45, flareR: 0.42, flareH: 0.28,
-  masses: [
-    { cx: 0.00, cy: 5.00, cz: 0.00, rx: 2.35, ry: 1.15, rz: 2.20, sides: 9, shape: 'drum', yawDeg: 0, hex: PINK[0] },
-    { cx: 0.30, cy: 5.90, cz: -0.25, rx: 1.55, ry: 1.00, rz: 1.45, sides: 9, shape: 'drum', yawDeg: 15, hex: PINK[1] },
-    { cx: -1.40, cy: 4.95, cz: 0.75, rx: 1.05, ry: 0.80, rz: 1.00, sides: 7, shape: 'drum', yawDeg: 30, hex: PINK[0] },
-    { cx: 0.15, cy: 6.45, cz: 0.10, rx: 0.95, ry: 0.65, rz: 0.90, sides: 7, shape: 'orb', yawDeg: 45, hex: PINK[1] },
-  ],
-  satellite: { cx: 2.55, cy: 5.35, cz: 0.85, sx: 0.85, sy: 0.55, sz: 0.85, hex: PINK[1] },
-};
-
-const SHRUB: MassSpec[] = [
-  { cx: 0.00, cy: 0.55, cz: 0.00, rx: 0.70, ry: 0.55, rz: 0.65, sides: 9, shape: 'orb', yawDeg: 0, hex: GREEN[0] },
-  { cx: 0.25, cy: 0.95, cz: -0.15, rx: 0.45, ry: 0.42, rz: 0.42, sides: 7, shape: 'orb', yawDeg: 15, hex: GREEN[1] },
-  { cx: -0.20, cy: 1.05, cz: 0.20, rx: 0.34, ry: 0.45, rz: 0.32, sides: 7, shape: 'orb', yawDeg: 30, hex: GREEN[2] },
-];
-
-const quant = (v: number) => Math.round(v / 0.05) * 0.05;
-const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
-
-function jitterMass(m: MassSpec, rnd: () => number, groupX: number, groupZ: number): MassSpec {
-  const rjit = (v: number) => quant(clamp(v * (1 + (rnd() * 0.16 - 0.08)), 0.25, 4));
-  return {
-    ...m,
-    cx: quant(m.cx + groupX + (rnd() * 0.60 - 0.30)),
-    cy: quant(m.cy + (rnd() * 0.40 - 0.20)),
-    cz: quant(m.cz + groupZ + (rnd() * 0.60 - 0.30)),
-    rx: rjit(m.rx), ry: rjit(m.ry), rz: rjit(m.rz),
-    yawDeg: m.yawDeg + (Math.floor(rnd() * 3) - 1) * 15,
-  };
-}
-
-function treeGeometry(species: TreeSpec, variant: number): THREE.BufferGeometry {
-  const rnd = mulberry32((species === T1 ? 11 : species === T2 ? 23 : species === T3 ? 37 : 53) * 7919 + variant * 104729);
-  const jittered = variant > 0;
-  const groupX = jittered ? rnd() * 0.70 - 0.35 : 0;
-  const groupZ = jittered ? rnd() * 0.70 - 0.35 : 0;
-  const trunkR = jittered ? quant(clamp(species.trunkR + (rnd() * 0.10 - 0.05), 0.20, 0.40)) : species.trunkR;
-  // V5 permits ±0.60 m, but K4 (trunk top inside the canopy) is a hard clamp;
-  // a smaller ±0.30 m jitter keeps every variant valid.
-  const trunkH = jittered ? quant(clamp(species.trunkH + (rnd() * 0.60 - 0.30), 3.0, 5.4)) : species.trunkH;
-  const flareR = trunkR + 0.10;
-  const parts: THREE.BufferGeometry[] = [
-    column(0, 0, 0, trunkH, trunkR, 6, 0, TRUNK),
-    column(0, 0, 0, species.flareH, flareR, 6, 0, BARK),
-  ];
-  for (const m of species.masses) {
-    parts.push(massGeometry(jittered ? jitterMass(m, rnd, groupX, groupZ) : m));
+  if (isVegetationKind(e.kind)) {
+    const species = treeSpecies(e, seed), stage = growthStage(e);
+    if (!species || !stage) return null;
+    const variant = vegetationVariant(e);
+    return { key: `${species}:${stage}:${variant}`, plan: vegetationPlan(species, stage, variant) };
   }
-  if (species.satellite && variant % 3 === 0) {
-    const s = species.satellite;
-    parts.push(box(s.cx + groupX, s.cy, s.cz + groupZ, s.sx, s.sy, s.sz, s.hex));
+  if (e.kind === 'styl_ore' || e.kind === 'styl_cairn') {
+    const key = e.kind === 'styl_ore' ? `ore:${Math.abs(e.variant) % 2}` : 'cairn';
+    let plan = propPlans.get(key);
+    if (!plan) {
+      plan = e.kind === 'styl_ore' ? orePlan(Math.abs(e.variant) % 2) : cairnPlan();
+      propPlans.set(key, plan);
+    }
+    return { key, plan };
   }
-  return assembly(parts);
-}
-
-function shrubGeometry(variant: number): THREE.BufferGeometry {
-  const rnd = mulberry32(97 * 7919 + variant * 104729);
-  const parts = SHRUB.map((m, i) => {
-    if (variant === 0 && i === 0) return massGeometry(m);
-    return massGeometry(jitterMass(m, rnd, 0, 0));
-  });
-  return assembly(parts);
-}
-
-// ---------- retained ore / cairn assets (block language) ----------
-function oreGeometry(variant: number): THREE.BufferGeometry {
-  const flip = variant === 1 ? -1 : 1;
-  const parts = [
-    box(0, 0.45, 0, 1.80, 0.90, 1.50, STONE),
-    box(0.15, 1.10, -0.10, 1.20, 0.70, 1.00, STONE),
-    box(-0.40, 1.40, 0.25, 0.70, 0.50, 0.60, STONE_B),
-    box(0.10, 0.45, 0.75 * flip, 0.90, 0.35, 0.20, ORE),
-    box(0.10, 0.45, 0.865 * flip, 0.50, 0.14, 0.07, ORE_B),
-  ];
-  return assembly(parts);
-}
-
-function cairnGeometry(): THREE.BufferGeometry {
-  return assembly([
-    box(0, 0.25, 0, 1.50, 0.50, 1.30, STONE),
-    box(0.10, 0.725, 0, 1.15, 0.45, 1.00, STONE_B),
-    box(-0.10, 1.15, 0.05, 0.85, 0.40, 0.75, STONE),
-    box(0.10, 1.525, 0.05, 0.50, 0.35, 0.50, STONE_B),
-    box(0.10, 1.85, 0.05, 0.30, 0.30, 0.30, STONE_SHADE),
-  ]);
-}
-
-// ---------- asset lookup ----------
-function geometryFor(kind: EntityKind, variant: number): THREE.BufferGeometry | null {
-  if (kind === 'styl_tree_spire') return treeGeometry(T1, Math.abs(variant) % 4);
-  if (kind === 'styl_tree_table') return treeGeometry(T2, Math.abs(variant) % 4);
-  if (kind === 'styl_tree_cluster') return treeGeometry(T3, Math.abs(variant) % 3);
-  if (kind === 'styl_tree_blossom') return treeGeometry(T4, Math.abs(variant) % 2);
-  if (kind === 'styl_shrub') return shrubGeometry(Math.abs(variant) % 3);
-  if (kind === 'styl_ore') return oreGeometry(Math.abs(variant) % 2);
-  if (kind === 'styl_cairn') return cairnGeometry();
   return null;
+}
+
+// Geometry is a pure function of (model key, lod). Build each once and reuse
+// it: BatchedMesh.addGeometry copies the data, so a nature rebuild never
+// disposes the cached source.
+const geometryCache = new Map<string, THREE.BufferGeometry>();
+
+export function natureGeometry(model: ResolvedModel, lod: LodBand): THREE.BufferGeometry {
+  const key = `${model.key}:${lod}`;
+  let geo = geometryCache.get(key);
+  if (!geo) {
+    geo = blocksGeometry(planBlocks(model.plan, lod));
+    geometryCache.set(key, geo);
+  }
+  return geo;
+}
+
+const tris = (g: THREE.BufferGeometry) => g.attributes.position.count / 3;
+
+export interface NatureLodCounts {
+  near: { instances: number; triangles: number };
+  mid: { instances: number; triangles: number };
+  far: { instances: number; triangles: number };
 }
 
 export interface NatureBuildResult {
   group: THREE.Group;
+  /** Triangles selected for drawing at the current LOD (before culling). */
   triangles: number;
   instances: number;
+  /** Per-band instance and triangle counts at the current LOD. */
+  lodCounts: NatureLodCounts;
+  /** LOD controller; null when nothing is drawn. */
+  lod: LodSet | null;
+  /** The incremental view that owns the result (M013). */
+  view?: NatureView;
 }
 
-const natureMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+export function lodCounts(lod: LodSet | null): NatureLodCounts {
+  const s = lod?.stats() ?? { instances: [0, 0, 0], triangles: [0, 0, 0] };
+  return {
+    near: { instances: s.instances[0], triangles: s.triangles[0] },
+    mid: { instances: s.instances[1], triangles: s.triangles[1] },
+    far: { instances: s.instances[2], triangles: s.triangles[2] },
+  };
+}
+
+export const natureMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+
+export interface NatureBuildOptions {
+  /** Camera position for the initial LOD bands; without it every instance starts near. */
+  camera?: Vec3Like;
+  bands?: LodBands;
+  /**
+   * WEBGL_multi_draw available (default true). Without it a BatchedMesh costs
+   * one draw call per visible instance, so the build uses TiledLodMesh:
+   * merged static tiles with a bounded number of calls.
+   */
+  multiDraw?: boolean;
+}
+
+export interface NatureSyncStats {
+  /** Incremental work so far: instances added, retired and given a new model; chunks added and dropped. */
+  adds: number; removes: number; swaps: number; chunksAdded: number; chunksDropped: number;
+  /** Entities re-checked by the rotating lifecycle scan. */
+  scanned: number;
+  /** Chunks still queued for adding. */
+  pendingChunks: number;
+  lastMs: number; maxMs: number; syncs: number; totalMs: number;
+}
+
+const _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion();
+const _v = new THREE.Vector3();
+const _s = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
 
 /**
- * Build one InstancedMesh per kind+variant for the supplied loaded chunks.
- * Entities remain the source of truth; harvested entities are skipped.
+ * The drawn natural assets, kept in step with the world incrementally (M013).
+ *
+ * The first build registers every loaded entity. After that `sync` only
+ * touches what changed: entities of newly loaded chunks are added (a few
+ * chunks per call), those of dropped chunks retired, and trees whose
+ * simulated stage or presence changed (felled, cut, resprouted, planted,
+ * seeded, or simply grown over time) get their new model in place. Growth
+ * is noticed two ways: the simulation's change channel names trees it
+ * touched, and a rotating scan re-checks a bounded slice of entities per
+ * call so time-driven stage changes appear within a few frames. Geometry for
+ * a model is registered once, when it first appears. Entities stay the
+ * source of truth: the view never decides whether a tree exists.
+ */
+export class NatureView {
+  readonly group = new THREE.Group();
+  lod: LodSet | null = null;
+  readonly stats: NatureSyncStats = { adds: 0, removes: 0, swaps: 0, chunksAdded: 0, chunksDropped: 0, scanned: 0, pendingChunks: 0, lastMs: 0, maxMs: 0, syncs: 0, totalMs: 0 };
+  private readonly entries = new Map<string, { inst: number; key: string; chunk: string }>();
+  private readonly geo = new Map<string, LodGeometry>();
+  private readonly models = new Map<string, ResolvedModel>();
+  private readonly batchIds: string[] = [];
+  private readonly targets: Array<LodTarget | null> = [];
+  private readonly chunks = new Set<string>();
+  private readonly queue: string[] = [];
+  private changeSeq = 0;
+  private scan: string[] = [];
+  private scanAt = 0;
+  private lastTick = -1;
+  /** W3: trees drawn by a presentation proxy (shaking, falling) instead of the batch. */
+  private readonly hidden = new Set<string>();
+  private readonly hiddenDirty: string[] = [];
+
+  constructor(private readonly world: World, private readonly options: NatureBuildOptions = {}) {
+    this.group.name = 'styl_nature';
+  }
+
+  get instances(): number { return this.entries.size; }
+
+  /** The initial build: every entity of the loaded chunks at once (or all chunks when `loaded` is null). */
+  build(loaded: ReadonlySet<string> | null, camera?: Vec3Like): void {
+    const world = this.world;
+    this.changeSeq = treeChangesSince(world, 0).seq;
+    const live: Array<{ e: Entity; model: ResolvedModel }> = [];
+    for (const e of world.entities.values()) {
+      if (world.entityRemovals?.has(e.id)) continue;
+      if (loaded && !loaded.has(e.chunk)) continue;
+      const model = this.modelOf(e);
+      if (!model) continue;
+      live.push({ e, model });
+      this.models.set(model.key, model);
+    }
+    if (loaded) for (const k of loaded) this.chunks.add(k);
+    else for (const k of world.entityChunks.keys()) this.chunks.add(k);
+    if (live.length === 0 && this.options.multiDraw !== false) return;
+    let mainVertices = 0, farVertices = 0;
+    for (const model of this.models.values()) {
+      mainVertices += natureGeometry(model, LOD_NEAR).attributes.position.count + natureGeometry(model, LOD_MID).attributes.position.count;
+      farVertices += natureGeometry(model, LOD_FAR).attributes.position.count;
+    }
+    const bands = this.options.bands ?? (this.options.multiDraw === false ? FALLBACK_LOD_BANDS : DEFAULT_LOD_BANDS);
+    this.lod = this.options.multiDraw === false
+      ? new TiledLodMesh({ name: 'styl_nature', material: natureMaterial, bands })
+      : new LodBatch({ name: 'styl_nature_batch', material: natureMaterial, maxInstances: Math.max(16, live.length), mainVertices: Math.max(64, mainVertices), farVertices: Math.max(64, farVertices), bands });
+    for (const model of this.models.values()) this.register(model);
+    for (const { e, model } of live) this.addEntity(e, model);
+    this.lod.setInspection(this.batchIds as string[], this.targets as LodTarget[]);
+    if (camera) this.lod.update(camera, true);
+    this.lod.finish();
+    this.group.add(...this.lod.objects);
+  }
+
+  /** W3: hide or show one tree's batch instance (presentation only; applied on the next sync). */
+  setHidden(id: string, on: boolean): void {
+    if (this.hidden.has(id) === on) return;
+    if (on) this.hidden.add(id); else this.hidden.delete(id);
+    this.hiddenDirty.push(id);
+  }
+
+  private modelOf(e: Entity): ResolvedModel | null {
+    if (this.hidden.has(e.id)) return null;
+    if (e.harvested && !e.kind.startsWith('styl_tree_')) return null;
+    return natureModel(e, this.world.seed, this.world);
+  }
+
+  private register(model: ResolvedModel): LodGeometry {
+    let g = this.geo.get(model.key);
+    if (g) return g;
+    const near = natureGeometry(model, LOD_NEAR), mid = natureGeometry(model, LOD_MID), far = natureGeometry(model, LOD_FAR);
+    g = { near: this.lod!.addGeometry(LOD_NEAR, near), mid: this.lod!.addGeometry(LOD_MID, mid), far: this.lod!.addGeometry(LOD_FAR, far), triangles: [tris(near), tris(mid), tris(far)] };
+    this.geo.set(model.key, g);
+    return g;
+  }
+
+  private target(e: Entity, model: ResolvedModel): LodTarget {
+    const top = natureGeometry(model, LOD_NEAR).boundingBox!.max.y;
+    const h = e.kind.startsWith('styl_tree_') ? Math.min(3.0, top * 0.5) * e.scale
+      : e.kind === 'styl_shrub' ? Math.min(0.7, top * 0.6) * e.scale : e.kind === 'styl_ore' ? 0.65 * e.scale : e.scale;
+    return { entityId: e.id, x: e.x, y: e.y + h, z: e.z };
+  }
+
+  private addEntity(e: Entity, model: ResolvedModel, camera?: Vec3Like): void {
+    _q.setFromAxisAngle(_up, e.rot);
+    _v.set(e.x, e.y - 0.15, e.z);
+    _s.setScalar(e.scale);
+    const id = this.lod!.addInstance(this.register(model), _m.compose(_v, _q, _s), { x: e.x, y: e.y + 2, z: e.z });
+    this.batchIds[id] = e.id;
+    this.targets[id] = this.target(e, model);
+    this.entries.set(e.id, { inst: id, key: model.key, chunk: e.chunk });
+    if (camera) this.lod!.placeBand(id, camera);
+  }
+
+  private retire(id: string): void {
+    const en = this.entries.get(id);
+    if (!en) return;
+    this.lod!.removeInstance(en.inst);
+    delete this.batchIds[en.inst];
+    this.targets[en.inst] = null;
+    this.entries.delete(id);
+    this.stats.removes++;
+  }
+
+  /** Bring one entity's drawing in line with the world (add, retire or swap the model). Returns true when something changed. */
+  private refresh(id: string, camera: Vec3Like): boolean {
+    const e = this.world.entities.get(id);
+    const en = this.entries.get(id);
+    const model = e && this.chunks.has(e.chunk) && !this.world.entityRemovals.has(id) ? this.modelOf(e) : null;
+    if (!model) { if (en) { this.retire(id); return true; } return false; }
+    if (!en) { this.ensureLod(); this.addEntity(e!, model, camera); this.stats.adds++; return true; }
+    if (en.key === model.key) return false;
+    this.lod!.setInstanceGeometry(en.inst, this.register(model));
+    en.key = model.key;
+    this.targets[en.inst] = this.target(e!, model);
+    this.stats.swaps++;
+    return true;
+  }
+
+  private ensureLod(): void {
+    if (this.lod) return;
+    const bands = this.options.bands ?? (this.options.multiDraw === false ? FALLBACK_LOD_BANDS : DEFAULT_LOD_BANDS);
+    this.lod = this.options.multiDraw === false
+      ? new TiledLodMesh({ name: 'styl_nature', material: natureMaterial, bands })
+      : new LodBatch({ name: 'styl_nature_batch', material: natureMaterial, maxInstances: 256, mainVertices: 20_000, farVertices: 4_000, bands });
+    this.lod.setInspection(this.batchIds as string[], this.targets as LodTarget[]);
+    this.group.add(...this.lod.objects);
+  }
+
+  /**
+   * Incremental update, bounded by `budgetMs` (at least one unit of work per
+   * call). Returns true when anything visible changed (the inspector's
+   * target list is then stale).
+   */
+  sync(loaded: ReadonlySet<string>, camera: Vec3Like, budgetMs = 1.5, scanPerCall = 400): boolean {
+    const t0 = performance.now();
+    const world = this.world;
+    let changed = false;
+    // Dropped chunks: retire their instances now (cheap).
+    for (const k of [...this.chunks]) {
+      if (loaded.has(k)) continue;
+      this.chunks.delete(k);
+      for (const [id, en] of [...this.entries]) if (en.chunk === k) { this.retire(id); changed = true; }
+      this.stats.chunksDropped++;
+    }
+    // New chunks queue (nearest first), added a few per call.
+    const queued = new Set(this.queue);
+    for (const k of loaded) if (!this.chunks.has(k) && !queued.has(k)) this.queue.push(k);
+    if (this.queue.length) {
+      const dist = (k: string) => { const [cx, cz] = k.split(',').map(Number); return Math.hypot(chunkOriginX(cx) + 16 - camera.x, chunkOriginZ(cz) + 16 - camera.z); };
+      this.queue.sort((a, b) => dist(a) - dist(b));
+    }
+    while (this.queue.length && (performance.now() - t0 < budgetMs || this.stats.syncs === 0)) {
+      const k = this.queue.shift()!;
+      if (!loaded.has(k)) continue;
+      this.chunks.add(k);
+      for (const id of world.entityChunks.get(k) ?? []) changed = this.refresh(id, camera) || changed;
+      this.stats.chunksAdded++;
+      if (performance.now() - t0 >= budgetMs) break;
+    }
+    // Trees the simulation touched (felled, cut, planted, seeded, resprouted, fell).
+    const ch = treeChangesSince(world, this.changeSeq);
+    this.changeSeq = ch.seq;
+    const ids = ch.ids ?? [...this.entries.keys()];
+    for (const id of ids) changed = this.refresh(id, camera) || changed;
+    for (const id of this.hiddenDirty.splice(0)) changed = this.refresh(id, camera) || changed;
+    // Time-driven growth: a rotating scan of every drawn entity, a slice per call, restarted when the tick moves.
+    const tick = world.life?.tick ?? 0;
+    // Only a living woodland (rules v5) changes over time; older worlds have nothing to scan for.
+    if (livingWoodlandOf(world) && tick !== this.lastTick && this.scanAt >= this.scan.length) {
+      this.lastTick = tick;
+      this.scan = [...this.entries.keys()];
+      this.scanAt = 0;
+    }
+    const end = Math.min(this.scan.length, this.scanAt + scanPerCall);
+    for (; this.scanAt < end; this.scanAt++) { changed = this.refresh(this.scan[this.scanAt], camera) || changed; this.stats.scanned++; }
+    this.lod?.commit();
+    const ms = performance.now() - t0;
+    this.stats.syncs++; this.stats.lastMs = ms; this.stats.maxMs = Math.max(this.stats.maxMs, ms); this.stats.totalMs += ms;
+    this.stats.pendingChunks = this.queue.length;
+    return changed;
+  }
+
+  dispose(): void {
+    for (const o of this.lod?.objects ?? []) o.traverse((c) => { const m = c as THREE.Mesh; if (m.isMesh || (m as unknown as THREE.BatchedMesh).isBatchedMesh) m.geometry?.dispose(); });
+    if (this.lod instanceof TiledLodMesh) this.lod.dispose();
+    this.group.clear();
+  }
+}
+
+/**
+ * Build the natural assets of the supplied loaded chunks into one LodBatch
+ * (a shadow-casting near/mid BatchedMesh and a non-casting far BatchedMesh),
+ * or into a TiledLodMesh when WEBGL_multi_draw is missing.
+ * Entities remain the source of truth; harvested entities are skipped (under
+ * rules v5 a felled tree's stump is drawn until it rots or resprouts).
  */
 export function buildNoxelNature(
   world: World,
   loadedChunks: ReadonlySet<string> | null = null,
+  options: NatureBuildOptions = {},
 ): NatureBuildResult {
-  const group = new THREE.Group();
-  group.name = 'styl_nature';
-  const buckets = new Map<string, Entity[]>();
-
-  for (const e of world.entities.values()) {
-    if (e.harvested) continue;
-    if (loadedChunks && !loadedChunks.has(e.chunk)) continue;
-    if (!geometryFor(e.kind, e.variant)) continue;
-    const key = `${e.kind}:${e.variant}`;
-    let list = buckets.get(key);
-    if (!list) { list = []; buckets.set(key, list); }
-    list.push(e);
-  }
-
-  let triangles = 0;
-  let instanceCount = 0;
-  const geometries = new Map<string, THREE.BufferGeometry>();
-  for (const [key, list] of buckets) {
-    const [kind, variantStr] = key.split(':');
-    const geo = geometryFor(kind as EntityKind, Number(variantStr));
-    if (!geo) continue;
-    geometries.set(key, geo.index ? geo.toNonIndexed() : geo);
-    triangles += (geo.attributes.position.count / 3) * list.length;
-    instanceCount += list.length;
-  }
-
-  if (instanceCount === 0) return { group, triangles: 0, instances: 0 };
-
-  // One BatchedMesh for every natural asset. The old code used one
-  // InstancedMesh per kind+variant (~31 draw calls); this keeps the same
-  // authored variants and per-instance transforms in a single draw call.
-  let vertexCount = 0;
-  for (const geo of geometries.values()) vertexCount += geo.attributes.position.count;
-  const batched = new THREE.BatchedMesh(
-    instanceCount,
-    Math.ceil(vertexCount * 1.08) + 16,
-    0,
-    natureMaterial,
-  );
-  batched.name = 'styl_nature_batch';
-  batched.castShadow = true;
-  batched.receiveShadow = true;
-  batched.perObjectFrustumCulled = true;
-  // BatchedMesh raycasts expose batchId, not a Mesh per entity. Keep the
-  // authoritative ID and a useful surface anchor beside every GPU instance.
-  batched.userData.inspectableBatchIds = [] as string[];
-  batched.userData.inspectableTargets = [] as Array<{
-    entityId: string; x: number; y: number; z: number;
-  }>;
-
-  const geometryIds = new Map<string, number>();
-  for (const [key, geo] of geometries) {
-    geometryIds.set(key, batched.addGeometry(geo));
-  }
-
-  const m = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const v = new THREE.Vector3();
-  const s = new THREE.Vector3();
-  const up = new THREE.Vector3(0, 1, 0);
-  let instances = 0;
-  for (const [key, list] of buckets) {
-    const geometryId = geometryIds.get(key);
-    if (geometryId === undefined) continue;
-    for (const e of list) {
-      const id = batched.addInstance(geometryId);
-      q.setFromAxisAngle(up, e.rot);
-      v.set(e.x, e.y - 0.15, e.z);
-      s.setScalar(e.scale);
-      batched.setMatrixAt(id, m.compose(v, q, s));
-      batched.userData.inspectableBatchIds[id] = e.id;
-      const targetHeight = e.kind.startsWith('styl_tree_') ? 3.0 * e.scale
-        : e.kind === 'styl_shrub' ? 0.7 * e.scale
-        : e.kind === 'styl_ore' ? 0.65 * e.scale
-        : e.scale;
-      batched.userData.inspectableTargets[id] = {
-        entityId: e.id, x: e.x, y: e.y + targetHeight, z: e.z,
-      };
-      instances++;
-    }
-  }
-  batched.computeBoundingBox();
-  batched.computeBoundingSphere();
-  group.add(batched);
-
-  return { group, triangles, instances };
+  const view = new NatureView(world, options);
+  view.build(loadedChunks, options.camera);
+  const lod = view.lod;
+  if (!lod) return { group: view.group, triangles: 0, instances: 0, lodCounts: lodCounts(null), lod: null, view };
+  return { group: view.group, triangles: lod.drawnTriangles(), instances: view.instances, lodCounts: lodCounts(lod), lod, view };
 }

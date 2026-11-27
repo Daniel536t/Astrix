@@ -1,0 +1,141 @@
+{
+ "emulated": "Playwright Chromium phone emulation 390x844, software GL: NOT a real device",
+ "seconds": 621,
+ "log": [
+  {
+   "t": 54,
+   "what": "loaded (walk mode at the farm, idle: thermal baseline)"
+  },
+  {
+   "t": 125,
+   "what": "walk loop with the joystick"
+  },
+  {
+   "t": 302,
+   "what": "Home"
+  },
+  {
+   "t": 312,
+   "what": "reload in the middle of the session"
+  },
+  {
+   "t": 363,
+   "what": "after reload: 25 buckets (before 25)"
+  },
+  {
+   "t": 363,
+   "what": "builder view"
+  },
+  {
+   "t": 390,
+   "what": "walk mode again, idle at the farm"
+  }
+ ],
+ "reload": {
+  "before": {
+   "buckets": 25,
+   "last": {
+    "i": 24,
+    "t": 266.5,
+    "dur": 11.2,
+    "visible": 1,
+    "frames": 10,
+    "fps": 0.9,
+    "fpsP5": 0.7,
+    "p50Ms": 1228,
+    "p95Ms": 1504.7,
+    "maxMs": 1504.7,
+    "long50": 10,
+    "scene": "walk:-2,-2:close",
+    "calls": 33,
+    "triangles": 65776,
+    "heapMB": 48,
+    "battery": 1,
+    "charging": true,
+    "quality": "low",
+    "path": "multi-draw"
+   },
+   "thermal": "ok",
+   "events": 1
+  },
+  "after": {
+   "buckets": 25,
+   "last": {
+    "i": 24,
+    "t": 266.5,
+    "dur": 11.2,
+    "visible": 1,
+    "frames": 10,
+    "fps": 0.9,
+    "fpsP5": 0.7,
+    "p50Ms": 1228,
+    "p95Ms": 1504.7,
+    "maxMs": 1504.7,
+    "long50": 10,
+    "scene": "walk:-2,-2:close",
+    "calls": 33,
+    "triangles": 65776,
+    "heapMB": 48,
+    "battery": 1,
+    "charging": true,
+    "quality": "low",
+    "path": "multi-draw"
+   },
+   "thermal": "ok",
+   "events": 3
+  }
+ },
+ "copy": {
+  "status": "Copied the report (17 KB): paste it into the chat.",
+  "chars": 17011,
+  "hasJson": true,
+  "text": "ASTrix perf report v1 · build 48375bf (index-DI-puJKV.js)\nDevice: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36\nGPU: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver) · cores 8 · memory 32 GB · screen 390x844 @1x · viewport 390x844\nRender: multi-draw · quality low (auto: GPU ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)) · pixel ratio 1 · canvas 390x844\nSession: 9.2 min · 49 buckets (47 visible)\nFPS: median 1.2 · worst bucket 0.8 · p5 0.7 · frame p50 857 ms · p95 >= 1000 ms · frames > 50 ms: 593\nDraw calls max 51 · triangles max 95820\nHeap MB first/last/max: 63/47/63 · battery 100% → 100% (charging)\nThermal: ok · 1.2 → 1.3 fps (-2.5% drift) · 6 recent bucket(s) at walk:-1,-1:close against 10 in the first two minutes\nChecks: median fps FAIL · p95 frame FAIL · drift PASS · length FAIL\nEvents: 0s start quality low · multi-draw · 285s hidden · 285s reload quality low · multi-draw\n"
+ },
+ "download": {
+  "suggested": "astrix-perf-2026-11-25T11-29-56.json"
+ },
+ "shareShown": false,
+ "final": {
+  "hash": "558b41e3617efe1b",
+  "perf": {
+   "buckets": 50,
+   "last": {
+    "i": 49,
+    "t": 551.3,
+    "dur": 10.5,
+    "visible": 1,
+    "frames": 12,
+    "fps": 1.1,
+    "fpsP5": 0.6,
+    "p50Ms": 873.8,
+    "p95Ms": 1587.2,
+    "maxMs": 1587.2,
+    "long50": 12,
+    "scene": "walk:-1,-1:close",
+    "calls": 46,
+    "triangles": 83276,
+    "heapMB": 48,
+    "battery": 1,
+    "charging": true,
+    "quality": "low",
+    "path": "multi-draw"
+   },
+   "thermal": "ok",
+   "events": 3
+  },
+  "quality": {
+   "level": "low",
+   "source": "auto",
+   "reasons": [
+    "GPU ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+   ],
+   "pixelRatio": 1,
+   "shadows": false,
+   "shadowMapSize": 0,
+   "antialias": false,
+   "natureNear": 50,
+   "groundCoverRadius": 30
+  }
+ },
+ "errs": []
+}

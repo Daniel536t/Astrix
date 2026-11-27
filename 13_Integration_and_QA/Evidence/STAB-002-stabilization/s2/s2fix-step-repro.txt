@@ -1,0 +1,10 @@
+60fps hen -33.15 bodyY 12 y0 13 worst overlap 0.004 {"x":-32.56,"y":13,"f":121} end -32.83 13.00 henNow -33.5
+fixed hen -33.15 bodyY 12 y0 13 worst overlap 0.114 {"x":-32.8,"y":13,"f":157} end -33.00 13.00 henNow -33.5
+60fps hen -33.25 bodyY 12 y0 13 worst overlap 0.001 {"x":-32.57,"y":13,"f":121} end -32.94 13.00 henNow -33.5
+fixed hen -33.25 bodyY 12 y0 13 worst overlap 0.001 {"x":-32.57,"y":13,"f":122} end -32.94 13.00 henNow -33.5
+60fps hen -33.35 bodyY 12 y0 13 worst overlap 0.000 {"x":-32.65,"y":13,"f":105} end -33.00 13.00 henNow -33.5
+fixed hen -33.35 bodyY 12 y0 13 worst overlap 0.000 {"x":-32.65,"y":13,"f":5} end -33.00 13.00 henNow -33.5
+60fps hen -33.5 bodyY 12 y0 13 worst overlap 0.000 null end -33.13 13.00 henNow -33.5
+fixed hen -33.5 bodyY 12 y0 13 worst overlap 0.000 null end -33.13 13.00 henNow -33.5
+60fps hen -33.7 bodyY 12 y0 13 worst overlap 0.000 null end -33.26 13.00 henNow -33.5
+fixed hen -33.7 bodyY 12 y0 13 worst overlap 0.000 null end -33.26 13.00 henNow -33.5

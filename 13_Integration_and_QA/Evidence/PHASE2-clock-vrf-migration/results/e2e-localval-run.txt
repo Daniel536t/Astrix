@@ -1,0 +1,11 @@
+{"step":"validator","at":"2026-11-27T00:09:17.435Z","version":{"feature-set":2681577653,"solana-core":"4.4.1"},"program":"\nProgram Id: Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy\nOwner: BPFLoaderUpgradeab1e11111111111111111111111\nProgramData Address: 2FaAFUUL2fJpr7ZoB24ZWZtC9ZVQ3t9Sf6F8MbeRZDMb\nAuthority: 47fUJb27PB6JRjUprmvgFTkRLCE6P8cL7LFsV6nmQrV1\nLast Deployed In Slot: 0\nData Length: 506417 (0x7ba31) bytes\nBalance: 3.5258664 SOL\n\n"}
+{"step":"1-loaded-copy-equals-backup","at":"2026-11-27T00:09:17.512Z","accounts":67}
+{"step":"2-old-binary-sanity","at":"2026-11-27T00:09:18.344Z","tick":true,"link":true,"tickCu":5097}
+{"step":"3-upgrade","at":"2026-11-27T00:09:26.030Z","oldElfCapacity":506417,"newElf":620008,"extendBytes":113591,"costLamports":793678400,"deploy":"Signature: 2VVFjUSpHrbCSJUPz4v5fMgUVFgp6rw5FYEe9AVVAbQ4z9JQRoGKbihDWmtENiG5z7Y6LDDBGscpRtPFYzo59NTt"}
+{"step":"4-new-binary-on-v1","at":"2026-11-27T00:09:26.360Z","ok":true,"cu":34433,"logs":["Program log: settle +4 tick 122702 rem 0","Program log: settle +300 tick 122991 rem 2100"]}
+{"step":"5-migration","at":"2026-11-27T00:09:42.338Z","worlds":33,"prefixIdentical":33,"fieldsPreserved":33,"passportsRegistryTreasuryIdentical":34,"maxCu":16472,"totalCostLamports":169072192,"idempotentRerun":true}
+{"step":"6a-scheduler-stopped","at":"2026-11-27T00:09:42.340Z","tick":122702,"lastSettledTs":1795738164}
+{"step":"6b-restart-catch-up","at":"2026-11-27T00:10:44.005Z","ok":true,"applied":39,"clockNow":1795738242,"expectedTick":122741,"tick":122741,"duplicateRunsAddedTicks":0,"cu":11515}
+{"step":"7-rollback-old-binary","at":"2026-11-27T00:10:52.482Z","claimLegacy":true,"harvest":true,"tick":true,"link":true,"worldLen":876,"tailIntact":true,"programShow":["Authority: 47fUJb27PB6JRjUprmvgFTkRLCE6P8cL7LFsV6nmQrV1","Data Length: 506417 (0x7ba31) bytes"]}
+{"step":"8-re-upgrade","at":"2026-11-27T00:11:01.404Z","ok":true,"reanchors":1,"tick":122746,"epochInvariant":true,"behindSeconds":1}
+E2E OK

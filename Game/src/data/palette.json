@@ -49,6 +49,90 @@
       "hex": "#E3D3A6",
       "role": "shore cells"
     },
+    "snow": {
+      "hex": "#EEF1F5",
+      "role": "generator v2 snowfields above the snowline (added 2026-11-23, review required)"
+    },
+    "char_skin": {
+      "hex": "#D9A77E",
+      "role": "character skin (added 2026-11-23, review required)"
+    },
+    "char_tunic": {
+      "hex": "#B34A3C",
+      "role": "founder tunic, warm red accent (added 2026-11-23, review required)"
+    },
+    "char_tunic_alt": {
+      "hex": "#2E8C86",
+      "role": "villager tunic, teal accent (added 2026-11-23, review required)"
+    },
+    "char_trousers": {
+      "hex": "#5B4636",
+      "role": "character trousers (added 2026-11-23, review required)"
+    },
+    "char_hair": {
+      "hex": "#4A3324",
+      "role": "character hair (added 2026-11-23, review required)"
+    },
+    "char_boots": {
+      "hex": "#33281F",
+      "role": "character boots and belt (added 2026-11-23, review required)"
+    },
+    "fauna_deer": {
+      "hex": "#8C5B3A",
+      "role": "red deer coat (added 2026-11-23, review required)"
+    },
+    "fauna_light": {
+      "hex": "#DCC7A4",
+      "role": "deer belly, hare tail, antler (added 2026-11-23, review required)"
+    },
+    "fauna_hare": {
+      "hex": "#9A8670",
+      "role": "hare coat (added 2026-11-23, review required)"
+    },
+    "fauna_trout": {
+      "hex": "#6F7F5E",
+      "role": "trout back (added 2026-11-23, review required)"
+    },
+    "fauna_trout_belly": {
+      "hex": "#D8C9A3",
+      "role": "trout belly (added 2026-11-23, review required)"
+    },
+    "arch_plaster": {
+      "hex": "#E8DDC6",
+      "role": "village wall plaster (added 2026-11-23, review required)"
+    },
+    "arch_timber": {
+      "hex": "#6A4530",
+      "role": "village timber frame (added 2026-11-23, review required)"
+    },
+    "arch_timber_light": {
+      "hex": "#8A6142",
+      "role": "village planks and doors (added 2026-11-23, review required)"
+    },
+    "arch_thatch": {
+      "hex": "#C7A257",
+      "role": "thatch roof (added 2026-11-23, review required)"
+    },
+    "arch_thatch_dark": {
+      "hex": "#9C7B3C",
+      "role": "thatch roof shade course (added 2026-11-23, review required)"
+    },
+    "arch_stone": {
+      "hex": "#9B9A91",
+      "role": "village masonry (added 2026-11-23, review required)"
+    },
+    "arch_stone_dark": {
+      "hex": "#74736C",
+      "role": "village masonry joints and plinth (added 2026-11-23, review required)"
+    },
+    "prop_iron": {
+      "hex": "#3A3A3F",
+      "role": "iron fittings (added 2026-11-23, review required)"
+    },
+    "prop_glow": {
+      "hex": "#FFD27F",
+      "role": "lantern light (emissive, effect only) (added 2026-11-23, review required)"
+    },
     "water_shallow": {
       "hex": "#67CFD8",
       "role": "water depth <= 0.5 m"
@@ -93,6 +177,90 @@
       "hex": "#4E3626",
       "role": "trunk shade, stumps"
     },
+    "conifer_pine": {
+      "hex": "#4C8A4A",
+      "role": "pine needles, main mass"
+    },
+    "conifer_pine_b": {
+      "hex": "#5C9C53",
+      "role": "pine needles, highlight"
+    },
+    "conifer_spruce": {
+      "hex": "#2F6B48",
+      "role": "spruce needles, main mass"
+    },
+    "conifer_spruce_b": {
+      "hex": "#3E7F56",
+      "role": "spruce needles, highlight"
+    },
+    "birch_bark": {
+      "hex": "#E6E1D3",
+      "role": "pale birch trunk"
+    },
+    "birch_mark": {
+      "hex": "#3A3530",
+      "role": "dark birch bark band"
+    },
+    "birch_leaf": {
+      "hex": "#9CC95A",
+      "role": "birch canopy, main mass"
+    },
+    "birch_leaf_b": {
+      "hex": "#B3D76B",
+      "role": "birch canopy, highlight"
+    },
+    "beech_bark": {
+      "hex": "#8E897D",
+      "role": "smooth grey beech trunk"
+    },
+    "beech_leaf": {
+      "hex": "#558F3A",
+      "role": "beech canopy, shade mass"
+    },
+    "beech_leaf_b": {
+      "hex": "#67A445",
+      "role": "beech canopy, main mass"
+    },
+    "bush_dark": {
+      "hex": "#467F37",
+      "role": "berry bush leaves"
+    },
+    "berry_red": {
+      "hex": "#C8394A",
+      "role": "berries"
+    },
+    "fern_green": {
+      "hex": "#86BE55",
+      "role": "fern fronds, main"
+    },
+    "fern_green_b": {
+      "hex": "#6FA746",
+      "role": "fern fronds, shade"
+    },
+    "flower_yellow": {
+      "hex": "#F2CF4A",
+      "role": "ground cover: meadow flower heads"
+    },
+    "flower_white": {
+      "hex": "#F4F1E4",
+      "role": "ground cover: daisy flower heads"
+    },
+    "flower_violet": {
+      "hex": "#9C7BD6",
+      "role": "ground cover: violet flower heads"
+    },
+    "mushroom_cap": {
+      "hex": "#B8483A",
+      "role": "ground cover: forest mushroom cap"
+    },
+    "mushroom_stem": {
+      "hex": "#EDE3CC",
+      "role": "ground cover: mushroom stem"
+    },
+    "moss_green": {
+      "hex": "#5C8C3A",
+      "role": "ground cover: moss on fallen logs"
+    },
     "ore_crystal": {
       "hex": "#7B5AD6",
       "role": "ore deposit accent (proposed, replaces teal)"
@@ -124,6 +292,30 @@
     "emissive_magic": {
       "hex": "#D24BFF",
       "role": "reserved: magic effects only, never materials"
+    },
+    "snag_bark": {
+      "hex": "#8A4F36",
+      "role": "M013 standing dead trees (snags), reddish-brown bare wood"
+    },
+    "snag_bark_b": {
+      "hex": "#6A3B2A",
+      "role": "M013 snag shade and broken limbs"
+    },
+    "stump_cut": {
+      "hex": "#C9A274",
+      "role": "M013 the cut face of a felled stump"
+    },
+    "leaf_dying_a": {
+      "hex": "#A69A45",
+      "role": "M013 thinning, browning crown of a dying broadleaf"
+    },
+    "leaf_dying_b": {
+      "hex": "#B8873E",
+      "role": "M013 dying crown, second tone"
+    },
+    "conifer_dying": {
+      "hex": "#7E7A3E",
+      "role": "M013 dying conifer needles"
     }
   },
   "lighting": {

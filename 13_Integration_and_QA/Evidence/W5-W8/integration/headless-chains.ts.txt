@@ -1,0 +1,264 @@
+// HEADLESS (Node) integration chains on the SAME world as the browser run: it starts from the same Node-generated
+// start save (start-save.json, seed 1337, wilderness 'w1', content v9) and plays journaled commands only.
+// It does NOT continue the browser's own save (the browser world diverged by ~1,700 ticks of live play).
+// Source: /projects/sandbox/Astrix/Game/src at a4a02a4 (Game/src identical to 2429be3).
+import { readFileSync, writeFileSync } from 'node:fs';
+import { GameSession } from '../../../Astrix/Game/src/app/session';
+import { BrowserSaveStore, KeyValueStorage } from '../../../Astrix/Game/src/app/persistence';
+import { GENERATOR_V2, WILDERNESS } from '../../../Astrix/Game/src/sim/world';
+import { siteSpotOf } from '../../../Astrix/Game/src/sim/wild-build';
+import { depositOf } from '../../../Astrix/Game/src/sim/deposits';
+import { terrainCache } from '../../../Astrix/Game/src/sim/route';
+import { Animal } from '../../../Astrix/Game/src/sim/wildlife';
+import { ARROW_DT, DRAW_FULL_MS, STUN_SECS, animalPose, flightPath, hitShape, launch, quantiseDir } from '../../../Astrix/Game/src/sim/hunting';
+import { SPAWN, clone, code, dm, ok } from '../../../Astrix/Game/tests/w4-harness';
+let hseq = 0;
+const send = (s: GameSession, c: Record<string, unknown>) => s.dispatch({ schema: 3, id: `hl:${hseq++}:${String(c.type)}`, expectedRevision: s.world.revision, ...c } as never);
+const tick = (s: GameSession, n = 1) => { for (let i = 0; i < n; i++) ok(send(s, { type: 'tick', ticks: 1 }), 'tick'); };
+function swing(s: GameSession, c: Record<string, unknown>) { for (let i = 0; i < 3; i++) { const r = send(s, c); if (r.ok || code(r) !== 'too_fast') return r; tick(s); } throw new Error('rate limit never cleared'); }
+
+
+class MemoryStorage implements KeyValueStorage {
+  readonly map = new Map<string, string>();
+  getItem(k: string) { return this.map.get(k) ?? null; }
+  setItem(k: string, v: string) { this.map.set(k, v); }
+  removeItem(k: string) { this.map.delete(k); }
+  key(i: number) { return [...this.map.keys()][i] ?? null; }
+  get length() { return this.map.size; }
+}
+const G = GENERATOR_V2;
+type P = { x: number; z: number }; type V = { x: number; y: number; z: number };
+const KEY = 'astrix:wild:v3:w1:seed:1337';
+const start = JSON.parse(readFileSync(new URL('./start-save.json', import.meta.url), 'utf8'));
+const storage = new MemoryStorage();
+storage.setItem(KEY, start.storage[KEY]);
+const store = () => new BrowserSaveStore(storage, 1337, G, { scenario: WILDERNESS, id: 'w1' });
+const loaded = store().load();
+let s: GameSession = loaded.session;
+const R: Record<string, unknown> = { loadStatus: loaded.status, startHash: s.stateHash, expectedStartHash: start.summary.hash };
+const w = () => s.world.wild!;
+const wl = () => w().wildlife!;
+const pres = (p: P, mx = 0, mz = 0) => ({ x: Math.round(p.x * 10), z: Math.round(p.z * 10), mx, mz });
+const tickP = (p: P, n = 1) => { for (let i = 0; i < n; i++) ok(send(s, { type: 'tick', ticks: 1, presence: pres(p) }), 'tick'); };
+const explore = (p: P) => send(s, { type: 'explore', at: dm(p) });
+const ground = (x: number, z: number) => terrainCache(1337, G).h(Math.floor(x), Math.floor(z));
+/** save + reload through the browser store: returns {equal, hash} and continues in the reloaded session. */
+function reload(label: string) {
+  const before = s.stateHash;
+  if (!store().save(s).ok) throw new Error('save ' + label);
+  const again = store().load();
+  const eq = again.session.stateHash === before;
+  s = again.session;
+  const checks = (R.reloads as unknown[] | undefined) ?? (R.reloads = []);
+  (checks as unknown[]).push({ label, before, after: s.stateHash, equal: eq, status: again.status, records: wl().animals.size, dead: wl().dead.size, carcasses: wl().carcasses.size });
+  return eq;
+}
+function walk(a: P, b: P, withPresence = true) {
+  const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 16));
+  for (let k = 1; k <= n; k++) { const p = { x: a.x + (b.x - a.x) * k / n, z: a.z + (b.z - a.z) * k / n }; if (withPresence) tickP(p); else tick(s); ok(explore(p), 'report'); }
+}
+// ---- hunting helpers (same maths as tests/w8.hunting.test.ts) ----
+const EYE = 1.4;
+function aimAt(from: V, target: V, draw: number, kind: 'arrow' | 'blunt_arrow' = 'arrow') {
+  const dx = target.x - from.x, dz = target.z - from.z, D = Math.hypot(dx, dz), hx = dx / D, hz = dz / D;
+  const yAt = (e: number) => {
+    const dir = quantiseDir(hx * Math.cos(e), Math.sin(e), hz * Math.cos(e));
+    const f = launch({ x: Math.round(from.x * 100), y: Math.round(from.y * 100), z: Math.round(from.z * 100) }, dir, draw)!;
+    const p = flightPath(f, kind);
+    for (let i = 3; i < p.length; i += 3) {
+      const d0 = Math.hypot(p[i - 3] - f.x, p[i - 1] - f.z), d1 = Math.hypot(p[i] - f.x, p[i + 2] - f.z);
+      if (d1 >= D) { const k = (D - d0) / (d1 - d0); return { y: p[i - 2] + (p[i + 1] - p[i - 2]) * k, dir, secs: (i / 3 - 1 + k) * ARROW_DT }; }
+    }
+    return { y: -1e9, dir, secs: 99 };
+  };
+  let lo = -0.7, hi = 0.7;
+  for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (yAt(m).y < target.y) lo = m; else hi = m; }
+  const r = yAt((lo + hi) / 2); return { dir: r.dir, secs: r.secs };
+}
+const bodyAt = (a: Animal, frac: number): V => { const pose = animalPose(a, frac), sh = hitShape(a, pose, ground(pose.x, pose.z)); return { x: (sh.a.x + sh.b.x) / 2, y: sh.a.y, z: (sh.a.z + sh.b.z) / 2 }; };
+const headAt = (a: Animal, frac: number): V => { const pose = animalPose(a, frac); return hitShape(a, pose, ground(pose.x, pose.z)).head; };
+function shootAt(sess: GameSession, stand: P, target: V | ((secs: number) => V), o: { draw?: number; t?: number; arrow?: 'arrow' | 'blunt_arrow' } = {}) {
+  const draw = o.draw ?? DRAW_FULL_MS, arrow = o.arrow ?? 'arrow', t = o.t ?? 300;
+  const from = { x: stand.x, y: ground(stand.x, stand.z) + EYE, z: stand.z };
+  let goal = typeof target === 'function' ? target(0) : target;
+  let aim = aimAt(from, goal, draw, arrow);
+  if (typeof target === 'function') for (let i = 0; i < 4; i++) { goal = target(aim.secs); aim = aimAt(from, goal, draw, arrow); }
+  return send(sess, { type: 'shoot', arrow, from: { x: Math.round(from.x * 100), y: Math.round(from.y * 100), z: Math.round(from.z * 100) }, dir: aim.dir, draw, t, at: dm(stand) });
+}
+function clearLine(p: P, a: Animal): boolean {
+  const tc = terrainCache(1337, G), b = bodyAt(a, 0), y0 = ground(p.x, p.z) + EYE, L = Math.hypot(b.x - p.x, b.z - p.z);
+  for (let d = 0.3; d < L - 0.8; d += 0.25) { const k = d / L, x = p.x + (b.x - p.x) * k, z = p.z + (b.z - p.z) * k, y = y0 + (b.y - y0) * k; if (tc.h(Math.floor(x), Math.floor(z)) > y - 0.12 || tc.d(Math.floor(x), Math.floor(z)) > 0) return false; }
+  return true;
+}
+function standOff(a: Animal, d: number, toward: P = SPAWN): P {
+  const ax = a.x / 10, az = a.z / 10;
+  for (let k = 0; k < 32; k++) { const ang = Math.atan2(toward.z - az, toward.x - ax) + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.2; const p = { x: ax + Math.cos(ang) * d, z: az + Math.sin(ang) * d }; if (terrainCache(1337, G).d(Math.floor(p.x), Math.floor(p.z)) === 0 && clearLine(p, a)) return p; }
+  throw new Error('no spot');
+}
+const nearest = (sp: string, from: P, f: (a: Animal) => boolean = () => true) => [...wl().animals.values()].filter((a) => a.sp === sp && f(a)).sort((p, q) => Math.hypot(p.x / 10 - from.x, p.z / 10 - from.z) - Math.hypot(q.x / 10 - from.x, q.z / 10 - from.z) || (p.id < q.id ? -1 : 1))[0];
+const out = (o: Record<string, unknown>) => o;
+
+const shedId = start.summary.shed as string, benchAt = start.summary.benchAt as P, shedAt = start.summary.shedAt as P;
+const shed = () => w().build!.sites.get(shedId)!;
+const shedP = { x: shedAt.x / 10, z: shedAt.z / 10 };
+
+// ---------- H1 discovery ----------
+{
+  const clay = depositOf(1337, G, 'k:29,28:0')!;
+  tickP(SPAWN, 2);
+  const at40 = { x: clay.x + (SPAWN.x - clay.x) * 40 / Math.hypot(SPAWN.x - clay.x, SPAWN.z - clay.z), z: clay.z + (SPAWN.z - clay.z) * 40 / Math.hypot(SPAWN.x - clay.x, SPAWN.z - clay.z) };
+  walk(SPAWN, at40);
+  const at40disc = w().map!.deposits.has(clay.id);
+  const refusedMine = code(send(s, { type: 'mine', depositId: clay.id, at: dm(at40) }));
+  const by = { x: clay.x + (SPAWN.x - clay.x) / 46.8, z: clay.z + (SPAWN.z - clay.z) / 46.8 };
+  const at20 = { x: clay.x + (at40.x - clay.x) / 2, z: clay.z + (at40.z - clay.z) / 2 };
+  walk(at40, at20);
+  const at20disc = w().map!.deposits.has(clay.id);
+  walk(at20, by);
+  R.H1 = out({ deposit: clay.id, discoveredAfterReportAt40m: at40disc, mineWhileUndiscovered: refusedMine, discoveredAfterReportAt20m: at20disc });
+  // ---------- H2 mine, carry, store ----------
+  ok(send(s, { type: 'equip', item: 'stone_pickaxe' }), 'pickaxe');
+  let got = 0;
+  for (let i = 0; i < 60 && got < 8; i++) { const r = swing(s, { type: 'mine', depositId: clay.id, at: dm(by) }); if (r.ok && r.outcome.type === 'mine' && (r.outcome as { amount?: number }).amount) got++; }
+  const capRefusal = code(send(s, { type: 'mine', depositId: clay.id, at: dm(by) }));
+  walk(by, shedP);
+  ok(send(s, { type: 'store_items', siteId: shedId, item: 'clay', n: 8, at: shedAt }), 'store clay');
+  const stock = { ...shed().stock };
+  const eq = reload('H2 after storing clay');
+  R.H2 = out({ clayMined: got, nextSwing: capRefusal, depositLeft: w().mine!.deposits.get(clay.id), shedStock: stock, reloadEqual: eq, stockAfterReload: { ...shed().stock } });
+  // depletion persists: mine the last 2, then 300 ticks later still exhausted
+  walk(shedP, by);
+  let more = 0; for (let i = 0; i < 20 && more < 2; i++) { const r = swing(s, { type: 'mine', depositId: clay.id, at: dm(by) }); if (r.ok && r.outcome.type === 'mine' && (r.outcome as { amount?: number }).amount) more++; }
+  tickP(by, 300);
+  reload('H2 exhausted + 300 ticks');
+  (R.H2 as Record<string, unknown>).exhaustedAfter300TicksAndReload = { left: w().mine!.deposits.get(clay.id), nextMine: code(send(s, { type: 'mine', depositId: clay.id, at: dm(by) })) };
+  walk(by, shedP);
+  ok(send(s, { type: 'store_items', siteId: shedId, item: 'clay', n: 2, at: shedAt }), 'store clay 2');
+}
+// ---------- craft bow & arrows (journaled, at the start save's bench) ----------
+{
+  walk(shedP, { x: benchAt.x / 10, z: benchAt.z / 10 });
+  for (const r of ['bow', 'arrows', 'arrows', 'blunt_arrows']) ok(send(s, { type: 'craft', recipe: r, at: benchAt }), r);
+  ok(send(s, { type: 'equip', item: 'bow' }), 'bow');
+  tickP({ x: benchAt.x / 10, z: benchAt.z / 10 }, 5);
+  R.crafted = { items: { ...w().items }, tools: w().tools.map((t) => `${t.kind}:${t.durability}`) };
+}
+// ---------- H5 moving deer: lead vs no lead (physics decides) ----------
+{
+  const here = { x: benchAt.x / 10, z: benchAt.z / 10 };
+  const deer = nearest('deer', here)!;
+  const p = standOff(deer, 6, here);
+  walk(here, p);
+  const d = wl().animals.get(deer.id)!;
+  const tr = d.trail ?? [];
+  const run = tr.length >= 4 ? Math.hypot(tr[tr.length - 2] - tr[0], tr[tr.length - 1] - tr[1]) / 10 : 0;
+  const res: Record<string, unknown> = { deer: deer.id, act: d.a, ranInTick_m: +run.toFixed(1) };
+  if (run > 1) {
+    const ux = (tr[tr.length - 2] - tr[0]) / 10 / run, uz = (tr[tr.length - 1] - tr[1]) / 10 / run, mid = bodyAt(d, 0.35);
+    const sides = [8, -8, 7, -7, 9, -9, 6, -6].map((k) => ({ x: mid.x - uz * k, z: mid.z + ux * k })).filter((q) => Math.hypot(q.x - p.x, q.z - p.z) < 15.5 && terrainCache(1337, G).d(Math.floor(q.x), Math.floor(q.z)) === 0);
+    const T = 300;
+    const pick = (r: ReturnType<typeof send>) => (r.ok ? (({ hit, ref, part, x, y, z, ms, speed, result, damage, hp }) => ({ hit, ref, part, x, y, z, ms, speed, result, damage, hp }))(r.outcome as never) : { refused: code(r) });
+    const attempts: unknown[] = [];
+    let keep: GameSession | null = null;
+    for (const me of sides) {
+      const lead = GameSession.restore(clone(s.snapshot) as never, clone(s.journal)), still = GameSession.restore(clone(s.snapshot) as never, clone(s.journal));
+      const sameStart = lead.stateHash === s.stateHash && still.stateHash === s.stateHash;
+      const target = (sim: GameSession) => (secs: number) => bodyAt(sim.world.wild!.wildlife!.animals.get(deer.id)!, Math.min(1, T / 1000 + secs / 2));
+      const rl = shootAt(lead, me, target(lead), { t: T });
+      const rs = shootAt(still, me, bodyAt(still.world.wild!.wildlife!.animals.get(deer.id)!, T / 1000), { t: T });
+      attempts.push({ stand: { x: +me.x.toFixed(2), z: +me.z.toFixed(2) }, sameStart, leadShot: pick(rl), noLeadShot: pick(rs) });
+      if (rl.ok && (rl.outcome as { hit?: string }).hit === 'animal') { keep = lead; break; }
+    }
+    Object.assign(res, { sidesTried: attempts.length, attempts });
+    if (keep) s = keep;
+  }
+  R.H5 = res;
+}
+// ---------- H6 kill -> carcass -> knife -> butcher -> collect -> store ----------
+{
+  const here = { x: benchAt.x / 10, z: benchAt.z / 10 };
+  ok(send(s, { type: 'equip', item: 'bow' }), 'bow');
+  const deer = nearest('deer', here, (a) => a.a !== 'flee' && !wl().dead.has(a.id))!;
+  const me = standOff(deer, 12, here);
+  walk(here, me);
+  const shots: unknown[] = [];
+  for (let i = 0; i < 10 && !wl().dead.has(deer.id); i++) {
+    const d = wl().animals.get(deer.id)!;
+    if (Math.hypot(d.x / 10 - me.x, d.z / 10 - me.z) > 22) { const n = standOff(d, 12, me); walk(me, n); Object.assign(me, n); continue; }
+    const r = shootAt(s, me, (secs) => headAt(wl().animals.get(deer.id)!, Math.min(1, 0.1 + secs / 2)), { t: 100 });
+    shots.push(r.ok ? (({ hit, ref, part, ms, speed, result, damage, hp }) => ({ hit, ref, part, ms, speed, result, damage, hp }))(r.outcome as never) : code(r));
+    if (!wl().dead.has(deer.id)) tickP(me);
+  }
+  const c = wl().carcasses.get(deer.id);
+  const h6: Record<string, unknown> = { deer: deer.id, shots, killed: wl().dead.has(deer.id), carcass: c && { ...c } };
+  if (c) {
+    reload('H6 after kill (before butchering)');
+    const by = { x: c.x / 10 + 0.8, z: c.z / 10 };
+    walk(me, by);
+    h6.withBow = code(send(s, { type: 'butcher', carcassId: deer.id, at: dm(by) }));
+    ok(send(s, { type: 'equip', item: 'knife' }), 'knife');
+    const made: string[] = []; let swings = 0;
+    for (let i = 0; i < 40 && wl().carcasses.has(deer.id); i++) {
+      const r = ok(swing(s, { type: 'butcher', carcassId: deer.id, at: dm(by) }), 'butcher'); swings++;
+      if (r.ok && r.outcome.type === 'butcher' && (r.outcome as { item?: string }).item) made.push((r.outcome as { item: string }).item);
+      if (swings === 5) reload('H6 mid-butchering (5 swings)');
+    }
+    const piles = [...w().piles.values()].filter((p) => Math.hypot(p.x - c.x / 10, p.z - c.z / 10) < 1.5 && ['raw_meat', 'hide', 'bone'].includes(p.item));
+    const tot: Record<string, number> = {}; for (const p of piles) tot[p.item] = (tot[p.item] ?? 0) + p.qty;
+    const bag0 = { ...w().items };
+    for (const p of piles) for (let i = 0; i < 6 && w().piles.has(p.id); i++) ok(send(s, { type: 'pickup', entityId: p.id, at: dm(p) }), 'pickup');
+    const bag1 = { ...w().items };
+    walk(by, shedP);
+    for (const it of ['raw_meat', 'hide', 'bone']) ok(send(s, { type: 'store_items', siteId: shedId, item: it, n: (bag1[it] ?? 0) - (bag0[it] ?? 0), at: shedAt }), 'store ' + it);
+    const stock = { ...shed().stock };
+    const eq = reload('H6 after storing outputs');
+    tickP(shedP, 50);
+    reload('H6 stored + 50 ticks');
+    Object.assign(h6, { made, swings, pileTotals: tot, picked: { raw_meat: (bag1.raw_meat ?? 0) - (bag0.raw_meat ?? 0), hide: (bag1.hide ?? 0) - (bag0.hide ?? 0), bone: (bag1.bone ?? 0) - (bag0.bone ?? 0) }, carcassGone: !wl().carcasses.has(deer.id), tombstone: wl().dead.has(deer.id), recordBack: wl().animals.has(deer.id), stockAfterStore: stock, reloadEqual: eq, stockAfter50TicksAndReload: { ...shed().stock }, butcherAgain: code(send(s, { type: 'butcher', carcassId: deer.id, at: dm(by) })) });
+  }
+  R.H6 = h6;
+}
+// ---------- H7 stun -> alive -> recovers, no carcass, no tombstone ----------
+{
+  ok(send(s, { type: 'equip', item: 'bow' }), 'bow');
+  const hare = nearest('rabbit', shedP, (a) => !wl().dead.has(a.id))!;
+  const me = standOff(hare, 7, shedP);
+  walk(shedP, me);
+  const h7: Record<string, unknown> = { hare: hare.id };
+  const dead0 = wl().dead.size, carc0 = wl().carcasses.size;
+  let r: ReturnType<typeof send> | null = null;
+  for (let i = 0; i < 6; i++) {
+    const a = wl().animals.get(hare.id); if (!a) break;
+    if (Math.hypot(a.x / 10 - me.x, a.z / 10 - me.z) > 14) { const n = standOff(a, 7, me); walk(me, n); Object.assign(me, n); }
+    r = shootAt(s, me, (secs) => bodyAt(wl().animals.get(hare.id)!, Math.min(1, 0.1 + secs / 2)), { t: 100, arrow: 'blunt_arrow' });
+    if (r.ok && (r.outcome as { result?: string }).result === 'stunned') break;
+    tickP(me);
+  }
+  const o = r && r.ok ? (r.outcome as Record<string, unknown>) : null;
+  h7.shot = o && { hit: o.hit, ref: o.ref, part: o.part, ms: o.ms, speed: o.speed, result: o.result, damage: o.damage, hp: o.hp };
+  if (o?.result === 'stunned') {
+    const a = wl().animals.get(hare.id)!;
+    h7.right = { act: a.a, hp: a.hp ?? 'full', deadDelta: wl().dead.size - dead0, carcassDelta: wl().carcasses.size - carc0, tombstoned: wl().dead.has(hare.id) };
+    reload('H7 during stun');
+    h7.afterReload = { act: wl().animals.get(hare.id)?.a };
+    const ticks = Math.ceil(STUN_SECS.rabbit / 2) + 2;
+    const acts: string[] = [];
+    for (let i = 0; i < ticks; i++) { tickP(me); const x = wl().animals.get(hare.id); acts.push(x ? x.a : 'GONE'); }
+    h7.actsAfter = acts.filter((x, i) => i === 0 || x !== acts[i - 1]);
+    h7.end = { alive: wl().animals.has(hare.id), deadDelta: wl().dead.size - dead0, tombstoned: wl().dead.has(hare.id), carcassOfHare: wl().carcasses.has(hare.id) };
+  }
+  R.H7 = h7;
+}
+// ---------- H8 final consistency ----------
+{
+  const ids = [...wl().animals.keys()];
+  const dup = ids.length - new Set(ids).size;
+  const resurrected = ids.filter((id) => wl().dead.has(id));
+  const h = s.stateHash;
+  const rest = GameSession.restore(clone(s.snapshot) as never, clone(s.journal));
+  s.compact();
+  const comp = GameSession.restore(clone(s.snapshot) as never, clone(s.journal));
+  R.H8 = { records: ids.length, duplicateIds: dup, resurrected: resurrected.length, dead: wl().dead.size, restoreEqual: rest.stateHash === h, compactRestoreEqual: comp.stateHash === h, finalHash: h, tick: s.world.life?.tick };
+}
+writeFileSync(new URL('./headless-results.json', import.meta.url), JSON.stringify(R, null, 1));
+console.log(JSON.stringify(R, null, 1));

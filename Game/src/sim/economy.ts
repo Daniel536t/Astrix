@@ -1,14 +1,18 @@
 // Schema-3 life loop. All quantities are integers and all mutations are driven
 // by accepted commands; wall-clock time and rendering never advance this state.
-import type { World } from './world';
+import type { Scenario, World } from './world';
 
-export const LIFE_RESOURCES = ['fiber', 'food', 'ore', 'rations', 'seed', 'stone', 'wood'] as const;
+/** Every resource a bag or store may hold. M006 adds animal products and carried water buckets. */
+export const LIFE_RESOURCES = ['eggs', 'fiber', 'food', 'milk', 'ore', 'rations', 'seed', 'stone', 'water', 'wood', 'wool'] as const;
 export type LifeResource = (typeof LIFE_RESOURCES)[number];
 export const CARRIED_CAPACITY = 120;
 export const STOCKPILE_CAPACITY = 200;
 export const MAX_PRODUCTION_JOBS = 16;
 export const MAX_TICKS_PER_COMMAND = 64;
 export const CROP_GROWTH_TICKS = 4;
+/** Fixed harvest from one ready crop plot. Journal outcomes must match it exactly. */
+export const CROP_YIELD = { food: 6, fiber: 1 } as const;
+export const CROP_YIELD_LABEL = `${CROP_YIELD.food} food + ${CROP_YIELD.fiber} fiber`;
 export const FOUNDER_STOCKPILE_ID = 'stockpile:founder';
 export const FOUNDER_STOCKPILE = { id: FOUNDER_STOCKPILE_ID, x: -50, z: -32, capacity: STOCKPILE_CAPACITY } as const;
 
@@ -50,9 +54,10 @@ export interface LifeState {
   tick: number;
 }
 
-export function createLifeState(): LifeState {
+/** W1: a wilderness world starts with no founder stockpile (nothing is built there yet). */
+export function createLifeState(scenario: Scenario = 'settlement'): LifeState {
   return {
-    stockpiles: new Map([[FOUNDER_STOCKPILE_ID, {
+    stockpiles: scenario === 'wilderness' ? new Map() : new Map([[FOUNDER_STOCKPILE_ID, {
       id: FOUNDER_STOCKPILE_ID, x: FOUNDER_STOCKPILE.x, z: FOUNDER_STOCKPILE.z,
       capacity: STOCKPILE_CAPACITY, inventory: {},
     }]]), jobs: new Map(), crops: new Map(), tick: 0,
@@ -170,7 +175,7 @@ export function harvestCrop(world: World, plotId: string): LifeResult<{ food: nu
   if (!cropReady(crop, life.tick)) return rejectLife('crop_not_ready', [`crop needs ${crop.growthTicks - (life.tick - crop.plantedTick)} more ticks`]);
   // Plant growth is the explicit biological source; every other life-loop
   // transformation conserves its declared inputs and outputs.
-  const yieldBag = { food: 6, fiber: 1 };
+  const yieldBag = { food: CROP_YIELD.food, fiber: CROP_YIELD.fiber };
   if (total(world.inventory) + yieldBag.food + yieldBag.fiber > CARRIED_CAPACITY) {
     return rejectLife('capacity_exceeded', [`carried capacity ${CARRIED_CAPACITY} would be exceeded`]);
   }
@@ -188,7 +193,8 @@ export interface TickOutcome {
   readyCrops: string[];
 }
 
-export function advanceTicks(world: World, count: number): LifeResult<TickOutcome> {
+/** `onStep` runs after production jobs on every tick (the homestead simulation). */
+export function advanceTicks(world: World, count: number, onStep?: (tick: number) => void): LifeResult<TickOutcome> {
   const life = lifeState(world);
   if (!Number.isSafeInteger(count) || count < 1 || count > MAX_TICKS_PER_COMMAND) {
     return rejectLife('invalid_tick_count', [`ticks must be an integer from 1 to ${MAX_TICKS_PER_COMMAND}`]);
@@ -210,6 +216,7 @@ export function advanceTicks(world: World, count: number): LifeResult<TickOutcom
       life.jobs.delete(job.id);
       completed.push({ id: job.id, recipe: job.recipe, output });
     }
+    onStep?.(life.tick);
   }
   const readyCrops = [...life.crops.values()].filter((crop) => cropReady(crop, life.tick)
     && crop.plantedTick + crop.growthTicks > fromTick).map((crop) => crop.id).sort();

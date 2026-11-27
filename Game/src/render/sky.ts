@@ -23,6 +23,61 @@ const mix = (a: number, b: number, k: number) => a + (b - a) * k;
 const mixHex = (a: string, b: string, k: number, out: THREE.Color) =>
   out.copy(new THREE.Color(a)).lerp(new THREE.Color(b), k);
 
+/**
+ * Half-width (m) of the sun's orthographic shadow box. M008 cut it from 180 m
+ * to 100 m: the box now follows the view (setShadowView), so it covers the
+ * ground on screen instead of a square that mostly lay behind the camera,
+ * and every caster outside it skips the shadow pass. Texels shrink from
+ * 0.18 m to 0.10 m on the 2048 map.
+ */
+export const SHADOW_HALF_EXTENT = 100;
+/** How far (m) the shadow box centre sits ahead of the view target. */
+export const SHADOW_LEAD = 40;
+/** Ground (m) the shadow box keeps beyond the bottom screen edge. */
+export const SHADOW_NEAR_MARGIN = 8;
+
+/**
+ * Lead of the shadow box centre for a view whose bottom screen edge meets
+ * the ground `nearOffset` metres along the view direction from the target
+ * (negative = between camera and target, see viewGroundOffset). The lead is
+ * SHADOW_LEAD unless that would leave the nearest on-screen ground outside
+ * the box; then the box slides back so its near edge reaches the bottom of
+ * the screen. Review v1: at long zoom the foreground nearest the camera,
+ * the largest ground on screen, had no shadows while ground far ahead did.
+ */
+export function shadowLead(nearOffset: number): number {
+  return Math.min(SHADOW_LEAD, nearOffset + SHADOW_HALF_EXTENT - SHADOW_NEAR_MARGIN);
+}
+
+const _snapped = new THREE.Vector3();
+const _x = new THREE.Vector3(), _y = new THREE.Vector3(), _z = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
+
+/** Shadow box centre for a view: target + SHADOW_LEAD along the horizontal view direction. */
+export function shadowCentre(target: THREE.Vector3, camera: THREE.Vector3, out = new THREE.Vector3(), lead = SHADOW_LEAD): THREE.Vector3 {
+  const dx = target.x - camera.x, dz = target.z - camera.z, len = Math.hypot(dx, dz);
+  out.copy(target);
+  if (len > 1e-6) { out.x += (dx / len) * lead; out.z += (dz / len) * lead; }
+  return out;
+}
+
+/**
+ * Snap a shadow centre to whole shadow-map texels in the light's view plane,
+ * so panning the camera does not make shadow edges crawl. `dir` points from
+ * the centre toward the sun.
+ */
+export function snapShadowCentre(centre: THREE.Vector3, dir: THREE.Vector3, texel: number, out = new THREE.Vector3()): THREE.Vector3 {
+  _z.copy(dir).normalize();
+  _x.crossVectors(UP, _z);
+  if (_x.lengthSq() < 1e-8) _x.set(1, 0, 0); else _x.normalize();
+  _y.crossVectors(_z, _x);
+  const a = centre.dot(_x), b = centre.dot(_y);
+  out.copy(centre)
+    .addScaledVector(_x, Math.round(a / texel) * texel - a)
+    .addScaledVector(_y, Math.round(b / texel) * texel - b);
+  return out;
+}
+
 export class Sky {
   readonly sun: THREE.DirectionalLight;
   readonly hemi: THREE.HemisphereLight;
@@ -30,6 +85,8 @@ export class Sky {
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
   private focus = new THREE.Vector3();
+  private shadowFocus = new THREE.Vector3();
+  private hasShadowView = false;
   private dome: THREE.Mesh;
   private domeGeo: THREE.SphereGeometry;
   private domeBottom = new THREE.Color('#DCEFF8');
@@ -49,7 +106,8 @@ export class Sky {
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const cam = this.sun.shadow.camera as THREE.OrthographicCamera;
-    cam.left = -180; cam.right = 180; cam.top = 180; cam.bottom = -180;
+    const r = SHADOW_HALF_EXTENT;
+    cam.left = -r; cam.right = r; cam.top = r; cam.bottom = -r;
     cam.near = 1; cam.far = 900;
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.045;
@@ -93,6 +151,19 @@ export class Sky {
 
   setFocus(v: THREE.Vector3) { this.focus.copy(v); }
 
+  /**
+   * Centre the sun shadow box on what the camera looks at: the view target
+   * pushed SHADOW_LEAD metres along the horizontal view direction (the
+   * visible ground lies mostly beyond the target). With `nearOffset` (where
+   * the bottom screen edge meets the ground) the lead shrinks so the nearest
+   * ground stays inside the box (shadowLead). Without a call the box follows
+   * the focus.
+   */
+  setShadowView(target: THREE.Vector3, camera: THREE.Vector3, nearOffset = 0) {
+    shadowCentre(target, camera, this.shadowFocus, shadowLead(nearOffset));
+    this.hasShadowView = true;
+  }
+
   private paintDome() {
     const pos = this.domeGeo.attributes.position;
     const col = this.domeGeo.attributes.color as THREE.BufferAttribute;
@@ -122,8 +193,10 @@ export class Sky {
       Math.cos(elev) * Math.cos(az)
     );
 
-    this.sun.position.copy(this.focus).addScaledVector(dir, 450);
-    this.sun.target.position.copy(this.focus);
+    const centre = snapShadowCentre(this.hasShadowView ? this.shadowFocus : this.focus, dir,
+      (2 * SHADOW_HALF_EXTENT) / this.sun.shadow.mapSize.x, _snapped);
+    this.sun.position.copy(centre).addScaledVector(dir, 450);
+    this.sun.target.position.copy(centre);
     mixHex(A.sunColor, B.sunColor, k, this.sun.color);
     this.sun.intensity = mix(A.sunIntensity, B.sunIntensity, k);
 

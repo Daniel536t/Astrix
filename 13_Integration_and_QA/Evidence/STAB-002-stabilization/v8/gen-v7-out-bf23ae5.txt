@@ -1,0 +1,6 @@
+fresh v7 900 4b53db46a1916870 rejected 0 animals 25 version 7
+v6->v7 300+600 75eaf4d14533a811 rejected 0 animals 28 villagers 3 sites done plots growing,ripe
+fresh: sites woodshed:done plots growing/0,ripe/0 acts graze,wander,drink roles woodcutter,herder,farmer
+presence ticks 300 entries 912
+ms 2260
+S3 replay of fixture journal 75eaf4d14533a811

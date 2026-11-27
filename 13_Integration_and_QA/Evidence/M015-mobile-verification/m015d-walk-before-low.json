@@ -1,0 +1,109 @@
+{
+ "emulated": "Playwright Chromium 683x355, hasTouch, isMobile false (desktop-site mode), dpr 1, software GL (SwiftShader), CPU throttle 4x during the walk: NOT a real device",
+ "tag": "before-low",
+ "seconds": 335,
+ "results": {
+  "low": {
+   "quality": "low",
+   "walkS": 240,
+   "walkedM": 101,
+   "frames": 135,
+   "fps": 0.6,
+   "p50": 1717,
+   "p95": 2967,
+   "max": 6216,
+   "over50": 135,
+   "over100": 135,
+   "over200": 131,
+   "longTasks": 135,
+   "longTasksOver100": 135,
+   "longTaskMax": 6192,
+   "longTaskMsPer32m": 57385,
+   "update": {
+    "over50": 6,
+    "over33": 10,
+    "over100": 6,
+    "p50": 4.1,
+    "p95": 42.7,
+    "max": 610.1,
+    "frames": 135
+   },
+   "sectionTotalsMs": {
+    "homestead": 78,
+    "faunasync": 28,
+    "fauna": 92,
+    "terrain": 1689,
+    "naturesync": 69,
+    "vegetation": 7,
+    "groundcover": 192,
+    "render": 6348,
+    "chunkinstall": 257,
+    "chunkpad": 265,
+    "chunkgeom": 25,
+    "chunkwater": 0,
+    "macro": 1136
+   },
+   "frameLoopMsPer32m": 674,
+   "updateMsPer32m": 874,
+   "chunksGenerated": 35,
+   "sections": {
+    "homestead": "0.58/1.4/7.1",
+    "faunasync": "1.14/3.1/6.1",
+    "fauna": "0.68/2.3/9.9",
+    "terrain": "12.51/9.4/606.8",
+    "naturesync": "0.51/1.3/17.6",
+    "vegetation": "0.05/0.1/2",
+    "groundcover": "1.42/7.6/35.6",
+    "render": "47.02/15.9/5497.8",
+    "chunkinstall": "9.53/25.4/34.4",
+    "chunkpad": "12.62/35.4/36.6",
+    "chunkgeom": "1.19/3/6.6",
+    "chunkwater": "0.01/0.1/0.1",
+    "macro": "568.05/530/606.1"
+   },
+   "streamPerf": {
+    "chunkGenP50": 0,
+    "chunkGenP95": 0,
+    "chunkGenMax": 0,
+    "chunkMeshP50": 0,
+    "chunkMeshP95": 0,
+    "chunkMeshMax": 0,
+    "macroP50": 530,
+    "macroMax": 606.1,
+    "macroSampleP50": 0,
+    "macroSampleMax": 0,
+    "macroCacheHits": 2,
+    "chunkSamples": 0,
+    "macroSamples": 2
+   },
+   "worker": {
+    "workers": 3,
+    "inFlight": 0,
+    "generated": 66,
+    "meshed": 50,
+    "discarded": 0,
+    "genMs": 4351.699999984354,
+    "meshMs": 1306.3000000044703,
+    "genMsAvg": 65.9,
+    "meshMsAvg": 26.1
+   },
+   "natureSync": {
+    "adds": 118,
+    "removes": 37,
+    "swaps": 0,
+    "chunksAdded": 50,
+    "chunksDropped": 41,
+    "scanned": 26,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 17.5,
+    "syncs": 155,
+    "totalMs": 81.39999999850988
+   },
+   "groundCover": {
+    "pieces": 164
+   }
+  }
+ },
+ "errs": []
+}

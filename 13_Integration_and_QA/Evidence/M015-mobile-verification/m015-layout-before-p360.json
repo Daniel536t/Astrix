@@ -1,0 +1,3118 @@
+{
+ "base": "https://astrix.local/",
+ "dist": "/projects/sandbox/.kiro/artifacts/screenshots/probe/dist-m015-before",
+ "vp": "p360",
+ "size": [
+  360,
+  780
+ ],
+ "mobile": true,
+ "emulated": "Playwright Chromium emulation, not a real device",
+ "seconds": 365.9,
+ "errs": [],
+ "issues": [
+  {
+   "name": "1-entry",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#farm-button",
+     "#chain-panel"
+    ],
+    [
+     "#farm-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#mode-button",
+     "#chain-panel"
+    ],
+    [
+     "#mode-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#vitals",
+     "#chain-panel"
+    ],
+    [
+     "#vitals",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#gather-nearest",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#jump-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#return-home-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#return-banner-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#plant-banner-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     ".zoomers",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#chain-panel",
+     "#enter-screen .enter-card"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#chain-panel"
+    ],
+    [
+     "#hud",
+     "#enter-screen .enter-card"
+    ]
+   ],
+   "clipped": [],
+   "small": 9,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    },
+    {
+     "el": "button[data-act].primary",
+     "text": "Quick Play",
+     "w": 87,
+     "h": 30,
+     "in": "chain-panel"
+    },
+    {
+     "el": "button",
+     "text": "Wallet Play (wallet) (no",
+     "w": 192,
+     "h": 30,
+     "in": "chain-panel"
+    },
+    {
+     "el": "button[data-act]",
+     "text": "Recover with passkey",
+     "w": 133,
+     "h": 23,
+     "in": "chain-panel"
+    },
+    {
+     "el": "button[data-act].primary",
+     "text": "Quick Play",
+     "w": 248,
+     "h": 31,
+     "in": "enter-screen"
+    },
+    {
+     "el": "button",
+     "text": "No wallet found",
+     "w": 248,
+     "h": 31,
+     "in": "enter-screen"
+    },
+    {
+     "el": "button[data-act]",
+     "text": "Recover with passkey",
+     "w": 148,
+     "h": 26,
+     "in": "enter-screen"
+    },
+    {
+     "el": "button[data-act]",
+     "text": "Explore offline",
+     "w": 107,
+     "h": 26,
+     "in": "enter-screen"
+    }
+   ],
+   "overflow": [],
+   "cover": [
+    [
+     "#enter-screen .enter-card",
+     "joystick area"
+    ],
+    [
+     "#enter-screen .enter-card",
+     "Jump"
+    ]
+   ],
+   "scrollers": {}
+  },
+  {
+   "name": "2-chain-explore",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#farm-button",
+     "#chain-panel"
+    ],
+    [
+     "#mode-button",
+     "#chain-panel"
+    ],
+    [
+     "#vitals",
+     "#chain-panel"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#chain-panel"
+    ]
+   ],
+   "clipped": [],
+   "small": 5,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    },
+    {
+     "el": "button[data-act].primary",
+     "text": "Quick Play",
+     "w": 87,
+     "h": 30,
+     "in": "chain-panel"
+    },
+    {
+     "el": "button",
+     "text": "Wallet Play (wallet) (no",
+     "w": 192,
+     "h": 30,
+     "in": "chain-panel"
+    },
+    {
+     "el": "button[data-act]",
+     "text": "Recover with passkey",
+     "w": 133,
+     "h": 23,
+     "in": "chain-panel"
+    }
+   ],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "3-explore",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ]
+   ],
+   "hudToast": [],
+   "clipped": [],
+   "small": 2,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "4-joystick",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ]
+   ],
+   "hudToast": [],
+   "clipped": [],
+   "small": 2,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "5-toast",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#toast",
+     "#gather-nearest"
+    ]
+   ],
+   "clipped": [],
+   "small": 2,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "6-farm-top",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#homestead-panel",
+     "#gather-nearest"
+    ],
+    [
+     "#homestead-panel",
+     "#jump-button"
+    ],
+    [
+     "#homestead-panel",
+     "#return-home-button"
+    ],
+    [
+     "#homestead-panel",
+     "#return-banner-button"
+    ],
+    [
+     "#homestead-panel",
+     "#plant-banner-button"
+    ],
+    [
+     "#homestead-panel",
+     ".zoomers"
+    ]
+   ],
+   "hudToast": [],
+   "clipped": [],
+   "small": 7,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "button[data-close]",
+     "text": "×",
+     "w": 29,
+     "h": 30,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-plan-new].primary",
+     "text": "Plan a new field",
+     "w": 105,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "select[data-role-of]",
+     "text": "builderfarmerherderwoodc",
+     "w": 88,
+     "h": 25,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "select[data-role-of]",
+     "text": "builderfarmerherderwoodc",
+     "w": 88,
+     "h": 25,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "select[data-role-of]",
+     "text": "builderfarmerherderwoodc",
+     "w": 88,
+     "h": 25,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "cover": [
+    [
+     "#homestead-panel",
+     "joystick area"
+    ],
+    [
+     "#homestead-panel",
+     "Jump"
+    ]
+   ],
+   "scrollers": {
+    "#homestead-panel": {
+     "scrollH": 2029,
+     "clientH": 482,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "7-farm-bottom",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#homestead-panel",
+     "#gather-nearest"
+    ],
+    [
+     "#homestead-panel",
+     "#jump-button"
+    ],
+    [
+     "#homestead-panel",
+     "#return-home-button"
+    ],
+    [
+     "#homestead-panel",
+     "#return-banner-button"
+    ],
+    [
+     "#homestead-panel",
+     "#plant-banner-button"
+    ],
+    [
+     "#homestead-panel",
+     ".zoomers"
+    ]
+   ],
+   "hudToast": [],
+   "clipped": [],
+   "small": 15,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Open",
+     "w": 49,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Lock",
+     "w": 45,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Open",
+     "w": 49,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Lock",
+     "w": 45,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Open",
+     "w": 49,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Lock",
+     "w": 45,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Open",
+     "w": 49,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Lock",
+     "w": 45,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Open",
+     "w": 49,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Lock",
+     "w": 45,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "input[data-steward]",
+     "text": "",
+     "w": 87,
+     "h": 20,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "select[data-policy]",
+     "text": "may actask me firstnever",
+     "w": 88,
+     "h": 25,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "select[data-policy]",
+     "text": "may actask me firstnever",
+     "w": 88,
+     "h": 25,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "cover": [
+    [
+     "#homestead-panel",
+     "joystick area"
+    ],
+    [
+     "#homestead-panel",
+     "Jump"
+    ]
+   ],
+   "scrollers": {
+    "#homestead-panel": {
+     "scrollH": 2029,
+     "clientH": 482,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "8-build-walk",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#build-bar",
+     "#farm-button"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#build-bar"
+    ]
+   ],
+   "clipped": [],
+   "small": 7,
+   "smallList": [
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    },
+    {
+     "el": "button[data-build-kind]",
+     "text": "Log store",
+     "w": 75,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-kind]",
+     "text": "Well",
+     "w": 46,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-kind].on",
+     "text": "Woodshed",
+     "w": 82,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-turn]",
+     "text": "Turn 90°",
+     "w": 70,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-place].primary",
+     "text": "Place & approve",
+     "w": 113,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-close]",
+     "text": "Close",
+     "w": 52,
+     "h": 31,
+     "in": "build-bar"
+    }
+   ],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {
+    "#build-bar": {
+     "scrollH": 257,
+     "clientH": 257,
+     "scrolls": false,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "9-builder",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#gather-nearest"
+    ],
+    [
+     "#hud",
+     ".zoomers"
+    ]
+   ],
+   "clipped": [],
+   "small": 2,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Walk",
+     "w": 59,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "9b-build-tab",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#build-panel",
+     "#farm-button"
+    ],
+    [
+     "#build-panel",
+     "#mode-button"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#gather-nearest"
+    ],
+    [
+     "#hud",
+     ".zoomers"
+    ]
+   ],
+   "clipped": [],
+   "small": 2,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Walk",
+     "w": 59,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {
+    "#build-panel": {
+     "scrollH": 311,
+     "clientH": 311,
+     "scrolls": false,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "9c-world-tab",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#gather-nearest"
+    ],
+    [
+     "#hud",
+     ".zoomers"
+    ]
+   ],
+   "clipped": [],
+   "small": 2,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Walk",
+     "w": 59,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "9a-settlement-tab",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#life-panel",
+     "#farm-button"
+    ],
+    [
+     "#life-panel",
+     "#mode-button"
+    ],
+    [
+     "#life-panel",
+     "#gather-nearest"
+    ],
+    [
+     "#life-panel",
+     ".zoomers"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#life-panel"
+    ],
+    [
+     "#hud",
+     "#gather-nearest"
+    ],
+    [
+     "#hud",
+     ".zoomers"
+    ]
+   ],
+   "clipped": [],
+   "small": 2,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Walk",
+     "w": 59,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [
+    {
+     "el": "Amount",
+     "scroll": 160,
+     "client": 58
+    },
+    {
+     "el": "Amount",
+     "scroll": 160,
+     "client": 58
+    }
+   ],
+   "cover": [],
+   "scrollers": {
+    "#life-panel": {
+     "scrollH": 952,
+     "clientH": 552,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "10-build-builder",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#life-panel",
+     "#build-bar"
+    ],
+    [
+     "#life-panel",
+     "#farm-button"
+    ],
+    [
+     "#life-panel",
+     ".zoomers"
+    ],
+    [
+     "#build-bar",
+     "#farm-button"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#life-panel"
+    ],
+    [
+     "#hud",
+     ".zoomers"
+    ]
+   ],
+   "clipped": [],
+   "small": 7,
+   "smallList": [
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    },
+    {
+     "el": "button[data-build-kind]",
+     "text": "Log store",
+     "w": 75,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-kind]",
+     "text": "Well",
+     "w": 46,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-kind].on",
+     "text": "Woodshed",
+     "w": 82,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-turn]",
+     "text": "Turn 90°",
+     "w": 70,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-place].primary",
+     "text": "Place & approve",
+     "w": 113,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-close]",
+     "text": "Close",
+     "w": 52,
+     "h": 31,
+     "in": "build-bar"
+    }
+   ],
+   "overflow": [
+    {
+     "el": "Amount",
+     "scroll": 160,
+     "client": 58
+    },
+    {
+     "el": "Amount",
+     "scroll": 160,
+     "client": 58
+    }
+   ],
+   "cover": [],
+   "scrollers": {
+    "#build-bar": {
+     "scrollH": 257,
+     "clientH": 257,
+     "scrolls": false,
+     "overflowY": "auto"
+    },
+    "#life-panel": {
+     "scrollH": 952,
+     "clientH": 552,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "11-swim",
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#mode-button",
+     "#vitals"
+    ]
+   ],
+   "hudToast": [],
+   "clipped": [],
+   "small": 2,
+   "smallList": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  }
+ ],
+ "screens": [
+  {
+   "name": "1-entry",
+   "file": "before-p360-1-entry.png",
+   "why": "first load: entry screen (Quick Play / Wallet Play)",
+   "t": 77.5,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 97,
+     "y": 58,
+     "w": 166,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#chain-panel": {
+     "x": 14,
+     "y": 60,
+     "w": 332,
+     "h": 267
+    },
+    "#enter-screen .enter-card": {
+     "x": 16,
+     "y": 64,
+     "w": 328,
+     "h": 651
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#chain-panel"
+    ],
+    [
+     "#hud",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#farm-button",
+     "#chain-panel"
+    ],
+    [
+     "#farm-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#mode-button",
+     "#chain-panel"
+    ],
+    [
+     "#mode-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#vitals",
+     "#chain-panel"
+    ],
+    [
+     "#vitals",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#gather-nearest",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#jump-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#return-home-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#return-banner-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#plant-banner-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     ".zoomers",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#chain-panel",
+     "#enter-screen .enter-card"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    },
+    {
+     "el": "button[data-act].primary",
+     "text": "Quick Play",
+     "w": 87,
+     "h": 30,
+     "in": "chain-panel"
+    },
+    {
+     "el": "button",
+     "text": "Wallet Play (wallet) (no",
+     "w": 192,
+     "h": 30,
+     "in": "chain-panel"
+    },
+    {
+     "el": "button[data-act]",
+     "text": "Recover with passkey",
+     "w": 133,
+     "h": 23,
+     "in": "chain-panel"
+    },
+    {
+     "el": "button[data-act].primary",
+     "text": "Quick Play",
+     "w": 248,
+     "h": 31,
+     "in": "enter-screen"
+    },
+    {
+     "el": "button",
+     "text": "No wallet found",
+     "w": 248,
+     "h": 31,
+     "in": "enter-screen"
+    },
+    {
+     "el": "button[data-act]",
+     "text": "Recover with passkey",
+     "w": 148,
+     "h": 26,
+     "in": "enter-screen"
+    },
+    {
+     "el": "button[data-act]",
+     "text": "Explore offline",
+     "w": 107,
+     "h": 26,
+     "in": "enter-screen"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [
+    [
+     "#enter-screen .enter-card",
+     "joystick area"
+    ],
+    [
+     "#enter-screen .enter-card",
+     "Jump"
+    ]
+   ],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "2-chain-explore",
+   "file": "before-p360-2-chain-explore.png",
+   "why": "walk mode with the MagicBlock settlement panel (chain on)",
+   "t": 94.3,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 97,
+     "y": 58,
+     "w": 166,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#chain-panel": {
+     "x": 14,
+     "y": 60,
+     "w": 332,
+     "h": 267
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#chain-panel"
+    ],
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#farm-button",
+     "#chain-panel"
+    ],
+    [
+     "#mode-button",
+     "#chain-panel"
+    ],
+    [
+     "#vitals",
+     "#chain-panel"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    },
+    {
+     "el": "button[data-act].primary",
+     "text": "Quick Play",
+     "w": 87,
+     "h": 30,
+     "in": "chain-panel"
+    },
+    {
+     "el": "button",
+     "text": "Wallet Play (wallet) (no",
+     "w": 192,
+     "h": 30,
+     "in": "chain-panel"
+    },
+    {
+     "el": "button[data-act]",
+     "text": "Recover with passkey",
+     "w": 133,
+     "h": 23,
+     "in": "chain-panel"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "3-explore",
+   "file": "before-p360-3-explore.png",
+   "why": "walk mode on arrival: HUD, vitals, settlers toast, controls",
+   "t": 181.8,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 97,
+     "y": 58,
+     "w": 166,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "4-joystick",
+   "file": "before-p360-4-joystick.png",
+   "why": "joystick held (walking)",
+   "t": 201.6,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 97,
+     "y": 58,
+     "w": 166,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "5-toast",
+   "file": "before-p360-5-toast.png",
+   "why": "Plant banner: toast in walk mode",
+   "t": 215.3,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 97,
+     "y": 58,
+     "w": 166,
+     "h": 18
+    },
+    "#toast": {
+     "x": 90,
+     "y": 572,
+     "w": 180,
+     "h": 50
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#toast",
+     "#gather-nearest"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "6-farm-top",
+   "file": "before-p360-6-farm-top.png",
+   "why": "Farm panel open (top)",
+   "t": 222.9,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#homestead-panel": {
+     "x": 8,
+     "y": 288,
+     "w": 344,
+     "h": 484
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 97,
+     "y": 58,
+     "w": 166,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#homestead-panel",
+     "#gather-nearest"
+    ],
+    [
+     "#homestead-panel",
+     "#jump-button"
+    ],
+    [
+     "#homestead-panel",
+     "#return-home-button"
+    ],
+    [
+     "#homestead-panel",
+     "#return-banner-button"
+    ],
+    [
+     "#homestead-panel",
+     "#plant-banner-button"
+    ],
+    [
+     "#homestead-panel",
+     ".zoomers"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "button[data-close]",
+     "text": "×",
+     "w": 29,
+     "h": 30,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-plan-new].primary",
+     "text": "Plan a new field",
+     "w": 105,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "select[data-role-of]",
+     "text": "builderfarmerherderwoodc",
+     "w": 88,
+     "h": 25,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "select[data-role-of]",
+     "text": "builderfarmerherderwoodc",
+     "w": 88,
+     "h": 25,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "select[data-role-of]",
+     "text": "builderfarmerherderwoodc",
+     "w": 88,
+     "h": 25,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {
+    "#homestead-panel": {
+     "scrollH": 2029,
+     "clientH": 482,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [
+    [
+     "#homestead-panel",
+     "joystick area"
+    ],
+    [
+     "#homestead-panel",
+     "Jump"
+    ]
+   ],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "7-farm-bottom",
+   "file": "before-p360-7-farm-bottom.png",
+   "why": "Farm panel scrolled to the bottom",
+   "t": 228.5,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#homestead-panel": {
+     "x": 8,
+     "y": 288,
+     "w": 344,
+     "h": 484
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 97,
+     "y": 58,
+     "w": 166,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#homestead-panel",
+     "#gather-nearest"
+    ],
+    [
+     "#homestead-panel",
+     "#jump-button"
+    ],
+    [
+     "#homestead-panel",
+     "#return-home-button"
+    ],
+    [
+     "#homestead-panel",
+     "#return-banner-button"
+    ],
+    [
+     "#homestead-panel",
+     "#plant-banner-button"
+    ],
+    [
+     "#homestead-panel",
+     ".zoomers"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Open",
+     "w": 49,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Lock",
+     "w": 45,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Open",
+     "w": 49,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Lock",
+     "w": 45,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Open",
+     "w": 49,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Lock",
+     "w": 45,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Open",
+     "w": 49,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Lock",
+     "w": 45,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Open",
+     "w": 49,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "button[data-gate]",
+     "text": "Lock",
+     "w": 45,
+     "h": 23,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "input[data-steward]",
+     "text": "",
+     "w": 87,
+     "h": 20,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "select[data-policy]",
+     "text": "may actask me firstnever",
+     "w": 88,
+     "h": 25,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "select[data-policy]",
+     "text": "may actask me firstnever",
+     "w": 88,
+     "h": 25,
+     "in": "homestead-panel"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {
+    "#homestead-panel": {
+     "scrollH": 2029,
+     "clientH": 482,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [
+    [
+     "#homestead-panel",
+     "joystick area"
+    ],
+    [
+     "#homestead-panel",
+     "Jump"
+    ]
+   ],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "8-build-walk",
+   "file": "before-p360-8-build-walk.png",
+   "why": "build mode in walk mode (Farm -> Build...)",
+   "t": 243.5,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore building",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#build-bar": {
+     "x": 10,
+     "y": 56,
+     "w": 340,
+     "h": 259
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#build-bar"
+    ],
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#build-bar",
+     "#farm-button"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    },
+    {
+     "el": "button[data-build-kind]",
+     "text": "Log store",
+     "w": 75,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-kind]",
+     "text": "Well",
+     "w": 46,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-kind].on",
+     "text": "Woodshed",
+     "w": 82,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-turn]",
+     "text": "Turn 90°",
+     "w": 70,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-place].primary",
+     "text": "Place & approve",
+     "w": 113,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-close]",
+     "text": "Close",
+     "w": 52,
+     "h": 31,
+     "in": "build-bar"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {
+    "#build-bar": {
+     "scrollH": 257,
+     "clientH": 257,
+     "scrolls": false,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "9-builder",
+   "file": "before-p360-9-builder.png",
+   "why": "builder view (default tab)",
+   "t": 254.5,
+   "vw": 360,
+   "vh": 780,
+   "body": "",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 514,
+     "w": 344,
+     "h": 124
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 293,
+     "y": 104,
+     "w": 59,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#gather-nearest"
+    ],
+    [
+     "#hud",
+     ".zoomers"
+    ],
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Walk",
+     "w": 59,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "9b-build-tab",
+   "file": "before-p360-9b-build-tab.png",
+   "why": "builder view: b-build-tab",
+   "t": 260.1,
+   "vw": 360,
+   "vh": 780,
+   "body": "",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 514,
+     "w": 344,
+     "h": 124
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#build-panel": {
+     "x": 22,
+     "y": 60,
+     "w": 330,
+     "h": 313
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 293,
+     "y": 104,
+     "w": 59,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#gather-nearest"
+    ],
+    [
+     "#hud",
+     ".zoomers"
+    ],
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#build-panel",
+     "#farm-button"
+    ],
+    [
+     "#build-panel",
+     "#mode-button"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Walk",
+     "w": 59,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {
+    "#build-panel": {
+     "scrollH": 311,
+     "clientH": 311,
+     "scrolls": false,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "9c-world-tab",
+   "file": "before-p360-9c-world-tab.png",
+   "why": "builder view: c-world-tab",
+   "t": 267.2,
+   "vw": 360,
+   "vh": 780,
+   "body": "",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 514,
+     "w": 344,
+     "h": 124
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 293,
+     "y": 104,
+     "w": 59,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#gather-nearest"
+    ],
+    [
+     "#hud",
+     ".zoomers"
+    ],
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Walk",
+     "w": 59,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "9a-settlement-tab",
+   "file": "before-p360-9a-settlement-tab.png",
+   "why": "builder view: a-settlement-tab",
+   "t": 275.1,
+   "vw": 360,
+   "vh": 780,
+   "body": "",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 514,
+     "w": 344,
+     "h": 124
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#life-panel": {
+     "x": 8,
+     "y": 60,
+     "w": 294,
+     "h": 554
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 293,
+     "y": 104,
+     "w": 59,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#life-panel"
+    ],
+    [
+     "#hud",
+     "#gather-nearest"
+    ],
+    [
+     "#hud",
+     ".zoomers"
+    ],
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#life-panel",
+     "#farm-button"
+    ],
+    [
+     "#life-panel",
+     "#mode-button"
+    ],
+    [
+     "#life-panel",
+     "#gather-nearest"
+    ],
+    [
+     "#life-panel",
+     ".zoomers"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Walk",
+     "w": 59,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [
+    {
+     "el": "Amount",
+     "scroll": 160,
+     "client": 58
+    },
+    {
+     "el": "Amount",
+     "scroll": 160,
+     "client": 58
+    }
+   ],
+   "scrollers": {
+    "#life-panel": {
+     "scrollH": 952,
+     "clientH": 552,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "10-build-builder",
+   "file": "before-p360-10-build-builder.png",
+   "why": "build mode in the builder view",
+   "t": 278.1,
+   "vw": 360,
+   "vh": 780,
+   "body": "building",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 514,
+     "w": 344,
+     "h": 124
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#life-panel": {
+     "x": 8,
+     "y": 60,
+     "w": 294,
+     "h": 554
+    },
+    "#build-bar": {
+     "x": 10,
+     "y": 56,
+     "w": 340,
+     "h": 259
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#life-panel"
+    ],
+    [
+     "#hud",
+     ".zoomers"
+    ],
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#life-panel",
+     "#build-bar"
+    ],
+    [
+     "#life-panel",
+     "#farm-button"
+    ],
+    [
+     "#life-panel",
+     ".zoomers"
+    ],
+    [
+     "#build-bar",
+     "#farm-button"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    },
+    {
+     "el": "button[data-build-kind]",
+     "text": "Log store",
+     "w": 75,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-kind]",
+     "text": "Well",
+     "w": 46,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-kind].on",
+     "text": "Woodshed",
+     "w": 82,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-turn]",
+     "text": "Turn 90°",
+     "w": 70,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-place].primary",
+     "text": "Place & approve",
+     "w": 113,
+     "h": 31,
+     "in": "build-bar"
+    },
+    {
+     "el": "button[data-build-close]",
+     "text": "Close",
+     "w": 52,
+     "h": 31,
+     "in": "build-bar"
+    }
+   ],
+   "overflow": [
+    {
+     "el": "Amount",
+     "scroll": 160,
+     "client": 58
+    },
+    {
+     "el": "Amount",
+     "scroll": 160,
+     "client": 58
+    }
+   ],
+   "scrollers": {
+    "#build-bar": {
+     "scrollH": 257,
+     "clientH": 257,
+     "scrolls": false,
+     "overflowY": "auto"
+    },
+    "#life-panel": {
+     "scrollH": 952,
+     "clientH": 552,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "11-swim",
+   "file": "before-p360-11-swim.png",
+   "why": "swimming: Dive button shown",
+   "t": 365.9,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore swimming",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 137,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 60,
+     "h": 36
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 30
+    },
+    ".drawer-toggle": {
+     "x": 133,
+     "y": 8,
+     "w": 219,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 97,
+     "y": 58,
+     "w": 166,
+     "h": 62
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#dive-button": {
+     "x": 176,
+     "y": 684,
+     "w": 66,
+     "h": 66
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    }
+   },
+   "overlaps": [
+    [
+     "#inventory",
+     ".drawer-toggle"
+    ],
+    [
+     "#mode-button",
+     "#vitals"
+    ]
+   ],
+   "clipped": [],
+   "small": [
+    {
+     "el": "#mode-button",
+     "text": "Builder view",
+     "w": 102,
+     "h": 30,
+     "in": "mode-button"
+    },
+    {
+     "el": "#farm-button",
+     "text": "Farm",
+     "w": 60,
+     "h": 36,
+     "in": "farm-button"
+    }
+   ],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  }
+ ]
+}

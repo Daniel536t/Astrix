@@ -1,0 +1,26 @@
+2026-11-26T18:42:11Z
+ 18:42:11 up  9:00,  0 users,  load average: 8.70, 8.94, 10.26
+exit 1
+2026-11-26T18:47:17Z
+ 18:47:17 up  9:05,  0 users,  load average: 14.50, 13.62, 12.02
+# tests 579
+# suites 0
+# pass 578
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 298339.898254
+829:not ok 138 - v2 chunk generation stays within budget per chunk
+830-  ---
+831-  duration_ms: 459.731303
+832-  type: 'test'
+833-  location: '/projects/sandbox/.tools/scratch/integration/copy/Game/tests/.build/m004.generator.test.mjs:17302:1'
+834-  failureType: 'testCodeFailure'
+835-  error: 'v2 chunk generation 76.3 ms'
+836-  code: 'ERR_ASSERTION'
+837-  name: 'AssertionError'
+838-  expected: true
+839-  actual: false
+840-  operator: '=='
+841-  stack: |-

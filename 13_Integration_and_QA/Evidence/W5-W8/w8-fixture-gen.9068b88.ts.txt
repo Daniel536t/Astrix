@@ -1,0 +1,58 @@
+// Run under the live W7 code (9068b88, temporary worktree): a content-v8 wilderness save for
+// tests/fixtures/w8-wilderness-save.json. State: a finished workbench, a stone axe and a stone knife (equipped),
+// wildlife records around the spawn (ticks carrying the player's presence), then (long, compacted) a stay in the
+// forest at (272, -176) until wolves have brought down a deer: a tombstone and a wolf carcass in the snapshot.
+import { writeFileSync } from 'node:fs';
+import { GameSession } from './src/app/session';
+import { BrowserSaveStore, KeyValueStorage } from './src/app/persistence';
+import { GENERATOR_V2, WILDERNESS } from './src/sim/world';
+import { siteSpotOf } from './src/sim/wild-build';
+import { SPAWN, axe, build, dm, gather, load, ok, send } from './tests/w4-harness';
+
+class MemoryStorage implements KeyValueStorage {
+  readonly map = new Map<string, string>();
+  getItem(k: string) { return this.map.get(k) ?? null; }
+  setItem(k: string, v: string) { this.map.set(k, v); }
+  removeItem(k: string) { this.map.delete(k); }
+  key(i: number) { return [...this.map.keys()][i] ?? null; }
+  get length() { return this.map.size; }
+}
+const storage = new MemoryStorage();
+const store = new BrowserSaveStore(storage, 1337, GENERATOR_V2, { scenario: WILDERNESS, id: 'w1' });
+const loaded = store.load();
+if (loaded.status !== 'new') throw new Error(loaded.status);
+const s = loaded.session;
+if (s.journal.wildContent !== 8) throw new Error('not v8');
+load(s);
+const tickP = (p: { x: number; z: number }, mx = 0, mz = 0) => ok(send(s, { type: 'tick', ticks: 1, presence: { ...dm(p), mx, mz } }), 'tick');
+tickP(SPAWN); tickP(SPAWN);
+axe(s);
+const bench = build(s, 'workbench', { x: SPAWN.x - 10, z: SPAWN.z + 2 });
+gather(s, 'branch', 1); gather(s, 'loose_stone', 1); gather(s, 'fiber_plant', 1);
+const at = dm(siteSpotOf(s.world.wild!.build!.sites.get(bench)!));
+ok(send(s, { type: 'craft', recipe: 'knife', at }), 'knife');
+ok(send(s, { type: 'equip', item: 'knife' }), 'equip knife');
+for (let i = 0; i < 12; i++) tickP({ x: SPAWN.x - i * 0.8, z: SPAWN.z + i * 1.2 }, -1, 1);
+const save = (): { key: string; hash: string; record: string } => {
+  const res = store.save(s);
+  if (!res.ok) throw new Error('save');
+  const key = [...storage.map.keys()].find((k) => k.startsWith('astrix:wild:'))!;
+  return { key, hash: s.stateHash, record: storage.getItem(key)! };
+};
+const short = save();
+const shortRecords = s.world.wild!.wildlife!.animals.size;
+if (GameSession.replay(JSON.parse(JSON.stringify(s.journal))).stateHash !== s.stateHash) throw new Error('replay');
+const FOREST = { x: 272, z: -176 };
+let kill = -1;
+for (let i = 0; i < 900 && kill < 0; i++) { tickP(FOREST); if (s.world.wild!.wildlife!.kills > 0) kill = i; }
+if (kill < 0) throw new Error('no kill');
+for (let i = 0; i < 3; i++) tickP(FOREST);
+s.compact();
+const long = { ...save(), compacted: true };
+const wl = s.world.wild!.wildlife!;
+const fixture = {
+  made: 'Live W7 code at 9068b88 (temporary worktree), BrowserSaveStore seed 1337 gen 2 slot w1, wilderness content v8: finished workbench, stone axe, stone knife (equipped), wildlife records from ticks with presence near the spawn (short); then a stay in the forest at (272, -176) until wolves killed a deer, compacted (long: a tombstone and a wolf carcass)',
+  bench, tick: s.world.life!.tick, shortRecords, dead: [...wl.dead], carcasses: [...wl.carcasses.keys()], short, long,
+};
+writeFileSync(process.argv[2], JSON.stringify(fixture, null, 2) + '\n');
+console.log('wrote', process.argv[2], 'short entries', JSON.parse(short.record).journal.entries.length, 'hash', short.hash, long.hash, 'tick', s.world.life!.tick, 'kill at', kill, 'dead', [...wl.dead]);

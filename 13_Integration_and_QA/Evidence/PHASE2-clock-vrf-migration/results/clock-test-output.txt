@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: catch-up: elapsed ER time becomes exactly floor(dt/2) steps, remainder kept
+ok 1 - catch-up: elapsed ER time becomes exactly floor(dt/2) steps, remainder kept
+  ---
+  duration_ms: 1217.732863
+  type: 'test'
+  ...
+# Subtest: idempotent: repeated settle/tick at the same clock changes no byte
+ok 2 - idempotent: repeated settle/tick at the same clock changes no byte
+  ---
+  duration_ms: 750.073391
+  type: 'test'
+  ...
+# Subtest: cap: a 3-hour outage drains over ceil(5400/cap) calls and ends exactly at world time
+ok 3 - cap: a 3-hour outage drains over ceil(5400/cap) calls and ends exactly at world time
+  ---
+  duration_ms: 641.48115
+  type: 'test'
+  ...
+# Subtest: player action during a large backlog fails with CatchUpRequired and saves nothing
+ok 4 - player action during a large backlog fails with CatchUpRequired and saves nothing
+  ---
+  duration_ms: 229.412623
+  type: 'test'
+  ...
+# Subtest: failed execution never advances the saved timestamp (invalid harvest after elapsed time)
+ok 5 - failed execution never advances the saved timestamp (invalid harvest after elapsed time)
+  ---
+  duration_ms: 688.105713
+  type: 'test'
+  ...
+# Subtest: clock regression: an earlier ER clock is ignored; time never moves backwards
+ok 6 - clock regression: an earlier ER clock is ignored; time never moves backwards
+  ---
+  duration_ms: 227.033951
+  type: 'test'
+  ...
+# Subtest: tick alias == settle; old cranks (2 s tick) + new crank (30 s settle) together never double-apply
+ok 7 - tick alias == settle; old cranks (2 s tick) + new crank (30 s settle) together never double-apply
+  ---
+  duration_ms: 4658.531218
+  type: 'test'
+  ...
+# Subtest: OWNER TEST: disconnect, stop scheduler, wait 3 h, restart (30 s crank), reconnect -> identical to never stopping
+ok 8 - OWNER TEST: disconnect, stop scheduler, wait 3 h, restart (30 s crank), reconnect -> identical to never stopping
+  ---
+  duration_ms: 3147.617175
+  type: 'test'
+  ...
+# Subtest: rollback compatibility: the old devnet binary ticks a v2 world; the new binary re-anchors without double time
+ok 9 - rollback compatibility: the old devnet binary ticks a v2 world; the new binary re-anchors without double time
+  ---
+  duration_ms: 186.270523
+  type: 'test'
+  ...
+# Subtest: demo settlement (v1, ER backup) keeps working unmigrated and after migration
+ok 10 - demo settlement (v1, ER backup) keeps working unmigrated and after migration
+  ---
+  duration_ms: 52.200946
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13413.858952

@@ -11,6 +11,8 @@
     "test": "node tools/run-tests.mjs"
   },
   "dependencies": {
+    "@noble/hashes": "1.8.0",
+    "@solana/web3.js": "^1.99.0",
     "three": "^0.186.0"
   },
   "devDependencies": {

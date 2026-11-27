@@ -1,0 +1,7896 @@
+{
+ "base": "https://astrix.local/",
+ "startedAt": "2026-11-25T04:16:20.880Z",
+ "seconds": 1252.2,
+ "ticks": [
+  5,
+  1506
+ ],
+ "verdict": {
+  "freshWorld": true,
+  "setup": false,
+  "resumed": true,
+  "felling": true,
+  "stumps": true,
+  "replanting": true,
+  "growth": true,
+  "seeding": true,
+  "protectedUntouched": true,
+  "idleReasons": true,
+  "reload": true,
+  "panel": true,
+  "render": false
+ },
+ "checks": {
+  "freshWorld": {
+   "ok": true,
+   "tick": 5,
+   "rules": 5,
+   "trees": {
+    "trees": 15,
+    "harvestable": 4,
+    "protected": 7,
+    "regrowing": 5,
+    "path": 68.6,
+    "perDay": 1.21
+   },
+   "quota": 1020250,
+   "rate": 4050
+  },
+  "setup": {
+   "ok": false,
+   "protectId": "e:29,33:0",
+   "protect": [],
+   "commands": 1,
+   "panelText": "15 trees in the managed woodland: 1 sapling, 4 young, 8 mature, 2 old · 3 may be felled · 8 protected · 5 regrowing Sustainable: about 1.12 trees (11.8 wood) a day, 6.2-day rotation · felling allowance 1.0 trees (+1.2/day) · woodcutter walks 58.1 m on average to the store So far: 0 felled · 0 planted · 0 seeded themselves · 0 stumps resprouted · nothing to replant · day 1"
+  },
+  "resumed": {
+   "ok": true,
+   "hashBefore": "571e8dc1ff083a3c",
+   "hashAfter": "830ff6529d83b85a",
+   "tick": [
+    5,
+    50
+   ]
+  },
+  "felling": {
+   "ok": true,
+   "fellings": [
+    {
+     "id": "e:30,30:4",
+     "from": "mature",
+     "to": "stump",
+     "tick": 698
+    },
+    {
+     "id": "e:31,30:4",
+     "from": "mature",
+     "to": "stump",
+     "tick": 473
+    },
+    {
+     "id": "e:31,32:5",
+     "from": "mature",
+     "to": "stump",
+     "tick": 140
+    },
+    {
+     "id": "e:32,30:0",
+     "from": "mature",
+     "to": "stump",
+     "tick": 967
+    }
+   ],
+   "felled": 4,
+   "choppedTargets": [
+    "tree:31:32:5",
+    "tree:31:30:4",
+    "tree:30:30:4",
+    "tree:32:30:0"
+   ]
+  },
+  "stumps": {
+   "ok": true,
+   "stumpIds": [
+    "e:30,30:4",
+    "e:31,30:4",
+    "e:31,32:5",
+    "e:32,30:0"
+   ],
+   "resprouted": [
+    {
+     "id": "e:30,30:4",
+     "from": "stump",
+     "to": "sapling",
+     "tick": 1147
+    },
+    {
+     "id": "e:31,30:4",
+     "from": "stump",
+     "to": "sapling",
+     "tick": 743
+    },
+    {
+     "id": "e:31,32:5",
+     "from": "stump",
+     "to": "sapling",
+     "tick": 608
+    }
+   ],
+   "rotted": []
+  },
+  "replanting": {
+   "ok": true,
+   "ordersSeen": [
+    "plant:0:oak@-26,20",
+    "plant:5:birch@-26,-47",
+    "plant:7:beech@-42,-52",
+    "plant:13:birch@0,-56"
+   ],
+   "planted": 4,
+   "plantedTrees": [
+    [
+     "e:30,30:1008",
+     "cherry:young:1::plant"
+    ],
+    [
+     "e:31,30:1006",
+     "birch:young:1::plant"
+    ],
+    [
+     "e:31,32:1003",
+     "oak:young:1::plant"
+    ],
+    [
+     "e:32,30:1014",
+     "birch:young:1::plant"
+    ]
+   ]
+  },
+  "growth": {
+   "ok": true,
+   "transitions": [
+    {
+     "id": "e:29,32:3",
+     "from": "young",
+     "to": "mature",
+     "tick": 653
+    },
+    {
+     "id": "e:29,33:0",
+     "from": "mature",
+     "to": "old",
+     "tick": 877
+    },
+    {
+     "id": "e:30,30:4",
+     "from": "young",
+     "to": "mature",
+     "tick": 653
+    },
+    {
+     "id": "e:30,31:3",
+     "from": "young",
+     "to": "mature",
+     "tick": 321
+    },
+    {
+     "id": "e:31,30:4",
+     "from": "sapling",
+     "to": "young",
+     "tick": 1191
+    },
+    {
+     "id": "e:31,32:1",
+     "from": "sapling",
+     "to": "young",
+     "tick": 140
+    },
+    {
+     "id": "e:31,32:1",
+     "from": "young",
+     "to": "mature",
+     "tick": 967
+    },
+    {
+     "id": "e:32,29:6",
+     "from": "mature",
+     "to": "old",
+     "tick": 877
+    },
+    {
+     "id": "e:32,30:0",
+     "from": "young",
+     "to": "mature",
+     "tick": 230
+    },
+    {
+     "id": "e:31,31:1001",
+     "from": "sapling",
+     "to": "young",
+     "tick": 967
+    },
+    {
+     "id": "e:31,31:1002",
+     "from": "sapling",
+     "to": "young",
+     "tick": 922
+    },
+    {
+     "id": "e:31,32:1003",
+     "from": "sapling",
+     "to": "young",
+     "tick": 1416
+    },
+    {
+     "id": "e:31,30:1006",
+     "from": "sapling",
+     "to": "young",
+     "tick": 922
+    },
+    {
+     "id": "e:30,30:1008",
+     "from": "sapling",
+     "to": "young",
+     "tick": 1416
+    },
+    {
+     "id": "e:31,30:1009",
+     "from": "sapling",
+     "to": "young",
+     "tick": 1281
+    },
+    {
+     "id": "e:31,30:1010",
+     "from": "sapling",
+     "to": "young",
+     "tick": 1191
+    },
+    {
+     "id": "e:31,31:1011",
+     "from": "sapling",
+     "to": "young",
+     "tick": 1371
+    },
+    {
+     "id": "e:32,30:1012",
+     "from": "sapling",
+     "to": "young",
+     "tick": 1461
+    },
+    {
+     "id": "e:32,30:1014",
+     "from": "sapling",
+     "to": "young",
+     "tick": 1461
+    },
+    {
+     "id": "e:31,32:1015",
+     "from": "sapling",
+     "to": "young",
+     "tick": 1461
+    }
+   ],
+   "count": 22
+  },
+  "seeding": {
+   "ok": true,
+   "seeded": 12,
+   "seedlings": 12,
+   "note": "informational: natural seeding is a random process; zero in a short run is possible"
+  },
+  "protectedUntouched": {
+   "ok": true,
+   "id": "e:29,33:0",
+   "states": [
+    "oak:mature:1::wild",
+    "oak:old:1::wild"
+   ]
+  },
+  "idleReasons": {
+   "ok": true,
+   "reasons": [
+    "sustainable quota reached: the woodland regrows about 1.9 trees a day; next tree in about 54 ticks",
+    "the store has 47 wood and no site needs more"
+   ],
+   "note": "informational: why the woodcutter was not felling (quota, canopy minimum, store full)"
+  },
+  "reload": {
+   "ok": true,
+   "tickBefore": 329,
+   "tickAfter": 329,
+   "hashBefore": "d41185384a498203",
+   "hashAfter": "d41185384a498203",
+   "stump": "e:31,32:5",
+   "sameWoodland": true
+  },
+  "panel": {
+   "ok": true,
+   "stats": "31 trees in the managed woodland: 5 sapling, 14 young, 7 mature, 4 old, 1 stump · 2 may be felled · 9 protected · 19 regrowing Sustainable: about 3.88 trees (39.1 wood) a day, 5.9-day rotation · felling allowance 3.9 trees (+3.9/day) · woodcutter walks 69.2 m on average to the store So far: 4 felled · 4 planted · 12 seeded themselves · 3 stumps resprouted · nothing to replant · day 6",
+   "why": []
+  },
+  "render": {
+   "ok": false,
+   "maxCalls": 92,
+   "maxTris": 263002
+  },
+  "pageErrors": []
+ },
+ "perf": {
+  "farm": {
+   "calls": 81,
+   "tris": 128852,
+   "instances": 58,
+   "vegetation": {
+    "near": {
+     "instances": 37,
+     "triangles": 4820
+    },
+    "mid": {
+     "instances": 18,
+     "triangles": 720
+    },
+    "far": {
+     "instances": 3,
+     "triangles": 96
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 58,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 0.6999999992549419,
+    "syncs": 19,
+    "totalMs": 1.1000000052154064
+   },
+   "tick": null
+  },
+  "forest": {
+   "calls": 38,
+   "tris": 186624,
+   "instances": 499,
+   "vegetation": {
+    "near": {
+     "instances": 244,
+     "triangles": 48696
+    },
+    "mid": {
+     "instances": 127,
+     "triangles": 5576
+    },
+    "far": {
+     "instances": 128,
+     "triangles": 4096
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 499,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 6.700000002980232,
+    "syncs": 13,
+    "totalMs": 7.400000002235174
+   },
+   "tick": null
+  },
+  "forest-140": {
+   "calls": 55,
+   "tris": 203200,
+   "instances": 499,
+   "vegetation": {
+    "near": {
+     "instances": 66,
+     "triangles": 13284
+    },
+    "mid": {
+     "instances": 88,
+     "triangles": 3872
+    },
+    "far": {
+     "instances": 345,
+     "triangles": 11032
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 499,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 2.100000001490116,
+    "syncs": 13,
+    "totalMs": 3
+   },
+   "tick": null
+  },
+  "farm-600": {
+   "calls": 46,
+   "tris": 117192,
+   "instances": 58,
+   "vegetation": {
+    "near": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "mid": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "far": {
+     "instances": 58,
+     "triangles": 1656
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 58,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 0.4000000022351742,
+    "syncs": 19,
+    "totalMs": 0.6000000014901161
+   },
+   "tick": null
+  },
+  "forest-600": {
+   "calls": 37,
+   "tris": 172448,
+   "instances": 499,
+   "vegetation": {
+    "near": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "mid": {
+     "instances": 0,
+     "triangles": 0
+    },
+    "far": {
+     "instances": 499,
+     "triangles": 15960
+    }
+   },
+   "sync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 499,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 2.199999999254942,
+    "syncs": 19,
+    "totalMs": 2.599999997764826
+   },
+   "tick": null
+  },
+  "farm-timelapse": {
+   "calls": 80,
+   "tris": 126228,
+   "instances": 59,
+   "vegetation": {
+    "near": {
+     "instances": 38,
+     "triangles": 4924
+    },
+    "mid": {
+     "instances": 18,
+     "triangles": 720
+    },
+    "far": {
+     "instances": 3,
+     "triangles": 96
+    }
+   },
+   "sync": {
+    "adds": 1,
+    "removes": 0,
+    "swaps": 2,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 764,
+    "pendingChunks": 0,
+    "lastMs": 0.10000000149011612,
+    "maxMs": 4.100000001490116,
+    "syncs": 13,
+    "totalMs": 9.700000002980232
+   },
+   "tick": {
+    "meanMs": 3.5,
+    "p95Ms": 9.4,
+    "maxMs": 22.2,
+    "n": 90
+   }
+  },
+  "pan-forest": {
+   "chunksAdded": 21,
+   "chunksDropped": 7,
+   "adds": 178,
+   "removes": 56,
+   "syncs": 24,
+   "syncMeanMs": 1.2124999999068677,
+   "syncMaxMs": 8.5,
+   "syncSection": {
+    "meanMs": 1.13,
+    "p95Ms": 7.8,
+    "maxMs": 9.7,
+    "n": 37
+   },
+   "vegetationSection": {
+    "meanMs": 0.03,
+    "p95Ms": 0.2,
+    "maxMs": 0.2,
+    "n": 37
+   },
+   "fullRebuilds": 1,
+   "rebuildSection": null,
+   "calls": 41,
+   "tris": 192762,
+   "pendingBakes": null
+  },
+  "pan-forest-multidraw0": {
+   "chunksAdded": 21,
+   "chunksDropped": 7,
+   "adds": 178,
+   "removes": 56,
+   "syncs": 24,
+   "syncMeanMs": 0.44166666688397527,
+   "syncMaxMs": 4.100000001490116,
+   "syncSection": {
+    "meanMs": 0.34,
+    "p95Ms": 1.3,
+    "maxMs": 4.1,
+    "n": 37
+   },
+   "vegetationSection": {
+    "meanMs": 3.57,
+    "p95Ms": 12.7,
+    "maxMs": 19.9,
+    "n": 37
+   },
+   "fullRebuilds": 1,
+   "rebuildSection": null,
+   "calls": 56,
+   "tris": 263002,
+   "pendingBakes": 13
+  }
+ },
+ "shots": [
+  {
+   "file": "wood-0-fresh-world.png",
+   "why": "fresh world under settlement rules v5 (the farm and its woodland)",
+   "t": 64.8,
+   "tick": 5
+  },
+  {
+   "file": "wood-1-farm-panel-woodland.png",
+   "why": "Farm panel: the woodland section (stats, policy, protection, fellable trees), Cora made woodcutter, one tree protected",
+   "t": 93.4,
+   "tick": 5
+  },
+  {
+   "file": "wood-4-stump-after-reload.png",
+   "why": "after the mid-cycle reload: the stump of e:31,32:5 (oak:stump:1:0:wild)",
+   "t": 252.1,
+   "tick": 329
+  },
+  {
+   "file": "wood-5-planted-sapling.png",
+   "why": "the replanted sapling e:31,32:1003 (oak:sapling:1::plant)",
+   "t": 362.6,
+   "tick": 375
+  },
+  {
+   "file": "wood-3-carrying-sapling.png",
+   "why": "Cora carrying a birch wildling to replant",
+   "t": 426.9,
+   "tick": 473
+  },
+  {
+   "file": "wood-6-farm-later.png",
+   "why": "the farm woodland at tick 1506 (day 6)",
+   "t": 589.2,
+   "tick": 1506
+  },
+  {
+   "file": "wood-7-farm-panel-end.png",
+   "why": "Farm panel woodland section at the end",
+   "t": 605.6,
+   "tick": 1506
+  },
+  {
+   "file": "wood-view-farm.png",
+   "why": "farm: 81 calls, 128852 triangles",
+   "t": 683.3,
+   "tick": 1506
+  },
+  {
+   "file": "wood-view-forest.png",
+   "why": "forest: 38 calls, 186624 triangles",
+   "t": 736.4,
+   "tick": 1506
+  },
+  {
+   "file": "wood-view-forest-140.png",
+   "why": "forest-140: 55 calls, 203200 triangles",
+   "t": 789.7,
+   "tick": 1506
+  },
+  {
+   "file": "wood-view-farm-600.png",
+   "why": "farm-600: 46 calls, 117192 triangles",
+   "t": 852.4,
+   "tick": 1506
+  },
+  {
+   "file": "wood-view-forest-600.png",
+   "why": "forest-600: 37 calls, 172448 triangles",
+   "t": 911.5,
+   "tick": 1506
+  },
+  {
+   "file": "wood-view-farm-timelapse.png",
+   "why": "farm-timelapse: 80 calls, 126228 triangles",
+   "t": 980.6,
+   "tick": 1506
+  },
+  {
+   "file": "wood-8-lineup.png",
+   "why": "dev lineup (?trees=1): rows oak, birch... columns sapling, young, mature, old, dying, dead snag, stump (near LOD)",
+   "t": 1188.7,
+   "tick": 1506
+  },
+  {
+   "file": "wood-9-lineup-close.png",
+   "why": "lineup close-up: the first rows at near LOD (root spurs, lumpy crowns, layered spruce)",
+   "t": 1252.2,
+   "tick": 1506
+  }
+ ],
+ "samples": [
+  {
+   "t": 58,
+   "label": "loaded",
+   "tick": 5,
+   "rules": 5,
+   "hash": "8cece3fbf8f21e00",
+   "seq": 6,
+   "cora": {
+    "role": "farmer",
+    "task": "idle",
+    "target": "idle:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -8.5,
+    "carry": null
+   },
+   "why": [],
+   "felled": 0,
+   "planted": 0,
+   "seeded": 0,
+   "sprouted": 0,
+   "records": 0,
+   "quota": 1020250,
+   "rate": 4050,
+   "orders": [],
+   "protect": [],
+   "standing": 10,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:young:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,32:1": "birch:sapling:1::wild",
+    "e:31,32:5": "oak:mature:1::wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:young:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 15,
+    "harvestable": 4,
+    "protected": 7,
+    "regrowing": 5,
+    "path": 68.6,
+    "perDay": 1.21
+   },
+   "store": {
+    "fiber": 20,
+    "food": 10,
+    "seed": 6
+   },
+   "calls": 90,
+   "tris": 125126,
+   "natureSync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 210,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 0.6999999992549419,
+    "syncs": 13,
+    "totalMs": 1.5000000037252903
+   },
+   "natureInstances": 35,
+   "tickMs": {
+    "mean": 6.04,
+    "p95": 3.2,
+    "max": 19.3
+   },
+   "syncMs": {
+    "mean": 0.13,
+    "p95": 0.2,
+    "max": 0.9
+   },
+   "vegMs": {
+    "mean": 0.01,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 1.14,
+   "gridPatches": 0,
+   "gridBuilds": 1,
+   "timescale": 1
+  },
+  {
+   "t": 85.1,
+   "label": "setup",
+   "tick": 5,
+   "rules": 5,
+   "hash": "571e8dc1ff083a3c",
+   "seq": 7,
+   "cora": {
+    "role": "woodcutter",
+    "task": null,
+    "target": null,
+    "op": null,
+    "x": -33.5,
+    "z": -8.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 0,
+   "planted": 0,
+   "seeded": 0,
+   "sprouted": 0,
+   "records": 0,
+   "quota": 1020250,
+   "rate": 4050,
+   "orders": [],
+   "protect": [],
+   "standing": 10,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:young:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,32:1": "birch:sapling:1::wild",
+    "e:31,32:5": "oak:mature:1::wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:young:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 15,
+    "harvestable": 4,
+    "protected": 7,
+    "regrowing": 5,
+    "path": 68.6,
+    "perDay": 1.21
+   },
+   "store": {
+    "fiber": 20,
+    "food": 10,
+    "seed": 6
+   },
+   "calls": 90,
+   "tris": 135926,
+   "natureSync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 210,
+    "pendingChunks": 0,
+    "lastMs": 0.09999999776482582,
+    "maxMs": 0.6999999992549419,
+    "syncs": 49,
+    "totalMs": 2.1000000052154064
+   },
+   "natureInstances": 35,
+   "tickMs": {
+    "mean": 6.04,
+    "p95": 3.2,
+    "max": 19.3
+   },
+   "syncMs": {
+    "mean": 0.05,
+    "p95": 0.2,
+    "max": 0.9
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 1.14,
+   "gridPatches": 0,
+   "gridBuilds": 1,
+   "timescale": 1
+  },
+  {
+   "t": 157.3,
+   "label": "timelapse",
+   "tick": 50,
+   "rules": 5,
+   "hash": "830ff6529d83b85a",
+   "seq": 53,
+   "cora": {
+    "role": "woodcutter",
+    "task": "chop",
+    "target": "tree:31:32:5",
+    "op": "walk",
+    "x": -48,
+    "z": -29,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 0,
+   "planted": 0,
+   "seeded": 0,
+   "sprouted": 0,
+   "records": 1,
+   "quota": 202500,
+   "rate": 4050,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 10,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:young:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,32:1": "birch:sapling:1::wild",
+    "e:31,32:5": "oak:mature:1:10:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:young:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 15,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 5,
+    "path": 58.1,
+    "perDay": 1.12
+   },
+   "store": {
+    "fiber": 20,
+    "food": 10,
+    "seed": 6,
+    "wood": 5
+   },
+   "calls": 89,
+   "tris": 122074,
+   "natureSync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 245,
+    "pendingChunks": 0,
+    "lastMs": 0.09999999776482582,
+    "maxMs": 1.6000000014901161,
+    "syncs": 7,
+    "totalMs": 2.6999999955296516
+   },
+   "natureInstances": 35,
+   "tickMs": {
+    "mean": 4.6,
+    "p95": 5.7,
+    "max": 57.4
+   },
+   "syncMs": {
+    "mean": 0.59,
+    "p95": 0.5,
+    "max": 2.9
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 2.56,
+   "gridPatches": 0,
+   "gridBuilds": 1,
+   "timescale": 20
+  },
+  {
+   "t": 161.8,
+   "label": "run",
+   "tick": 95,
+   "rules": 5,
+   "hash": "7fabae141bd5dd64",
+   "seq": 98,
+   "cora": {
+    "role": "woodcutter",
+    "task": "chop",
+    "target": "tree:31:32:5",
+    "op": "walk",
+    "x": -45.5,
+    "z": -12.7,
+    "carry": {
+     "item": "wood",
+     "amount": 5
+    }
+   },
+   "why": [
+    null
+   ],
+   "felled": 0,
+   "planted": 0,
+   "seeded": 0,
+   "sprouted": 0,
+   "records": 1,
+   "quota": 384750,
+   "rate": 4050,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 10,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:young:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,32:1": "birch:sapling:1::wild",
+    "e:31,32:5": "oak:mature:1:5:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:young:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 15,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 5,
+    "path": 58.1,
+    "perDay": 1.12
+   },
+   "store": {
+    "fiber": 20,
+    "food": 10,
+    "seed": 6,
+    "wood": 5
+   },
+   "calls": 92,
+   "tris": 125338,
+   "natureSync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 455,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 1.6000000014901161,
+    "syncs": 13,
+    "totalMs": 3.199999999254942
+   },
+   "natureInstances": 35,
+   "tickMs": {
+    "mean": 3.16,
+    "p95": 4.9,
+    "max": 57.4
+   },
+   "syncMs": {
+    "mean": 0.35,
+    "p95": 0.5,
+    "max": 2.9
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 1.37,
+   "gridPatches": 0,
+   "gridBuilds": 1,
+   "timescale": 20
+  },
+  {
+   "t": 166.3,
+   "label": "run",
+   "tick": 140,
+   "rules": 5,
+   "hash": "9bf1ec2a19dc405e",
+   "seq": 143,
+   "cora": {
+    "role": "woodcutter",
+    "task": "chop",
+    "target": "tree:31:32:5",
+    "op": "walk",
+    "x": -27.9,
+    "z": 16.1,
+    "carry": {
+     "item": "wood",
+     "amount": 5
+    }
+   },
+   "why": [
+    null
+   ],
+   "felled": 1,
+   "planted": 0,
+   "seeded": 0,
+   "sprouted": 0,
+   "records": 1,
+   "quota": 567000,
+   "rate": 4050,
+   "orders": [
+    {
+     "id": "plant:0",
+     "x": -26,
+     "z": 20,
+     "sp": "oak"
+    }
+   ],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 9,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:young:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:young:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 15,
+    "harvestable": 2,
+    "protected": 8,
+    "regrowing": 7,
+    "path": 55.2,
+    "perDay": 1.12
+   },
+   "store": {
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 10,
+    "eggs": 3
+   },
+   "calls": 90,
+   "tris": 131570,
+   "natureSync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 2,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 665,
+    "pendingChunks": 0,
+    "lastMs": 5.799999997019768,
+    "maxMs": 5.799999997019768,
+    "syncs": 19,
+    "totalMs": 10.299999997019768
+   },
+   "natureInstances": 35,
+   "tickMs": {
+    "mean": 3.19,
+    "p95": 7.5,
+    "max": 57.4
+   },
+   "syncMs": {
+    "mean": 0.62,
+    "p95": 2.9,
+    "max": 5.8
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 1.37,
+   "gridPatches": 2,
+   "gridBuilds": 7,
+   "timescale": 20
+  },
+  {
+   "t": 170.8,
+   "label": "run",
+   "tick": 185,
+   "rules": 5,
+   "hash": "cc4334221ed9a6ae",
+   "seq": 188,
+   "cora": {
+    "role": "woodcutter",
+    "task": "rest",
+    "target": "home:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 1,
+   "planted": 0,
+   "seeded": 0,
+   "sprouted": 0,
+   "records": 1,
+   "quota": 749250,
+   "rate": 4050,
+   "orders": [
+    {
+     "id": "plant:0",
+     "x": -26,
+     "z": 20,
+     "sp": "oak"
+    }
+   ],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 9,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:young:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:young:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 15,
+    "harvestable": 2,
+    "protected": 8,
+    "regrowing": 7,
+    "path": 55.2,
+    "perDay": 1.12
+   },
+   "store": {
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 15,
+    "eggs": 3,
+    "milk": 1
+   },
+   "calls": 86,
+   "tris": 135326,
+   "natureSync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 2,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 875,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 5.799999997019768,
+    "syncs": 25,
+    "totalMs": 10.799999997019768
+   },
+   "natureInstances": 35,
+   "tickMs": {
+    "mean": 2.88,
+    "p95": 6,
+    "max": 57.4
+   },
+   "syncMs": {
+    "mean": 0.5,
+    "p95": 0.5,
+    "max": 5.8
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 1.2,
+   "gridPatches": 2,
+   "gridBuilds": 15,
+   "timescale": 20
+  },
+  {
+   "t": 175.3,
+   "label": "run",
+   "tick": 230,
+   "rules": 5,
+   "hash": "1db9758e7fdede8d",
+   "seq": 233,
+   "cora": {
+    "role": "woodcutter",
+    "task": "rest",
+    "target": "home:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 1,
+   "planted": 0,
+   "seeded": 0,
+   "sprouted": 0,
+   "records": 1,
+   "quota": 931500,
+   "rate": 4050,
+   "orders": [
+    {
+     "id": "plant:0",
+     "x": -26,
+     "z": 20,
+     "sp": "oak"
+    }
+   ],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 10,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:young:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 15,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 6,
+    "path": 58.7,
+    "perDay": 1.12
+   },
+   "store": {
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 15,
+    "eggs": 3,
+    "milk": 1
+   },
+   "calls": 84,
+   "tris": 134442,
+   "natureSync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 3,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 1085,
+    "pendingChunks": 0,
+    "lastMs": 1.0999999977648258,
+    "maxMs": 5.799999997019768,
+    "syncs": 31,
+    "totalMs": 13.199999995529652
+   },
+   "natureInstances": 35,
+   "tickMs": {
+    "mean": 2.62,
+    "p95": 5.7,
+    "max": 57.4
+   },
+   "syncMs": {
+    "mean": 0.48,
+    "p95": 1.1,
+    "max": 5.8
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.99,
+   "gridPatches": 3,
+   "gridBuilds": 18,
+   "timescale": 20
+  },
+  {
+   "t": 179.9,
+   "label": "run",
+   "tick": 276,
+   "rules": 5,
+   "hash": "7ce00c5c52aaa31c",
+   "seq": 279,
+   "cora": {
+    "role": "woodcutter",
+    "task": "rest",
+    "target": "home:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 1,
+   "planted": 0,
+   "seeded": 0,
+   "sprouted": 0,
+   "records": 1,
+   "quota": 1117800,
+   "rate": 4050,
+   "orders": [
+    {
+     "id": "plant:0",
+     "x": -26,
+     "z": 20,
+     "sp": "oak"
+    }
+   ],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 10,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:young:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 15,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 6,
+    "path": 58.7,
+    "perDay": 1.12
+   },
+   "store": {
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 15,
+    "eggs": 3,
+    "milk": 1
+   },
+   "calls": 84,
+   "tris": 134418,
+   "natureSync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 4,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 1295,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 5.799999997019768,
+    "syncs": 37,
+    "totalMs": 13.699999999254942
+   },
+   "natureInstances": 35,
+   "tickMs": {
+    "mean": 2.42,
+    "p95": 5.5,
+    "max": 57.4
+   },
+   "syncMs": {
+    "mean": 0.42,
+    "p95": 1.1,
+    "max": 5.8
+   },
+   "vegMs": {
+    "mean": 0.01,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.83,
+   "gridPatches": 4,
+   "gridBuilds": 19,
+   "timescale": 20
+  },
+  {
+   "t": 184.5,
+   "label": "run",
+   "tick": 321,
+   "rules": 5,
+   "hash": "5335b714c273c5a9",
+   "seq": 324,
+   "cora": {
+    "role": "woodcutter",
+    "task": "eat",
+    "target": "eat:villager:2",
+    "op": "walk",
+    "x": -48.5,
+    "z": -29.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 1,
+   "planted": 0,
+   "seeded": 1,
+   "sprouted": 0,
+   "records": 2,
+   "quota": 1304538,
+   "rate": 4254,
+   "orders": [
+    {
+     "id": "plant:0",
+     "x": -26,
+     "z": 20,
+     "sp": "oak"
+    }
+   ],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 16,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 6,
+    "path": 58.7,
+    "perDay": 1.28
+   },
+   "store": {
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 15,
+    "eggs": 2
+   },
+   "calls": 90,
+   "tris": 136814,
+   "natureSync": {
+    "adds": 1,
+    "removes": 0,
+    "swaps": 6,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 1511,
+    "pendingChunks": 0,
+    "lastMs": 0.10000000149011612,
+    "maxMs": 12.300000000745058,
+    "syncs": 43,
+    "totalMs": 27.399999998509884
+   },
+   "natureInstances": 36,
+   "tickMs": {
+    "mean": 2.4,
+    "p95": 5.5,
+    "max": 57.4
+   },
+   "syncMs": {
+    "mean": 0.68,
+    "p95": 1.1,
+    "max": 12.3
+   },
+   "vegMs": {
+    "mean": 0.01,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.78,
+   "gridPatches": 6,
+   "gridBuilds": 27,
+   "timescale": 20
+  },
+  {
+   "t": 188.9,
+   "label": "before-reload",
+   "tick": 329,
+   "rules": 5,
+   "hash": "d41185384a498203",
+   "seq": 332,
+   "cora": {
+    "role": "woodcutter",
+    "task": "eat",
+    "target": "eat:villager:2",
+    "op": "work",
+    "x": -50.5,
+    "z": -30.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 1,
+   "planted": 0,
+   "seeded": 1,
+   "sprouted": 0,
+   "records": 2,
+   "quota": 1338570,
+   "rate": 4254,
+   "orders": [
+    {
+     "id": "plant:0",
+     "x": -26,
+     "z": 20,
+     "sp": "oak"
+    }
+   ],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 16,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 6,
+    "path": 58.7,
+    "perDay": 1.28
+   },
+   "store": {
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 15,
+    "eggs": 1
+   },
+   "calls": 90,
+   "tris": 136858,
+   "natureSync": {
+    "adds": 1,
+    "removes": 0,
+    "swaps": 6,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 1547,
+    "pendingChunks": 0,
+    "lastMs": 0.09999999776482582,
+    "maxMs": 12.300000000745058,
+    "syncs": 49,
+    "totalMs": 27.599999997764826
+   },
+   "natureInstances": 36,
+   "tickMs": {
+    "mean": 2.37,
+    "p95": 5.5,
+    "max": 57.4
+   },
+   "syncMs": {
+    "mean": 0.6,
+    "p95": 1.1,
+    "max": 12.3
+   },
+   "vegMs": {
+    "mean": 0.01,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.78,
+   "gridPatches": 6,
+   "gridBuilds": 27,
+   "timescale": 20
+  },
+  {
+   "t": 245.8,
+   "label": "after-reload",
+   "tick": 329,
+   "rules": 5,
+   "hash": "d41185384a498203",
+   "seq": 332,
+   "cora": {
+    "role": "woodcutter",
+    "task": "eat",
+    "target": "eat:villager:2",
+    "op": "work",
+    "x": -50.5,
+    "z": -30.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 1,
+   "planted": 0,
+   "seeded": 1,
+   "sprouted": 0,
+   "records": 2,
+   "quota": 1338570,
+   "rate": 4254,
+   "orders": [
+    {
+     "id": "plant:0",
+     "x": -26,
+     "z": 20,
+     "sp": "oak"
+    }
+   ],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 16,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 6,
+    "path": 58.7,
+    "perDay": 1.28
+   },
+   "store": {
+    "eggs": 1,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 15
+   },
+   "calls": 67,
+   "tris": 108314,
+   "natureSync": {
+    "adds": 0,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 43,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 0.30000000074505806,
+    "syncs": 13,
+    "totalMs": 0.4999999962747097
+   },
+   "natureInstances": 43,
+   "tickMs": null,
+   "syncMs": {
+    "mean": 0.04,
+    "p95": 0.1,
+    "max": 0.3
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 0,
+   "gridPatches": 0,
+   "gridBuilds": 1,
+   "timescale": 1
+  },
+  {
+   "t": 304.8,
+   "label": "run",
+   "tick": 375,
+   "rules": 5,
+   "hash": "7a19826997c69c2e",
+   "seq": 379,
+   "cora": {
+    "role": "woodcutter",
+    "task": "chop",
+    "target": "tree:31:30:4",
+    "op": "walk",
+    "x": -29.5,
+    "z": -9.6,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 1,
+   "planted": 1,
+   "seeded": 2,
+   "sprouted": 0,
+   "records": 4,
+   "quota": 1534254,
+   "rate": 4254,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:4": "birch:mature:1::wild",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 18,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 7,
+    "path": 58.7,
+    "perDay": 1.57
+   },
+   "store": {
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 15,
+    "eggs": 6
+   },
+   "calls": 89,
+   "tris": 123242,
+   "natureSync": {
+    "adds": 2,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 256,
+    "pendingChunks": 0,
+    "lastMs": 0.19999999925494194,
+    "maxMs": 4.599999997764826,
+    "syncs": 7,
+    "totalMs": 5.699999991804361
+   },
+   "natureInstances": 38,
+   "tickMs": {
+    "mean": 5.38,
+    "p95": 12,
+    "max": 45.4
+   },
+   "syncMs": {
+    "mean": 0.84,
+    "p95": 0.4,
+    "max": 4.6
+   },
+   "vegMs": {
+    "mean": 0.01,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 2.32,
+   "gridPatches": 2,
+   "gridBuilds": 7,
+   "timescale": 20
+  },
+  {
+   "t": 415.5,
+   "label": "run",
+   "tick": 428,
+   "rules": 5,
+   "hash": "ca7df1442183cc17",
+   "seq": 432,
+   "cora": {
+    "role": "woodcutter",
+    "task": "chop",
+    "target": "tree:31:30:4",
+    "op": "walk",
+    "x": -35.4,
+    "z": -38.6,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 1,
+   "planted": 1,
+   "seeded": 3,
+   "sprouted": 0,
+   "records": 6,
+   "quota": 759716,
+   "rate": 4254,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:4": "birch:mature:1:3:wild",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 19,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 8,
+    "path": 58.7,
+    "perDay": 1.67
+   },
+   "store": {
+    "eggs": 3,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 21,
+    "wool": 2
+   },
+   "calls": 89,
+   "tris": 123050,
+   "natureSync": {
+    "adds": 1,
+    "removes": 0,
+    "swaps": 0,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 271,
+    "pendingChunks": 0,
+    "lastMs": 0.09999999776482582,
+    "maxMs": 1.5,
+    "syncs": 7,
+    "totalMs": 3.199999999254942
+   },
+   "natureInstances": 39,
+   "tickMs": {
+    "mean": 5.57,
+    "p95": 15.5,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.46,
+    "p95": 0.9,
+    "max": 1.5
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 1.85,
+   "gridPatches": 1,
+   "gridBuilds": 5,
+   "timescale": 20
+  },
+  {
+   "t": 420.1,
+   "label": "run",
+   "tick": 473,
+   "rules": 5,
+   "hash": "9d608cda49bc1cbb",
+   "seq": 477,
+   "cora": {
+    "role": "woodcutter",
+    "task": "plant",
+    "target": "plant:5",
+    "op": "work",
+    "x": -25.5,
+    "z": -45.5,
+    "carry": {
+     "item": "sapling:birch",
+     "amount": 1
+    }
+   },
+   "why": [
+    null
+   ],
+   "felled": 2,
+   "planted": 1,
+   "seeded": 3,
+   "sprouted": 0,
+   "records": 6,
+   "quota": 951146,
+   "rate": 4254,
+   "orders": [
+    {
+     "id": "plant:5",
+     "x": -26,
+     "z": -47,
+     "sp": "birch"
+    }
+   ],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 10,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:4": "birch:stump:1:0:wild",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 19,
+    "harvestable": 2,
+    "protected": 8,
+    "regrowing": 10,
+    "path": 71.5,
+    "perDay": 1.67
+   },
+   "store": {
+    "eggs": 3,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 24,
+    "wool": 4
+   },
+   "calls": 92,
+   "tris": 126198,
+   "natureSync": {
+    "adds": 1,
+    "removes": 0,
+    "swaps": 2,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 505,
+    "pendingChunks": 0,
+    "lastMs": 0.09999999776482582,
+    "maxMs": 2.600000001490116,
+    "syncs": 13,
+    "totalMs": 7.99999999627471
+   },
+   "natureInstances": 39,
+   "tickMs": {
+    "mean": 3.99,
+    "p95": 14.1,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.62,
+    "p95": 1.8,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 1.29,
+   "gridPatches": 2,
+   "gridBuilds": 12,
+   "timescale": 20
+  },
+  {
+   "t": 428.3,
+   "label": "run",
+   "tick": 564,
+   "rules": 5,
+   "hash": "e31cf46a9a2f7643",
+   "seq": 568,
+   "cora": {
+    "role": "woodcutter",
+    "task": "rest",
+    "target": "home:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 2,
+   "planted": 2,
+   "seeded": 3,
+   "sprouted": 0,
+   "records": 7,
+   "quota": 1338260,
+   "rate": 4254,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 10,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:sapling:1::plant",
+    "e:31,30:4": "birch:stump:1:0:wild",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:stump:1:0:wild",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 20,
+    "harvestable": 2,
+    "protected": 8,
+    "regrowing": 10,
+    "path": 71.5,
+    "perDay": 1.87
+   },
+   "store": {
+    "eggs": 6,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 24,
+    "wool": 4
+   },
+   "calls": 84,
+   "tris": 134758,
+   "natureSync": {
+    "adds": 2,
+    "removes": 0,
+    "swaps": 2,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 985,
+    "pendingChunks": 0,
+    "lastMs": 0.10000000149011612,
+    "maxMs": 2.600000001490116,
+    "syncs": 25,
+    "totalMs": 10.199999995529652
+   },
+   "natureInstances": 40,
+   "tickMs": {
+    "mean": 2.93,
+    "p95": 7.1,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.41,
+    "p95": 1.5,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 0.8,
+   "gridPatches": 3,
+   "gridBuilds": 21,
+   "timescale": 20
+  },
+  {
+   "t": 432.8,
+   "label": "run",
+   "tick": 608,
+   "rules": 5,
+   "hash": "411eda35358db0fe",
+   "seq": 612,
+   "cora": {
+    "role": "woodcutter",
+    "task": "eat",
+    "target": "eat:villager:2",
+    "op": "walk",
+    "x": -43.5,
+    "z": -21.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 2,
+   "planted": 2,
+   "seeded": 3,
+   "sprouted": 1,
+   "records": 7,
+   "quota": 1543364,
+   "rate": 6246,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 10,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:young:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:young:1::wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:sapling:1::plant",
+    "e:31,30:4": "birch:stump:1:0:wild",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 20,
+    "harvestable": 2,
+    "protected": 8,
+    "regrowing": 10,
+    "path": 71.5,
+    "perDay": 1.87
+   },
+   "store": {
+    "eggs": 5,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 24,
+    "wool": 4
+   },
+   "calls": 90,
+   "tris": 136610,
+   "natureSync": {
+    "adds": 2,
+    "removes": 0,
+    "swaps": 3,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 1225,
+    "pendingChunks": 0,
+    "lastMs": 0.09999999776482582,
+    "maxMs": 2.600000001490116,
+    "syncs": 31,
+    "totalMs": 10.999999985098839
+   },
+   "natureInstances": 40,
+   "tickMs": {
+    "mean": 2.75,
+    "p95": 6.3,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.36,
+    "p95": 1.5,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 0.72,
+   "gridPatches": 3,
+   "gridBuilds": 27,
+   "timescale": 20
+  },
+  {
+   "t": 437.3,
+   "label": "run",
+   "tick": 653,
+   "rules": 5,
+   "hash": "307b3b43163af5ee",
+   "seq": 657,
+   "cora": {
+    "role": "woodcutter",
+    "task": "chop",
+    "target": "tree:30:30:4",
+    "op": "walk",
+    "x": -40.5,
+    "z": -40.1,
+    "carry": {
+     "item": "wood",
+     "amount": 8
+    }
+   },
+   "why": [
+    null
+   ],
+   "felled": 2,
+   "planted": 2,
+   "seeded": 3,
+   "sprouted": 1,
+   "records": 8,
+   "quota": 824434,
+   "rate": 6246,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 12,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:mature:1:6:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:sapling:1::plant",
+    "e:31,30:4": "birch:stump:1:0:wild",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 20,
+    "harvestable": 4,
+    "protected": 8,
+    "regrowing": 8,
+    "path": 62.6,
+    "perDay": 1.87
+   },
+   "store": {
+    "eggs": 2,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 24,
+    "wool": 4
+   },
+   "calls": 92,
+   "tris": 138182,
+   "natureSync": {
+    "adds": 2,
+    "removes": 0,
+    "swaps": 7,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 1465,
+    "pendingChunks": 0,
+    "lastMs": 2,
+    "maxMs": 2.600000001490116,
+    "syncs": 37,
+    "totalMs": 14.499999988824129
+   },
+   "natureInstances": 40,
+   "tickMs": {
+    "mean": 2.67,
+    "p95": 6.3,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.39,
+    "p95": 1.8,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 0.7,
+   "gridPatches": 5,
+   "gridBuilds": 33,
+   "timescale": 20
+  },
+  {
+   "t": 441.8,
+   "label": "run",
+   "tick": 698,
+   "rules": 5,
+   "hash": "2114f7b86e96e3ea",
+   "seq": 702,
+   "cora": {
+    "role": "woodcutter",
+    "task": "plant",
+    "target": "plant:7",
+    "op": "walk",
+    "x": -31.4,
+    "z": -35.6,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 3,
+   "planted": 2,
+   "seeded": 3,
+   "sprouted": 1,
+   "records": 8,
+   "quota": 1105504,
+   "rate": 6246,
+   "orders": [
+    {
+     "id": "plant:7",
+     "x": -42,
+     "z": -52,
+     "sp": "beech"
+    }
+   ],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:4": "beech:stump:1:0:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:sapling:1::plant",
+    "e:31,30:4": "birch:stump:1:0:wild",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 20,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 10,
+    "path": 74.6,
+    "perDay": 1.87
+   },
+   "store": {
+    "eggs": 2,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 38,
+    "wool": 4
+   },
+   "calls": 90,
+   "tris": 138902,
+   "natureSync": {
+    "adds": 2,
+    "removes": 0,
+    "swaps": 8,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 1705,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 2.600000001490116,
+    "syncs": 43,
+    "totalMs": 16.49999998882413
+   },
+   "natureInstances": 40,
+   "tickMs": {
+    "mean": 2.63,
+    "p95": 6,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.39,
+    "p95": 1.5,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 0.74,
+   "gridPatches": 6,
+   "gridBuilds": 43,
+   "timescale": 20
+  },
+  {
+   "t": 446.3,
+   "label": "run",
+   "tick": 743,
+   "rules": 5,
+   "hash": "0a41504f8c074be7",
+   "seq": 747,
+   "cora": {
+    "role": "woodcutter",
+    "task": "chop",
+    "target": "tree:32:30:0",
+    "op": "walk",
+    "x": -25.4,
+    "z": -45.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 3,
+   "planted": 3,
+   "seeded": 3,
+   "sprouted": 2,
+   "records": 9,
+   "quota": 1386574,
+   "rate": 6246,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:stump:1:0:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:sapling:1::plant",
+    "e:31,30:4": "birch:sapling:1::sprout",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1::wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 21,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 10,
+    "path": 74.6,
+    "perDay": 2.04
+   },
+   "store": {
+    "eggs": 5,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 38,
+    "wool": 4
+   },
+   "calls": 90,
+   "tris": 139842,
+   "natureSync": {
+    "adds": 3,
+    "removes": 0,
+    "swaps": 11,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 1949,
+    "pendingChunks": 0,
+    "lastMs": 0.30000000074505806,
+    "maxMs": 2.600000001490116,
+    "syncs": 49,
+    "totalMs": 18.599999994039536
+   },
+   "natureInstances": 41,
+   "tickMs": {
+    "mean": 2.62,
+    "p95": 5.4,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.38,
+    "p95": 1.5,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 0.74,
+   "gridPatches": 7,
+   "gridBuilds": 47,
+   "timescale": 20
+  },
+  {
+   "t": 450.8,
+   "label": "run",
+   "tick": 788,
+   "rules": 5,
+   "hash": "f0e4c4d4e50a0366",
+   "seq": 792,
+   "cora": {
+    "role": "woodcutter",
+    "task": null,
+    "target": null,
+    "op": null,
+    "x": -50,
+    "z": -30.4,
+    "carry": null
+   },
+   "why": [
+    "sustainable quota reached: the woodland regrows about 1.9 trees a day; next tree in about 54 ticks"
+   ],
+   "felled": 3,
+   "planted": 3,
+   "seeded": 5,
+   "sprouted": 2,
+   "records": 12,
+   "quota": 667644,
+   "rate": 6246,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:stump:1:0:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:sapling:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:sapling:1::seed",
+    "e:31,30:4": "birch:sapling:1::sprout",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1:3:wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 23,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 12,
+    "path": 74.6,
+    "perDay": 2.45
+   },
+   "store": {
+    "eggs": 5,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 44,
+    "wool": 6
+   },
+   "calls": 88,
+   "tris": 139118,
+   "natureSync": {
+    "adds": 5,
+    "removes": 0,
+    "swaps": 11,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 2202,
+    "pendingChunks": 0,
+    "lastMs": 0.10000000149011612,
+    "maxMs": 2.600000001490116,
+    "syncs": 55,
+    "totalMs": 20.099999997764826
+   },
+   "natureInstances": 43,
+   "tickMs": {
+    "mean": 2.6,
+    "p95": 5.7,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.37,
+    "p95": 1.5,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 0.76,
+   "gridPatches": 9,
+   "gridBuilds": 57,
+   "timescale": 20
+  },
+  {
+   "t": 455.3,
+   "label": "run",
+   "tick": 833,
+   "rules": 5,
+   "hash": "16f64c0640c3c4c9",
+   "seq": 837,
+   "cora": {
+    "role": "woodcutter",
+    "task": "rest",
+    "target": "home:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 3,
+   "planted": 3,
+   "seeded": 5,
+   "sprouted": 2,
+   "records": 12,
+   "quota": 948714,
+   "rate": 6246,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:mature:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:stump:1:0:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:sapling:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:sapling:1::seed",
+    "e:31,30:4": "birch:sapling:1::sprout",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:6": "oak:mature:1::wild",
+    "e:32,30:0": "birch:mature:1:3:wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 23,
+    "harvestable": 3,
+    "protected": 8,
+    "regrowing": 12,
+    "path": 74.6,
+    "perDay": 2.45
+   },
+   "store": {
+    "eggs": 5,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 44,
+    "wool": 6
+   },
+   "calls": 84,
+   "tris": 138054,
+   "natureSync": {
+    "adds": 5,
+    "removes": 0,
+    "swaps": 12,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 2460,
+    "pendingChunks": 0,
+    "lastMs": 0.09999999776482582,
+    "maxMs": 2.600000001490116,
+    "syncs": 61,
+    "totalMs": 21.49999999627471
+   },
+   "natureInstances": 43,
+   "tickMs": {
+    "mean": 2.49,
+    "p95": 5.7,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.36,
+    "p95": 1.5,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 0.7,
+   "gridPatches": 9,
+   "gridBuilds": 59,
+   "timescale": 20
+  },
+  {
+   "t": 459.7,
+   "label": "run",
+   "tick": 877,
+   "rules": 5,
+   "hash": "9407a683a825f99b",
+   "seq": 881,
+   "cora": {
+    "role": "woodcutter",
+    "task": "rest",
+    "target": "home:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 3,
+   "planted": 3,
+   "seeded": 6,
+   "sprouted": 2,
+   "records": 13,
+   "quota": 1223538,
+   "rate": 6246,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:stump:1:0:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:sapling:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:sapling:1::seed",
+    "e:31,30:4": "birch:sapling:1::sprout",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:sapling:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:mature:1:3:wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 24,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 13,
+    "path": 73.3,
+    "perDay": 2.66
+   },
+   "store": {
+    "eggs": 5,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 44,
+    "wool": 6
+   },
+   "calls": 84,
+   "tris": 138436,
+   "natureSync": {
+    "adds": 6,
+    "removes": 0,
+    "swaps": 14,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 2721,
+    "pendingChunks": 0,
+    "lastMs": 0.19999999925494194,
+    "maxMs": 2.600000001490116,
+    "syncs": 67,
+    "totalMs": 24.399999994784594
+   },
+   "natureInstances": 44,
+   "tickMs": {
+    "mean": 2.4,
+    "p95": 4.7,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.37,
+    "p95": 1.5,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "navTickMs": 0.64,
+   "gridPatches": 12,
+   "gridBuilds": 62,
+   "timescale": 20
+  },
+  {
+   "t": 464.2,
+   "label": "run",
+   "tick": 922,
+   "rules": 5,
+   "hash": "1ecb6dd206120a44",
+   "seq": 926,
+   "cora": {
+    "role": "woodcutter",
+    "task": "eat",
+    "target": "eat:villager:2",
+    "op": "work",
+    "x": -50,
+    "z": -30.4,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 3,
+   "planted": 3,
+   "seeded": 6,
+   "sprouted": 2,
+   "records": 13,
+   "quota": 1564983,
+   "rate": 8871,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:stump:1:0:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:sapling:1::seed",
+    "e:31,30:4": "birch:sapling:1::sprout",
+    "e:31,31:1001": "pine:sapling:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:young:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:mature:1:3:wild",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 24,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 13,
+    "path": 73.3,
+    "perDay": 2.66
+   },
+   "store": {
+    "eggs": 2,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 44,
+    "wool": 6
+   },
+   "calls": 90,
+   "tris": 140580,
+   "natureSync": {
+    "adds": 6,
+    "removes": 0,
+    "swaps": 16,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 2985,
+    "pendingChunks": 0,
+    "lastMs": 0.19999999925494194,
+    "maxMs": 2.600000001490116,
+    "syncs": 73,
+    "totalMs": 25.49999999627471
+   },
+   "natureInstances": 44,
+   "tickMs": {
+    "mean": 2.37,
+    "p95": 4.7,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.35,
+    "p95": 1.5,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.63,
+   "gridPatches": 14,
+   "gridBuilds": 70,
+   "timescale": 20
+  },
+  {
+   "t": 468.7,
+   "label": "run",
+   "tick": 967,
+   "rules": 5,
+   "hash": "2c9ff37aada8f1ef",
+   "seq": 971,
+   "cora": {
+    "role": "woodcutter",
+    "task": "chop",
+    "target": "tree:32:30:0",
+    "op": "walk",
+    "x": -22.7,
+    "z": -42.5,
+    "carry": {
+     "item": "wood",
+     "amount": 3
+    }
+   },
+   "why": [
+    null
+   ],
+   "felled": 4,
+   "planted": 3,
+   "seeded": 7,
+   "sprouted": 2,
+   "records": 14,
+   "quota": 1964178,
+   "rate": 8871,
+   "orders": [
+    {
+     "id": "plant:13",
+     "x": 0,
+     "z": -56,
+     "sp": "birch"
+    }
+   ],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:stump:1:0:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:sapling:1::seed",
+    "e:31,30:4": "birch:sapling:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 25,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 14,
+    "path": 69.2,
+    "perDay": 2.87
+   },
+   "store": {
+    "eggs": 1,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 44,
+    "wool": 6
+   },
+   "calls": 92,
+   "tris": 141548,
+   "natureSync": {
+    "adds": 7,
+    "removes": 0,
+    "swaps": 19,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 3253,
+    "pendingChunks": 0,
+    "lastMs": 0.6000000014901161,
+    "maxMs": 2.600000001490116,
+    "syncs": 79,
+    "totalMs": 28.300000000745058
+   },
+   "natureInstances": 45,
+   "tickMs": {
+    "mean": 2.42,
+    "p95": 4.6,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.36,
+    "p95": 1.6,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.67,
+   "gridPatches": 18,
+   "gridBuilds": 82,
+   "timescale": 20
+  },
+  {
+   "t": 473.2,
+   "label": "run",
+   "tick": 1012,
+   "rules": 5,
+   "hash": "d0e3867f17bd2591",
+   "seq": 1016,
+   "cora": {
+    "role": "woodcutter",
+    "task": null,
+    "target": null,
+    "op": null,
+    "x": -0.5,
+    "z": -54.5,
+    "carry": null
+   },
+   "why": [
+    "the store has 47 wood and no site needs more"
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 7,
+   "sprouted": 2,
+   "records": 15,
+   "quota": 2363373,
+   "rate": 8871,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:stump:1:0:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:sapling:1::seed",
+    "e:31,30:4": "birch:sapling:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "e:32,30:1014": "birch:sapling:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 26,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 14,
+    "path": 69.2,
+    "perDay": 3.07
+   },
+   "store": {
+    "eggs": 1,
+    "fiber": 20,
+    "food": 7,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6
+   },
+   "calls": 89,
+   "tris": 142340,
+   "natureSync": {
+    "adds": 8,
+    "removes": 0,
+    "swaps": 19,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 3524,
+    "pendingChunks": 0,
+    "lastMs": 0.30000000074505806,
+    "maxMs": 2.600000001490116,
+    "syncs": 85,
+    "totalMs": 29.099999997764826
+   },
+   "natureInstances": 46,
+   "tickMs": {
+    "mean": 2.38,
+    "p95": 4.5,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.34,
+    "p95": 1.5,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.65,
+   "gridPatches": 19,
+   "gridBuilds": 91,
+   "timescale": 20
+  },
+  {
+   "t": 477.7,
+   "label": "run",
+   "tick": 1057,
+   "rules": 5,
+   "hash": "5c2555947cbac954",
+   "seq": 1061,
+   "cora": {
+    "role": "woodcutter",
+    "task": "idle",
+    "target": "idle:villager:2",
+    "op": "work",
+    "x": -36.5,
+    "z": -9.5,
+    "carry": null
+   },
+   "why": [
+    "the store has 47 wood and no site needs more"
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 9,
+   "sprouted": 2,
+   "records": 17,
+   "quota": 2661300,
+   "rate": 8871,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:stump:1:0:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:sapling:1::seed",
+    "e:31,30:4": "birch:sapling:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:1015": "birch:sapling:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "e:32,30:1014": "birch:sapling:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 28,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 16,
+    "path": 69.2,
+    "perDay": 3.37
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6
+   },
+   "calls": 92,
+   "tris": 143112,
+   "natureSync": {
+    "adds": 10,
+    "removes": 0,
+    "swaps": 19,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 3808,
+    "pendingChunks": 0,
+    "lastMs": 0.10000000149011612,
+    "maxMs": 2.600000001490116,
+    "syncs": 91,
+    "totalMs": 30.199999999254942
+   },
+   "natureInstances": 48,
+   "tickMs": {
+    "mean": 2.35,
+    "p95": 4.4,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.33,
+    "p95": 1.5,
+    "max": 2.6
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.64,
+   "gridPatches": 21,
+   "gridBuilds": 95,
+   "timescale": 20
+  },
+  {
+   "t": 482.2,
+   "label": "run",
+   "tick": 1102,
+   "rules": 5,
+   "hash": "921ca12c2d4b7e78",
+   "seq": 1106,
+   "cora": {
+    "role": "woodcutter",
+    "task": "rest",
+    "target": "home:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 11,
+   "sprouted": 2,
+   "records": 19,
+   "quota": 2661300,
+   "rate": 8871,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:1018": "birch:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:stump:1:0:wild",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:sapling:1::seed",
+    "e:31,30:4": "birch:sapling:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,31:1017": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:1015": "birch:sapling:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "e:32,30:1014": "birch:sapling:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:1018": [
+     -74.5,
+     15.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,31:1017": [
+     -8.5,
+     -20.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 30,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 18,
+    "path": 69.2,
+    "perDay": 3.78
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6,
+    "eggs": 9
+   },
+   "calls": 84,
+   "tris": 141088,
+   "natureSync": {
+    "adds": 12,
+    "removes": 0,
+    "swaps": 20,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 4102,
+    "pendingChunks": 0,
+    "lastMs": 0.30000000074505806,
+    "maxMs": 4.800000000745058,
+    "syncs": 97,
+    "totalMs": 36.50000000372529
+   },
+   "natureInstances": 50,
+   "tickMs": {
+    "mean": 2.35,
+    "p95": 4.3,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.38,
+    "p95": 1.6,
+    "max": 4.8
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.65,
+   "gridPatches": 23,
+   "gridBuilds": 105,
+   "timescale": 20
+  },
+  {
+   "t": 486.7,
+   "label": "run",
+   "tick": 1147,
+   "rules": 5,
+   "hash": "0b97b708759b366c",
+   "seq": 1151,
+   "cora": {
+    "role": "woodcutter",
+    "task": "rest",
+    "target": "home:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 12,
+   "sprouted": 3,
+   "records": 20,
+   "quota": 2661300,
+   "rate": 8871,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:1018": "birch:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:sapling:1::sprout",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:sapling:1::seed",
+    "e:31,30:4": "birch:sapling:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,31:1017": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:1015": "birch:sapling:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:1019": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "e:32,30:1014": "birch:sapling:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:1018": [
+     -74.5,
+     15.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,31:1017": [
+     -8.5,
+     -20.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:1019": [
+     7.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 31,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 19,
+    "path": 69.2,
+    "perDay": 3.88
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6,
+    "eggs": 9
+   },
+   "calls": 84,
+   "tris": 141144,
+   "natureSync": {
+    "adds": 13,
+    "removes": 0,
+    "swaps": 21,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 4408,
+    "pendingChunks": 0,
+    "lastMs": 0.09999999776482582,
+    "maxMs": 4.800000000745058,
+    "syncs": 103,
+    "totalMs": 40.100000001490116
+   },
+   "natureInstances": 51,
+   "tickMs": {
+    "mean": 2.31,
+    "p95": 4.2,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.39,
+    "p95": 1.6,
+    "max": 4.8
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.61,
+   "gridPatches": 24,
+   "gridBuilds": 106,
+   "timescale": 20
+  },
+  {
+   "t": 491.2,
+   "label": "run",
+   "tick": 1191,
+   "rules": 5,
+   "hash": "85485f86653eeec2",
+   "seq": 1195,
+   "cora": {
+    "role": "woodcutter",
+    "task": null,
+    "target": null,
+    "op": null,
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    "the store has 47 wood and no site needs more"
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 12,
+   "sprouted": 3,
+   "records": 20,
+   "quota": 2661300,
+   "rate": 8871,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:1018": "birch:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:sapling:1::sprout",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:young:1::seed",
+    "e:31,30:4": "birch:young:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,31:1017": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:1015": "birch:sapling:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:1019": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "e:32,30:1014": "birch:sapling:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:1018": [
+     -74.5,
+     15.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,31:1017": [
+     -8.5,
+     -20.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:1019": [
+     7.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 31,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 19,
+    "path": 69.2,
+    "perDay": 3.88
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6,
+    "eggs": 7
+   },
+   "calls": 90,
+   "tris": 142896,
+   "natureSync": {
+    "adds": 13,
+    "removes": 0,
+    "swaps": 23,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 4714,
+    "pendingChunks": 0,
+    "lastMs": 0.19999999925494194,
+    "maxMs": 4.800000000745058,
+    "syncs": 109,
+    "totalMs": 40.79999999701977
+   },
+   "natureInstances": 51,
+   "tickMs": {
+    "mean": 2.28,
+    "p95": 4.3,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.38,
+    "p95": 1.6,
+    "max": 4.8
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.58,
+   "gridPatches": 26,
+   "gridBuilds": 108,
+   "timescale": 20
+  },
+  {
+   "t": 495.6,
+   "label": "run",
+   "tick": 1236,
+   "rules": 5,
+   "hash": "c29dd4d7703ce91e",
+   "seq": 1240,
+   "cora": {
+    "role": "woodcutter",
+    "task": "idle",
+    "target": "idle:villager:2",
+    "op": "walk",
+    "x": -45.3,
+    "z": -22.3,
+    "carry": null
+   },
+   "why": [
+    "the store has 47 wood and no site needs more"
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 12,
+   "sprouted": 3,
+   "records": 20,
+   "quota": 3139488,
+   "rate": 12924,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:1018": "birch:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:sapling:1::sprout",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:sapling:1::seed",
+    "e:31,30:1010": "birch:young:1::seed",
+    "e:31,30:4": "birch:young:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,31:1017": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:1015": "birch:sapling:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:1019": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "e:32,30:1014": "birch:sapling:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:1018": [
+     -74.5,
+     15.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,31:1017": [
+     -8.5,
+     -20.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:1019": [
+     7.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 31,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 19,
+    "path": 69.2,
+    "perDay": 3.88
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6,
+    "eggs": 4
+   },
+   "calls": 90,
+   "tris": 143376,
+   "natureSync": {
+    "adds": 13,
+    "removes": 0,
+    "swaps": 23,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 5020,
+    "pendingChunks": 0,
+    "lastMs": 0.09999999776482582,
+    "maxMs": 4.800000000745058,
+    "syncs": 115,
+    "totalMs": 41.399999994784594
+   },
+   "natureInstances": 51,
+   "tickMs": {
+    "mean": 2.29,
+    "p95": 4.3,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.36,
+    "p95": 1.6,
+    "max": 4.8
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.58,
+   "gridPatches": 26,
+   "gridBuilds": 114,
+   "timescale": 20
+  },
+  {
+   "t": 500.1,
+   "label": "run",
+   "tick": 1281,
+   "rules": 5,
+   "hash": "ec86e56f40d2d84e",
+   "seq": 1285,
+   "cora": {
+    "role": "woodcutter",
+    "task": "idle",
+    "target": "idle:villager:2",
+    "op": "work",
+    "x": -34.5,
+    "z": -8.5,
+    "carry": null
+   },
+   "why": [
+    "the store has 47 wood and no site needs more"
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 12,
+   "sprouted": 3,
+   "records": 20,
+   "quota": 3721068,
+   "rate": 12924,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:1018": "birch:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:sapling:1::sprout",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:young:1::seed",
+    "e:31,30:1010": "birch:young:1::seed",
+    "e:31,30:4": "birch:young:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,31:1017": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:1015": "birch:sapling:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:1019": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "e:32,30:1014": "birch:sapling:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:1018": [
+     -74.5,
+     15.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,31:1017": [
+     -8.5,
+     -20.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:1019": [
+     7.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 31,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 19,
+    "path": 69.2,
+    "perDay": 3.88
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6,
+    "eggs": 4
+   },
+   "calls": 90,
+   "tris": 144988,
+   "natureSync": {
+    "adds": 13,
+    "removes": 0,
+    "swaps": 24,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 5326,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 15.399999998509884,
+    "syncs": 121,
+    "totalMs": 57.69999999180436
+   },
+   "natureInstances": 51,
+   "tickMs": {
+    "mean": 2.28,
+    "p95": 4.1,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.48,
+    "p95": 1.8,
+    "max": 15.4
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.58,
+   "gridPatches": 27,
+   "gridBuilds": 124,
+   "timescale": 20
+  },
+  {
+   "t": 504.6,
+   "label": "run",
+   "tick": 1326,
+   "rules": 5,
+   "hash": "7ad7433368686425",
+   "seq": 1330,
+   "cora": {
+    "role": "woodcutter",
+    "task": "eat",
+    "target": "eat:villager:2",
+    "op": "walk",
+    "x": -48.1,
+    "z": -28.1,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 12,
+   "sprouted": 3,
+   "records": 20,
+   "quota": 3877200,
+   "rate": 12924,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:1018": "birch:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:sapling:1::sprout",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:young:1::seed",
+    "e:31,30:1010": "birch:young:1::seed",
+    "e:31,30:4": "birch:young:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:sapling:1::seed",
+    "e:31,31:1017": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:1015": "birch:sapling:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:1019": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "e:32,30:1014": "birch:sapling:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:1018": [
+     -74.5,
+     15.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,31:1017": [
+     -8.5,
+     -20.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:1019": [
+     7.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 31,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 19,
+    "path": 69.2,
+    "perDay": 3.88
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6,
+    "eggs": 2
+   },
+   "calls": 90,
+   "tris": 145436,
+   "natureSync": {
+    "adds": 13,
+    "removes": 0,
+    "swaps": 24,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 5632,
+    "pendingChunks": 0,
+    "lastMs": 0,
+    "maxMs": 15.399999998509884,
+    "syncs": 127,
+    "totalMs": 57.899999994784594
+   },
+   "natureInstances": 51,
+   "tickMs": {
+    "mean": 2.28,
+    "p95": 4.1,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.46,
+    "p95": 1.6,
+    "max": 15.4
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.58,
+   "gridPatches": 27,
+   "gridBuilds": 131,
+   "timescale": 20
+  },
+  {
+   "t": 509.1,
+   "label": "run",
+   "tick": 1371,
+   "rules": 5,
+   "hash": "d55f25293aec8875",
+   "seq": 1375,
+   "cora": {
+    "role": "woodcutter",
+    "task": "idle",
+    "target": "idle:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -6.5,
+    "carry": null
+   },
+   "why": [
+    "the store has 47 wood and no site needs more"
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 12,
+   "sprouted": 3,
+   "records": 20,
+   "quota": 3877200,
+   "rate": 12924,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:1018": "birch:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:sapling:1::plant",
+    "e:30,30:4": "beech:sapling:1::sprout",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:young:1::seed",
+    "e:31,30:1010": "birch:young:1::seed",
+    "e:31,30:4": "birch:young:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:young:1::seed",
+    "e:31,31:1017": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:sapling:1::plant",
+    "e:31,32:1015": "birch:sapling:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:1019": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "e:32,30:1014": "birch:sapling:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:1018": [
+     -74.5,
+     15.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,31:1017": [
+     -8.5,
+     -20.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:1019": [
+     7.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 31,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 19,
+    "path": 69.2,
+    "perDay": 3.88
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6,
+    "eggs": 1
+   },
+   "calls": 90,
+   "tris": 145664,
+   "natureSync": {
+    "adds": 13,
+    "removes": 0,
+    "swaps": 25,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 5938,
+    "pendingChunks": 0,
+    "lastMs": 0.10000000149011612,
+    "maxMs": 15.399999998509884,
+    "syncs": 133,
+    "totalMs": 58.599999997764826
+   },
+   "natureInstances": 51,
+   "tickMs": {
+    "mean": 2.26,
+    "p95": 3.9,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.44,
+    "p95": 1.6,
+    "max": 15.4
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.58,
+   "gridPatches": 28,
+   "gridBuilds": 140,
+   "timescale": 20
+  },
+  {
+   "t": 513.6,
+   "label": "run",
+   "tick": 1416,
+   "rules": 5,
+   "hash": "cb739538fb290733",
+   "seq": 1420,
+   "cora": {
+    "role": "woodcutter",
+    "task": "rest",
+    "target": "home:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 12,
+   "sprouted": 3,
+   "records": 20,
+   "quota": 3877200,
+   "rate": 12924,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:1018": "birch:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:young:1::plant",
+    "e:30,30:4": "beech:sapling:1::sprout",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:young:1::seed",
+    "e:31,30:1010": "birch:young:1::seed",
+    "e:31,30:4": "birch:young:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:young:1::seed",
+    "e:31,31:1017": "birch:sapling:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:young:1::plant",
+    "e:31,32:1015": "birch:sapling:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:1019": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:sapling:1::seed",
+    "e:32,30:1014": "birch:sapling:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:1018": [
+     -74.5,
+     15.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,31:1017": [
+     -8.5,
+     -20.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:1019": [
+     7.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 31,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 19,
+    "path": 69.2,
+    "perDay": 3.88
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6,
+    "eggs": 7
+   },
+   "calls": 86,
+   "tris": 144328,
+   "natureSync": {
+    "adds": 13,
+    "removes": 0,
+    "swaps": 27,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 6244,
+    "pendingChunks": 0,
+    "lastMs": 0.10000000149011612,
+    "maxMs": 15.399999998509884,
+    "syncs": 139,
+    "totalMs": 60.49999999627471
+   },
+   "natureInstances": 51,
+   "tickMs": {
+    "mean": 2.26,
+    "p95": 3.9,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.44,
+    "p95": 1.6,
+    "max": 15.4
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.58,
+   "gridPatches": 30,
+   "gridBuilds": 152,
+   "timescale": 20
+  },
+  {
+   "t": 518.1,
+   "label": "run",
+   "tick": 1461,
+   "rules": 5,
+   "hash": "0351b765858593f8",
+   "seq": 1465,
+   "cora": {
+    "role": "woodcutter",
+    "task": "rest",
+    "target": "home:villager:2",
+    "op": "work",
+    "x": -33.5,
+    "z": -13.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 12,
+   "sprouted": 3,
+   "records": 20,
+   "quota": 3877200,
+   "rate": 12924,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:1018": "birch:sapling:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:young:1::plant",
+    "e:30,30:4": "beech:sapling:1::sprout",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:young:1::seed",
+    "e:31,30:1010": "birch:young:1::seed",
+    "e:31,30:4": "birch:young:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:young:1::seed",
+    "e:31,31:1017": "birch:young:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:young:1::plant",
+    "e:31,32:1015": "birch:young:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:1019": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:young:1::seed",
+    "e:32,30:1014": "birch:young:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:1018": [
+     -74.5,
+     15.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,31:1017": [
+     -8.5,
+     -20.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:1019": [
+     7.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 31,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 19,
+    "path": 69.2,
+    "perDay": 3.88
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6,
+    "eggs": 7
+   },
+   "calls": 84,
+   "tris": 143720,
+   "natureSync": {
+    "adds": 13,
+    "removes": 0,
+    "swaps": 32,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 6550,
+    "pendingChunks": 0,
+    "lastMs": 0.29999999701976776,
+    "maxMs": 15.399999998509884,
+    "syncs": 145,
+    "totalMs": 61.3999999910593
+   },
+   "natureInstances": 51,
+   "tickMs": {
+    "mean": 2.22,
+    "p95": 3.9,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.43,
+    "p95": 1.5,
+    "max": 15.4
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.56,
+   "gridPatches": 33,
+   "gridBuilds": 155,
+   "timescale": 20
+  },
+  {
+   "t": 522.6,
+   "label": "run",
+   "tick": 1506,
+   "rules": 5,
+   "hash": "8c46c126edd6146d",
+   "seq": 1510,
+   "cora": {
+    "role": "woodcutter",
+    "task": "eat",
+    "target": "eat:villager:2",
+    "op": "walk",
+    "x": -44.5,
+    "z": -24.5,
+    "carry": null
+   },
+   "why": [
+    null
+   ],
+   "felled": 4,
+   "planted": 4,
+   "seeded": 12,
+   "sprouted": 3,
+   "records": 20,
+   "quota": 3877200,
+   "rate": 12924,
+   "orders": [],
+   "protect": [
+    "e:29,33:0"
+   ],
+   "standing": 11,
+   "trees": {
+    "e:29,32:1004": "oak:sapling:1::seed",
+    "e:29,32:1018": "birch:young:1::seed",
+    "e:29,32:3": "birch:mature:1::wild",
+    "e:29,33:0": "oak:old:1::wild",
+    "e:30,30:1008": "cherry:young:1::plant",
+    "e:30,30:4": "beech:sapling:1::sprout",
+    "e:30,31:3": "oak:mature:1::wild",
+    "e:31,30:1006": "birch:young:1::plant",
+    "e:31,30:1009": "birch:young:1::seed",
+    "e:31,30:1010": "birch:young:1::seed",
+    "e:31,30:4": "birch:young:1::sprout",
+    "e:31,31:1001": "pine:young:1::seed",
+    "e:31,31:1002": "birch:young:1::seed",
+    "e:31,31:1011": "birch:young:1::seed",
+    "e:31,31:1017": "birch:young:1::seed",
+    "e:31,32:1": "birch:mature:1::wild",
+    "e:31,32:1003": "oak:young:1::plant",
+    "e:31,32:1015": "birch:young:1::seed",
+    "e:31,32:5": "oak:sapling:1::sprout",
+    "e:32,29:1016": "oak:sapling:1::seed",
+    "e:32,29:1019": "oak:sapling:1::seed",
+    "e:32,29:6": "oak:old:1::wild",
+    "e:32,30:0": "birch:stump:1:0:wild",
+    "e:32,30:1012": "birch:young:1::seed",
+    "e:32,30:1014": "birch:young:1::plant",
+    "hero:styl_tree_blossom:-28:-38": "cherry:old:1::wild",
+    "hero:styl_tree_cluster:-12:-24": "birch:mature:1::wild",
+    "hero:styl_tree_cluster:-16:-34": "birch:mature:1::wild",
+    "hero:styl_tree_spire:-22:-26": "pine:mature:1::wild",
+    "hero:styl_tree_table:-34:-18": "oak:old:1::wild",
+    "hero:styl_tree_table:-40:-30": "oak:mature:1::wild"
+   },
+   "treePos": {
+    "e:29,32:1004": [
+     -90.5,
+     29.5
+    ],
+    "e:29,32:1018": [
+     -74.5,
+     15.5
+    ],
+    "e:29,32:3": [
+     -76.5,
+     17.5
+    ],
+    "e:29,33:0": [
+     -88.5,
+     35.5
+    ],
+    "e:30,30:1008": [
+     -41.5,
+     -51.5
+    ],
+    "e:30,30:4": [
+     -38.5,
+     -48.5
+    ],
+    "e:30,31:3": [
+     -37.5,
+     -6.5
+    ],
+    "e:31,30:1006": [
+     -25.5,
+     -46.5
+    ],
+    "e:31,30:1009": [
+     -3.5,
+     -50.5
+    ],
+    "e:31,30:1010": [
+     -20.5,
+     -35.5
+    ],
+    "e:31,30:4": [
+     -23.5,
+     -44.5
+    ],
+    "e:31,31:1001": [
+     -23.5,
+     -29.5
+    ],
+    "e:31,31:1002": [
+     -20.5,
+     -28.5
+    ],
+    "e:31,31:1011": [
+     -14.5,
+     -29.5
+    ],
+    "e:31,31:1017": [
+     -8.5,
+     -20.5
+    ],
+    "e:31,32:1": [
+     -6.5,
+     3.5
+    ],
+    "e:31,32:1003": [
+     -25.5,
+     20.5
+    ],
+    "e:31,32:1015": [
+     -3.5,
+     6.5
+    ],
+    "e:31,32:5": [
+     -22.5,
+     23.5
+    ],
+    "e:32,29:1016": [
+     10.5,
+     -66.5
+    ],
+    "e:32,29:1019": [
+     7.5,
+     -66.5
+    ],
+    "e:32,29:6": [
+     7.5,
+     -69.5
+    ],
+    "e:32,30:0": [
+     2.5,
+     -53.5
+    ],
+    "e:32,30:1012": [
+     6.5,
+     -53.5
+    ],
+    "e:32,30:1014": [
+     0.5,
+     -55.5
+    ],
+    "hero:styl_tree_blossom:-28:-38": [
+     -27.5,
+     -37.5
+    ],
+    "hero:styl_tree_cluster:-12:-24": [
+     -11.5,
+     -23.5
+    ],
+    "hero:styl_tree_cluster:-16:-34": [
+     -15.5,
+     -33.5
+    ],
+    "hero:styl_tree_spire:-22:-26": [
+     -21.5,
+     -25.5
+    ],
+    "hero:styl_tree_table:-34:-18": [
+     -33.5,
+     -17.5
+    ],
+    "hero:styl_tree_table:-40:-30": [
+     -39.5,
+     -29.5
+    ]
+   },
+   "stats": {
+    "trees": 31,
+    "harvestable": 2,
+    "protected": 9,
+    "regrowing": 19,
+    "path": 69.2,
+    "perDay": 3.88
+   },
+   "store": {
+    "fiber": 20,
+    "food": 5,
+    "seed": 6,
+    "wood": 47,
+    "wool": 6,
+    "eggs": 6
+   },
+   "calls": 90,
+   "tris": 145540,
+   "natureSync": {
+    "adds": 13,
+    "removes": 0,
+    "swaps": 35,
+    "chunksAdded": 0,
+    "chunksDropped": 0,
+    "scanned": 6856,
+    "pendingChunks": 0,
+    "lastMs": 0.09999999776482582,
+    "maxMs": 15.399999998509884,
+    "syncs": 151,
+    "totalMs": 63.89999998360872
+   },
+   "natureInstances": 51,
+   "tickMs": {
+    "mean": 2.21,
+    "p95": 3.9,
+    "max": 31.2
+   },
+   "syncMs": {
+    "mean": 0.43,
+    "p95": 1.6,
+    "max": 15.4
+   },
+   "vegMs": {
+    "mean": 0,
+    "p95": 0,
+    "max": 0.1
+   },
+   "navTickMs": 0.57,
+   "gridPatches": 34,
+   "gridBuilds": 162,
+   "timescale": 20
+  }
+ ]
+}

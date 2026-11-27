@@ -1,0 +1,4600 @@
+{
+"pen": {
+"errs": [],
+"dirs": {
+"w": {
+"x": 0,
+"z": 1,
+"speed": 1.1000000000000005
+},
+"a": {
+"x": 1,
+"z": 0,
+"speed": 1.9400000000000013
+},
+"s": {
+"x": -0.42993358039234786,
+"z": -0.9028605188239303,
+"speed": 2.325940669922601
+},
+"d": {
+"x": -0.9895864392845114,
+"z": 0.1439398457141107,
+"speed": 1.1115754585272217
+}
+},
+"shots": [
+{
+"name": "pen-0-loaded.png",
+"why": "restored v3 save; founder north of the pen",
+"t": 21
+},
+{
+"name": "pen-1-fence-blocks.png",
+"why": "walked into the pen fence: stopped outside it",
+"t": 55
+},
+{
+"name": "pen-2-gate-closed-blocks.png",
+"why": "the closed gate holds the founder",
+"t": 66
+},
+{
+"name": "pen-3-gate-opened.png",
+"why": "E next to the gate opened it",
+"t": 68
+},
+{
+"name": "pen-4-inside-pen.png",
+"why": "inside the pen through the open gate",
+"t": 72
+},
+{
+"name": "pen-5-animals-out.png",
+"why": "2 pen animals out through the open gate",
+"t": 192
+},
+{
+"name": "pen-6-gate-closed-strays-out.png",
+"why": "gate closed with 3 strays out",
+"t": 219
+},
+{
+"name": "pen-7-herder-holds-gate.png",
+"why": "Bram holds the gate while the strays walk in",
+"t": 349
+},
+{
+"name": "pen-8-all-back-gate-shut.png",
+"why": "end of the wait",
+"t": 472
+}
+],
+"breakdown": {
+"main": {
+"draws": 52,
+"triangles": 107480
+},
+"shadow": {
+"draws": 22,
+"triangles": 37334
+},
+"all": {
+"draws": 74,
+"triangles": 144814
+}
+},
+"log": [
+{
+"t": 20,
+"label": "loaded",
+"tick": 313,
+"rules": 3,
+"px": -27.5,
+"py": 13,
+"pz": -7.5,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "harvest",
+"x": -48,
+"z": -29,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "eat",
+"x": -46.5,
+"z": -27.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 315,
+"save": "saved",
+"calls": 66,
+"tris": 124956,
+"nav": {
+"ticks": 8,
+"tickMs": 9.5,
+"maxTickMs": 5.8
+},
+"toast": null
+},
+{
+"t": 54,
+"label": "pressed into the fence",
+"tick": 330,
+"rules": 3,
+"px": -27.59,
+"py": 13,
+"pz": -4.43,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "harvest",
+"x": -41,
+"z": -10,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "collect",
+"x": -40.6,
+"z": -16.6,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Shear sheep",
+"seq": 332,
+"save": "saved",
+"calls": 65,
+"tris": 128754,
+"nav": {
+"ticks": 25,
+"tickMs": 17,
+"maxTickMs": 5.9
+},
+"toast": null
+},
+{
+"t": 65,
+"label": "pressed into the closed gate",
+"tick": 335,
+"rules": 3,
+"px": -25.49,
+"py": 13,
+"pz": -4.38,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "harvest",
+"x": -41,
+"z": -10,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "collect",
+"x": -34.9,
+"z": -5.9,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Open the pen gate",
+"seq": 337,
+"save": "saved",
+"calls": 63,
+"tris": 123474,
+"nav": {
+"ticks": 30,
+"tickMs": 17.6,
+"maxTickMs": 5.9
+},
+"toast": null
+},
+{
+"t": 68,
+"label": "E: gate opened",
+"tick": 337,
+"rules": 3,
+"px": -25.49,
+"py": 13,
+"pz": -4.38,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "open",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "open",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "harvest",
+"x": -42,
+"z": -6.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "collect",
+"x": -33.5,
+"z": -4.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Close the pen gate",
+"seq": 340,
+"save": "saved",
+"calls": 63,
+"tris": 123522,
+"nav": {
+"ticks": 32,
+"tickMs": 20,
+"maxTickMs": 5.9
+},
+"toast": "Opened the pen gate"
+},
+{
+"t": 71,
+"label": "walked through the open gate",
+"tick": 338,
+"rules": 3,
+"px": -25.49,
+"py": 13,
+"pz": 0.21,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "harvest",
+"x": -44.6,
+"z": -6.6,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "collect",
+"x": -32.5,
+"z": -2.3,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Milk goat",
+"seq": 341,
+"save": "saved",
+"calls": 62,
+"tris": 121902,
+"nav": {
+"ticks": 33,
+"tickMs": 22.2,
+"maxTickMs": 5.9
+},
+"toast": "Opened the pen gate"
+},
+{
+"t": 86,
+"label": "stood aside",
+"tick": 346,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.32,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "harvest",
+"x": -49.5,
+"z": -25.3,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "collect",
+"x": -32.6,
+"z": -2.6,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 349,
+"save": "saved",
+"calls": 76,
+"tris": 137800,
+"nav": {
+"ticks": 41,
+"tickMs": 23.9,
+"maxTickMs": 5.9
+},
+"toast": "Opened the pen gate"
+},
+{
+"t": 94,
+"label": "gate open, watching",
+"tick": 350,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": null,
+"x": -50,
+"z": -30.4,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "collect",
+"x": -35.1,
+"z": -8.1,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 353,
+"save": "saved",
+"calls": 76,
+"tris": 137800,
+"nav": {
+"ticks": 45,
+"tickMs": 28.2,
+"maxTickMs": 5.9
+},
+"toast": "Opened the pen gate"
+},
+{
+"t": 102,
+"label": "gate open, watching",
+"tick": 354,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -46.5,
+"z": -27,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "collect",
+"x": -40.3,
+"z": -16.3,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 357,
+"save": "saved",
+"calls": 76,
+"tris": 137868,
+"nav": {
+"ticks": 49,
+"tickMs": 31.4,
+"maxTickMs": 5.9
+},
+"toast": "Opened the pen gate"
+},
+{
+"t": 111,
+"label": "gate open, watching",
+"tick": 358,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -44.5,
+"z": -17.4,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "collect",
+"x": -44.7,
+"z": -24.7,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 361,
+"save": "saved",
+"calls": 76,
+"tris": 137868,
+"nav": {
+"ticks": 53,
+"tickMs": 31.8,
+"maxTickMs": 5.9
+},
+"toast": "Opened the pen gate"
+},
+{
+"t": 119,
+"label": "gate open, watching",
+"tick": 362,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -44.5,
+"z": -7,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "collect",
+"x": -50,
+"z": -30.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 365,
+"save": "saved",
+"calls": 76,
+"tris": 138050,
+"nav": {
+"ticks": 57,
+"tickMs": 32.1,
+"maxTickMs": 5.9
+},
+"toast": "Opened the pen gate"
+},
+{
+"t": 127,
+"label": "gate open, watching",
+"tick": 366,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -41,
+"z": -10,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -45.7,
+"z": -24.7,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 369,
+"save": "saved",
+"calls": 76,
+"tris": 138050,
+"nav": {
+"ticks": 61,
+"tickMs": 34.2,
+"maxTickMs": 5.9
+},
+"toast": "Opened the pen gate"
+},
+{
+"t": 135,
+"label": "gate open, watching",
+"tick": 370,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -41,
+"z": -10,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -40.6,
+"z": -16.6,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 373,
+"save": "saved",
+"calls": 76,
+"tris": 138050,
+"nav": {
+"ticks": 65,
+"tickMs": 34.5,
+"maxTickMs": 5.9
+},
+"toast": "Ada sowed flax (4 seed)"
+},
+{
+"t": 143,
+"label": "gate open, watching",
+"tick": 374,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [
+"animal:018:out"
+],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -36.7,
+"z": -5.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -35.4,
+"z": -8.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 377,
+"save": "saved",
+"calls": 76,
+"tris": 141506,
+"nav": {
+"ticks": 69,
+"tickMs": 35,
+"maxTickMs": 5.9
+},
+"toast": "Ada sowed flax (4 seed)"
+},
+{
+"t": 151,
+"label": "gate open, watching",
+"tick": 378,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [
+"animal:018:out"
+],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -29.5,
+"z": -10.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -26.7,
+"z": -4.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 381,
+"save": "saved",
+"calls": 77,
+"tris": 141854,
+"nav": {
+"ticks": 73,
+"tickMs": 35.5,
+"maxTickMs": 5.9
+},
+"toast": "Ada sowed flax (4 seed)"
+},
+{
+"t": 159,
+"label": "gate open, watching",
+"tick": 383,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -27.7,
+"z": -9.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -26.5,
+"z": -3.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 386,
+"save": "saved",
+"calls": 78,
+"tris": 142214,
+"nav": {
+"ticks": 78,
+"tickMs": 36.3,
+"maxTickMs": 5.9
+},
+"toast": "Ada sowed flax (4 seed)"
+},
+{
+"t": 167,
+"label": "gate open, watching",
+"tick": 387,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -36.4,
+"z": -5.6,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -29.5,
+"z": -8.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 390,
+"save": "saved",
+"calls": 77,
+"tris": 141672,
+"nav": {
+"ticks": 82,
+"tickMs": 37,
+"maxTickMs": 5.9
+},
+"toast": "Ada sowed flax (4 seed)"
+},
+{
+"t": 175,
+"label": "gate open, watching",
+"tick": 390,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -40.9,
+"z": -9.6,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -36.4,
+"z": -10.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 393,
+"save": "saved",
+"calls": 76,
+"tris": 141256,
+"nav": {
+"ticks": 85,
+"tickMs": 37.4,
+"maxTickMs": 5.9
+},
+"toast": "Ada sowed flax (4 seed)"
+},
+{
+"t": 183,
+"label": "gate open, watching",
+"tick": 395,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [
+"animal:008:out"
+],
+"v": [
+{
+"n": "Ada",
+"task": "eat",
+"x": -44.6,
+"z": -6.6,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -43.5,
+"z": -19.8,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 398,
+"save": "saved",
+"calls": 76,
+"tris": 141256,
+"nav": {
+"ticks": 90,
+"tickMs": 38,
+"maxTickMs": 5.9
+},
+"toast": "Ada sowed flax (4 seed)"
+},
+{
+"t": 191,
+"label": "gate open, watching",
+"tick": 398,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:018"
+]
+},
+"going": [
+"animal:008:out"
+],
+"v": [
+{
+"n": "Ada",
+"task": "eat",
+"x": -48.5,
+"z": -12.7,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -45.6,
+"z": -26.6,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 401,
+"save": "saved",
+"calls": 76,
+"tris": 141394,
+"nav": {
+"ticks": 93,
+"tickMs": 38.3,
+"maxTickMs": 5.9
+},
+"toast": "Ada sowed flax (4 seed)"
+},
+{
+"t": 200,
+"label": "gate open, watching",
+"tick": 403,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "eat",
+"x": -49.5,
+"z": -25.3,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "eat",
+"x": -50,
+"z": -30.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 406,
+"save": "saved",
+"calls": 76,
+"tris": 141534,
+"nav": {
+"ticks": 98,
+"tickMs": 38.8,
+"maxTickMs": 5.9
+},
+"toast": "Ada sowed flax (4 seed)"
+},
+{
+"t": 208,
+"label": "gate open, watching",
+"tick": 407,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [
+"animal:017:out"
+],
+"v": [
+{
+"n": "Ada",
+"task": "eat",
+"x": -50.5,
+"z": -30.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -48,
+"z": -29,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 410,
+"save": "saved",
+"calls": 76,
+"tris": 141534,
+"nav": {
+"ticks": 102,
+"tickMs": 40.1,
+"maxTickMs": 5.9
+},
+"toast": "Ada sowed flax (4 seed)"
+},
+{
+"t": 218,
+"label": "E: gate closed",
+"tick": 412,
+"rules": 3,
+"px": -25.91,
+"py": 13,
+"pz": -4.8,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -46.9,
+"z": -26.9,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -42.4,
+"z": -18.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Open the pen gate",
+"seq": 416,
+"save": "saved",
+"calls": 75,
+"tris": 139834,
+"nav": {
+"ticks": 107,
+"tickMs": 41.4,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 233,
+"label": "herder round-up",
+"tick": 420,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -37.4,
+"z": -10.4,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -30.2,
+"z": -4.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 424,
+"save": "saved",
+"calls": 76,
+"tris": 142522,
+"nav": {
+"ticks": 115,
+"tickMs": 42.4,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 239,
+"label": "herder round-up",
+"tick": 423,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -35.5,
+"z": -8.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -25.5,
+"z": -4.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 427,
+"save": "saved",
+"calls": 77,
+"tris": 142894,
+"nav": {
+"ticks": 118,
+"tickMs": 44.3,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 245,
+"label": "herder round-up",
+"tick": 426,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -35.5,
+"z": -8.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -24.5,
+"z": -1.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 430,
+"save": "saved",
+"calls": 77,
+"tris": 142918,
+"nav": {
+"ticks": 121,
+"tickMs": 46,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 251,
+"label": "herder round-up",
+"tick": 429,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -35.5,
+"z": -8.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -24.5,
+"z": -1.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 433,
+"save": "saved",
+"calls": 77,
+"tris": 142918,
+"nav": {
+"ticks": 124,
+"tickMs": 46.1,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 257,
+"label": "herder round-up",
+"tick": 432,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -31.2,
+"z": -10.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -26.6,
+"z": -5.6,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 436,
+"save": "saved",
+"calls": 77,
+"tris": 142918,
+"nav": {
+"ticks": 127,
+"tickMs": 50,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 264,
+"label": "herder round-up",
+"tick": 435,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -25.5,
+"z": -10.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -32.3,
+"z": -10.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 439,
+"save": "saved",
+"calls": 77,
+"tris": 142974,
+"nav": {
+"ticks": 130,
+"tickMs": 50.2,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 270,
+"label": "herder round-up",
+"tick": 438,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -27.7,
+"z": -9.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -37.5,
+"z": -13.1,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 442,
+"save": "saved",
+"calls": 77,
+"tris": 142930,
+"nav": {
+"ticks": 133,
+"tickMs": 50.5,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 276,
+"label": "herder round-up",
+"tick": 441,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -34.6,
+"z": -7.4,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -42.7,
+"z": -18.7,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 445,
+"save": "saved",
+"calls": 76,
+"tris": 142526,
+"nav": {
+"ticks": 136,
+"tickMs": 50.6,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 282,
+"label": "herder round-up",
+"tick": 444,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -40.5,
+"z": -7.1,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -45.4,
+"z": -25.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 448,
+"save": "saved",
+"calls": 76,
+"tris": 142570,
+"nav": {
+"ticks": 139,
+"tickMs": 51,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 288,
+"label": "herder round-up",
+"tick": 447,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": null,
+"x": -41,
+"z": -10,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -50,
+"z": -30.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 451,
+"save": "saved",
+"calls": 76,
+"tris": 142570,
+"nav": {
+"ticks": 142,
+"tickMs": 51.2,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 294,
+"label": "herder round-up",
+"tick": 450,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -38.5,
+"z": -7.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "round_up",
+"x": -46.5,
+"z": -27,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 454,
+"save": "saved",
+"calls": 76,
+"tris": 143242,
+"nav": {
+"ticks": 145,
+"tickMs": 52.1,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 300,
+"label": "herder round-up",
+"tick": 453,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -38.5,
+"z": -7.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "round_up",
+"x": -41.4,
+"z": -21.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 457,
+"save": "saved",
+"calls": 76,
+"tris": 143242,
+"nav": {
+"ticks": 148,
+"tickMs": 52.4,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 306,
+"label": "herder round-up",
+"tick": 456,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -38.5,
+"z": -7.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "round_up",
+"x": -37.5,
+"z": -15.3,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 460,
+"save": "saved",
+"calls": 76,
+"tris": 143242,
+"nav": {
+"ticks": 151,
+"tickMs": 52.7,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 312,
+"label": "herder round-up",
+"tick": 459,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -38.7,
+"z": -5.7,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "round_up",
+"x": -35.4,
+"z": -8.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 463,
+"save": "saved",
+"calls": 76,
+"tris": 144970,
+"nav": {
+"ticks": 154,
+"tickMs": 53.1,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 318,
+"label": "herder round-up",
+"tick": 462,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -36.5,
+"z": -6.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "round_up",
+"x": -28.4,
+"z": -6.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 466,
+"save": "saved",
+"calls": 76,
+"tris": 144788,
+"nav": {
+"ticks": 157,
+"tickMs": 53.5,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 324,
+"label": "herder round-up",
+"tick": 465,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:008",
+"animal:017",
+"animal:018"
+]
+},
+"going": [
+"animal:008:home"
+],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -36.5,
+"z": -6.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "round_up",
+"x": -24.7,
+"z": -4.7,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 469,
+"save": "saved",
+"calls": 77,
+"tris": 145068,
+"nav": {
+"ticks": 160,
+"tickMs": 53.8,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 330,
+"label": "herder round-up",
+"tick": 468,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:017",
+"animal:018"
+]
+},
+"going": [
+"animal:008:home"
+],
+"v": [
+{
+"n": "Ada",
+"task": "idle",
+"x": -36.5,
+"z": -6.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": null,
+"x": -24.5,
+"z": -4.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 472,
+"save": "saved",
+"calls": 77,
+"tris": 145184,
+"nav": {
+"ticks": 163,
+"tickMs": 57.3,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 336,
+"label": "herder round-up",
+"tick": 471,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:017",
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -32.9,
+"z": -10.1,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "round_up",
+"x": -29.5,
+"z": -6.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 475,
+"save": "saved",
+"calls": 76,
+"tris": 144836,
+"nav": {
+"ticks": 166,
+"tickMs": 57.7,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 342,
+"label": "herder round-up",
+"tick": 474,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:017",
+"animal:018"
+]
+},
+"going": [
+"animal:017:home"
+],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -25.5,
+"z": -10.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "round_up",
+"x": -25.2,
+"z": -4.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 478,
+"save": "saved",
+"calls": 77,
+"tris": 145184,
+"nav": {
+"ticks": 169,
+"tickMs": 58,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 349,
+"label": "herder round-up",
+"tick": 477,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "open",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:017",
+"animal:018"
+]
+},
+"going": [
+"animal:017:home"
+],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -27.7,
+"z": -9.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "round_up",
+"x": -24.5,
+"z": -4.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 481,
+"save": "saved",
+"calls": 77,
+"tris": 145184,
+"nav": {
+"ticks": 172,
+"tickMs": 60.1,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 356,
+"label": "herder round-up",
+"tick": 481,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -36.4,
+"z": -5.6,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -29.9,
+"z": -9.9,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 485,
+"save": "saved",
+"calls": 76,
+"tris": 145018,
+"nav": {
+"ticks": 176,
+"tickMs": 62,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 362,
+"label": "herder round-up",
+"tick": 484,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -40.9,
+"z": -9.6,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 488,
+"save": "saved",
+"calls": 75,
+"tris": 144670,
+"nav": {
+"ticks": 179,
+"tickMs": 62.4,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 368,
+"label": "herder round-up",
+"tick": 487,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -40.5,
+"z": -7.6,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 491,
+"save": "saved",
+"calls": 75,
+"tris": 144670,
+"nav": {
+"ticks": 182,
+"tickMs": 62.7,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 374,
+"label": "herder round-up",
+"tick": 490,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.8,
+"z": -7.2,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 494,
+"save": "saved",
+"calls": 75,
+"tris": 144670,
+"nav": {
+"ticks": 185,
+"tickMs": 62.8,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 380,
+"label": "herder round-up",
+"tick": 493,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 497,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 188,
+"tickMs": 63,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 386,
+"label": "herder round-up",
+"tick": 496,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 500,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 191,
+"tickMs": 63.2,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 392,
+"label": "herder round-up",
+"tick": 499,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 503,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 194,
+"tickMs": 63.4,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 398,
+"label": "herder round-up",
+"tick": 502,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 506,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 197,
+"tickMs": 63.5,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 404,
+"label": "herder round-up",
+"tick": 505,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 509,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 200,
+"tickMs": 63.6,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 410,
+"label": "herder round-up",
+"tick": 508,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 512,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 203,
+"tickMs": 63.7,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 416,
+"label": "herder round-up",
+"tick": 511,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 515,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 206,
+"tickMs": 63.8,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 422,
+"label": "herder round-up",
+"tick": 514,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 518,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 209,
+"tickMs": 64,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 428,
+"label": "herder round-up",
+"tick": 517,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 521,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 212,
+"tickMs": 64.1,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 434,
+"label": "herder round-up",
+"tick": 520,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 524,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 215,
+"tickMs": 64.1,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 440,
+"label": "herder round-up",
+"tick": 523,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 527,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 218,
+"tickMs": 64.2,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 446,
+"label": "herder round-up",
+"tick": 526,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 530,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 221,
+"tickMs": 64.3,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 453,
+"label": "herder round-up",
+"tick": 529,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 533,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 224,
+"tickMs": 64.4,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 459,
+"label": "herder round-up",
+"tick": 532,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 536,
+"save": "saved",
+"calls": 74,
+"tris": 144310,
+"nav": {
+"ticks": 227,
+"tickMs": 64.4,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 465,
+"label": "herder round-up",
+"tick": 535,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 539,
+"save": "saved",
+"calls": 74,
+"tris": 144790,
+"nav": {
+"ticks": 230,
+"tickMs": 64.4,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 471,
+"label": "herder round-up",
+"tick": 539,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 543,
+"save": "saved",
+"calls": 74,
+"tris": 144814,
+"nav": {
+"ticks": 234,
+"tickMs": 64.8,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+},
+{
+"t": 472,
+"label": "end",
+"tick": 539,
+"rules": 3,
+"px": -21.29,
+"py": 13,
+"pz": -7.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {
+"pen": [
+"animal:018"
+]
+},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "rest",
+"x": -34.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "rest",
+"x": -32.5,
+"z": -11.5,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 543,
+"save": "saved",
+"calls": 74,
+"tris": 144814,
+"nav": {
+"ticks": 234,
+"tickMs": 64.8,
+"maxTickMs": 5.9
+},
+"toast": "Closed the pen gate"
+}
+]
+},
+"door": {
+"errs": [],
+"upgradeToast": "The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use. | ",
+"dirs": {
+"w": {
+"x": 0,
+"z": -1,
+"speed": 0.6799999999999997
+},
+"a": {
+"x": -0.7609017370697109,
+"z": 0.6488671254766238,
+"speed": 2.142195135836138
+},
+"s": {
+"x": 0.013156755870282909,
+"z": 0.9999134461416997,
+"speed": 1.5201315732527887
+},
+"d": {
+"x": 0.7654862707908152,
+"z": -0.6434522276212672,
+"speed": 0.9013878188659955
+}
+},
+"shots": [
+{
+"name": "door-0-front.png",
+"why": "the farmhouse front, door closed",
+"t": 127
+},
+{
+"name": "door-1-closed-blocks.png",
+"why": "the closed door holds the founder",
+"t": 132
+},
+{
+"name": "door-2-open.png",
+"why": "door leaf swung open (drawn from the sim state)",
+"t": 138
+},
+{
+"name": "door-3-in-doorway.png",
+"why": "in the doorway; the house behind it is solid",
+"t": 142
+},
+{
+"name": "door-4-closed-from-inside.png",
+"why": "closed from inside",
+"t": 145
+},
+{
+"name": "door-5-out-door-open.png",
+"why": "out again",
+"t": 151
+},
+{
+"name": "door-6-closed.png",
+"why": "door leaf back in the frame",
+"t": 165
+}
+],
+"breakdown": {
+"main": {
+"draws": 56,
+"triangles": 126328
+},
+"shadow": {
+"draws": 24,
+"triangles": 35188
+},
+"all": {
+"draws": 80,
+"triangles": 161516
+}
+},
+"sections": {
+"homestead": {
+"meanMs": 0.18,
+"p95Ms": 0.2,
+"maxMs": 37.8,
+"n": 1111
+},
+"fauna": {
+"meanMs": 0.19,
+"p95Ms": 0.3,
+"maxMs": 2.9,
+"n": 1111
+},
+"terrain": {
+"meanMs": 0.12,
+"p95Ms": 0.2,
+"maxMs": 16.3,
+"n": 1111
+},
+"vegetation": {
+"meanMs": 0,
+"p95Ms": 0,
+"maxMs": 0.1,
+"n": 1111
+},
+"groundcover": {
+"meanMs": 0.03,
+"p95Ms": 0.1,
+"maxMs": 17.5,
+"n": 1111
+},
+"render": {
+"meanMs": 1.76,
+"p95Ms": 1.9,
+"maxMs": 264.2,
+"n": 1111
+},
+"tick": {
+"meanMs": 1.99,
+"p95Ms": 4.5,
+"maxMs": 16.2,
+"n": 102
+},
+"naturerebuild": {
+"meanMs": 2,
+"p95Ms": 1.7,
+"maxMs": 2.3,
+"n": 2
+}
+},
+"log": [
+{
+"t": 13,
+"label": "loaded (upgraded?)",
+"tick": 310,
+"rules": 3,
+"px": -33.5,
+"py": 13,
+"pz": -8.5,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "eat",
+"x": -49.4,
+"z": -30,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "eat",
+"x": -45.8,
+"z": -24.8,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 313,
+"save": "saved",
+"calls": 91,
+"tris": 167498,
+"nav": {
+"ticks": 5,
+"tickMs": 3.3,
+"maxTickMs": 2.4
+},
+"toast": "The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use."
+},
+{
+"t": 126,
+"label": "in front of the door",
+"tick": 366,
+"rules": 3,
+"px": -33.47,
+"py": 13,
+"pz": -8.77,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -44.5,
+"z": -9.6,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -46.5,
+"z": -27,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 369,
+"save": "saved",
+"calls": 82,
+"tris": 159072,
+"nav": {
+"ticks": 61,
+"tickMs": 33.6,
+"maxTickMs": 5.4
+},
+"toast": "The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use."
+},
+{
+"t": 131,
+"label": "pressed into the closed door",
+"tick": 369,
+"rules": 3,
+"px": -33.47,
+"py": 13,
+"pz": -10.57,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -40.5,
+"z": -7.2,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -44.2,
+"z": -20.2,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Open the farmhouse door",
+"seq": 372,
+"save": "saved",
+"calls": 80,
+"tris": 157816,
+"nav": {
+"ticks": 64,
+"tickMs": 33.8,
+"maxTickMs": 5.4
+},
+"toast": "The homestead is livelier: animals use open gates, villagers make way for each other, and you can open gates with Use."
+},
+{
+"t": 134,
+"label": "E: door opened",
+"tick": 370,
+"rules": 3,
+"px": -33.47,
+"py": 13,
+"pz": -10.57,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "open",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "open",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -40.9,
+"z": -9.7,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -42.4,
+"z": -18.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Close the farmhouse door",
+"seq": 374,
+"save": "saved",
+"calls": 80,
+"tris": 157816,
+"nav": {
+"ticks": 65,
+"tickMs": 33.9,
+"maxTickMs": 5.4
+},
+"toast": "Opened the farmhouse door"
+},
+{
+"t": 137,
+"label": "stepped back",
+"tick": 371,
+"rules": 3,
+"px": -33.47,
+"py": 13,
+"pz": -8.05,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "open",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "open",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -41,
+"z": -10,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -40.6,
+"z": -16.6,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 375,
+"save": "saved",
+"calls": 83,
+"tris": 159388,
+"nav": {
+"ticks": 66,
+"tickMs": 34,
+"maxTickMs": 5.4
+},
+"toast": "Opened the farmhouse door"
+},
+{
+"t": 141,
+"label": "walked into the doorway",
+"tick": 374,
+"rules": 3,
+"px": -33.47,
+"py": 13,
+"pz": -11.67,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "open",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "open",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -41,
+"z": -10,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -37.2,
+"z": -10.2,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Close the farmhouse door",
+"seq": 378,
+"save": "saved",
+"calls": 78,
+"tris": 155284,
+"nav": {
+"ticks": 69,
+"tickMs": 34.2,
+"maxTickMs": 5.4
+},
+"toast": "Opened the farmhouse door"
+},
+{
+"t": 144,
+"label": "E from inside: door closed",
+"tick": 375,
+"rules": 3,
+"px": -33.47,
+"py": 13,
+"pz": -11.67,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "sow",
+"x": -41,
+"z": -10,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -35.4,
+"z": -8.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Open the farmhouse door",
+"seq": 380,
+"save": "saved",
+"calls": 78,
+"tris": 155284,
+"nav": {
+"ticks": 70,
+"tickMs": 34.3,
+"maxTickMs": 5.4
+},
+"toast": "Closed the farmhouse door"
+},
+{
+"t": 147,
+"label": "E from inside: door opened",
+"tick": 376,
+"rules": 3,
+"px": -33.47,
+"py": 13,
+"pz": -11.67,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "open",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "open",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": null,
+"x": -41,
+"z": -10,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -33.6,
+"z": -6.6,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Close the farmhouse door",
+"seq": 382,
+"save": "saved",
+"calls": 78,
+"tris": 162196,
+"nav": {
+"ticks": 71,
+"tickMs": 34.4,
+"maxTickMs": 5.4
+},
+"toast": "Opened the farmhouse door"
+},
+{
+"t": 150,
+"label": "walked out",
+"tick": 378,
+"rules": 3,
+"px": -33.47,
+"py": 13,
+"pz": -5.95,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "open",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "open",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -39.1,
+"z": -6.1,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -30.5,
+"z": -2.7,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": "Open the coop gate",
+"seq": 384,
+"save": "saved",
+"calls": 84,
+"tris": 165284,
+"nav": {
+"ticks": 73,
+"tickMs": 34.8,
+"maxTickMs": 5.4
+},
+"toast": "Opened the farmhouse door"
+},
+{
+"t": 164,
+"label": "door closed again",
+"tick": 385,
+"rules": 3,
+"px": -33.47,
+"py": 13,
+"pz": -8.33,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -25.5,
+"z": -10.5,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -31.5,
+"z": -0.7,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 392,
+"save": "saved",
+"calls": 82,
+"tris": 165996,
+"nav": {
+"ticks": 80,
+"tickMs": 35.8,
+"maxTickMs": 5.4
+},
+"toast": "Closed the farmhouse door"
+},
+{
+"t": 177,
+"label": "pressed into the wall",
+"tick": 392,
+"rules": 3,
+"px": -36.03,
+"py": 12,
+"pz": -10.67,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "water",
+"x": -36.4,
+"z": -5.6,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -39.4,
+"z": -15.4,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 399,
+"save": "saved",
+"calls": 81,
+"tris": 161860,
+"nav": {
+"ticks": 87,
+"tickMs": 36.8,
+"maxTickMs": 5.4
+},
+"toast": "Closed the farmhouse door"
+},
+{
+"t": 207,
+"label": "end",
+"tick": 407,
+"rules": 3,
+"px": -36.03,
+"py": 12,
+"pz": -10.67,
+"mode": "ground",
+"gates": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"drawn": {
+"door:farmhouse": "closed",
+"gate:coop": "closed",
+"gate:paddock": "closed",
+"gate:pen": "closed",
+"gate:sty": "closed"
+},
+"strays": {},
+"going": [],
+"v": [
+{
+"n": "Ada",
+"task": "eat",
+"x": -49.5,
+"z": -22.7,
+"wait": null,
+"blocked": null
+},
+{
+"n": "Bram",
+"task": "shear",
+"x": -41.7,
+"z": -18.7,
+"wait": null,
+"blocked": null
+}
+],
+"nearest": null,
+"seq": 414,
+"save": "saved",
+"calls": 80,
+"tris": 161516,
+"nav": {
+"ticks": 102,
+"tickMs": 39.2,
+"maxTickMs": 5.4
+},
+"toast": "Closed the farmhouse door"
+}
+]
+}
+}

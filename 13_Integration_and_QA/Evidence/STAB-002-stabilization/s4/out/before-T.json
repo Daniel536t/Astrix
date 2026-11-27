@@ -1,0 +1,74 @@
+{
+ "speed": 26,
+ "rows": [
+  {
+   "t": "T",
+   "label": "v7 standard",
+   "seed": 1337,
+   "max": 57,
+   "open": {
+    "key": "product:animal:021",
+    "age": 15
+   },
+   "total": {
+    "travel": 1034,
+    "waiting": 116,
+    "work": 212,
+    "idle": 997,
+    "eating": 432,
+    "sleeping": 1706,
+    "ticks": 4497,
+    "starving": 0
+   },
+   "step": 1.015413752495699,
+   "errands": 58,
+   "errandTicks": 1327
+  },
+  {
+   "t": "T",
+   "label": "v7 standard",
+   "seed": 42,
+   "max": 62,
+   "open": {
+    "key": "product:animal:007",
+    "age": 20
+   },
+   "total": {
+    "travel": 1116,
+    "waiting": 95,
+    "work": 261,
+    "idle": 1063,
+    "eating": 368,
+    "sleeping": 1594,
+    "ticks": 4497,
+    "starving": 0
+   },
+   "step": 1.0066347944848,
+   "errands": 66,
+   "errandTicks": 1428
+  },
+  {
+   "t": "T",
+   "label": "v7 standard",
+   "seed": 7,
+   "max": 53,
+   "open": {
+    "key": "eggs:coop",
+    "age": 9
+   },
+   "total": {
+    "travel": 1132,
+    "waiting": 106,
+    "work": 256,
+    "idle": 964,
+    "eating": 354,
+    "sleeping": 1685,
+    "ticks": 4497,
+    "starving": 0
+   },
+   "step": 1.0066347944848,
+   "errands": 72,
+   "errandTicks": 1457
+  }
+ ]
+}

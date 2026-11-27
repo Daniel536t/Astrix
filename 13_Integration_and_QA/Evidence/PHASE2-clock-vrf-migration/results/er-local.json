@@ -1,0 +1,200 @@
+{
+ "steps": [
+  {
+   "step": "stack",
+   "at": "2026-11-27T00:01:33.075Z",
+   "baseVersion": {
+    "feature-set": 2681577653,
+    "solana-core": "4.4.1"
+   },
+   "erVersion": {
+    "core": "2.0.3",
+    "solana-core": "4.2.2",
+    "feature-set": 565236538,
+    "git-commit": "3f53eec"
+   },
+   "erIdentity": "mAGicPQYBMvcYveUZA5F5UNNwyHvfYh5xkLS2Fr1mev",
+   "admin": "47fUJb27PB6JRjUprmvgFTkRLCE6P8cL7LFsV6nmQrV1"
+  },
+  {
+   "step": "A-base-v1-accounts",
+   "at": "2026-11-27T00:01:37.625Z",
+   "slotLen": 240
+  },
+  {
+   "step": "A-delegated",
+   "at": "2026-11-27T00:01:42.314Z",
+   "erSlot0": "Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy",
+   "baseOwner": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
+  },
+  {
+   "step": "B-old-crank-running",
+   "at": "2026-11-27T00:01:56.399Z",
+   "tickBefore": 1,
+   "tickAfter12s": 7
+  },
+  {
+   "step": "C-upgraded",
+   "at": "2026-11-27T00:03:07.882Z",
+   "extendBytes": 113591,
+   "erRunsNewProgram": true,
+   "oldCrankTicksIn10s": 5,
+   "lastTickTsMinusNow": -1
+  },
+  {
+   "step": "D-two-cranks",
+   "at": "2026-11-27T00:03:28.186Z",
+   "ticks": 10,
+   "wallSeconds": 20.013,
+   "lastTickTsDelta": 20,
+   "expectTicksEqualHalfOfTsDelta": true
+  },
+  {
+   "step": "E-migrate-on-ER",
+   "at": "2026-11-27T00:03:28.202Z",
+   "ok": false,
+   "err": "{\"InstructionError\":[1,\"Immutable\"]}",
+   "logs": []
+  },
+  {
+   "step": "F-scheduler-stopped",
+   "at": "2026-11-27T00:03:48.365Z",
+   "ticksWhileStopped": 0
+  },
+  {
+   "step": "F-undelegated",
+   "at": "2026-11-27T00:03:50.635Z",
+   "returned": true,
+   "baseEqualsErSnapshot": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "treasuryLamports": 501176240,
+   "batchCu": [
+    37475,
+    37475,
+    37475,
+    37475,
+    33689
+   ],
+   "registryCu": 33395,
+   "alt": true
+  },
+  {
+   "step": "G-migrated-on-base",
+   "at": "2026-11-27T00:03:52.185Z",
+   "lens": [
+    876,
+    876,
+    876,
+    876
+   ],
+   "prefixIdentical": [
+    true,
+    true,
+    true,
+    true
+   ]
+  },
+  {
+   "step": "G-v2-on-ER",
+   "at": "2026-11-27T00:03:57.112Z",
+   "erLen": 876,
+   "settleOk": true,
+   "caughtUpTicks": 14,
+   "stoppedSeconds": 28,
+   "epochInvariant": true,
+   "logs": [
+    "Program log: settle +14 tick 67 rem 0"
+   ]
+  },
+  {
+   "step": "timeout: VRF callback",
+   "at": "2026-11-27T00:05:05.923Z"
+  },
+  {
+   "step": "H-vrf-on-ER",
+   "at": "2026-11-27T00:05:05.931Z",
+   "queueOnEr": {
+    "owner": "Vrf1RNUjXmQGjmQrQLvJHs9SNkvDJEsRVFPkfSQUwGz",
+    "len": 9500
+   },
+   "queueOnBase": {
+    "owner": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh",
+    "len": 9500
+   },
+   "foodBefore": 400,
+   "fulfilled": false,
+   "lastRoll": 0,
+   "journalSeq": 1,
+   "lastRecord": {
+    "seq": "1",
+    "requestId": "0",
+    "prospectId": 0,
+    "kind": 6,
+    "outcome": 0,
+    "find": 0,
+    "epochLo": 0,
+    "worldTick": "53",
+    "ts": "1795737829",
+    "randomness": "c264996900000000000000000000000000000000000000000000000000000000",
+    "raw": "0100000000000000000000000000000000000000060000003500000000000000e5c8086b00000000c264996900000000000000000000000000000000000000000000000000000000"
+   },
+   "prospectLogs": [
+    "Program log: Idx: 16",
+    "Program Vrf1RNUjXmQGjmQrQLvJHs9SNkvDJEsRVFPkfSQUwGz consumed 11417 of 1382399 compute units",
+    "Program Vrf1RNUjXmQGjmQrQLvJHs9SNkvDJEsRVFPkfSQUwGz success",
+    "Program log: prospect request 1 prospect 1 nonce 9795548341145149573",
+    "Program Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy consumed 31922 of 1399850 compute units",
+    "Program Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy success"
+   ]
+  },
+  {
+   "step": "timeout: genesis callback",
+   "at": "2026-11-27T00:06:06.564Z"
+  },
+  {
+   "step": "I-vrf-genesis-on-ER",
+   "at": "2026-11-27T00:06:06.567Z",
+   "claimOk": true,
+   "err": "null",
+   "revealed": false,
+   "seed": 0,
+   "seedOrigin": 2,
+   "logs": [
+    "Program Vrf1RNUjXmQGjmQrQLvJHs9SNkvDJEsRVFPkfSQUwGz success",
+    "Program log: world slot 1 committed by 4JPTN2WqmZTDdYj576ieGEjBsushQqQEwdHsfFR8iEqG; genesis request 1",
+    "Program Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy consumed 42986 of 1399850 compute units",
+    "Program Gge4UkouS7gC12yfMAYpV1j3ZdnsQLSh3c43AeNiGRdy success"
+   ]
+  },
+  {
+   "step": "J-commit-v2",
+   "at": "2026-11-27T00:06:07.616Z",
+   "ok": true,
+   "err": "null",
+   "landed": true,
+   "baseLen": 876
+  },
+  {
+   "step": "K-both-cranks-v2",
+   "at": "2026-11-27T00:06:22.905Z",
+   "ticks": 7,
+   "tsDelta": 14,
+   "invariant": true,
+   "regressions": 0
+  },
+  {
+   "step": "DONE",
+   "at": "2026-11-27T00:06:23.454Z"
+  }
+ ]
+}

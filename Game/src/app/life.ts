@@ -1,18 +1,21 @@
 // Playable schema-3 life loop. Every write is a GameSession command; the UI,
 // meshes and persistence are derived from the resulting authoritative world.
 import * as THREE from 'three';
-import { FOUNDER_STOCKPILE_ID, LifeResource, cropReady } from '../sim/economy';
+import { CROP_YIELD_LABEL, FOUNDER_STOCKPILE_ID, LifeResource, cropReady } from '../sim/economy';
 import { World } from '../sim/world';
 import { buildLifeMeshes, disposeLifeMeshes } from '../render/life';
 import { LifeIntent, LifePanel } from '../ui/life';
 import { BrowserSaveStore } from './persistence';
 import { Command, GameSession } from './session';
+import type { Presence } from '../sim/bodies';
 
 export interface LifeGameOptions {
   session: GameSession;
   store: BrowserSaveStore;
   scene: THREE.Scene;
   toast: (message: string, kind: 'good' | 'warn' | 'bad') => void;
+  /** Called after a player command was saved immediately. */
+  onSaved?: () => void;
 }
 
 /** A snapshot for the read-only browser evidence surface, never a write API. */
@@ -81,11 +84,39 @@ export class LifeGame {
       return;
     }
     let saved: { ok: boolean; message: string } | null = null;
-    if (!result.duplicate) saved = this.options.store.save(session);
+    if (!result.duplicate) { saved = this.options.store.save(session); this.options.onSaved?.(); }
     const message = lifeMessage(intent) + (saved ? ` · ${saved.message}` : '');
     this.options.toast(message, saved?.ok === false ? 'bad' : 'good');
     // Rejected commands and duplicate receipts cannot refresh authoritative life.
     if (!result.duplicate) this.refresh();
+  }
+
+  /**
+   * Issue one real-time settlement tick through the normal journaled command
+   * path. Saving is left to the caller's SaveScheduler (throttled), so this
+   * returns whether an accepted tick changed state.
+   */
+  realtimeTick(presence?: Presence | null): { ok: boolean; reasons: string[] } {
+    const session = this.options.session;
+    if (session.journal.schema !== 3 || !session.world.life) return { ok: false, reasons: ['legacy world'] };
+    // STAB-002 S2: the player's quantised presence rides on the tick (only when there is one: see `playerPresence`).
+    const result = session.dispatch({
+      schema: 3, id: session.commandId('tick', 'realtime'), type: 'tick', ticks: 1,
+      expectedRevision: session.world.revision, ...(presence ? { presence } : {}),
+    });
+    if (!result.ok) return { ok: false, reasons: result.reasons };
+    if (result.outcome.type === 'tick') {
+      const done = result.outcome.completedJobs.map((j) => j.recipe);
+      const ready = result.outcome.readyCrops.length;
+      if (done.length || ready) {
+        this.options.toast([
+          done.length ? `Finished ${done.join(', ')}` : '',
+          ready ? `${ready} crop${ready === 1 ? '' : 's'} ready to harvest` : '',
+        ].filter(Boolean).join(' · '), 'good');
+      }
+    }
+    this.refresh();
+    return { ok: true, reasons: [] };
   }
 
   refresh(): void {
@@ -119,7 +150,7 @@ function lifeMessage(intent: LifeIntent): string {
   if (intent.type === 'tick') return `Advanced ${intent.ticks} simulation tick${intent.ticks === 1 ? '' : 's'}`;
   if (intent.type === 'plant' || intent.type === 'harvest_crop') {
     return intent.type === 'plant' ? `Planted ${intent.plotId}`
-      : `Harvested ${intent.plotId}: 6 food + 1 fiber`;
+      : `Harvested ${intent.plotId}: ${CROP_YIELD_LABEL}`;
   }
   return '';
 }

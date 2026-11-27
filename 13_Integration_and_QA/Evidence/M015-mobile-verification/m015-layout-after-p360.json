@@ -1,0 +1,2216 @@
+{
+ "base": "https://astrix.local/",
+ "dist": "/projects/sandbox/.kiro/artifacts/screenshots/probe/dist",
+ "vp": "p360",
+ "size": [
+  360,
+  780
+ ],
+ "mobile": true,
+ "emulated": "Playwright Chromium emulation, not a real device",
+ "seconds": 300.5,
+ "errs": [],
+ "issues": [
+  {
+   "name": "1-entry",
+   "overlaps": [
+    [
+     "#inventory",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#farm-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#mode-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     ".drawer-toggle",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#vitals",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#gather-nearest",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#jump-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#return-home-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#return-banner-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#plant-banner-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     ".zoomers",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#chain-panel",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#enter-screen .enter-card",
+     "#perf-overlay"
+    ],
+    [
+     "#enter-screen .enter-card",
+     "#settings-button"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#enter-screen .enter-card"
+    ]
+   ],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [
+    [
+     "#enter-screen .enter-card",
+     "joystick area"
+    ],
+    [
+     "#enter-screen .enter-card",
+     "Jump"
+    ]
+   ],
+   "scrollers": {}
+  },
+  {
+   "name": "2-chain-explore",
+   "overlaps": [],
+   "hudToast": [],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "3-explore",
+   "overlaps": [],
+   "hudToast": [],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "4-joystick",
+   "overlaps": [],
+   "hudToast": [],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "5-toast",
+   "overlaps": [],
+   "hudToast": [
+    [
+     "#toast",
+     "#gather-nearest"
+    ]
+   ],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "6-farm-top",
+   "overlaps": [
+    [
+     "#inventory",
+     "#homestead-panel"
+    ],
+    [
+     "#homestead-panel",
+     "#farm-button"
+    ],
+    [
+     "#homestead-panel",
+     "#mode-button"
+    ],
+    [
+     "#homestead-panel",
+     ".drawer-toggle"
+    ],
+    [
+     "#homestead-panel",
+     "#vitals"
+    ],
+    [
+     "#homestead-panel",
+     "#perf-overlay"
+    ],
+    [
+     "#homestead-panel",
+     "#settings-button"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#homestead-panel"
+    ]
+   ],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {
+    "#homestead-panel": {
+     "scrollH": 2583,
+     "clientH": 458,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "7-farm-bottom",
+   "overlaps": [
+    [
+     "#inventory",
+     "#homestead-panel"
+    ],
+    [
+     "#homestead-panel",
+     "#farm-button"
+    ],
+    [
+     "#homestead-panel",
+     "#mode-button"
+    ],
+    [
+     "#homestead-panel",
+     ".drawer-toggle"
+    ],
+    [
+     "#homestead-panel",
+     "#vitals"
+    ],
+    [
+     "#homestead-panel",
+     "#perf-overlay"
+    ],
+    [
+     "#homestead-panel",
+     "#settings-button"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#homestead-panel"
+    ]
+   ],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {
+    "#homestead-panel": {
+     "scrollH": 2583,
+     "clientH": 458,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "8-build-walk",
+   "overlaps": [],
+   "hudToast": [
+    [
+     "#hud",
+     "#build-bar"
+    ]
+   ],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {
+    "#build-bar": {
+     "scrollH": 275,
+     "clientH": 275,
+     "scrolls": false,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "9-builder",
+   "overlaps": [],
+   "hudToast": [],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "9b-build-tab",
+   "overlaps": [],
+   "hudToast": [
+    [
+     "#hud",
+     "#build-panel"
+    ]
+   ],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {
+    "#build-panel": {
+     "scrollH": 311,
+     "clientH": 311,
+     "scrolls": false,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "9c-world-tab",
+   "overlaps": [],
+   "hudToast": [],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "9a-settlement-tab",
+   "overlaps": [],
+   "hudToast": [
+    [
+     "#hud",
+     "#life-panel"
+    ]
+   ],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {
+    "#life-panel": {
+     "scrollH": 969,
+     "clientH": 432,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "10-build-builder",
+   "overlaps": [],
+   "hudToast": [
+    [
+     "#hud",
+     "#perf-overlay"
+    ]
+   ],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {
+    "#build-bar": {
+     "scrollH": 275,
+     "clientH": 275,
+     "scrolls": false,
+     "overflowY": "auto"
+    }
+   }
+  },
+  {
+   "name": "11-swim",
+   "overlaps": [],
+   "hudToast": [],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "12-settings",
+   "overlaps": [
+    [
+     "#mode-button",
+     "#settings-panel"
+    ],
+    [
+     "#return-home-button",
+     "#settings-panel"
+    ],
+    [
+     "#return-banner-button",
+     "#settings-panel"
+    ],
+    [
+     "#plant-banner-button",
+     "#settings-panel"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#settings-panel"
+    ]
+   ],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  },
+  {
+   "name": "13-perf-open",
+   "overlaps": [
+    [
+     "#farm-button",
+     "#perf-overlay"
+    ],
+    [
+     "#mode-button",
+     "#perf-overlay"
+    ],
+    [
+     "#return-home-button",
+     "#perf-overlay"
+    ],
+    [
+     "#return-banner-button",
+     "#perf-overlay"
+    ],
+    [
+     "#perf-overlay",
+     "#settings-button"
+    ]
+   ],
+   "hudToast": [
+    [
+     "#hud",
+     "#perf-overlay"
+    ]
+   ],
+   "clipped": [],
+   "small": 0,
+   "smallList": [],
+   "overflow": [],
+   "cover": [],
+   "scrollers": {}
+  }
+ ],
+ "screens": [
+  {
+   "name": "1-entry",
+   "file": "after-p360-1-entry.png",
+   "why": "first load: entry screen (Quick Play / Wallet Play)",
+   "t": 60.9,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 136,
+     "y": 58,
+     "w": 88,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#chain-panel": {
+     "x": 259,
+     "y": 152,
+     "w": 93,
+     "h": 40
+    },
+    "#enter-screen .enter-card": {
+     "x": 16,
+     "y": 42,
+     "w": 328,
+     "h": 695
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 112,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#inventory",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#farm-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#mode-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     ".drawer-toggle",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#vitals",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#gather-nearest",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#jump-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#return-home-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#return-banner-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#plant-banner-button",
+     "#enter-screen .enter-card"
+    ],
+    [
+     ".zoomers",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#chain-panel",
+     "#enter-screen .enter-card"
+    ],
+    [
+     "#enter-screen .enter-card",
+     "#perf-overlay"
+    ],
+    [
+     "#enter-screen .enter-card",
+     "#settings-button"
+    ]
+   ],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [
+    [
+     "#enter-screen .enter-card",
+     "joystick area"
+    ],
+    [
+     "#enter-screen .enter-card",
+     "Jump"
+    ]
+   ],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "2-chain-explore",
+   "file": "after-p360-2-chain-explore.png",
+   "why": "walk mode with the MagicBlock settlement panel (chain on)",
+   "t": 75.5,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 136,
+     "y": 58,
+     "w": 88,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#chain-panel": {
+     "x": 259,
+     "y": 152,
+     "w": 93,
+     "h": 40
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 112,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "3-explore",
+   "file": "after-p360-3-explore.png",
+   "why": "walk mode on arrival: HUD, vitals, settlers toast, controls",
+   "t": 145.6,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 136,
+     "y": 58,
+     "w": 88,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 112,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "4-joystick",
+   "file": "after-p360-4-joystick.png",
+   "why": "joystick held (walking)",
+   "t": 161.1,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 136,
+     "y": 58,
+     "w": 88,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 106,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "5-toast",
+   "file": "after-p360-5-toast.png",
+   "why": "Plant banner: toast in walk mode",
+   "t": 172,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 136,
+     "y": 58,
+     "w": 88,
+     "h": 18
+    },
+    "#toast": {
+     "x": 90,
+     "y": 572,
+     "w": 180,
+     "h": 50
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 96,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [
+    [
+     "#toast",
+     "#gather-nearest"
+    ]
+   ],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "6-farm-top",
+   "file": "after-p360-6-farm-top.png",
+   "why": "Farm panel open (top)",
+   "t": 178.5,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#homestead-panel": {
+     "x": 8,
+     "y": 8,
+     "w": 344,
+     "h": 460
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 136,
+     "y": 58,
+     "w": 88,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 96,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#homestead-panel"
+    ],
+    [
+     "#inventory",
+     "#homestead-panel"
+    ],
+    [
+     "#homestead-panel",
+     "#farm-button"
+    ],
+    [
+     "#homestead-panel",
+     "#mode-button"
+    ],
+    [
+     "#homestead-panel",
+     ".drawer-toggle"
+    ],
+    [
+     "#homestead-panel",
+     "#vitals"
+    ],
+    [
+     "#homestead-panel",
+     "#perf-overlay"
+    ],
+    [
+     "#homestead-panel",
+     "#settings-button"
+    ]
+   ],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {
+    "#homestead-panel": {
+     "scrollH": 2583,
+     "clientH": 458,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "7-farm-bottom",
+   "file": "after-p360-7-farm-bottom.png",
+   "why": "Farm panel scrolled to the bottom",
+   "t": 181.4,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#homestead-panel": {
+     "x": 8,
+     "y": 8,
+     "w": 344,
+     "h": 460
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 136,
+     "y": 58,
+     "w": 88,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 96,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#homestead-panel"
+    ],
+    [
+     "#inventory",
+     "#homestead-panel"
+    ],
+    [
+     "#homestead-panel",
+     "#farm-button"
+    ],
+    [
+     "#homestead-panel",
+     "#mode-button"
+    ],
+    [
+     "#homestead-panel",
+     ".drawer-toggle"
+    ],
+    [
+     "#homestead-panel",
+     "#vitals"
+    ],
+    [
+     "#homestead-panel",
+     "#perf-overlay"
+    ],
+    [
+     "#homestead-panel",
+     "#settings-button"
+    ]
+   ],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {
+    "#homestead-panel": {
+     "scrollH": 2583,
+     "clientH": 458,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "8-build-walk",
+   "file": "after-p360-8-build-walk.png",
+   "why": "build mode in walk mode (Farm -> Build...)",
+   "t": 187.8,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore building",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#build-bar": {
+     "x": 10,
+     "y": 56,
+     "w": 340,
+     "h": 277
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 246,
+     "y": 624,
+     "w": 106,
+     "h": 40
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#build-bar"
+    ]
+   ],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {
+    "#build-bar": {
+     "scrollH": 275,
+     "clientH": 275,
+     "scrolls": false,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "9-builder",
+   "file": "after-p360-9-builder.png",
+   "why": "builder view (default tab)",
+   "t": 197.6,
+   "vw": 360,
+   "vh": 780,
+   "body": "",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 461,
+     "w": 236,
+     "h": 177
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 293,
+     "y": 104,
+     "w": 59,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 96,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "9b-build-tab",
+   "file": "after-p360-9b-build-tab.png",
+   "why": "builder view: b-build-tab",
+   "t": 202.9,
+   "vw": 360,
+   "vh": 780,
+   "body": "",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 461,
+     "w": 236,
+     "h": 177
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#build-panel": {
+     "x": 22,
+     "y": 152,
+     "w": 330,
+     "h": 313
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 293,
+     "y": 104,
+     "w": 59,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 106,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#build-panel"
+    ]
+   ],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {
+    "#build-panel": {
+     "scrollH": 311,
+     "clientH": 311,
+     "scrolls": false,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "9c-world-tab",
+   "file": "after-p360-9c-world-tab.png",
+   "why": "builder view: c-world-tab",
+   "t": 208.1,
+   "vw": 360,
+   "vh": 780,
+   "body": "",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 461,
+     "w": 236,
+     "h": 177
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 293,
+     "y": 104,
+     "w": 59,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 106,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "9a-settlement-tab",
+   "file": "after-p360-9a-settlement-tab.png",
+   "why": "builder view: a-settlement-tab",
+   "t": 214.4,
+   "vw": 360,
+   "vh": 780,
+   "body": "",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 461,
+     "w": 236,
+     "h": 177
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#life-panel": {
+     "x": 8,
+     "y": 152,
+     "w": 264,
+     "h": 434
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 293,
+     "y": 104,
+     "w": 59,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 96,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#life-panel"
+    ]
+   ],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {
+    "#life-panel": {
+     "scrollH": 969,
+     "clientH": 432,
+     "scrolls": true,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "10-build-builder",
+   "file": "after-p360-10-build-builder.png",
+   "why": "build mode in the builder view",
+   "t": 217.6,
+   "vw": 360,
+   "vh": 780,
+   "body": "building",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 461,
+     "w": 236,
+     "h": 177
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#build-bar": {
+     "x": 10,
+     "y": 56,
+     "w": 340,
+     "h": 277
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 246,
+     "y": 624,
+     "w": 106,
+     "h": 40
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#perf-overlay"
+    ]
+   ],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {
+    "#build-bar": {
+     "scrollH": 275,
+     "clientH": 275,
+     "scrolls": false,
+     "overflowY": "auto"
+    }
+   },
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "11-swim",
+   "file": "after-p360-11-swim.png",
+   "why": "swimming: Dive button shown",
+   "t": 285.2,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore swimming",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 44,
+     "y": 58,
+     "w": 272,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#dive-button": {
+     "x": 176,
+     "y": 684,
+     "w": 66,
+     "h": 66
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 112,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "12-settings",
+   "file": "after-p360-12-settings.png",
+   "why": "settings: graphics quality",
+   "t": 291.7,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore swimming",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 44,
+     "y": 58,
+     "w": 272,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#dive-button": {
+     "x": 176,
+     "y": 684,
+     "w": 66,
+     "h": 66
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 136,
+     "y": 82,
+     "w": 96,
+     "h": 40
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    },
+    "#settings-panel": {
+     "x": 14,
+     "y": 130,
+     "w": 332,
+     "h": 338
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#settings-panel"
+    ],
+    [
+     "#mode-button",
+     "#settings-panel"
+    ],
+    [
+     "#return-home-button",
+     "#settings-panel"
+    ],
+    [
+     "#return-banner-button",
+     "#settings-panel"
+    ],
+    [
+     "#plant-banner-button",
+     "#settings-panel"
+    ]
+   ],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  },
+  {
+   "name": "13-perf-open",
+   "file": "after-p360-13-perf-open.png",
+   "why": "performance monitor expanded",
+   "t": 300.5,
+   "vw": 360,
+   "vh": 780,
+   "body": "explore swimming",
+   "els": {
+    "#hud": {
+     "x": 12,
+     "y": 124,
+     "w": 166,
+     "h": 128
+    },
+    "#inventory": {
+     "x": 8,
+     "y": 8,
+     "w": 127,
+     "h": 46
+    },
+    "#farm-button": {
+     "x": 14,
+     "y": 78,
+     "w": 64,
+     "h": 44
+    },
+    "#mode-button": {
+     "x": 250,
+     "y": 104,
+     "w": 102,
+     "h": 40
+    },
+    ".drawer-toggle": {
+     "x": 157,
+     "y": 8,
+     "w": 195,
+     "h": 44
+    },
+    "#vitals": {
+     "x": 44,
+     "y": 58,
+     "w": 272,
+     "h": 18
+    },
+    "#gather-nearest": {
+     "x": 264,
+     "y": 600,
+     "w": 62,
+     "h": 62
+    },
+    "#jump-button": {
+     "x": 256,
+     "y": 676,
+     "w": 80,
+     "h": 80
+    },
+    "#dive-button": {
+     "x": 176,
+     "y": 684,
+     "w": 66,
+     "h": 66
+    },
+    "#return-home-button": {
+     "x": 274,
+     "y": 344,
+     "w": 64,
+     "h": 40
+    },
+    "#return-banner-button": {
+     "x": 274,
+     "y": 392,
+     "w": 64,
+     "h": 40
+    },
+    "#plant-banner-button": {
+     "x": 274,
+     "y": 440,
+     "w": 64,
+     "h": 40
+    },
+    ".zoomers": {
+     "x": 290,
+     "y": 494,
+     "w": 40,
+     "h": 90
+    },
+    "#perf-overlay": {
+     "x": 8,
+     "y": 82,
+     "w": 344,
+     "h": 323
+    },
+    "#settings-button": {
+     "x": 84,
+     "y": 78,
+     "w": 44,
+     "h": 44
+    }
+   },
+   "overlaps": [
+    [
+     "#hud",
+     "#perf-overlay"
+    ],
+    [
+     "#farm-button",
+     "#perf-overlay"
+    ],
+    [
+     "#mode-button",
+     "#perf-overlay"
+    ],
+    [
+     "#return-home-button",
+     "#perf-overlay"
+    ],
+    [
+     "#return-banner-button",
+     "#perf-overlay"
+    ],
+    [
+     "#perf-overlay",
+     "#settings-button"
+    ]
+   ],
+   "clipped": [],
+   "small": [],
+   "overflow": [],
+   "scrollers": {},
+   "cover": [],
+   "thumb": {
+    "x": 0,
+    "y": 468,
+    "w": 180,
+    "h": 312
+   }
+  }
+ ]
+}

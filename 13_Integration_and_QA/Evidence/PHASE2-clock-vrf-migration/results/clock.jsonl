@@ -1,0 +1,3 @@
+{"test":"catch-up","dt":62,"steps":31}
+{"test":"cap","outageS":10800,"calls":18,"maxCu":44396,"noopCu":6453}
+{"test":"owner-disconnect","outageS":10800,"ticksAtStop":300,"finalTick":5970,"totalWorldSeconds":11940,"crankRunsToCatchUp":19,"stock":[0,42,8952,9990,0,8952,9,0],"population":10,"startPop":1,"planks":9,"plotsPlanted":6}

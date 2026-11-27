@@ -5,6 +5,43 @@ import * as THREE from 'three';
 
 type Pt = { x: number; y: number };
 
+/**
+ * 'builder' orbits a free target (the settlement overview); 'explore' follows
+ * the player character: movement keys drive the character instead of the
+ * target, the camera stays close and never passes through terrain.
+ */
+export type RigMode = 'builder' | 'explore';
+
+/** Returns the free distance along a ray (<= maxDist), used for arm collision. */
+export type ArmCollider = (from: THREE.Vector3, dir: THREE.Vector3, maxDist: number) => number;
+
+/**
+ * Signed horizontal distance (m) from `target` to where the bottom screen
+ * edge (centre column) meets the horizontal plane through the target,
+ * measured along the camera's horizontal view direction: negative means the
+ * nearest visible ground lies between the camera and the target. Returns 0
+ * when that ray never reaches the plane (camera level or looking up).
+ * Used to anchor the shadow box and ground cover to the ground on screen.
+ */
+export function viewGroundOffset(camera: THREE.PerspectiveCamera, target: THREE.Vector3): number {
+  const p = camera.position;
+  const h = p.y - target.y;
+  const along = Math.hypot(target.x - p.x, target.z - p.z);
+  if (h <= 0) return 0;
+  const down = Math.atan2(h, along) + THREE.MathUtils.degToRad(camera.fov / 2);
+  if (down <= 0) return 0;
+  // Past straight down (down > 90 deg) the hit lies behind the camera.
+  return h / Math.tan(down) - along;
+}
+
+/** `target` moved `offset` metres along the camera's horizontal view direction. */
+export function alongView(target: THREE.Vector3, camera: THREE.Vector3, offset: number, out = new THREE.Vector3()): THREE.Vector3 {
+  const dx = target.x - camera.x, dz = target.z - camera.z, len = Math.hypot(dx, dz);
+  out.copy(target);
+  if (len > 1e-6) { out.x += (dx / len) * offset; out.z += (dz / len) * offset; }
+  return out;
+}
+
 export class OrbitRig {
   readonly camera: THREE.PerspectiveCamera;
   target = new THREE.Vector3(0, 10, 0);
@@ -19,7 +56,16 @@ export class OrbitRig {
   private keys = new Set<string>();
   private padX = 0;
   private padZ = 0;
-  private padActive = false;
+  private padRun = false;
+  mode: RigMode = 'builder';
+  /** Optional terrain collision for the camera arm (explore mode). */
+  collider: ArmCollider | null = null;
+  /** Distance actually used after collision (<= distance). */
+  effectiveDistance = 58;
+  private readonly limits = {
+    builder: { minDist: 12, maxDist: 1400, minPitch: 0.35, maxPitch: 1.25 },
+    explore: { minDist: 3, maxDist: 60, minPitch: -0.2, maxPitch: 1.3 },
+  };
 
   constructor(private el: HTMLElement) {
     this.camera = new THREE.PerspectiveCamera(38, el.clientWidth / Math.max(1, el.clientHeight), 0.5, 9000);
@@ -42,7 +88,8 @@ export class OrbitRig {
 
       if (this.pointers.size === 1 && prev) {
         this.yaw -= (p.x - prev.x) * 0.005;
-        this.pitch = THREE.MathUtils.clamp(this.pitch + (p.y - prev.y) * 0.004, 0.35, 1.25);
+        const lim = this.limits[this.mode];
+        this.pitch = THREE.MathUtils.clamp(this.pitch + (p.y - prev.y) * 0.004, lim.minPitch, lim.maxPitch);
         this.apply();
       } else if (this.pointers.size >= 2) {
         const [a, b] = [...this.pointers.values()];
@@ -50,7 +97,7 @@ export class OrbitRig {
         const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
         if (this.pinchDist > 0) {
           this.zoomBy(this.pinchDist / Math.max(1, d));
-          this.panBy((mx - this.mid.x) * 0.9, (my - this.mid.y) * 0.9);
+          if (this.mode === 'builder') this.panBy((mx - this.mid.x) * 0.9, (my - this.mid.y) * 0.9);
         }
         this.pinchDist = d;
         this.mid = { x: mx, y: my };
@@ -72,8 +119,11 @@ export class OrbitRig {
 
     el.addEventListener('wheel', (e) => {
       e.preventDefault();
-      this.zoomBy(1 + Math.sign(e.deltaY) * 0.1);
+      // Proportional to the delta so trackpads (many small events) zoom smoothly.
+      const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      this.zoomBy(Math.exp(THREE.MathUtils.clamp(delta, -200, 200) * 0.0012));
     }, { passive: false });
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
 
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
@@ -83,12 +133,36 @@ export class OrbitRig {
       }
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
-    window.addEventListener('blur', () => this.keys.clear());
+    window.addEventListener('blur', () => { this.keys.clear(); this.clearPad(); });
 
-    window.addEventListener('resize', () => {
-      this.camera.aspect = el.clientWidth / Math.max(1, el.clientHeight);
-      this.camera.updateProjectionMatrix();
-    });
+  }
+
+  setMode(mode: RigMode): void {
+    this.mode = mode;
+    const lim = this.limits[mode];
+    this.distance = THREE.MathUtils.clamp(this.distance, lim.minDist, lim.maxDist);
+    this.pitch = THREE.MathUtils.clamp(this.pitch, lim.minPitch, lim.maxPitch);
+    this.apply();
+  }
+
+  /**
+   * Movement intent from keys and the touch pad, relative to the camera's
+   * ground-plane basis: x = right, z = forward. Used by the character controller.
+   */
+  moveIntent(): { x: number; z: number; run: boolean } {
+    let ix = 0, iz = 0;
+    if (this.keys.has('w') || this.keys.has('arrowup')) iz += 1;
+    if (this.keys.has('s') || this.keys.has('arrowdown')) iz -= 1;
+    if (this.keys.has('d') || this.keys.has('arrowright')) ix += 1;
+    if (this.keys.has('a') || this.keys.has('arrowleft')) ix -= 1;
+    ix += this.padX; iz += this.padZ;
+    const { right, forward } = this.basis();
+    const len = Math.max(1, Math.hypot(ix, iz));
+    return {
+      x: (right.x * ix + forward.x * iz) / len,
+      z: (right.z * ix + forward.z * iz) / len,
+      run: this.keys.has('shift') || this.padRun,
+    };
   }
 
   private beginPinch() {
@@ -115,16 +189,16 @@ export class OrbitRig {
   }
 
   zoomBy(factor: number) {
-    this.distance = THREE.MathUtils.clamp(this.distance * factor, 12, 1400);
+    const lim = this.limits[this.mode];
+    this.distance = THREE.MathUtils.clamp(this.distance * factor, lim.minDist, lim.maxDist);
     this.apply();
   }
 
-  /** On-screen pad, −1..1 per axis. z>0 walks forward. */
-  setPad(x: number, z: number) {
-    this.padActive = x !== 0 || z !== 0;
-    this.padX = x; this.padZ = z;
+  /** On-screen joystick, analog −1..1 per axis (length <= 1). z>0 walks forward. */
+  setPad(x: number, z: number, run = false) {
+    this.padX = x; this.padZ = z; this.padRun = run;
   }
-  clearPad() { this.setPad(0, 0); this.padActive = false; }
+  clearPad() { this.setPad(0, 0, false); }
 
   private clampTarget() {
     this.target.x = THREE.MathUtils.clamp(this.target.x, -1000, 1000);
@@ -134,6 +208,12 @@ export class OrbitRig {
 
   /** Keyboard + pad movement, called once per frame. */
   update(dt: number) {
+    if (this.mode === 'explore') {
+      if (this.keys.has('+') || this.keys.has('=')) this.zoomBy(1 - dt * 1.2);
+      if (this.keys.has('-')) this.zoomBy(1 + dt * 1.2);
+      // Arrow keys left/right turn the camera when walking with WASD is not enough.
+      return;
+    }
     let ix = 0, iz = 0;
     if (this.keys.has('w') || this.keys.has('arrowup')) iz += 1;
     if (this.keys.has('s') || this.keys.has('arrowdown')) iz -= 1;
@@ -160,10 +240,18 @@ export class OrbitRig {
   }
 
   apply() {
-    const x = this.target.x + this.distance * Math.cos(this.pitch) * Math.sin(this.yaw);
-    const y = this.target.y + this.distance * Math.sin(this.pitch);
-    const z = this.target.z + this.distance * Math.cos(this.pitch) * Math.cos(this.yaw);
-    this.camera.position.set(x, y, z);
+    const dir = new THREE.Vector3(
+      Math.cos(this.pitch) * Math.sin(this.yaw),
+      Math.sin(this.pitch),
+      Math.cos(this.pitch) * Math.cos(this.yaw),
+    );
+    let dist = this.distance;
+    if (this.mode === 'explore' && this.collider) {
+      // Keep a margin so the near plane never clips the hillside.
+      dist = Math.max(1.2, Math.min(dist, this.collider(this.target, dir, dist) - 0.6));
+    }
+    this.effectiveDistance = dist;
+    this.camera.position.copy(this.target).addScaledVector(dir, dist);
     this.camera.lookAt(this.target);
   }
 

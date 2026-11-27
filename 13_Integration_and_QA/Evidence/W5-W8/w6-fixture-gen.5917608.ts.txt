@@ -1,0 +1,77 @@
+// Run under the live W5 code (5917608, temporary worktree): a content-v6 wilderness save for
+// tests/fixtures/w6-wilderness-save.json. State: a finished workbench and campfire (fuelled), a stone pickaxe
+// (crafted at the bench, equipped) and an axe, an unfinished lean-to (materials delivered), dropped piles,
+// explored land from the spawn to the nearest ore outcrop (the ford and the outcrop discovered), a waypoint, ticks.
+import { writeFileSync } from 'node:fs';
+import { GameSession } from './src/app/session';
+import { BrowserSaveStore, KeyValueStorage } from './src/app/persistence';
+import { GENERATOR_V2, WILDERNESS } from './src/sim/world';
+import { carriedWeight, carryCapacity } from './src/sim/gathering';
+import { siteSpotOf } from './src/sim/wild-build';
+import { exploredCount, oreInChunk } from './src/sim/map';
+import { SPAWN, axe, build, dm, fund, gather, load, ok, placeAt, send, spot, tick, deliverAll } from './tests/w4-harness';
+
+class MemoryStorage implements KeyValueStorage {
+  readonly map = new Map<string, string>();
+  getItem(k: string) { return this.map.get(k) ?? null; }
+  setItem(k: string, v: string) { this.map.set(k, v); }
+  removeItem(k: string) { this.map.delete(k); }
+  key(i: number) { return [...this.map.keys()][i] ?? null; }
+  get length() { return this.map.size; }
+}
+const storage = new MemoryStorage();
+const store = new BrowserSaveStore(storage, 1337, GENERATOR_V2, { scenario: WILDERNESS, id: 'w1' });
+const loaded = store.load();
+if (loaded.status !== 'new') throw new Error(loaded.status);
+const s = loaded.session;
+if (s.journal.wildContent !== 6) throw new Error('not v6');
+load(s);
+tick(s, 2);
+ok(send(s, { type: 'explore', at: dm(SPAWN) }), 'explore at spawn');
+axe(s);
+const fire = build(s, 'campfire', SPAWN);
+gather(s, 'branch', 2);
+ok(send(s, { type: 'fuel_fire', siteId: fire, item: 'branch', n: 1, at: dm(siteSpotOf(s.world.wild!.build!.sites.get(fire)!)) }), 'fuel');
+const benchFrom = { x: SPAWN.x - 10, z: SPAWN.z + 2 };
+const bench = build(s, 'workbench', benchFrom);
+gather(s, 'branch', 1); gather(s, 'loose_stone', 2);
+for (let i = 0; i < 1; i++) { gather(s, 'fiber_plant', 2); ok(send(s, { type: 'craft', recipe: 'cord' }), 'cord'); }
+const benchSpot = dm(siteSpotOf(s.world.wild!.build!.sites.get(bench)!));
+ok(send(s, { type: 'craft', recipe: 'stone_pickaxe', at: benchSpot }), 'pickaxe at the bench');
+// A lean-to marked out and delivered, unfinished.
+const from = { x: SPAWN.x + 12, z: SPAWN.z + 4 };
+fund(s, 'lean_to', from);
+const lean = placeAt(s, 'lean_to', spot(s, 'lean_to', from), 1, from);
+deliverAll(s, lean);
+gather(s, 'loose_stone', 2);
+ok(send(s, { type: 'drop', item: 'stone', n: 2, at: dm({ x: SPAWN.x - 6, z: SPAWN.z + 5 }) }), 'drop');
+ok(send(s, { type: 'equip', item: 'stone_pickaxe' }), 'equip pickaxe');
+// Walk (explore reports every 16 m, a tick each) to the nearest ore outcrop, NNE of the spawn.
+const ore = oreInChunk(1337, GENERATOR_V2, 31, 16).find((o) => o.id === 'e:31,16:6')!;
+const end = { x: ore.x - 2, z: ore.z + 2 };
+const steps = Math.ceil(Math.hypot(end.x - SPAWN.x, end.z - SPAWN.z) / 16);
+for (let i = 1; i <= steps; i++) {
+  tick(s, 1);
+  ok(send(s, { type: 'explore', at: dm({ x: SPAWN.x + (end.x - SPAWN.x) * i / steps, z: SPAWN.z + (end.z - SPAWN.z) * i / steps }) }), `explore ${i}`);
+}
+ok(send(s, { type: 'set_waypoint', x: Math.round(ore.x), z: Math.round(ore.z), name: 'Ore outcrop' }), 'waypoint');
+tick(s, 2);
+const w = s.world.wild!;
+if (!w.map!.deposits.has(ore.id)) throw new Error('ore not discovered');
+console.log('bag', JSON.stringify(w.items), carriedWeight(w), '/', carryCapacity(w), 'tools', JSON.stringify(w.tools), 'explored', exploredCount(w.map!), 'places', [...w.map!.places], 'deposits', [...w.map!.deposits]);
+const save = (): { key: string; hash: string; record: string } => {
+  const res = store.save(s);
+  if (!res.ok) throw new Error('save');
+  const key = [...storage.map.keys()].find((k) => k.startsWith('astrix:wild:'))!;
+  return { key, hash: s.stateHash, record: storage.getItem(key)! };
+};
+const short = save();
+if (GameSession.replay(JSON.parse(JSON.stringify(s.journal))).stateHash !== s.stateHash) throw new Error('replay');
+s.compact();
+const long = { ...save(), compacted: true };
+const fixture = {
+  made: 'Live W5 code at 5917608 (temporary worktree), BrowserSaveStore seed 1337 gen 2 slot w1, wilderness content v6: finished campfire (fuelled) and workbench, stone axe and stone pickaxe (equipped), an unfinished lean-to with its materials delivered, dropped piles, land explored from the spawn to the ore outcrop e:31,16:6 (discovered), a waypoint there',
+  fire, bench, lean, ore: { id: ore.id, x: ore.x, z: ore.z }, at: dm(end), short, long,
+};
+writeFileSync(process.argv[2], JSON.stringify(fixture, null, 2) + '\n');
+console.log('wrote', process.argv[2], 'entries', JSON.parse(short.record).journal.entries.length, 'hash', short.hash, long.hash);

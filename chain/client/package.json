@@ -1,0 +1,15 @@
+{
+  "name": "astrix-chain-client",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "tsx scripts/demo.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@magicblock-labs/ephemeral-rollups-sdk": "^0.18.0",
+    "@solana/web3.js": "^1.99.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}

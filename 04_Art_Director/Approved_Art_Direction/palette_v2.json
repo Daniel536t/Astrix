@@ -49,6 +49,90 @@
       "hex": "#E3D3A6",
       "role": "shore cells"
     },
+    "snow": {
+      "hex": "#EEF1F5",
+      "role": "generator v2 snowfields above the snowline (added 2026-11-23, review required)"
+    },
+    "char_skin": {
+      "hex": "#D9A77E",
+      "role": "character skin (added 2026-11-23, review required)"
+    },
+    "char_tunic": {
+      "hex": "#B34A3C",
+      "role": "founder tunic, warm red accent (added 2026-11-23, review required)"
+    },
+    "char_tunic_alt": {
+      "hex": "#2E8C86",
+      "role": "villager tunic, teal accent (added 2026-11-23, review required)"
+    },
+    "char_trousers": {
+      "hex": "#5B4636",
+      "role": "character trousers (added 2026-11-23, review required)"
+    },
+    "char_hair": {
+      "hex": "#4A3324",
+      "role": "character hair (added 2026-11-23, review required)"
+    },
+    "char_boots": {
+      "hex": "#33281F",
+      "role": "character boots and belt (added 2026-11-23, review required)"
+    },
+    "fauna_deer": {
+      "hex": "#8C5B3A",
+      "role": "red deer coat (added 2026-11-23, review required)"
+    },
+    "fauna_light": {
+      "hex": "#DCC7A4",
+      "role": "deer belly, hare tail, antler (added 2026-11-23, review required)"
+    },
+    "fauna_hare": {
+      "hex": "#9A8670",
+      "role": "hare coat (added 2026-11-23, review required)"
+    },
+    "fauna_trout": {
+      "hex": "#6F7F5E",
+      "role": "trout back (added 2026-11-23, review required)"
+    },
+    "fauna_trout_belly": {
+      "hex": "#D8C9A3",
+      "role": "trout belly (added 2026-11-23, review required)"
+    },
+    "arch_plaster": {
+      "hex": "#E8DDC6",
+      "role": "village wall plaster (added 2026-11-23, review required)"
+    },
+    "arch_timber": {
+      "hex": "#6A4530",
+      "role": "village timber frame (added 2026-11-23, review required)"
+    },
+    "arch_timber_light": {
+      "hex": "#8A6142",
+      "role": "village planks and doors (added 2026-11-23, review required)"
+    },
+    "arch_thatch": {
+      "hex": "#C7A257",
+      "role": "thatch roof (added 2026-11-23, review required)"
+    },
+    "arch_thatch_dark": {
+      "hex": "#9C7B3C",
+      "role": "thatch roof shade course (added 2026-11-23, review required)"
+    },
+    "arch_stone": {
+      "hex": "#9B9A91",
+      "role": "village masonry (added 2026-11-23, review required)"
+    },
+    "arch_stone_dark": {
+      "hex": "#74736C",
+      "role": "village masonry joints and plinth (added 2026-11-23, review required)"
+    },
+    "prop_iron": {
+      "hex": "#3A3A3F",
+      "role": "iron fittings (added 2026-11-23, review required)"
+    },
+    "prop_glow": {
+      "hex": "#FFD27F",
+      "role": "lantern light (emissive, effect only) (added 2026-11-23, review required)"
+    },
     "water_shallow": {
       "hex": "#67CFD8",
       "role": "water depth <= 0.5 m"

@@ -1,0 +1,2 @@
+key astrix:m002:v3:seed:1337: rules v7, tick 60, entries 61, restore 41142835a590a3e9 (snapshot byte-identical true), replay from genesis 41142835a590a3e9, equal true
+upgrade ok true, v8, farm unchanged but the rules number true, animals 15, villagers 3

@@ -1,0 +1,388 @@
+{
+ "emulated": "Playwright Chromium 1000x600, desktop, software GL: NOT a real device",
+ "live": {
+  "url": "https://astrix.nyc.boxd.sh/?chain=0&metrics=1&timescale=4",
+  "first": {
+   "tick": 1,
+   "rules": 7,
+   "build": null
+  },
+  "at60": {
+   "tick": 61,
+   "rules": 7,
+   "hash": "fa7b75333a7089cd",
+   "build": null,
+   "animals": [
+    "animal:000",
+    "animal:001",
+    "animal:002",
+    "animal:003",
+    "animal:004",
+    "animal:005",
+    "animal:006",
+    "animal:007",
+    "animal:008",
+    "animal:009",
+    "animal:010",
+    "animal:011",
+    "animal:012",
+    "animal:013",
+    "animal:014"
+   ],
+   "herd": [
+    [
+     "animal:000",
+     "chicken",
+     -32.5,
+     0.5,
+     "graze"
+    ],
+    [
+     "animal:001",
+     "chicken",
+     -32.5,
+     -0.9,
+     "wander"
+    ],
+    [
+     "animal:002",
+     "chicken",
+     -34.5,
+     -0.5,
+     "graze"
+    ],
+    [
+     "animal:003",
+     "chicken",
+     -32.6,
+     -0.6,
+     "wander"
+    ],
+    [
+     "animal:004",
+     "sheep",
+     -24.8,
+     -0.6,
+     "wander"
+    ],
+    [
+     "animal:005",
+     "sheep",
+     -25.5,
+     0.5,
+     "graze"
+    ],
+    [
+     "animal:006",
+     "sheep",
+     -22.5,
+     -2.3,
+     "wander"
+    ],
+    [
+     "animal:007",
+     "goat",
+     -24.5,
+     -1.5,
+     "graze"
+    ],
+    [
+     "animal:008",
+     "goat",
+     -24.5,
+     -1.5,
+     "wander"
+    ],
+    [
+     "animal:009",
+     "pig",
+     -19.5,
+     -0.5,
+     "graze"
+    ],
+    [
+     "animal:010",
+     "pig",
+     -14.5,
+     -2.5,
+     "drink"
+    ],
+    [
+     "animal:011",
+     "cattle",
+     -29.5,
+     10.5,
+     "rest"
+    ],
+    [
+     "animal:012",
+     "cattle",
+     -26.5,
+     10.5,
+     "graze"
+    ],
+    [
+     "animal:013",
+     "horse",
+     -26.5,
+     8.5,
+     "graze"
+    ],
+    [
+     "animal:014",
+     "horse",
+     -17.4,
+     6.5,
+     "drink"
+    ]
+   ],
+   "villagers": [
+    [
+     "villager:0",
+     "Ada",
+     "farmer"
+    ],
+    [
+     "villager:1",
+     "Bram",
+     "herder"
+    ],
+    [
+     "villager:2",
+     "Cora",
+     "farmer"
+    ]
+   ],
+   "sites": 0,
+   "fields": 0
+  },
+  "saveKey": "astrix:m002:v3:seed:1337",
+  "saveRules": 7,
+  "saveTick": null,
+  "saveAnimals": [
+   "animal:000",
+   "animal:001",
+   "animal:002",
+   "animal:003",
+   "animal:004",
+   "animal:005",
+   "animal:006",
+   "animal:007",
+   "animal:008",
+   "animal:009",
+   "animal:010",
+   "animal:011",
+   "animal:012",
+   "animal:013",
+   "animal:014"
+  ],
+  "saveVillagers": [
+   "villager:0",
+   "villager:1",
+   "villager:2"
+  ],
+  "journalEntries": 61,
+  "keys": [
+   "astrix:avatar:v1:seed:1337:gen:2",
+   "astrix:entered:v1",
+   "astrix:m002:v3:seed:1337",
+   "astrix:lease:seed:1337",
+   "astrix:banners:v1:seed:1337:gen:2"
+  ],
+  "bytes": 25756
+ },
+ "upgrade": {
+  "after": {
+   "tick": 60,
+   "rules": 8,
+   "hash": "1ebd4eaee7d4c72c",
+   "build": null,
+   "animals": [
+    "animal:000",
+    "animal:001",
+    "animal:002",
+    "animal:003",
+    "animal:004",
+    "animal:005",
+    "animal:006",
+    "animal:007",
+    "animal:008",
+    "animal:009",
+    "animal:010",
+    "animal:011",
+    "animal:012",
+    "animal:013",
+    "animal:014"
+   ],
+   "herd": [
+    [
+     "animal:000",
+     "chicken",
+     -32.5,
+     0.5,
+     "graze"
+    ],
+    [
+     "animal:001",
+     "chicken",
+     -32.5,
+     -0.2,
+     "wander"
+    ],
+    [
+     "animal:002",
+     "chicken",
+     -34.5,
+     -0.5,
+     "graze"
+    ],
+    [
+     "animal:003",
+     "chicken",
+     -32.8,
+     -1.3,
+     "wander"
+    ],
+    [
+     "animal:004",
+     "sheep",
+     -24.1,
+     -0.6,
+     "wander"
+    ],
+    [
+     "animal:005",
+     "sheep",
+     -25,
+     1,
+     "graze"
+    ],
+    [
+     "animal:006",
+     "sheep",
+     -22.5,
+     -2.3,
+     "wander"
+    ],
+    [
+     "animal:007",
+     "goat",
+     -24.5,
+     -1.5,
+     "graze"
+    ],
+    [
+     "animal:008",
+     "goat",
+     -24.5,
+     -1.5,
+     "wander"
+    ],
+    [
+     "animal:009",
+     "pig",
+     -19.5,
+     -0.5,
+     "graze"
+    ],
+    [
+     "animal:010",
+     "pig",
+     -14.5,
+     -2.5,
+     "graze"
+    ],
+    [
+     "animal:011",
+     "cattle",
+     -29.5,
+     10.5,
+     "rest"
+    ],
+    [
+     "animal:012",
+     "cattle",
+     -26.5,
+     10.5,
+     "graze"
+    ],
+    [
+     "animal:013",
+     "horse",
+     -26.5,
+     8.5,
+     "graze"
+    ],
+    [
+     "animal:014",
+     "horse",
+     -18.1,
+     6.6,
+     "drink"
+    ]
+   ],
+   "villagers": [
+    [
+     "villager:0",
+     "Ada",
+     "farmer"
+    ],
+    [
+     "villager:1",
+     "Bram",
+     "herder"
+    ],
+    [
+     "villager:2",
+     "Cora",
+     "farmer"
+    ]
+   ],
+   "sites": 0,
+   "fields": 0
+  },
+  "later": {
+   "tick": 61,
+   "rules": 8,
+   "hash": "930d75a81f7d04d8"
+  },
+  "upgrades": [
+   {
+    "sequence": 61,
+    "rules": 8
+   }
+  ],
+  "saveRules": 8,
+  "animalsKept": true,
+  "animalsLive": 15,
+  "animalsLocal": 15,
+  "villagersKept": true,
+  "villagersLive": 3,
+  "villagersLocal": 3,
+  "toast": [
+   "Villagers walk faster and keep seed for the fields you mark."
+  ]
+ },
+ "fresh": {
+  "first": {
+   "tick": 1,
+   "rules": 8,
+   "build": null,
+   "animals": 15,
+   "villagers": [
+    "Ada",
+    "Bram",
+    "Cora"
+   ]
+  },
+  "later": {
+   "tick": 12,
+   "rules": 8
+  }
+ },
+ "errs": {
+  "live": [],
+  "upgrade": [],
+  "fresh": []
+ }
+}
