@@ -25,6 +25,8 @@ export interface ChainViewOptions {
   worlds?: import('../app/worlds').WorldListState;
   /** True when open in a wilderness world: keep the MagicBlock panel visible without spawning settlement props or blocking M (map). */
   wilderness?: boolean;
+  /** Pan the camera directly to the 3D MagicBlock ER Outpost in Demo Settlement mode. */
+  onFocusOutpost?: () => void;
 }
 
 export function startChainView(o: ChainViewOptions): { metrics: () => Record<string, unknown> } {
@@ -149,14 +151,20 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
     const walletButtons = (prefix: string, label: (n: string) => string) => wallets.length
       ? wallets.map((w, i) => btn(`${prefix}:${i}`, label(w.name))).join('')
       : `<button disabled title="Install Phantom or Backpack">${label('wallet')} (none found)</button>`;
+    const focusBtn = o.onFocusOutpost ? btn('focus-outpost', 'View ER Outpost') : '';
     if (mine) {
       const kind = guest.kind;
       ctl += `<div class="protection p-${kind}">${PROTECTION_LABEL[kind]}</div>`;
       if (guest.sessionExpired) ctl += `<div class="chain-actions">${btn('renew', 'Renew this browser’s session', 'primary')}</div>`;
+      const actions = o.wilderness
+        ? ['prospect:Prospect (VRF)']
+        : ['plant:Plant crop', 'wood:Gather wood', 'stone:Quarry stone', 'sawmill:Build sawmill', 'prospect:Prospect (VRF)'];
       ctl += `<div class="chain-actions">`
-        + ['plant:Plant crop', 'wood:Gather wood', 'stone:Quarry stone', 'sawmill:Build sawmill', 'prospect:Prospect (VRF)']
-          .map((x) => { const [k, l] = x.split(':'); return btn(k, l); }).join('')
-        + `</div><div class="dim result">${busy || lastResult}</div>`;
+        + focusBtn
+        + actions.map((x) => { const [k, l] = x.split(':'); return btn(k, l); }).join('')
+        + `</div>`
+        + (o.wilderness ? `<div class="dim">ER Outpost crops &amp; sawmill are rendered in Founder’s Settlement (Demo).</div>` : '')
+        + `<div class="dim result">${busy || lastResult}</div>`;
       if (kind === 'guest') {
         ctl += `<div class="chain-actions upgrade">${passkeySupported() ? btn('protect', 'Protect with passkey') : ''}${walletButtons('link', (n) => `Move to ${n}`)}</div>`
           + `<div class="dim">This world's key exists only in this browser. Protect it with a passkey or a wallet to recover it on any device (<a href="#" data-key="export">export key</a>).</div>`;
@@ -167,7 +175,7 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
         ctl += `<div class="dim">Owned by ${guest.record!.wallet ?? 'your wallet'} ${short(guest.owner)}. This browser plays with a session key until ${new Date((guest.record!.sessionExpires ?? 0) * 1000).toLocaleDateString()}.</div>`;
       }
     } else {
-      ctl += `<div class="chain-actions">${btn('create', 'Quick Play', 'primary')}${walletButtons('wallet', (n) => `Wallet Play (${n})`)}</div>`
+      ctl += `<div class="chain-actions">${focusBtn}${btn('create', 'Quick Play', 'primary')}${walletButtons('wallet', (n) => `Wallet Play (${n})`)}</div>`
         + `<div class="chain-actions">${passkeySupported() ? btn('recover-passkey', 'Recover with passkey') : ''}${wallets.length ? wallets.map((w, i) => btn(`recover-wallet:${i}`, `Recover with ${w.name}`)).join('') : ''}</div>`
         + `<div class="dim result">${busy || 'Quick Play needs no wallet and no SOL. Wallet Play makes your wallet the owner.'} <a href="#" data-key="import">Import a saved key</a></div>`;
     }
@@ -185,6 +193,7 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   };
   const status = (m: string) => { busy = m; render(watcher.view); enter?.status(m); };
   const run = async (act: string): Promise<void> => {
+    if (act === 'focus-outpost') { o.onFocusOutpost?.(); return; }
     if (busy) return;
     const [name, arg] = act.split(':');
     const wallet: DetectedWallet | undefined = arg !== undefined ? detectWallets()[Number(arg)] : undefined;

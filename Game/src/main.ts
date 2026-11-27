@@ -1010,8 +1010,18 @@ if (!isMap && !isKit && !wilderness) {
 // state; in Wilderness mode only the UI panel mounts (no 3D settlement props). ?chain=0 disables it.
 if (!isMap && !isKit && params.get('chain') !== '0' && !noUi) {
   import('./chain/chain-view').then(({ startChainView }) => {
-    chainView = startChainView({ scene, origin: { x: 6, z: -60 },
-      groundY: (x, z) => residentSurfaceAt(world, x, z) ?? surfaceAt(world, x, z), worlds: worldList, wilderness });
+    const outpost = { x: 6, z: -60 };
+    const groundY = (x: number, z: number) => residentSurfaceAt(world, x, z) ?? surfaceAt(world, x, z);
+    chainView = startChainView({
+      scene, origin: outpost, groundY, worlds: worldList, wilderness,
+      onFocusOutpost: wilderness ? undefined : () => {
+        toggleMode('builder');
+        rig.target.set(outpost.x, groundY(outpost.x, outpost.z) + 2, outpost.z + 3);
+        rig.distance = 30;
+        rig.pitch = 0.52;
+        rig.apply();
+      },
+    });
   }).catch((e) => { chainError = String(e).slice(0, 120); });
 }
 
