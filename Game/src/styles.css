@@ -919,6 +919,8 @@ body.planning-field #farm-button, body.planning-field #settings-button { display
 
 /* MagicBlock panel: a fold button; folded it is one small button (default on touch). */
 #chain-panel { right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); }
+/* Wilderness desktop: cap height so an open MagicBlock panel never grows up into the top-right minimap. */
+body.wilderness #chain-panel { max-height: calc(100dvh - 172px); overflow-y: auto; }
 #chain-panel .chain-fold {
   display: block; margin: -2px 0 6px auto; padding: 4px 8px; color: #C9B8FF; background: transparent;
   border: 1px solid rgba(167, 140, 255, 0.45); font-size: 11px;
@@ -932,12 +934,24 @@ body.building #chain-panel, body.planning-field #chain-panel { display: none; }
   #chain-panel button { min-height: 40px; padding: 8px 12px; }
   /* Walking: top right, clear of the vitals, the banner column and the zoom buttons. */
   body.explore #chain-panel { top: max(14px, calc(env(safe-area-inset-top) + 8px)); bottom: auto; max-height: calc(100dvh - 28px); overflow-y: auto; }
+  /* Wilderness walking on touch tablets/landscape: sit left of the top-right minimap so they never collide. */
+  body.wilderness.explore #chain-panel { right: calc(max(14px, env(safe-area-inset-right)) + 144px); max-width: min(360px, calc(100vw - 172px)); }
+  body.wilderness.explore #chain-panel:not(.folded) { top: max(62px, calc(env(safe-area-inset-top) + 56px)); max-height: calc(100dvh - 76px); }
   /* Builder view: bottom right, below the Gather button (the panels use the top). */
   body:not(.explore) #chain-panel { top: auto; bottom: max(14px, env(safe-area-inset-bottom)); max-height: calc(100dvh - 90px); overflow-y: auto; }
+  body.wilderness:not(.explore) #chain-panel { right: max(14px, env(safe-area-inset-right)); max-height: calc(100dvh - 172px); }
+}
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  /* Landscape phones: 84 px minimap in top-right; MagicBlock sits directly to its left (and below Builder view when open). */
+  body.wilderness.explore #chain-panel { top: max(8px, env(safe-area-inset-top)); right: calc(max(8px, env(safe-area-inset-right)) + 96px); max-width: min(340px, calc(100vw - 120px)); max-height: calc(100dvh - 20px); }
+  body.wilderness.explore #chain-panel:not(.folded) { top: max(62px, calc(env(safe-area-inset-top) + 56px)); max-height: calc(100dvh - 70px); }
 }
 @media (pointer: coarse) and (max-width: 760px) and (orientation: portrait) {
   /* Phones: the top row holds the drawer tabs; below the Builder view button on the right. */
   body.explore #chain-panel { top: max(152px, calc(env(safe-area-inset-top) + 144px)); right: max(8px, env(safe-area-inset-right)); max-height: calc(100dvh - 600px); }
+  /* Wilderness portrait phones: clear below both the 100 px minimap (8..108 px) and the Builder view button (122..166 px). */
+  body.wilderness.explore #chain-panel,
+  body.wilderness.explore #chain-panel:not(.folded) { top: max(176px, calc(env(safe-area-inset-top) + 170px)); right: max(8px, env(safe-area-inset-right)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 380px); }
 }
 
 /* Touch tap targets of at least 40 px (most were 24-36 px). */
