@@ -435,7 +435,7 @@ export class ExploreController {
       this.protagonist.root.visible = this.active && !!this.state;
       this.protagonist.root.position.set(x, y + (this.mounted ? 0.62 : 0), z);
       this.protagonist.root.rotation.y = this.aim ? this.aim.heading : (this.swinging && this.swingFace !== null ? this.swingFace : s.heading);
-      this.protagonist.update(s, frameDt, !!this.aim, this.mounted);
+      this.protagonist.update(s, frameDt, !!this.aim, this.mounted, this.figure);
     } else {
       this.protagonist.root.visible = false;
     }
