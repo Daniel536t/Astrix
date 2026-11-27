@@ -891,7 +891,7 @@ function frame(timestamp?: number) {
       const carried = Object.entries(m.inventory as Record<string, number>).filter(([, n]) => n > 0);
       hud.innerHTML =
         (wilderness ? `<strong>ASTrix — Wilderness ${wild!.id.slice(1)}</strong> · local only · seed ${worldSeed}<br>`
-          : `<strong>ASTrix — Founder Settlement</strong> · seed ${worldSeed} · ${WORLD_SIZE} × ${WORLD_SIZE} m · 1 m voxels<br>`) +
+          : `<strong>ASTrix — Founder’s Settlement</strong> <span class="demo-badge">DEMO</span> · seed ${worldSeed} · ${WORLD_SIZE} × ${WORLD_SIZE} m · 1 m voxels<br>`) +
         `${timeLabel(time.t)} · ${time.paused ? 'paused' : 'day ' + Math.round(time.dayLengthSec) + 's'}` +
         (realtimeNote ? ` · ${realtimeNote}` : '') +
         (wilderness ? ` · <span class="inv">${wildGame ? wildGame.summary() : `bag: ${carried.length ? carried.map(([k, n]) => `${k} ${n}`).join(', ') : 'empty'} · bare hands`}</span>`
@@ -1003,15 +1003,16 @@ if (!isMap && !isKit && !wilderness) {
     sceneInspector?.setVisible(false);
   }
   if (action === 'build' || action === 'all') m2Game.buildAll();
+}
 
-  // MagicBlock settlement (read-only presentation of on-chain state). Loaded
-  // lazily so the local game never depends on the chain; ?chain=0 disables it.
-  if (params.get('chain') !== '0' && !noUi) {
-    import('./chain/chain-view').then(({ startChainView }) => {
-      chainView = startChainView({ scene, origin: { x: 6, z: -60 },
-        groundY: (x, z) => residentSurfaceAt(world, x, z) ?? surfaceAt(world, x, z), worlds: worldList });
-    }).catch((e) => { chainError = String(e).slice(0, 120); });
-  }
+// MagicBlock Ephemeral Rollup panel (live ER ticks, cranks, VRF, delegation & Solana checkpoints).
+// Loaded lazily in both Demo Settlement and Wilderness modes so players can always inspect MagicBlock
+// state; in Wilderness mode only the UI panel mounts (no 3D settlement props). ?chain=0 disables it.
+if (!isMap && !isKit && params.get('chain') !== '0' && !noUi) {
+  import('./chain/chain-view').then(({ startChainView }) => {
+    chainView = startChainView({ scene, origin: { x: 6, z: -60 },
+      groundY: (x, z) => residentSurfaceAt(world, x, z) ?? surfaceAt(world, x, z), worlds: worldList, wilderness });
+  }).catch((e) => { chainError = String(e).slice(0, 120); });
 }
 
 /** W1: one journaled world tick in a wilderness world (no settlement controller there). */

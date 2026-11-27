@@ -76,8 +76,9 @@ export class BuildPanel {
   constructor(private callbacks: BuildPanelCallbacks) {
     this.inventoryEl = element('div');
     this.inventoryEl.id = 'inventory';
-    this.inventoryEl.setAttribute('aria-label', 'Resources');
-    const invTitle = element('div', 'inv-title', 'Resources');
+    this.inventoryEl.setAttribute('aria-label', 'Demo Settlement resources');
+    const invTitle = element('div', 'inv-title', 'Demo Resources · preloaded kit');
+    invTitle.title = 'Demo starter kit: 24 wood and 48 stone preloaded for the guided Founder’s Settlement demo (not minted). New Wilderness starts empty.';
     const invRow = element('div', 'inv-row');
     for (const resource of RESOURCES) {
       const item = element('div', 'inv-item');

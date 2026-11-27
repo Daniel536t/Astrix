@@ -110,11 +110,11 @@ export function worldListHtml(o: WorldListState): string {
   const here = (id: string) => (o.current === id ? ' <span class="here">(open now)</span>' : '');
   const settlement = o.registry.hasSettlement(o.settlementSeed);
   const rows = [
-    `<div class="world-row"><div><b>Settlement</b>${here('settlement')}<br><span class="hint">${settlement ? `your farm and villagers · seed ${o.settlementSeed}` : 'the founder settlement (no save yet in this browser)'}</span></div>`
-      + `<button data-world="settlement" class="${o.current === 'settlement' ? '' : 'primary'}">${settlement ? 'Continue settlement' : 'Open settlement'}</button></div>`,
+    `<div class="world-row world-demo"><div><b>Founder’s Settlement</b> <span class="demo-badge">DEMO</span>${here('settlement')}<br><span class="hint">${settlement ? `guided demo settlement · preloaded starter kit (24 wood, 48 stone) · seed ${o.settlementSeed}` : 'guided demo settlement · preloaded starter kit (24 wood, 48 stone), farm &amp; villagers showcase'}</span></div>`
+      + `<button data-world="settlement" class="${o.current === 'settlement' ? '' : 'primary'}">${settlement ? 'Continue demo' : 'Open demo'}</button></div>`,
     ...wild.map((r) => `<div class="world-row"><div><b>Wilderness ${r.id.slice(1)}</b>${here(r.id)}<br><span class="hint">local only · seed ${r.seed} · made ${date(r.created)}${o.registry.hasSave(r) ? '' : ' · not played yet'}</span></div>`
       + `<button data-world="${r.id}" class="primary">Continue wilderness</button></div>`),
-    `<div class="world-row"><div><b>New wilderness world</b><br><span class="hint">bare hands, empty bag, untamed land. Kept on this device only; your other worlds stay as they are.</span></div>`
+    `<div class="world-row"><div><b>New wilderness world</b><br><span class="hint">start from nothing · bare hands, empty bag, untamed land. Kept on this device only; your other worlds stay as they are.</span></div>`
       + `<button data-world="new-wilderness" class="primary">New wilderness</button></div>`,
   ];
   return `<section class="world-list" aria-label="Your worlds"><h2>Your worlds</h2>${rows.join('')}</section>`;

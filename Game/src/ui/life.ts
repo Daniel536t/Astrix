@@ -64,13 +64,15 @@ export class LifePanel {
     this.root.hidden = false;
 
     const header = element('header', 'life-head');
-    header.append(element('h2', undefined, 'Settlement'));
+    header.append(element('h2', undefined, 'Demo Settlement'));
     this.root.append(header);
 
     this.body = element('div', 'life-body');
     const unavailable = element('p', 'life-unavailable',
       'Settlement life is unavailable in this legacy world.');
-    this.body.append(unavailable, this.makeBagSection('carried', 'Gathered · carried bag',
+    const provenance = element('p', 'life-provenance',
+      'Demo starter kit: 24 wood & 48 stone preloaded (+ 20 fiber, 10 food, 6 seed on homestead founding; not minted). New Wilderness starts empty.');
+    this.body.append(unavailable, provenance, this.makeBagSection('carried', 'Carried bag',
       CARRIED_CAPACITY, this.carriedValues), this.makeBagSection('stockpile', 'Founder stockpile',
       STOCKPILE_CAPACITY, this.stockValues), this.makeTransfers(), this.makeProduction(),
       this.makeCrops());

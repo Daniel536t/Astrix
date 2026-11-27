@@ -23,6 +23,8 @@ export interface ChainViewOptions {
   origin: { x: number; z: number };
   /** W1: the local world list shown on the entry screen. */
   worlds?: import('../app/worlds').WorldListState;
+  /** True when open in a wilderness world: keep the MagicBlock panel visible without spawning settlement props or blocking M (map). */
+  wilderness?: boolean;
 }
 
 export function startChainView(o: ChainViewOptions): { metrics: () => Record<string, unknown> } {
@@ -33,11 +35,11 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   const erTx = (sig: string) => `https://explorer.solana.com/tx/${sig}?cluster=custom&customUrl=${encodeURIComponent(CHAIN.erRpc)}`;
   const root = new THREE.Group();
   root.name = 'magicblock_settlement';
-  o.scene.add(root);
+  if (!o.wilderness) o.scene.add(root);
   const panel = document.createElement('div');
   panel.id = 'chain-panel';
   panel.setAttribute('role', 'region');
-  panel.setAttribute('aria-label', 'MagicBlock settlement');
+  panel.setAttribute('aria-label', 'MagicBlock Ephemeral Rollup status');
   document.body.appendChild(panel);
   const info = document.createElement('div');
   const controls = document.createElement('div');
@@ -60,7 +62,7 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
     // Plain text: the triangle glyphs are missing from some Android and Linux fonts.
     fold.textContent = f ? 'MagicBlock' : 'Hide MagicBlock';
     fold.setAttribute('aria-expanded', String(!f));
-    fold.setAttribute('aria-label', f ? 'Show the MagicBlock settlement panel' : 'Fold the MagicBlock settlement panel');
+    fold.setAttribute('aria-label', f ? 'Show the MagicBlock Ephemeral Rollup panel' : 'Fold the MagicBlock Ephemeral Rollup panel');
   };
   setFold(folded);
   fold.addEventListener('click', () => { setFold(!folded); try { localStorage.setItem(FOLD_KEY, folded ? 'folded' : 'open'); } catch { /* ignore */ } });
@@ -80,6 +82,7 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
   };
 
   const rebuild = (v: ChainView) => {
+    if (o.wilderness) return;
     const s = v.live ?? v.committed;
     if (!s) return;
     const key = [s.sawmill, s.population, s.plots.map((p) => (p === null ? 0 : 1)).join(''),
@@ -125,14 +128,21 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
     const er = `https://explorer.solana.com/address/${watcher.addressBase58}?cluster=custom&customUrl=${encodeURIComponent(CHAIN.erRpc)}`;
     const base = `https://explorer.solana.com/address/${watcher.addressBase58}?cluster=devnet`;
     const mine = !!guest.record;
-    const title = mine ? `Your world <span class="dim">· slot ${guest.record!.slot} · seed ${guest.record!.seed}</span>` : 'Demo settlement <span class="dim">(owner-run)</span>';
+    const title = mine
+      ? `Your world <span class="dim">· slot ${guest.record!.slot} · seed ${guest.record!.seed}</span>`
+      : 'Demo Settlement <span class="demo-badge">DEMO</span> <span class="dim">(owner-run)</span>';
     const wallets = detectWallets();
     const short = (k: string | null) => (k ? `${k.slice(0, 4)}…${k.slice(-4)}` : '');
-    let html = `<strong>MagicBlock · ${title}</strong><br><span class="${v.error ? 'warn' : 'ok'}">${v.error ? 'offline — local game unaffected' : 'live on Ephemeral Rollup'}</span>`
-      + (s ? `<div>tick <b>${s.tick}</b> · crank ${rate > 0 ? rate.toFixed(2) + ' ticks/s' : 'measuring…'} · settlers ${s.population}${s.sawmill ? ' · sawmill' : ''}</div>`
+    const delegBadge = v.error
+      ? '<span class="warn">offline — local game unaffected</span>'
+      : `<span class="ok">live on Ephemeral Rollup</span> · <span class="dim">${v.delegated ? 'delegated to ER' : 'Solana base'} · ${short(CHAIN.programId.toBase58())}</span>`;
+    let html = `<strong>MagicBlock · ${title}</strong><br>${delegBadge}`
+      + (o.wilderness ? `<div class="dim">Wilderness gameplay runs locally; MagicBlock ER tracks on-chain clock, cranks &amp; VRF.</div>` : '')
+      + (s ? `<div>tick <b>${s.tick}</b> · crank <b>${rate > 0 ? rate.toFixed(2) + ' ticks/s' : `${s.tickIntervalS}s cadence`}</b> · settlers ${s.population}${s.sawmill ? ' · sawmill' : ''}</div>`
         + `<div class="stock">${RESOURCE_NAMES.map((n) => `${n} ${s.stock[n]}`).join(' · ')}</div>`
-        + `<div>prospects ${s.prospects} · last VRF find: <b>${s.lastFind}</b>${s.prospectPending ? ' (waiting for randomness…)' : ` (roll ${s.lastRoll})`}</div>` : '<div>loading…</div>')
-      + (c && !mine ? `<div class="dim">committed to Solana at tick ${c.tick}</div>` : '');
+        + `<div class="dim">PDA counters: 24 wood / 48 stone / 6 seed init + ER crank &amp; VRF output (cap 10k, not SPL-minted)</div>`
+        + `<div>VRF prospects <b>${s.prospects}</b> · last find: <b>${s.lastFind}</b>${s.prospectPending ? ' (waiting for VRF…)' : ` (roll ${s.lastRoll} · rare ${s.rareFinds})`}</div>` : '<div>loading ER &amp; Solana state…</div>')
+      + (c ? `<div class="dim">Solana devnet checkpoint: tick ${c.tick}</div>` : '');
     let ctl = '';
     const dis = busy ? 'disabled' : '';
     const btn = (act: string, label: string, cls = '') => `<button data-act="${act}" class="${cls}" ${dis}>${label}</button>`;
@@ -163,7 +173,7 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
     }
     info.innerHTML = html;
     if (ctl !== controlsKey) { controls.innerHTML = ctl; controlsKey = ctl; }
-    const l = `<div class="dim"><a href="${er}" target="_blank" rel="noopener">ER account</a> · <a href="${base}" target="_blank" rel="noopener">Solana account</a> · M: hide</div>`;
+    const l = `<div class="dim"><a href="${er}" target="_blank" rel="noopener">ER account</a> · <a href="${base}" target="_blank" rel="noopener">Solana account</a>${o.wilderness ? '' : ' · M: hide'}</div>`;
     if (links.innerHTML !== l) links.innerHTML = l;
     rebuild(v);
   };
@@ -202,7 +212,7 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
     } catch (e) { lastResult = `failed: ${(e as Error).message}`; enter?.status(lastResult); }
     busy = ''; render(watcher.view);
   };
-  const enter = guest.record ? null : showEnterScreen({
+  const enter = (guest.record || o.wilderness) ? null : showEnterScreen({
     wallets: detectWallets, passkey: passkeySupported(),
     choose: (act) => run(act),
     worlds: o.worlds,
@@ -222,8 +232,10 @@ export function startChainView(o: ChainViewOptions): { metrics: () => Record<str
     }
   });
   watcher.start();
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'm' || e.key === 'M') panel.classList.toggle('hidden');
-  });
+  if (!o.wilderness) {
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'm' || e.key === 'M') panel.classList.toggle('hidden');
+    });
+  }
   return { metrics: () => ({ ...watcher.view, props: mergedMeshes, address: watcher.addressBase58, guest: guest.record ? { slot: guest.record.slot, seed: guest.record.seed, key: guest.publicKey, kind: guest.kind, owner: guest.owner } : null }) };
 }

@@ -1123,6 +1123,9 @@ body.clean #perf-overlay { display: none; }
 #enter-screen .world-row > div { flex: 1; font-size: 13px; color: #E6DFCF; }
 #enter-screen .world-row button { flex: none; }
 #enter-screen .world-row .here { color: #9EE2B8; font-weight: 400; }
+#enter-screen .world-row.world-demo { padding: 8px 10px; margin: 0 -4px; background: rgba(215, 199, 120, 0.12); border: 1px solid rgba(215, 199, 120, 0.45); border-radius: 8px; }
+.demo-badge { display: inline-block; margin-left: 5px; padding: 1px 6px; border-radius: 999px; background: #D7C778; color: #1B202B; font: 700 10px/1.5 ui-sans-serif, system-ui, sans-serif; letter-spacing: 0.06em; vertical-align: middle; }
+.life-provenance { margin: 0 0 8px; padding: 6px 8px; border-radius: 6px; background: rgba(215, 199, 120, 0.12); border: 1px solid rgba(215, 199, 120, 0.35); color: #E8DDC6; font-size: 11px; line-height: 1.4; }
 #enter-screen.worlds-only .enter-card { width: min(520px, 100%); }
 #farm-button.off { color: #8D8A80; background: #3A3B40; border-color: #55565C; cursor: default; }
 body.wilderness .drawer-toggle { display: none; }

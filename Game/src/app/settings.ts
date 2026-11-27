@@ -38,7 +38,7 @@ export function mountSettings(o: SettingsOptions): void {
   const now = `Now: <b>${o.current.level}</b> (${o.current.source === 'url' ? 'set by ?quality= in the address' : o.current.source === 'saved' ? 'your choice' : `automatic: ${o.current.reasons.join(', ')}`})`;
   panel.innerHTML = `<header><h2>Settings</h2><button type="button" data-settings-close aria-label="Close settings">×</button></header>
     ${o.worlds ? `<h3>Worlds</h3>
-    <p class="dim">Open now: <b>${o.worlds.current}</b>. Your settlement and every wilderness world are kept; switching reloads the page.</p>
+    <p class="dim">Open now: <b>${o.worlds.current === 'settlement' ? 'Founder’s Settlement (Demo)' : o.worlds.current}</b>. The demo settlement and every wilderness world are kept; switching reloads the page.</p>
     <button type="button" data-worlds>Your worlds…</button>` : ''}
     ${o.map ? `<h3>Map</h3>
     <p class="dim">The small map shows what you have explored around you. Tap it, or press M, for the full map.</p>

@@ -30,7 +30,7 @@ export function showEnterScreen(o: EnterOptions): { status: (m: string) => void 
     : '<button disabled>No wallet found</button><div class="hint">Install Phantom or Backpack, then reload.</div>';
   el.innerHTML = `<div class="enter-card">
     <h1>ASTrix</h1>
-    <p class="lead">Your own living world. Its seed, terrain and settlement belong to you, recorded on MagicBlock and Solana.</p>
+    <p class="lead">Explore the guided <b>Founder’s Settlement (Demo)</b>, start fresh in a <b>New Wilderness</b>, or claim your own world recorded on MagicBlock and Solana.</p>
     ${o.worlds ? worldListHtml(o.worlds) : ''}
     <div class="enter-options">
       <section>
