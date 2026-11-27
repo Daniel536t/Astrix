@@ -94,7 +94,7 @@ test('derivation: every chunk population is a pure function of (seed, generator,
 test('records: the first ticks around the player derive the creatures ring by ring; every record is a derived id, none twice; v8 genesis pinned', () => {
   const s = v8();
   assert.equal(s.journal.wildContent, 8);
-  assert.equal(LATEST_WILD_CONTENT, 9, 'W8: the latest content is v9');
+  assert.equal(LATEST_WILD_CONTENT, 11, 'W10: the latest content is v11');
   assert.equal(s.stateHash, V8_PIN, 'v8 genesis');
   assert.equal(GameSession.genesis(1337, G, 'wilderness', 7).stateHash, '2b53c51d7dec7daa', 'v7 genesis unchanged');
   assert.equal(GameSession.genesis(1337).stateHash, 'e659504b056654dc', 'settlement genesis unchanged');

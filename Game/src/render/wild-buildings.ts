@@ -103,6 +103,18 @@ function stageParts(kind: string, W: number, D: number, s: WildSite): B[][] {
       [box(1, 1.3, 1, 1.0, 0.3, 1.0, CLAY_L), box(1, 1.6, 1, 0.55, 0.25, 0.55, CLAY), box(1, 1.85, 1, 0.3, 0.12, 0.3, ASH),
         box(1.75, 0.55, 1, 0.5, 0.12, 0.12, BRANCH)],
     ];
+    case 'trading_post': return [
+      // Stone footings at the 4 stall corners.
+      [box(0.35, 0, 0.35, 0.45, 0.22, 0.45, STONE), box(2.65, 0, 0.35, 0.45, 0.22, 0.45, STONE),
+        box(0.35, 0, 2.55, 0.45, 0.22, 0.45, STONE_D), box(2.65, 0, 2.55, 0.45, 0.22, 0.45, STONE_D)],
+      // Timber stall posts and crossbeams.
+      [box(0.35, 0.22, 0.35, 0.22, 2.0, 0.22, LOG), box(2.65, 0.22, 0.35, 0.22, 2.0, 0.22, LOG),
+        box(0.35, 0.22, 2.55, 0.22, 1.85, 0.22, LOG_D), box(2.65, 0.22, 2.55, 0.22, 1.85, 0.22, LOG_D),
+        box(1.5, 2.05, 0.35, 2.6, 0.16, 0.16, LOG), box(1.5, 1.9, 2.55, 2.6, 0.16, 0.16, LOG_D)],
+      // Plank barter counter and red-cream awning.
+      [box(1.5, 0.22, 1.05, 2.5, 0.85, 0.8, PLANK), box(1.5, 1.07, 1.05, 2.65, 0.1, 0.95, PLANK_D),
+        box(0.85, 2.15, 1.45, 1.35, 0.14, 2.6, '#B8472F'), box(2.15, 2.15, 1.45, 1.35, 0.14, 2.6, '#E8DEC8')],
+    ];
   }
   // Unknown (later) kinds are never placed; draw a plain block per stage.
   const d = buildingDef(kind);

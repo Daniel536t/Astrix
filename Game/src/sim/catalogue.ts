@@ -66,6 +66,8 @@ export type BuildingFunction =
   | { kind: 'storage'; capacity: number; summary: string }
   /** W6: smelts ore with coal into ingots over time (SMELT_RECIPES). */
   | { kind: 'smelter'; summary: string }
+  /** W10 (content v11): finite merchant barter and settler recruitment beacon. */
+  | { kind: 'trade'; summary: string }
   | { kind: 'planned'; summary: string };
 
 /**
@@ -217,6 +219,21 @@ export const BUILD_CATALOGUE: readonly BuildingDef[] = [
       summary: 'Smelts ore with coal: 2 iron ore + 2 coal make 1 iron ingot (90 s); 2 copper ore + 1 coal make 1 copper ingot (60 s). One batch at a time; the ingots come out at its door.' },
     solids: [{ x0: 0.35, z0: 0.35, x1: 1.65, z1: 1.65, h: 1.8 }],
     description: 'A bloomery: a clay and sand shaft on a stone and gravel hearth.',
+  }),
+  // ---- W10 (content v11): trading post for finite merchant barter and settler recruitment ----
+  def({
+    id: 'trading_post', label: 'Trading post', category: 'storage', tier: 'later', implemented: true, minContent: 11,
+    prerequisites: { buildings: ['workbench'], tools: ['hammer'] }, footprint: { w: 3, d: 3 }, placement: { ...PLACE },
+    stages: [
+      st('foundation', 'Stone footings', 3, { stone: 3 }),
+      st('frame', 'Timber stall frame', 4, { log: 3, cord: 2 }),
+      st('roof', 'Plank counter and awning', 4, { plank: 4 }),
+    ],
+    tool: 'hammer',
+    function: { kind: 'trade',
+      summary: 'A covered barter stall: trade real items with a finite-stock travelling merchant and welcome new settlers when you have shelter, storage and food.' },
+    solids: [{ x0: 0.2, z0: 0.2, x1: 2.8, z1: 1.4, h: 2.2 }],
+    description: 'A timber barter stall with a plank counter and awning.',
   }),
   // ---- later (locked: smithed iron parts, cut stone, or later milestones) ----
   def({

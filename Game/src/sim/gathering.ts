@@ -27,6 +27,8 @@ import { BuildSnapshot, BuildState, bagRefusal, buildFromSnapshot, buildSnapshot
 import { MineSnapshot, MineState, WILD_CONTENT_V7, createMine, mineFromSnapshot, mineSnapshot, validateMine } from './mining';
 import { WILD_CONTENT_V8, WILD_CONTENT_V9, WildlifeSnapshot, WildlifeState, createWildlife, stepWildlife, validateWildlife, wildlifeFromSnapshot, wildlifeSnapshot } from './wildlife';
 import { HuntSnapshot, HuntState, createHunt, huntFromSnapshot, huntSnapshot, validateHunt } from './hunting';
+import { HorsesSnapshot, HorsesState, WILD_CONTENT_V10, createHorses, horsesSnapshot, restoreHorses, stepHorses, validateHorses } from './horses';
+import { CommunitySnapshot, CommunityState, WILD_CONTENT_V11, communitySnapshot, createCommunity, restoreCommunity, stepCommunity, validateCommunity } from './community';
 import type { Presence } from './bodies';
 
 /**
@@ -60,16 +62,22 @@ export { WILD_CONTENT_V8 };
  * cooked meat. Wildlife records keep their latest tick's path (shots are resolved against it). Rules of v8 otherwise.
  */
 export { WILD_CONTENT_V9 };
-export const LATEST_WILD_CONTENT = 9 as const;
+/** v10 (W9): taming & horses (sim/horses.ts): persistent wild horses, feeding, progressive trust, saddle & bridle, riding and stamina. */
+export { WILD_CONTENT_V10 };
+/** v11 (W10): trade & settlers (sim/community.ts): trading post, finite merchant barter, legitimate settler recruitment & productive work. */
+export { WILD_CONTENT_V11 };
+export const LATEST_WILD_CONTENT = 11 as const;
 export type WildContent = typeof WILD_CONTENT_V2 | typeof WILD_CONTENT_V3 | typeof WILD_CONTENT_V4 | typeof WILD_CONTENT_V5 | typeof WILD_CONTENT_V6 | typeof WILD_CONTENT_V7
-  | typeof WILD_CONTENT_V8 | typeof WILD_CONTENT_V9;
-export const isWildContent = (v: unknown): v is WildContent => v === WILD_CONTENT_V2 || v === 3 || v === 4 || v === 5 || v === 6 || v === 7 || v === 8 || v === 9;
+  | typeof WILD_CONTENT_V8 | typeof WILD_CONTENT_V9 | typeof WILD_CONTENT_V10 | typeof WILD_CONTENT_V11;
+export const isWildContent = (v: unknown): v is WildContent =>
+  v === WILD_CONTENT_V2 || v === 3 || v === 4 || v === 5 || v === 6 || v === 7 || v === 8 || v === 9 || v === 10 || v === 11;
 
 export const PICKUP_KINDS = ['branch', 'loose_stone', 'fiber_plant', 'grass_tuft', 'berry_bush', 'mushroom'] as const;
 export type PickupKind = (typeof PICKUP_KINDS)[number];
 /** Carried count items. */
-export const WILD_ITEMS = ['arrow', 'berries', 'blunt_arrow', 'bone', 'branch', 'chest', 'clay', 'coal', 'cooked_meat', 'cooked_mushroom', 'copper_ingot', 'copper_ore', 'cord',
-  'fiber', 'grass', 'gravel', 'hide', 'iron_ingot', 'iron_ore', 'log', 'mushroom', 'plank', 'raw_meat', 'sand', 'stone'] as const;
+export const WILD_ITEMS = ['arrow', 'astrix_cape', 'berries', 'blunt_arrow', 'bone', 'branch', 'bridle', 'chest', 'clay', 'coal', 'cooked_meat', 'cooked_mushroom',
+  'copper_ingot', 'copper_ore', 'cord', 'fiber', 'grass', 'gravel', 'hide', 'iron_ingot', 'iron_ore', 'leather_armour', 'log', 'mushroom', 'plank',
+  'raw_meat', 'saddle', 'sand', 'seeds', 'stone'] as const;
 export type WildItem = (typeof WILD_ITEMS)[number];
 /** W4 (content v4) items: made at the workbench and the campfire. */
 export const V4_ITEMS: readonly WildItem[] = ['chest', 'cooked_mushroom', 'plank'];
@@ -77,6 +85,10 @@ export const V4_ITEMS: readonly WildItem[] = ['chest', 'cooked_mushroom', 'plank
 export const V7_ITEMS: readonly WildItem[] = ['clay', 'coal', 'copper_ingot', 'copper_ore', 'gravel', 'iron_ingot', 'iron_ore', 'sand'];
 /** W8 (content v9) items: arrows made at the workbench, and what butchering and cooking give. */
 export const V9_ITEMS: readonly WildItem[] = ['arrow', 'blunt_arrow', 'bone', 'cooked_meat', 'hide', 'raw_meat'];
+/** W9 (content v10) items: horse tack crafted at the workbench. */
+export const V10_ITEMS: readonly WildItem[] = ['bridle', 'saddle'];
+/** W10 (content v11) items: traded/crafted gear and seeds. */
+export const V11_ITEMS: readonly WildItem[] = ['astrix_cape', 'leather_armour', 'seeds'];
 export const TOOL_KINDS = ['bow', 'hammer', 'knife', 'stone_axe', 'stone_pickaxe'] as const;
 export type ToolKind = (typeof TOOL_KINDS)[number];
 /** W4 (content v4) tools: made at the workbench. */
@@ -95,6 +107,7 @@ export const ITEM_LABEL: Record<WildItem | ToolKind, string> = {
   chest: 'wooden chest', cooked_mushroom: 'cooked mushroom', plank: 'plank', hammer: 'hammer', knife: 'knife', stone_pickaxe: 'stone pickaxe',
   clay: 'clay', coal: 'coal', copper_ingot: 'copper ingot', copper_ore: 'copper ore', gravel: 'gravel', iron_ingot: 'iron ingot', iron_ore: 'iron ore', sand: 'sand',
   arrow: 'arrow', blunt_arrow: 'blunt arrow', bone: 'bone', cooked_meat: 'cooked meat', hide: 'hide', raw_meat: 'raw meat', bow: 'bow',
+  saddle: 'leather saddle', bridle: 'riding bridle', astrix_cape: 'ASTrix star cape', leather_armour: 'leather armour', seeds: 'wild seeds',
 };
 export const PICKUP_LABEL: Record<PickupKind, string> = {
   branch: 'branch', loose_stone: 'stone', fiber_plant: 'fibre plant', grass_tuft: 'grass', berry_bush: 'berries', mushroom: 'mushroom',
@@ -108,6 +121,8 @@ export const ITEM_WEIGHT: Record<WildItem | ToolKind, number> = {
   iron_ore: 4, copper_ore: 4, coal: 2, clay: 3, sand: 2, gravel: 2, iron_ingot: 3, copper_ingot: 3,
   // W8: a bow and arrows are light; meat and hide are the heavy part of a carcass.
   bow: 2, arrow: 1, blunt_arrow: 1, raw_meat: 2, cooked_meat: 2, hide: 3, bone: 1,
+  // W9 & W10: horse tack, adventurer gear and seeds.
+  saddle: 4, bridle: 2, astrix_cape: 1, leather_armour: 3, seeds: 1,
 };
 /** Bag capacity (weight) in content v2-v4. Journals made then replay with it until their `upgrade_wilderness` to v5. */
 export const CARRY_CAPACITY = 30;
@@ -164,6 +179,16 @@ export const WILD_RECIPES: readonly WildRecipe[] = [
     note: 'Branch shafts, knapped stone heads, fibre fletching. Wound and kill; one that misses can often be picked up again.' },
   { id: 'blunt_arrows', label: 'Blunt arrows (4)', station: 'workbench', input: { branch: 1, fiber: 1 }, tool: 'knife', output: { items: { blunt_arrow: 4 } }, since: 9,
     note: 'No arrowhead: a hard hit stuns an animal without harming it; it recovers and runs off.' },
+  // W9 (content v10): horse tack crafted from hide, cord and smelted iron.
+  { id: 'saddle', label: 'Leather saddle', station: 'workbench', input: { hide: 3, cord: 2, iron_ingot: 1 }, tool: 'knife', output: { items: { saddle: 1 } }, since: 10,
+    note: 'Fitted onto a tamed horse together with a bridle so you can mount and ride.' },
+  { id: 'bridle', label: 'Riding bridle', station: 'workbench', input: { hide: 1, cord: 2, iron_ingot: 1 }, tool: 'knife', output: { items: { bridle: 1 } }, since: 10,
+    note: 'Leather headstall and iron bit: equips onto a tamed horse for mounted control.' },
+  // W10 (content v11): adventurer gear crafted from real hides, cord and iron (or bartered at the Trading Post).
+  { id: 'leather_armour', label: 'Leather armour', station: 'workbench', input: { hide: 4, cord: 2, iron_ingot: 1 }, tool: 'knife', output: { items: { leather_armour: 1 } }, since: 11,
+    note: 'Stitched hide pauldrons, chest harness, bracers and boots.' },
+  { id: 'astrix_cape', label: 'ASTrix star cape', station: 'workbench', input: { hide: 2, fiber: 4, cord: 2 }, tool: 'knife', output: { items: { astrix_cape: 1 } }, since: 11,
+    note: 'Woven red-orange mantle bearing the white ASTrix star.' },
 ];
 export const recipeById = (id: string): WildRecipe | undefined => WILD_RECIPES.find((r) => r.id === id);
 
@@ -207,6 +232,10 @@ export interface WildState {
   wildlife?: WildlifeState;
   /** W8 (content v9): the bow's rate limit and the hunting counters. */
   hunt?: HuntState;
+  /** W9 (content v10): persistent wild/tamed horses, tack, riding and stamina. */
+  horses?: HorsesState;
+  /** W10 (content v11): finite merchant barter, persistent settlers and depot outputs. */
+  community?: CommunityState;
 }
 
 export function createWildState(content: WildContent = WILD_CONTENT_V2, seed = 0, tick = 0): WildState {
@@ -214,7 +243,8 @@ export function createWildState(content: WildContent = WILD_CONTENT_V2, seed = 0
     taken: new Set(), left: new Map(), piles: new Map(), nextId: 1,
     ...(content >= WILD_CONTENT_V3 ? { fell: createFell(seed, tick) } : {}), ...(content >= WILD_CONTENT_V4 ? { build: createBuild() } : {}),
     ...(content >= WILD_CONTENT_V6 ? { map: createMap() } : {}), ...(content >= WILD_CONTENT_V7 ? { mine: createMine() } : {}),
-    ...(content >= WILD_CONTENT_V8 ? { wildlife: createWildlife() } : {}), ...(content >= WILD_CONTENT_V9 ? { hunt: createHunt(tick) } : {}) };
+    ...(content >= WILD_CONTENT_V8 ? { wildlife: createWildlife() } : {}), ...(content >= WILD_CONTENT_V9 ? { hunt: createHunt(tick) } : {}),
+    ...(content >= WILD_CONTENT_V10 ? { horses: createHorses() } : {}), ...(content >= WILD_CONTENT_V11 ? { community: createCommunity() } : {}) };
 }
 
 /** A content-v2 state gains W3 felling (v3), a v3 state W4 building (v4), a v4 state the v5 rules, a v5 state the W5 map (v6), a v6 state W6 mining (v7), through journaled `upgrade_wilderness`. */
@@ -234,6 +264,8 @@ export function upgradeWildState(w: WildState, seed: number, tick: number, to: W
     // upgraded state starts without paths (each animal stands where its record is until its next tick).
     for (const a of w.wildlife?.animals.values() ?? []) a.trail = undefined;
   }
+  if (!w.horses && to >= WILD_CONTENT_V10) w.horses = createHorses();
+  if (!w.community && to >= WILD_CONTENT_V11) w.community = createCommunity();
   w.content = to;
 }
 
@@ -497,13 +529,15 @@ export function eat(world: World, item: WildItem): WildResult<{ hunger: number }
   return { ok: true, value: { hunger: w.hunger } };
 }
 
-/** One world tick of wilderness life (hunger; W3: the woodland's stumps and regrowth; W7: the wildlife, which reads the tick's presence). */
+/** One world tick of wilderness life (hunger; W3: woodland; W7: wildlife; W9: horses; W10: settlers). */
 export function stepWild(world: World, tick: number, presence?: Presence): void {
   const w = world.wild;
   if (w && tick % HUNGER_TICKS === 0) w.hunger = Math.min(100, w.hunger + 1);
   if (w?.fell) stepFelling(world, tick);
   if (w?.build) stepBuild(world, tick);
   if (w?.wildlife) stepWildlife(world, tick, presence);
+  if (w?.horses) stepHorses(world, tick, presence);
+  if (w?.community) stepCommunity(world, tick);
 }
 
 function sortBag(bag: Record<string, number>): Record<string, number> {
@@ -513,9 +547,11 @@ function sortBag(bag: Record<string, number>): Record<string, number> {
 // ---------- snapshot form ----------
 export interface WildSnapshot {
   build?: BuildSnapshot;
+  community?: CommunitySnapshot;
   content: WildContent;
   equipped?: string;
   fell?: FellSnapshot;
+  horses?: HorsesSnapshot;
   hunger: number;
   hunt?: HuntSnapshot;
   items: Record<string, number>;
@@ -532,9 +568,11 @@ export interface WildSnapshot {
 export function wildSnapshot(w: WildState): WildSnapshot {
   return {
     ...(w.build ? { build: buildSnapshot(w.build) } : {}),
+    ...(w.community ? { community: communitySnapshot(w.community) } : {}),
     content: w.content,
     ...(w.equipped ? { equipped: w.equipped } : {}),
     ...(w.fell ? { fell: fellSnapshot(w.fell) } : {}),
+    ...(w.horses ? { horses: horsesSnapshot(w.horses) } : {}),
     hunger: w.hunger,
     ...(w.hunt ? { hunt: huntSnapshot(w.hunt) } : {}),
     items: sortBag(w.items),
@@ -569,9 +607,13 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
   if (v8 !== (v.wildlife !== undefined)) bad('wildlife block');
   const v9 = (v.content as number) >= WILD_CONTENT_V9;
   if (v9 !== (v.hunt !== undefined)) bad('hunting block');
+  const v10 = (v.content as number) >= WILD_CONTENT_V10;
+  if (v10 !== (v.horses !== undefined)) bad('horses block');
+  const v11 = (v.content as number) >= WILD_CONTENT_V11;
+  if (v11 !== (v.community !== undefined)) bad('community block');
   // Logs exist only with felling (content v3); planks, chests and cooked food with building (v4); ores, ingots and soft materials with mining (v7).
   const itemOk = (k: unknown) => WILD_ITEMS.includes(k as WildItem) && (v3 || k !== 'log') && (v4 || !V4_ITEMS.includes(k as WildItem)) && (v7 || !V7_ITEMS.includes(k as WildItem))
-    && (v9 || !V9_ITEMS.includes(k as WildItem));
+    && (v9 || !V9_ITEMS.includes(k as WildItem)) && (v10 || !V10_ITEMS.includes(k as WildItem)) && (v11 || !V11_ITEMS.includes(k as WildItem));
   if (!uintMax(v.hunger, 100) || !uintMax(v.nextId, 9_999_999) || v.nextId < 1) bad('counters');
   if (!isObj(v.items) || !isObj(v.left) || !Array.isArray(v.piles) || !Array.isArray(v.taken) || !Array.isArray(v.tools)) bad('fields');
   const items: Record<string, number> = {};
@@ -622,11 +664,15 @@ export function validateWildSnapshot(value: unknown, tick = 0): WildSnapshot {
   const mine = v7 ? validateMine(v.mine) : undefined;
   const wildlife = v8 ? validateWildlife(v.wildlife, tick, v.content as number) : undefined;
   const hunt = v9 ? validateHunt(v.hunt, tick) : undefined;
+  const horses = v10 ? validateHorses(v.horses) : undefined;
+  const community = v11 ? validateCommunity(v.community, (k) => itemOk(k)) : undefined;
   const s: WildSnapshot = {
     ...(build ? { build } : {}),
+    ...(community ? { community } : {}),
     content: v.content as WildContent,
     ...(v.equipped !== undefined ? { equipped: v.equipped as string } : {}),
     ...(fell ? { fell } : {}),
+    ...(horses ? { horses } : {}),
     hunger: v.hunger as number, ...(hunt ? { hunt } : {}), items, left, ...(map ? { map } : {}), ...(mine ? { mine } : {}), nextId: v.nextId as number, piles, taken: taken as string[], tools,
     ...(wildlife ? { wildlife } : {}),
   };
@@ -644,5 +690,7 @@ export function wildFromSnapshot(s: WildSnapshot): WildState {
     piles: new Map(s.piles.map((p) => [p.id, { ...p }])), nextId: s.nextId,
     ...(s.wildlife ? { wildlife: wildlifeFromSnapshot(s.wildlife) } : {}),
     ...(s.hunt ? { hunt: huntFromSnapshot(s.hunt) } : {}),
+    ...(s.horses ? { horses: restoreHorses(s.horses) } : {}),
+    ...(s.community ? { community: restoreCommunity(s.community) } : {}),
   };
 }

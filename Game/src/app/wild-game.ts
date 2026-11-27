@@ -19,7 +19,7 @@ import type { GameSession } from './session';
 import type { ExploreController } from './explore';
 import {
   CARRY_CAPACITY, CARRY_CAPACITY_V5, FOOD_VALUE, ITEM_LABEL, ITEM_WEIGHT, LATEST_WILD_CONTENT, LivePickup, PICKUP_LABEL, PICKUP_REACH, TOOL_DURABILITY,
-  WILD_CONTENT_V5, WILD_CONTENT_V9, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
+  WILD_CONTENT_V5, WILD_CONTENT_V9, WILD_CONTENT_V11, WILD_RECIPES, WildItem, carriedWeight, carryCapacity, equippedTool, pickupsNear,
 } from '../sim/gathering';
 import {
   CHOP_REACH, EventRecord, FellEvent, NearTree, SWING_COOLDOWN_MS, Trunk, choppable, stockpileAt, stockpileLogs, treeDistance,
@@ -39,6 +39,10 @@ import { HuntUI } from './hunting-ui';
 import type { FaunaView } from '../render/fauna';
 import { BUTCHER_REACH, BUTCHER_SWINGS, carcassLeft, carcassOutputs, carcassesNear } from '../sim/hunting';
 import type { Carcass } from '../sim/wildlife';
+import { HorsesView } from '../render/horses';
+import { CommunityView } from '../render/community';
+import { HORSE_REACH, HorseFeedItem, HorseGait, horsesNear, mountedHorse } from '../sim/horses';
+import { MERCHANT_OFFERS, RECRUIT_FOOD_COST, SETTLER_ROLES, SettlerRole, hasSettlementStorage, shelterCapacity, tradingPostNear } from '../sim/community';
 
 export interface WildGameOptions {
   session: GameSession;
@@ -100,6 +104,11 @@ export class WildGame {
   readonly map: WildMap;
   /** W8: the bow (aim, draw, release) and the drawn flights. */
   readonly hunt: HuntUI | null;
+  /** W9: wild & tamed horses. */
+  readonly horses = new HorsesView();
+  /** W10: persistent settlers. */
+  readonly community = new CommunityView();
+  private lastFrameMs = performance.now();
   private readonly axe = buildHeldAxe();
   private readonly pickaxe = buildHeldPickaxe();
   private readonly toastEl: HTMLElement;
@@ -130,7 +139,7 @@ export class WildGame {
     lastRespawn: null as null | { point: string; x: number; z: number; refused: string[] }, butchered: 0 };
 
   constructor(private readonly o: WildGameOptions) {
-    o.scene.add(this.view.group, this.felling.group, this.deposits.group);
+    o.scene.add(this.view.group, this.felling.group, this.deposits.group, this.horses.group, this.community.group);
     this.toastEl = document.createElement('div');
     this.toastEl.className = 'toast';
     this.toastEl.id = 'wild-toast';
@@ -259,14 +268,15 @@ export class WildGame {
 
   private get world() { return this.o.session.world; }
 
-  /** A world with older wilderness content (v1-v8) gains the latest (v9) through one journaled command. */
+  /** A world with older wilderness content (v1-v10) gains the latest (v11) through one journaled command. */
   private ensureContent(): void {
     const w = this.world.wild;
     if (w && w.content >= LATEST_WILD_CONTENT) return;
-    const had = !!w, fell = !!w?.fell, built = !!w?.build, big = !!w && w.content >= WILD_CONTENT_V5, mapped = !!w?.map, mined = !!w?.mine, alive = !!w?.wildlife;
-    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V9 }, 'v9');
-    if (r) this.toast(alive ? 'You can now hunt: make a bow and arrows at the workbench (with a knife), shoot, and butcher what you bring down with the knife.'
-      : mined ? 'The wild animals now live on in your world, and you can hunt them with a bow you make at the workbench.'
+    const had = !!w, fell = !!w?.fell, built = !!w?.build, big = !!w && w.content >= WILD_CONTENT_V5, mapped = !!w?.map, mined = !!w?.mine, alive = !!w?.wildlife, hunted = !!w?.hunt;
+    const r = this.send({ type: 'upgrade_wilderness', content: WILD_CONTENT_V11 }, 'v11');
+    if (r) this.toast(hunted ? 'Wild horses now roam the meadows, and you can build a Trading Post to barter and welcome settlers.'
+      : alive ? 'You can now hunt, tame wild horses, and build a Trading Post for barter and settlers.'
+      : mined ? 'Wild animals and horses now live on in your world, and you can hunt, tame, trade and welcome settlers.'
       : mapped ? 'Deposits can now be mined: explore to find iron, copper, coal, clay, sand and gravel, equip a stone pickaxe and swing (E). Clay, sand and gravel build a clay smelter for ingots.'
       : big ? 'You now have a map: tap the small map (or press M) to open it, set waypoints and get a walking route. What you have not seen stays hidden.'
       : built ? `Your bag now holds ${CARRY_CAPACITY_V5} weight (was ${CARRY_CAPACITY}). At a building site, free materials in your bag can now be delivered in place of ones reserved in piles.`
@@ -383,7 +393,7 @@ export class WildGame {
     this.o.onChanged();
     this.stats.mines++;
     this.stats.firstMineMs ??= Math.round(performance.now() - this.startedAt);
-    this.o.explore()?.swing(d.x, d.z);
+    this.o.explore()?.swing(d.x, d.z, 'Mine');
     const o = r.outcome;
     if (o.type !== 'mine') return;
     const item = DEPOSIT_ITEM[d.type], w = this.world.wild!;
@@ -405,7 +415,7 @@ export class WildGame {
     this.version++;
     this.o.onChanged();
     this.stats.butchered = (this.stats.butchered ?? 0) + 1;
-    this.o.explore()?.swing(c.x / 10, c.z / 10);
+    this.o.explore()?.swing(c.x / 10, c.z / 10, 'Interact');
     const o = r.outcome;
     if (o.type !== 'butcher') return;
     const sp = SP_NAME[c.sp];
@@ -427,7 +437,7 @@ export class WildGame {
     this.o.onChanged();
     this.stats.works++;
     const c = siteSpotOf(site);
-    this.o.explore()?.swing(c.x, c.z);
+    this.o.explore()?.swing(c.x, c.z, 'Build');
     const o = r.outcome;
     if (o.type !== 'build_work') return;
     if (o.events.includes('BUILDING_COMPLETED')) {
@@ -450,7 +460,7 @@ export class WildGame {
     this.o.onChanged();
     this.stats.cuts++;
     const c = trunkDistance(t, this.o.explore()!.character!.x, this.o.explore()!.character!.z);
-    this.o.explore()?.swing(c.px, c.pz);
+    this.o.explore()?.swing(c.px, c.pz, 'Chop');
     const o = r.outcome;
     if (o.type !== 'cut_log') return;
     if (o.pileId) {
@@ -466,6 +476,7 @@ export class WildGame {
     // A pile whose units are all reserved is picked up for its site (they stay reserved for it, in the bag).
     const forSite = p.kind === 'pile' && w.build && freeIn(this.world, p.id, p.item) <= 0 ? reservationsInSource(this.world, p.id)[0]?.siteId : undefined;
     if (!at || !this.send({ type: 'pickup', entityId: p.id, at, ...(forSite ? { forSite } : {}) }, p.id)) return;
+    this.o.explore()?.triggerAction(p.item === 'log' || p.kind === 'pile' ? 'Pickup' : 'Gather');
     const got = (w.items[p.item] ?? 0) - before;
     if (forSite) { this.toast(`picked up ${got} ${ITEM_LABEL[p.item]} for your ${buildingDef(w.build!.sites.get(forSite)!.kind)!.label.toLowerCase()} (still reserved for it) · bag ${carriedWeight(w)}/${carryCapacity(w)} · carry it to the site and deliver (E)`); return; }
     const room = Math.floor((carryCapacity(w) - carriedWeight(w)) / ITEM_WEIGHT.log);
@@ -498,7 +509,10 @@ export class WildGame {
   }
 
   equip(item: string): void {
-    if (this.send({ type: 'equip', item }, item)) this.toast(item === 'hands' ? 'bare hands' : item === 'stone_axe' ? 'stone axe in hand: walk up to a tree and swing (E / Chop)' : `${ITEM_LABEL[item as WildItem] ?? item} in hand`);
+    if (this.send({ type: 'equip', item }, item)) {
+      this.o.explore()?.triggerAction('ToolEquip');
+      this.toast(item === 'hands' ? 'bare hands' : item === 'stone_axe' ? 'stone axe in hand: walk up to a tree and swing (E / Chop)' : `${ITEM_LABEL[item as WildItem] ?? item} in hand`);
+    }
   }
 
   eat(item: WildItem): void {
@@ -524,6 +538,7 @@ export class WildGame {
     const b = (e.target as HTMLElement).closest('button');
     if (!b || b.disabled) return;
     const d = b.dataset;
+    const at = this.at();
     if (d.close !== undefined) this.toggle(false);
     else if (d.craft) this.craft(d.craft);
     else if (d.eat) this.eat(d.eat as WildItem);
@@ -531,6 +546,40 @@ export class WildGame {
     else if (d.equip) this.equip(d.equip);
     else if (d.stockpile !== undefined) this.markStockpile();
     else if (d.quiver !== undefined) { this.hunt?.switchKind(); this.panelKey = ''; this.renderPanel(); }
+    else if (d.horseFeed && d.horseId && at) {
+      const r = this.send({ type: 'horse_feed', horseId: d.horseId, item: d.horseFeed as HorseFeedItem, at }, d.horseId);
+      if (r && r.ok && r.outcome.type === 'horse_feed') {
+        this.o.explore()?.triggerAction('Interact');
+        this.toast(r.outcome.tamed ? `Horse ${d.horseId} is now tamed! Fit a saddle and bridle to ride.` : `Fed horse ${d.horseId} · trust ${r.outcome.trust}/100`);
+      }
+    } else if (d.horseTack && d.horseId && at) {
+      const r = this.send({ type: 'horse_tack', horseId: d.horseId, item: d.horseTack as 'saddle' | 'bridle', at }, d.horseId);
+      if (r && r.ok) { this.o.explore()?.triggerAction('Interact'); this.toast(`Fitted ${d.horseTack} on horse ${d.horseId}`); }
+    } else if (d.horseMount && at) {
+      if (this.send({ type: 'horse_mount', horseId: d.horseMount, at }, d.horseMount)) this.toast(`Mounted horse ${d.horseMount}`);
+    } else if (d.horseDismount !== undefined && at) {
+      if (this.send({ type: 'horse_dismount', at }, 'dismount')) this.toast('Dismounted horse');
+    } else if (d.horseGait) {
+      if (this.send({ type: 'horse_gait', gait: d.horseGait as HorseGait }, d.horseGait)) this.toast(`Gait: ${d.horseGait}`);
+    } else if (d.barter && at) {
+      const r = this.send({ type: 'trade_barter', offerId: d.barter, qty: 1, at }, d.barter);
+      if (r && r.ok && r.outcome.type === 'trade_barter') {
+        this.o.explore()?.triggerAction('Interact');
+        this.toast(`Traded for ${r.outcome.receivedQty} ${ITEM_LABEL[r.outcome.received as WildItem] ?? r.outcome.received} (${r.outcome.stockLeft} left)`);
+      }
+    } else if (d.recruit && at) {
+      const r = this.send({ type: 'settler_recruit', food: d.recruit, at }, 'recruit');
+      if (r && r.ok && r.outcome.type === 'settler_recruit') this.toast(`${r.outcome.name} joined your settlement! Assign them work below.`);
+    } else if (d.assignRole && d.settlerId) {
+      if (this.send({ type: 'settler_assign', settlerId: d.settlerId, role: d.assignRole as SettlerRole }, d.settlerId)) {
+        this.toast(`Assigned settler ${d.settlerId} to ${d.assignRole}`);
+      }
+    } else if (d.collectItem && at) {
+      const qty = Math.max(1, Number(d.collectQty || 1));
+      if (this.send({ type: 'community_collect', item: d.collectItem as WildItem, qty, at }, d.collectItem)) {
+        this.toast(`Collected ${qty} ${ITEM_LABEL[d.collectItem as WildItem] ?? d.collectItem} from settlement depot`);
+      }
+    }
   }
 
   /** Tap / click: target the tree or trunk nearest the pointer on screen. */
@@ -692,12 +741,38 @@ export class WildGame {
     }
     this.felling.update(this.world, ch ? { x: ch.x, z: ch.z } : Number.isFinite(fx) ? { x: fx, z: fz } : null, this.o.groundY, this.o.nature?.() ?? null);
     this.deposits.sync(this.world, Number.isFinite(fx) ? { x: fx, z: fz } : null, this.o.groundY, this.o.nature?.() ?? null);
-    // The axe in the hand.
+    // The axe in the hand (fallback figure) + modular GLB protagonist equipment (authoritative state only).
     const hand = ex?.rightHand ?? null;
     if (hand && this.axeParent !== hand) { hand.add(this.axe, this.pickaxe); this.axeParent = hand; }
-    this.axe.visible = equippedTool(this.world)?.kind === 'stone_axe';
-    this.pickaxe.visible = equippedTool(this.world)?.kind === 'stone_pickaxe';
-    this.build.update(performance.now() / 1000);
+    const eqTool = equippedTool(this.world)?.kind ?? null;
+    const useGlb = ex?.protagonistLoaded ?? false;
+    this.axe.visible = !useGlb && eqTool === 'stone_axe';
+    this.pickaxe.visible = !useGlb && eqTool === 'stone_pickaxe';
+    if (ex) {
+      const w = this.world.wild;
+      const hasBowOrArrows = !!w && (w.tools.some((t) => t.kind === 'bow') || (w.items.arrow ?? 0) > 0 || (w.items.blunt_arrow ?? 0) > 0);
+      const carryingLog = !!w && (w.items.log ?? 0) > 0;
+      const hasCape = !!w && (w.items.astrix_cape ?? 0) > 0;
+      const hasArmour = !!w && (w.items.leather_armour ?? 0) > 0;
+      ex.setEquipment({
+        equippedTool: eqTool,
+        hasQuiver: hasBowOrArrows,
+        carryingLog,
+        hasCape,
+        hasPauldrons: hasArmour,
+        hasHarness: hasArmour,
+        hasBracers: hasArmour,
+        hasAdventurerBoots: hasArmour,
+      });
+      const mHorse = mountedHorse(this.world);
+      ex.setMounted(!!mHorse, mHorse ? w?.horses?.gait ?? 'walk' : null);
+    }
+    const nowMs = performance.now();
+    const dt = Math.min(0.1, Math.max(0.001, (nowMs - this.lastFrameMs) / 1000));
+    this.lastFrameMs = nowMs;
+    this.horses.update(this.world, this.o.groundY, dt, ch ? { x: ch.x, y: ch.y, z: ch.z, heading: ch.heading, speed: ch.speed } : null);
+    this.community.update(this.world, this.o.groundY, nowMs / 1000);
+    this.build.update(nowMs / 1000);
     this.hunt?.update();
     this.renderPanel();
     this.renderFeed();
@@ -802,7 +877,13 @@ export class WildGame {
     const at = this.at();
     const bench = !!at && !!w.build && stationNear(this.world, 'workbench', at);
     const reserved = w.build ? reservedTotalsIn(this.world, 'bag') : {};
-    const key = JSON.stringify([w.content, w.items, w.tools, w.equipped, w.hunger, w.fell?.stockpiles.size, bench, reserved, this.hunt?.kind]);
+    const atPost = !!at && !!w.community && tradingPostNear(this.world, at);
+    const ch = this.o.explore()?.character;
+    const nearH = ch && w.horses ? horsesNear(this.world, ch.x, ch.z, HORSE_REACH + 4) : [];
+    const mHorse = mountedHorse(this.world);
+    const key = JSON.stringify([w.content, w.items, w.tools, w.equipped, w.hunger, w.fell?.stockpiles.size, bench, reserved, this.hunt?.kind,
+      atPost, mHorse?.id, mHorse ? (mHorse.stamina < 15 ? 0 : Math.floor(mHorse.stamina / 10)) : null, w.horses?.gait, nearH.map((x) => [x.h.id, x.h.trust, x.h.tamed, x.h.saddled, x.h.bridled]),
+      w.community?.tradesCompleted, w.community?.depot, w.community ? [...w.community.settlers.values()].map((s) => [s.id, s.role, s.produced]) : null]);
     if (key === this.panelKey) return;
     this.panelKey = key;
     const have = (k: string) => w.items[k] ?? 0;
@@ -825,7 +906,65 @@ export class WildGame {
     const quiver = w.hunt && (have('arrow') || have('blunt_arrow') || w.tools.some((t) => t.kind === 'bow'))
       ? `<h3>Quiver</h3><ul><li><span>${this.hunt?.kind === 'blunt_arrow' ? 'shooting <b>blunt arrows</b> (they stun)' : 'shooting <b>arrows</b>'} <span class="dim">· arrows ${have('arrow')} · blunt ${have('blunt_arrow')}</span></span>`
         + `<button type="button" data-quiver>${this.hunt?.kind === 'blunt_arrow' ? 'Use arrows' : 'Use blunt'}</button></li></ul>` : '';
-    const piles = quiver + (w.fell ? `<h3>Logs</h3><ul><li><span class="dim">${w.fell.stockpiles.size ? `${w.fell.stockpiles.size} stockpile${w.fell.stockpiles.size === 1 ? '' : 's'} marked · drop logs at one to deliver` : 'no stockpile yet'}</span>`
+    // W9: Horses (nearby or mounted).
+    let horseHtml = '';
+    if (w.horses && (mHorse || nearH.length)) {
+      const hRows: string[] = [];
+      if (mHorse) {
+        const g = w.horses.gait;
+        hRows.push(`<li><span><b>Riding ${mHorse.id}</b> (${mHorse.coat}) · gait <b>${g}</b> · stamina ${mHorse.stamina}/100</span>`
+          + `<button type="button" data-horse-gait="walk" ${g === 'walk' ? 'disabled' : ''}>Walk</button>`
+          + `<button type="button" data-horse-gait="trot" ${g === 'trot' ? 'disabled' : ''}>Trot</button>`
+          + `<button type="button" data-horse-gait="gallop" ${g === 'gallop' || mHorse.stamina < 15 ? 'disabled' : ''}>Gallop</button>`
+          + `<button type="button" data-horse-dismount>Dismount</button></li>`);
+      }
+      for (const { h } of nearH) {
+        if (mHorse?.id === h.id) continue;
+        const status = h.tamed ? `tamed${h.saddled ? ' · saddled' : ''}${h.bridled ? ' · bridled' : ''}` : `wild (${h.temperament}) · trust ${h.trust}/100`;
+        const btns = [
+          !h.tamed && have('berries') > 0 ? `<button type="button" data-horse-id="${h.id}" data-horse-feed="berries">Feed berries</button>` : '',
+          !h.tamed && have('grass') > 0 ? `<button type="button" data-horse-id="${h.id}" data-horse-feed="grass">Feed grass</button>` : '',
+          h.tamed && !h.saddled && have('saddle') > 0 ? `<button type="button" data-horse-id="${h.id}" data-horse-tack="saddle">Fit saddle</button>` : '',
+          h.tamed && !h.bridled && have('bridle') > 0 ? `<button type="button" data-horse-id="${h.id}" data-horse-tack="bridle">Fit bridle</button>` : '',
+          h.tamed && h.saddled && h.bridled && !mHorse ? `<button type="button" data-horse-mount="${h.id}">Mount</button>` : '',
+        ].filter(Boolean).join('');
+        hRows.push(`<li><span><b>Horse ${h.id}</b> (${h.coat}) <span class="dim">· ${status}</span></span>${btns}</li>`);
+      }
+      horseHtml = `<h3>Horses</h3><ul>${hRows.join('')}</ul>`;
+    }
+    // W10: Trading Post & Settlers.
+    let communityHtml = '';
+    if (w.community && (atPost || w.community.settlers.size > 0)) {
+      const cm = w.community;
+      const parts: string[] = [];
+      if (atPost) {
+        const offers = MERCHANT_OFFERS.map((o) => {
+          const left = cm.stock[o.id] ?? 0;
+          const cost = Object.entries(o.give).map(([k, n]) => `${n} ${ITEM_LABEL[k as WildItem] ?? k}`).join(' + ');
+          const can = left > 0 && Object.entries(o.give).every(([k, n]) => have(k) >= n);
+          return `<li><span><b>${o.label}</b> <span class="dim">· stock ${left} · pay ${cost}</span></span><button type="button" data-barter="${o.id}" ${can ? '' : 'disabled'}>Trade</button></li>`;
+        }).join('');
+        parts.push(`<h3>Trading Post (Finite Barter)</h3><ul>${offers}</ul>`);
+        const cap = shelterCapacity(this.world), storeOk = hasSettlementStorage(this.world);
+        const recruitBtns = Object.entries(RECRUIT_FOOD_COST).map(([food, n]) => {
+          const can = cm.settlers.size < cap && storeOk && have(food) >= n;
+          return `<button type="button" data-recruit="${food}" ${can ? '' : 'disabled'}>Recruit (${n} ${ITEM_LABEL[food as WildItem] ?? food})</button>`;
+        }).join('');
+        parts.push(`<h3>Settlers (${cm.settlers.size}/${cap} shelter · storage ${storeOk ? 'ready' : 'needed'})</h3><ul><li>${recruitBtns}</li></ul>`);
+        const depotRows = Object.entries(cm.depot).filter(([, n]) => n > 0).map(([k, n]) =>
+          `<li><span>${ITEM_LABEL[k as WildItem] ?? k} <b>×${n}</b></span><button type="button" data-collect-item="${k}" data-collect-qty="1">Collect 1</button></li>`).join('');
+        if (depotRows) parts.push(`<h3>Settlement Depot</h3><ul>${depotRows}</ul>`);
+      }
+      if (cm.settlers.size > 0) {
+        const sRows = [...cm.settlers.values()].map((s) => {
+          const roleBtns = SETTLER_ROLES.map((r) => `<button type="button" data-settler-id="${s.id}" data-assign-role="${r}" ${s.role === r ? 'disabled' : ''}>${r}</button>`).join('');
+          return `<li><span><b>${s.name}</b> (${s.id}) <span class="dim">· ${s.role} · produced ${s.produced}</span></span>${roleBtns}</li>`;
+        }).join('');
+        parts.push(`<h3>Assigned Settlers</h3><ul>${sRows}</ul>`);
+      }
+      communityHtml = parts.join('');
+    }
+    const piles = quiver + horseHtml + communityHtml + (w.fell ? `<h3>Logs</h3><ul><li><span class="dim">${w.fell.stockpiles.size ? `${w.fell.stockpiles.size} stockpile${w.fell.stockpiles.size === 1 ? '' : 's'} marked · drop logs at one to deliver` : 'no stockpile yet'}</span>`
       + `<button type="button" data-stockpile>Mark stockpile here</button></li></ul>` : '');
     const used = carriedWeight(w), cap = carryCapacity(w);
     this.panel.innerHTML = `<header><h2>Bag</h2><span class="dim" data-capacity>weight ${used}/${cap} · hunger ${w.hunger}/100</span><button type="button" data-close aria-label="Close bag">×</button></header>`
@@ -875,6 +1014,17 @@ export class WildGame {
       stats: { ...this.stats },
       build: this.build.metrics(),
       hunt: this.hunt?.metrics() ?? null,
+      horses: w?.horses ? {
+        count: w.horses.horses.size, drawn: this.horses.count, mountedId: w.horses.mountedId, gait: w.horses.gait,
+        clips: this.horses.clips(),
+        list: [...w.horses.horses.values()].map((h) => ({ id: h.id, coat: h.coat, x: h.x / 10, z: h.z / 10, state: h.state, trust: h.trust, tamed: h.tamed, saddled: h.saddled, bridled: h.bridled, stamina: h.stamina })),
+      } : null,
+      community: w?.community ? {
+        tradesCompleted: w.community.tradesCompleted, settlers: w.community.settlers.size, drawn: this.community.count,
+        stock: { ...w.community.stock },
+        settlersList: [...w.community.settlers.values()].map((s) => ({ id: s.id, name: s.name, role: s.role, produced: s.produced })),
+        depot: { ...w.community.depot },
+      } : null,
       carcasses: w?.wildlife ? [...w.wildlife.carcasses.values()].map((c) => ({ ...c })) : [],
       map: this.map.metrics(),
       mining: w?.mine ? { worked: [...w.mine.deposits.values()].map((r) => ({ ...r })), drawn: { ...this.deposits.drawn },

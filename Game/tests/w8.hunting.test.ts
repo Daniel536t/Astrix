@@ -49,7 +49,7 @@ const items = (s: GameSession) => ({ ...s.world.wild!.items });
 let HUNTER: GameSession | null = null;
 function hunter(): GameSession {
   if (HUNTER) return copy(HUNTER);
-  const s = GameSession.genesis(1337, G, 'wilderness');
+  const s = GameSession.genesis(1337, G, 'wilderness', 9);
   load(s);
   tickP(s, SPAWN, 2);
   gather(s, 'branch', 1); gather(s, 'loose_stone', 1); gather(s, 'fiber_plant', 2);
@@ -139,7 +139,7 @@ test('crafting: the bow and arrows are made at a finished workbench with the kni
   const s = hunter();
   const w = s.world.wild!;
   assert.equal(w.content, 9);
-  assert.equal(LATEST_WILD_CONTENT, 9);
+  assert.equal(LATEST_WILD_CONTENT, 11);
   assert.ok(w.tools.some((t) => t.kind === 'bow' && t.durability === 150), 'a bow');
   assert.equal(w.items.arrow, 8);
   assert.equal(w.items.blunt_arrow, 4);
@@ -632,7 +632,7 @@ test('pins: settlement genesis and v7, v8 wilderness genesis unchanged; v9 genes
   assert.equal(GameSession.genesis(1337).stateHash, 'e659504b056654dc');
   assert.equal(GameSession.genesis(1337, G, 'wilderness', 7).stateHash, '2b53c51d7dec7daa');
   assert.equal(GameSession.genesis(1337, G, 'wilderness', 8).stateHash, '7c46024708b9815d');
-  const v9 = GameSession.genesis(1337, G, 'wilderness');
+  const v9 = GameSession.genesis(1337, G, 'wilderness', 9);
   console.log(`# v9 genesis ${v9.stateHash}`);
   assert.equal(v9.stateHash, V9_PIN);
   const st = GameSession.genesis(1337);

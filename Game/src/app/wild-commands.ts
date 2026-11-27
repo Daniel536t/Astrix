@@ -76,8 +76,16 @@ import { mineDeposit } from '../sim/mining';
 import { smeltRecipe } from '../sim/catalogue';
 import { WILD_CONTENT_V7, WILD_CONTENT_V8 } from '../sim/gathering';
 import { ANIMAL_ID, noteNoise } from '../sim/wildlife';
-import { WILD_CONTENT_V9 } from '../sim/gathering';
+import { WILD_CONTENT_V9, WILD_CONTENT_V10, WILD_CONTENT_V11, ITEM_WEIGHT, carriedWeight, carryCapacity } from '../sim/gathering';
 import { ArrowKind, HitKind, HitResult, ShotValue, butcher, isArrowKind, shoot } from '../sim/hunting';
+import {
+  FEED_COOLDOWN_TICKS, HORSE_FEED_ITEMS, HORSE_GAITS, HORSE_GALLOP_MIN_STAMINA, HORSE_ID, HORSE_MAX_TRUST, HORSE_REACH,
+  HorseFeedItem, HorseGait, ensureWildHorses, feedTrustGain,
+} from '../sim/horses';
+import {
+  MAX_SETTLERS, RECRUIT_FOOD_COST, SETTLER_ID, SETTLER_ROLES, SettlerRole,
+  finishedTradingPosts, hasSettlementStorage, nextSettlerName, offerById, shelterCapacity, tradingPostNear,
+} from '../sim/community';
 const siteSpotDm = (s: Parameters<typeof siteSpotOf>[0]) => { const p = siteSpotOf(s); return { x: Math.round(p.x * 10), z: Math.round(p.z * 10) }; };
 import type { World } from '../sim/world';
 
@@ -126,11 +134,25 @@ export interface SmeltCommand extends Envelope { type: 'smelt'; siteId: string; 
 export interface ShootCommand extends Envelope { type: 'shoot'; arrow: ArrowKind; from: { x: number; y: number; z: number }; dir: { x: number; y: number; z: number }; draw: number; t: number; at: At }
 /** W8: one knife swing at a carcass. */
 export interface ButcherCommand extends Envelope { type: 'butcher'; carcassId: string; at: At }
+/** W9 (content v10): taming, tack and riding horses. */
+export interface HorseFeedCommand extends Envelope { type: 'horse_feed'; horseId: string; item: HorseFeedItem; at: At }
+export interface HorseTackCommand extends Envelope { type: 'horse_tack'; horseId: string; item: 'saddle' | 'bridle'; at: At }
+export interface HorseMountCommand extends Envelope { type: 'horse_mount'; horseId: string; at: At }
+export interface HorseDismountCommand extends Envelope { type: 'horse_dismount'; at: At }
+export interface HorseGaitCommand extends Envelope { type: 'horse_gait'; gait: HorseGait }
+/** W10 (content v11): trading post barter, settler recruitment, work assignment and depot collection. */
+export interface TradeBarterCommand extends Envelope { type: 'trade_barter'; offerId: string; qty: number; at: At }
+export interface SettlerRecruitCommand extends Envelope { type: 'settler_recruit'; food: string; at: At }
+export interface SettlerAssignCommand extends Envelope { type: 'settler_assign'; settlerId: string; role: SettlerRole }
+export interface CommunityCollectCommand extends Envelope { type: 'community_collect'; item: WildItem; qty: number; at: At }
+
 export type WildCommand = PickupCommand | DropCommand | CraftCommand | EquipCommand | EatCommand | UpgradeWildernessCommand
   | ChopCommand | CutLogCommand | MarkStockpileCommand
   | WildPlaceSiteCommand | DeliverSiteCommand | BuildWorkCommand | WildCancelSiteCommand | ClaimShelterCommand | FuelFireCommand | CookCommand
   | StoreItemsCommand | TakeItemsCommand | DiedCommand | RespawnCommand | ExploreCommand | SetWaypointCommand | RemoveWaypointCommand
-  | MineCommand | SmeltCommand | ShootCommand | ButcherCommand;
+  | MineCommand | SmeltCommand | ShootCommand | ButcherCommand
+  | HorseFeedCommand | HorseTackCommand | HorseMountCommand | HorseDismountCommand | HorseGaitCommand
+  | TradeBarterCommand | SettlerRecruitCommand | SettlerAssignCommand | CommunityCollectCommand;
 
 export type WildOutcome =
   | { type: 'pickup'; entityId: string; item: WildItem; amount: number; events?: FellEvent[] }
@@ -159,12 +181,27 @@ export type WildOutcome =
   | { type: 'mine'; depositId: string; left: number; work: number; durability: number; item?: WildItem; amount?: number; events: FellEvent[] }
   | { type: 'smelt'; siteId: string; recipe: string; spent: Record<string, number>; end: number; events: FellEvent[] }
   | ({ type: 'shoot'; arrow: ArrowKind } & ShotValue)
-  | { type: 'butcher'; carcassId: string; cut: number; left: number; work: number; durability: number; item?: WildItem; pileId?: string; events: FellEvent[] };
+  | { type: 'butcher'; carcassId: string; cut: number; left: number; work: number; durability: number; item?: WildItem; pileId?: string; events: FellEvent[] }
+  | { type: 'horse_feed'; horseId: string; item: HorseFeedItem; trust: number; tamed: boolean }
+  | { type: 'horse_tack'; horseId: string; item: 'saddle' | 'bridle'; saddled: boolean; bridled: boolean }
+  | { type: 'horse_mount'; horseId: string }
+  | { type: 'horse_dismount'; horseId: string }
+  | { type: 'horse_gait'; gait: HorseGait }
+  | { type: 'trade_barter'; offerId: string; qty: number; received: string; receivedQty: number; stockLeft: number }
+  | { type: 'settler_recruit'; settlerId: string; name: string; food: string; foodSpent: number }
+  | { type: 'settler_assign'; settlerId: string; role: SettlerRole }
+  | { type: 'community_collect'; item: WildItem; qty: number };
 
 /** Commands only the wilderness has. */
 export const WILD_COMMAND_TYPES: readonly string[] = ['pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness', 'chop', 'cut_log', 'mark_stockpile',
   'deliver_site', 'build_work', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn',
-  'explore', 'set_waypoint', 'remove_waypoint', 'mine', 'smelt', 'shoot', 'butcher'];
+  'explore', 'set_waypoint', 'remove_waypoint', 'mine', 'smelt', 'shoot', 'butcher',
+  'horse_feed', 'horse_tack', 'horse_mount', 'horse_dismount', 'horse_gait',
+  'trade_barter', 'settler_recruit', 'settler_assign', 'community_collect'];
+/** W10 (content v11) commands. */
+export const COMMUNITY_COMMAND_TYPES: readonly string[] = ['trade_barter', 'settler_recruit', 'settler_assign', 'community_collect'];
+/** W9 (content v10) commands. */
+export const HORSE_COMMAND_TYPES: readonly string[] = ['horse_feed', 'horse_tack', 'horse_mount', 'horse_dismount', 'horse_gait'];
 /** W8 (content v9) commands. */
 export const HUNT_COMMAND_TYPES: readonly string[] = ['shoot', 'butcher'];
 /** W6 (content v7) commands. */
@@ -317,6 +354,45 @@ export function validateWildCommand(value: Record<string, unknown>, base: Envelo
     case 'butcher': {
       const at = atOf(value.at);
       return typeof value.carcassId === 'string' && ANIMAL_ID.test(value.carcassId) && at ? { ...base, type: 'butcher', carcassId: value.carcassId, at } : null;
+    }
+    case 'horse_feed': {
+      const at = atOf(value.at);
+      return typeof value.horseId === 'string' && HORSE_ID.test(value.horseId) && HORSE_FEED_ITEMS.includes(value.item as HorseFeedItem) && at
+        ? { ...base, type: 'horse_feed', horseId: value.horseId, item: value.item as HorseFeedItem, at } : null;
+    }
+    case 'horse_tack': {
+      const at = atOf(value.at);
+      return typeof value.horseId === 'string' && HORSE_ID.test(value.horseId) && (value.item === 'saddle' || value.item === 'bridle') && at
+        ? { ...base, type: 'horse_tack', horseId: value.horseId, item: value.item, at } : null;
+    }
+    case 'horse_mount': {
+      const at = atOf(value.at);
+      return typeof value.horseId === 'string' && HORSE_ID.test(value.horseId) && at
+        ? { ...base, type: 'horse_mount', horseId: value.horseId, at } : null;
+    }
+    case 'horse_dismount': {
+      const at = atOf(value.at);
+      return at ? { ...base, type: 'horse_dismount', at } : null;
+    }
+    case 'horse_gait':
+      return HORSE_GAITS.includes(value.gait as HorseGait) ? { ...base, type: 'horse_gait', gait: value.gait as HorseGait } : null;
+    case 'trade_barter': {
+      const at = atOf(value.at);
+      return typeof value.offerId === 'string' && !!offerById(value.offerId) && uint(value.qty, 20) && value.qty >= 1 && at
+        ? { ...base, type: 'trade_barter', offerId: value.offerId, qty: value.qty, at } : null;
+    }
+    case 'settler_recruit': {
+      const at = atOf(value.at);
+      return typeof value.food === 'string' && value.food in RECRUIT_FOOD_COST && at
+        ? { ...base, type: 'settler_recruit', food: value.food, at } : null;
+    }
+    case 'settler_assign':
+      return typeof value.settlerId === 'string' && SETTLER_ID.test(value.settlerId) && SETTLER_ROLES.includes(value.role as SettlerRole)
+        ? { ...base, type: 'settler_assign', settlerId: value.settlerId, role: value.role as SettlerRole } : null;
+    case 'community_collect': {
+      const at = atOf(value.at);
+      return itemOf(value.item) && uint(value.qty, 1000) && value.qty >= 1 && at
+        ? { ...base, type: 'community_collect', item: value.item, qty: value.qty, at } : null;
     }
   }
   return null;
@@ -508,6 +584,32 @@ export function validateWildOutcome(value: Record<string, unknown>): WildOutcome
       return butcherOutcome(value.carcassId, { cut: value.cut, left: value.left, work: value.work, durability: value.durability,
         ...(value.item !== undefined ? { item: value.item as WildItem, pileId: value.pileId as string } : {}), events: ev });
     }
+    case 'horse_feed':
+      return typeof value.horseId === 'string' && HORSE_ID.test(value.horseId) && HORSE_FEED_ITEMS.includes(value.item as HorseFeedItem)
+        && uint(value.trust, HORSE_MAX_TRUST) && typeof value.tamed === 'boolean'
+        ? { type: 'horse_feed', horseId: value.horseId, item: value.item as HorseFeedItem, trust: value.trust, tamed: value.tamed } : null;
+    case 'horse_tack':
+      return typeof value.horseId === 'string' && HORSE_ID.test(value.horseId) && (value.item === 'saddle' || value.item === 'bridle')
+        && typeof value.saddled === 'boolean' && typeof value.bridled === 'boolean'
+        ? { type: 'horse_tack', horseId: value.horseId, item: value.item, saddled: value.saddled, bridled: value.bridled } : null;
+    case 'horse_mount': case 'horse_dismount':
+      return typeof value.horseId === 'string' && HORSE_ID.test(value.horseId) ? { type: value.type, horseId: value.horseId } as WildOutcome : null;
+    case 'horse_gait':
+      return HORSE_GAITS.includes(value.gait as HorseGait) ? { type: 'horse_gait', gait: value.gait as HorseGait } : null;
+    case 'trade_barter':
+      return typeof value.offerId === 'string' && !!offerById(value.offerId) && uint(value.qty, 20) && value.qty >= 1
+        && typeof value.received === 'string' && uint(value.receivedQty, 1000) && uint(value.stockLeft, 100)
+        ? { type: 'trade_barter', offerId: value.offerId, qty: value.qty, received: value.received, receivedQty: value.receivedQty, stockLeft: value.stockLeft } : null;
+    case 'settler_recruit':
+      return typeof value.settlerId === 'string' && SETTLER_ID.test(value.settlerId) && typeof value.name === 'string' && value.name.length > 0
+        && typeof value.food === 'string' && uint(value.foodSpent, 100)
+        ? { type: 'settler_recruit', settlerId: value.settlerId, name: value.name, food: value.food, foodSpent: value.foodSpent } : null;
+    case 'settler_assign':
+      return typeof value.settlerId === 'string' && SETTLER_ID.test(value.settlerId) && SETTLER_ROLES.includes(value.role as SettlerRole)
+        ? { type: 'settler_assign', settlerId: value.settlerId, role: value.role as SettlerRole } : null;
+    case 'community_collect':
+      return itemOf(value.item) && uint(value.qty, 1000) && value.qty >= 1
+        ? { type: 'community_collect', item: value.item, qty: value.qty } : null;
   }
   return null;
 }
@@ -541,6 +643,15 @@ export function wildAgrees(c: WildCommand, o: WildOutcome): boolean {
     case 'smelt': return o.type === 'smelt' && o.siteId === c.siteId && o.recipe === c.recipe;
     case 'shoot': return o.type === 'shoot' && o.arrow === c.arrow;
     case 'butcher': return o.type === 'butcher' && o.carcassId === c.carcassId;
+    case 'horse_feed': return o.type === 'horse_feed' && o.horseId === c.horseId && o.item === c.item;
+    case 'horse_tack': return o.type === 'horse_tack' && o.horseId === c.horseId && o.item === c.item;
+    case 'horse_mount': return o.type === 'horse_mount' && o.horseId === c.horseId;
+    case 'horse_dismount': return o.type === 'horse_dismount';
+    case 'horse_gait': return o.type === 'horse_gait' && o.gait === c.gait;
+    case 'trade_barter': return o.type === 'trade_barter' && o.offerId === c.offerId && o.qty === c.qty;
+    case 'settler_recruit': return o.type === 'settler_recruit' && o.food === c.food;
+    case 'settler_assign': return o.type === 'settler_assign' && o.settlerId === c.settlerId && o.role === c.role;
+    case 'community_collect': return o.type === 'community_collect' && o.item === c.item && o.qty === c.qty;
   }
 }
 
@@ -582,6 +693,12 @@ function dispatchWildRules(world: World, c: WildCommand): WildDispatch {
   }
   if (HUNT_COMMAND_TYPES.includes(c.type) && (world.wild.content < WILD_CONTENT_V9 || !world.wild.hunt || !world.wild.wildlife)) {
     return { ok: false, code: 'wilderness', reasons: ['this world predates hunting (wilderness content v8); it needs upgrade_wilderness first'] };
+  }
+  if (HORSE_COMMAND_TYPES.includes(c.type) && (world.wild.content < WILD_CONTENT_V10 || !world.wild.horses)) {
+    return { ok: false, code: 'wilderness', reasons: ['this world predates horses (wilderness content v9); it needs upgrade_wilderness first'] };
+  }
+  if (COMMUNITY_COMMAND_TYPES.includes(c.type) && (world.wild.content < WILD_CONTENT_V11 || !world.wild.community)) {
+    return { ok: false, code: 'wilderness', reasons: ['this world predates trade and settlers (wilderness content v10); it needs upgrade_wilderness first'] };
   }
   // A recorded death waits for its respawn: nothing else is done by a dead character.
   if (world.wild.build?.death && c.type !== 'respawn' && c.type !== 'died') {
@@ -696,7 +813,174 @@ function dispatchWildRules(world: World, c: WildCommand): WildDispatch {
       const r = markStockpile(world, c.at);
       return r.ok ? { ok: true, value: { type: 'mark_stockpile', stockpileId: r.value.stockpileId, events: r.value.events } } : r;
     }
+    // ---- W9 (content v10): horses ----
+    case 'horse_feed': {
+      const hs = world.wild.horses!;
+      if (!hs.seeded) ensureWildHorses(world);
+      const h = hs.horses.get(c.horseId);
+      if (!h) return { ok: false, code: 'missing', reasons: [`no horse ${c.horseId}`] };
+      if (h.state === 'flee') return { ok: false, code: 'spooked', reasons: ['the horse is fleeing; wait for it to calm down'] };
+      const dist = Math.hypot(h.x - c.at.x, h.z - c.at.z) / 10;
+      if (dist > HORSE_REACH) return { ok: false, code: 'out_of_reach', reasons: ['walk closer to the horse to feed it'] };
+      const tick = world.life?.tick ?? 0;
+      if (tick - h.lastFedTick < FEED_COOLDOWN_TICKS) return { ok: false, code: 'too_fast', reasons: ['let the horse finish eating before offering more'] };
+      if ((world.wild.items[c.item] ?? 0) < 1) return { ok: false, code: 'missing_item', reasons: [`you have no ${c.item} in your bag`] };
+      const held = world.wild.build ? bagRefusal(world, c.item, 1, 'feed them to a horse') : null;
+      if (held) return { ok: false, ...held };
+      world.wild.items[c.item] -= 1;
+      if (world.wild.items[c.item] === 0) delete world.wild.items[c.item];
+      const gain = feedTrustGain(h.temperament, c.item);
+      h.trust = Math.min(HORSE_MAX_TRUST, h.trust + gain);
+      if (h.trust >= HORSE_MAX_TRUST) h.tamed = true;
+      h.lastFedTick = tick;
+      h.feeds += 1;
+      h.state = 'idle';
+      return { ok: true, value: { type: 'horse_feed', horseId: h.id, item: c.item, trust: h.trust, tamed: h.tamed } };
+    }
+    case 'horse_tack': {
+      const hs = world.wild.horses!;
+      if (!hs.seeded) ensureWildHorses(world);
+      const h = hs.horses.get(c.horseId);
+      if (!h) return { ok: false, code: 'missing', reasons: [`no horse ${c.horseId}`] };
+      if (!h.tamed) return { ok: false, code: 'wild', reasons: ['tame the horse with food before fitting tack'] };
+      const dist = Math.hypot(h.x - c.at.x, h.z - c.at.z) / 10;
+      if (dist > HORSE_REACH) return { ok: false, code: 'out_of_reach', reasons: ['walk closer to the horse to equip tack'] };
+      if (c.item === 'saddle' && h.saddled) return { ok: false, code: 'already', reasons: ['this horse is already saddled'] };
+      if (c.item === 'bridle' && h.bridled) return { ok: false, code: 'already', reasons: ['this horse is already bridled'] };
+      if ((world.wild.items[c.item] ?? 0) < 1) return { ok: false, code: 'missing_item', reasons: [`you have no ${c.item} in your bag`] };
+      const held = world.wild.build ? bagRefusal(world, c.item, 1, 'equip it on a horse') : null;
+      if (held) return { ok: false, ...held };
+      world.wild.items[c.item] -= 1;
+      if (world.wild.items[c.item] === 0) delete world.wild.items[c.item];
+      if (c.item === 'saddle') h.saddled = true;
+      else h.bridled = true;
+      return { ok: true, value: { type: 'horse_tack', horseId: h.id, item: c.item, saddled: h.saddled, bridled: h.bridled } };
+    }
+    case 'horse_mount': {
+      const hs = world.wild.horses!;
+      if (!hs.seeded) ensureWildHorses(world);
+      if (hs.mountedId) return { ok: false, code: 'mounted', reasons: ['dismount your current horse first'] };
+      const h = hs.horses.get(c.horseId);
+      if (!h) return { ok: false, code: 'missing', reasons: [`no horse ${c.horseId}`] };
+      if (!h.tamed) return { ok: false, code: 'wild', reasons: ['you cannot mount an untamed horse'] };
+      if (!h.saddled || !h.bridled) return { ok: false, code: 'no_tack', reasons: ['a horse needs both a saddle and a bridle before you can ride it'] };
+      const dist = Math.hypot(h.x - c.at.x, h.z - c.at.z) / 10;
+      if (dist > HORSE_REACH) return { ok: false, code: 'out_of_reach', reasons: ['walk closer to the horse to mount'] };
+      hs.mountedId = h.id;
+      hs.gait = 'walk';
+      h.state = 'mounted';
+      return { ok: true, value: { type: 'horse_mount', horseId: h.id } };
+    }
+    case 'horse_dismount': {
+      const hs = world.wild.horses!;
+      if (!hs.mountedId) return { ok: false, code: 'not_mounted', reasons: ['you are not riding a horse'] };
+      const h = hs.horses.get(hs.mountedId);
+      const id = hs.mountedId;
+      hs.mountedId = null;
+      hs.gait = 'walk';
+      if (h) {
+        h.x = c.at.x;
+        h.z = c.at.z;
+        h.state = 'idle';
+      }
+      return { ok: true, value: { type: 'horse_dismount', horseId: id } };
+    }
+    case 'horse_gait': {
+      const hs = world.wild.horses!;
+      if (!hs.mountedId) return { ok: false, code: 'not_mounted', reasons: ['mount a horse before changing gait'] };
+      const h = hs.horses.get(hs.mountedId);
+      if (c.gait === 'gallop' && h && h.stamina < HORSE_GALLOP_MIN_STAMINA) {
+        return { ok: false, code: 'tired', reasons: ['the horse is too winded to gallop; let it walk to recover stamina'] };
+      }
+      hs.gait = c.gait;
+      return { ok: true, value: { type: 'horse_gait', gait: c.gait } };
+    }
+    // ---- W10 (content v11): trade & settlers ----
+    case 'trade_barter': {
+      const cm = world.wild.community!;
+      if (!tradingPostNear(world, c.at)) return { ok: false, code: 'no_trading_post', reasons: ['stand beside a finished trading post to barter'] };
+      const offer = offerById(c.offerId)!;
+      const avail = cm.stock[offer.id] ?? 0;
+      if (avail < c.qty) return { ok: false, code: 'out_of_stock', reasons: [`merchant only has ${avail} left of ${offer.label}`] };
+      let removedWeight = 0;
+      for (const [k, needPer] of Object.entries(offer.give)) {
+        const need = needPer * c.qty;
+        if ((world.wild.items[k] ?? 0) < need) return { ok: false, code: 'missing_item', reasons: [`need ${need} ${k} to trade`] };
+        const held = world.wild.build ? bagRefusal(world, k as WildItem, need, 'trade them') : null;
+        if (held) return { ok: false, ...held };
+        removedWeight += (ITEM_WEIGHT[k as WildItem] ?? 0) * need;
+      }
+      const addedQty = offer.receiveQty * c.qty;
+      const addedWeight = (ITEM_WEIGHT[offer.receive as WildItem] ?? 0) * addedQty;
+      const cap = carryCapacity(world.wild);
+      if (carriedWeight(world.wild) - removedWeight + addedWeight > cap) {
+        return { ok: false, code: 'too_heavy', reasons: ['not enough room in your bag for the traded goods'] };
+      }
+      for (const [k, needPer] of Object.entries(offer.give)) {
+        const need = needPer * c.qty;
+        world.wild.items[k] -= need;
+        if (world.wild.items[k] === 0) delete world.wild.items[k];
+      }
+      world.wild.items[offer.receive] = (world.wild.items[offer.receive] ?? 0) + addedQty;
+      cm.stock[offer.id] = avail - c.qty;
+      cm.tradesCompleted += c.qty;
+      return { ok: true, value: { type: 'trade_barter', offerId: offer.id, qty: c.qty, received: offer.receive, receivedQty: addedQty, stockLeft: cm.stock[offer.id] } };
+    }
+    case 'settler_recruit': {
+      const cm = world.wild.community!;
+      const posts = finishedTradingPosts(world);
+      if (!posts.length || !tradingPostNear(world, c.at)) {
+        return { ok: false, code: 'no_trading_post', reasons: ['build a trading post and stand near it to welcome a settler'] };
+      }
+      if (cm.settlers.size >= MAX_SETTLERS) return { ok: false, code: 'full', reasons: ['settlement is at maximum settler capacity'] };
+      const cap = shelterCapacity(world);
+      if (cm.settlers.size >= cap) {
+        return { ok: false, code: 'no_shelter', reasons: [`need finished shelter capacity (have ${cap} for ${cm.settlers.size} settlers); build a lean-to first`] };
+      }
+      if (!hasSettlementStorage(world)) {
+        return { ok: false, code: 'no_storage', reasons: ['need settlement storage (log store, trading post or chest) before recruiting'] };
+      }
+      const foodCost = RECRUIT_FOOD_COST[c.food];
+      if (!foodCost) return { ok: false, code: 'not_food', reasons: ['offer real food rations (cooked meat, cooked mushrooms or berries)'] };
+      if ((world.wild.items[c.food] ?? 0) < foodCost) {
+        return { ok: false, code: 'missing_food', reasons: [`need ${foodCost} ${c.food} in your bag as settler arrival rations`] };
+      }
+      const held = world.wild.build ? bagRefusal(world, c.food as WildItem, foodCost, 'feed a new settler') : null;
+      if (held) return { ok: false, ...held };
+      world.wild.items[c.food] -= foodCost;
+      if (world.wild.items[c.food] === 0) delete world.wild.items[c.food];
+      const num = cm.nextSettlerId++;
+      const id = `s:${num}`;
+      const name = nextSettlerName(world.seed, num - 1);
+      const spot = siteSpotOf(posts[0]);
+      const angle = (num - 1) * 1.1;
+      const sx = Math.round((spot.x + Math.cos(angle) * 2.2) * 10);
+      const sz = Math.round((spot.z + Math.sin(angle) * 2.2) * 10);
+      cm.settlers.set(id, { id, name, role: 'idle', x: sx, z: sz, workTicks: 0, produced: 0, cycles: 0 });
+      return { ok: true, value: { type: 'settler_recruit', settlerId: id, name, food: c.food, foodSpent: foodCost } };
+    }
+    case 'settler_assign': {
+      const cm = world.wild.community!;
+      const s = cm.settlers.get(c.settlerId);
+      if (!s) return { ok: false, code: 'missing', reasons: [`no settler ${c.settlerId}`] };
+      s.role = c.role;
+      return { ok: true, value: { type: 'settler_assign', settlerId: s.id, role: s.role } };
+    }
+    case 'community_collect': {
+      const cm = world.wild.community!;
+      if (!tradingPostNear(world, c.at)) return { ok: false, code: 'no_trading_post', reasons: ['stand by a finished trading post to collect depot goods'] };
+      const have = cm.depot[c.item] ?? 0;
+      if (have < c.qty) return { ok: false, code: 'missing_item', reasons: [`depot only holds ${have} ${c.item}`] };
+      const addWeight = (ITEM_WEIGHT[c.item] ?? 0) * c.qty;
+      if (carriedWeight(world.wild) + addWeight > carryCapacity(world.wild)) {
+        return { ok: false, code: 'too_heavy', reasons: ['not enough room in your bag to carry that much from the depot'] };
+      }
+      cm.depot[c.item] -= c.qty;
+      if (cm.depot[c.item] === 0) delete cm.depot[c.item];
+      world.wild.items[c.item] = (world.wild.items[c.item] ?? 0) + c.qty;
+      return { ok: true, value: { type: 'community_collect', item: c.item, qty: c.qty } };
+    }
   }
 }
 
-export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6, WILD_CONTENT_V7, WILD_CONTENT_V8, WILD_CONTENT_V9 };
+export { WILD_RECIPES, WILD_CONTENT_V2, WILD_CONTENT_V4, WILD_CONTENT_V5, WILD_CONTENT_V6, WILD_CONTENT_V7, WILD_CONTENT_V8, WILD_CONTENT_V9, WILD_CONTENT_V10, WILD_CONTENT_V11 };

@@ -85,14 +85,15 @@ test('the Build catalogue: every definition is complete and consistent; early bu
   }
   assert.match(lockReasons(s.world, buildingDef('stone_house')!).join(';'), /cut stone \(not obtainable yet: stone cutting arrives later\)/);
   assert.match(lockReasons(s.world, buildingDef('storage_shed')!).join(';'), /finished workbench.*hammer/);
-  // Station recipes are data: planks, pickaxe, hammer, knife, chest at the workbench (W8, content v9: bow, arrows, blunt arrows).
-  assert.deepEqual(WILD_RECIPES.filter((r) => r.station === 'workbench').map((r) => r.id).sort(), ['arrows', 'blunt_arrows', 'bow', 'hammer', 'knife', 'planks', 'stone_pickaxe', 'wooden_chest']);
+  // Station recipes are data: planks, pickaxe, hammer, knife, chest at the workbench (W8: bow/arrows; W9: saddle/bridle; W10: armour/cape).
+  assert.deepEqual(WILD_RECIPES.filter((r) => r.station === 'workbench').map((r) => r.id).sort(),
+    ['arrows', 'astrix_cape', 'blunt_arrows', 'bow', 'bridle', 'hammer', 'knife', 'leather_armour', 'planks', 'saddle', 'stone_pickaxe', 'wooden_chest']);
   assert.deepEqual(WILD_RECIPES.filter((r) => r.since === 9).map((r) => r.id), ['bow', 'arrows', 'blunt_arrows']);
 });
 
 test('content v4 genesis is pinned; v3 and settlement pins unchanged; the settlement refuses wilderness building', () => {
-  // A new world now starts at content v8 (W7: persistent wildlife); v5 (W4 owner report 1) and v4 keep their pins.
-  assert.equal(GameSession.genesis(1337, GENERATOR_V2, 'wilderness').journal.wildContent, 9);
+  // A new world now starts at content v11 (W10: trade & settlers); v5 (W4 owner report 1) and v4 keep their pins.
+  assert.equal(GameSession.genesis(1337, GENERATOR_V2, 'wilderness').journal.wildContent, 11);
   const w = GameSession.genesis(1337, GENERATOR_V2, 'wilderness', 5);
   assert.equal(w.journal.wildContent, 5);
   assert.equal(w.stateHash, W5_PIN, 'v5 genesis');

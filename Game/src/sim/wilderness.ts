@@ -34,7 +34,9 @@ export const WILDERNESS_STARTER_INVENTORY: Readonly<Record<string, number>> = Ob
  */
 export const WILDERNESS_COMMANDS: readonly string[] = ['tick', 'pickup', 'drop', 'craft', 'equip', 'eat', 'upgrade_wilderness', 'chop', 'cut_log', 'mark_stockpile',
   'place_site', 'deliver_site', 'build_work', 'cancel_site', 'claim_shelter', 'fuel_fire', 'cook', 'store_items', 'take_items', 'died', 'respawn',
-  'explore', 'set_waypoint', 'remove_waypoint', 'mine', 'smelt', 'shoot', 'butcher'];
+  'explore', 'set_waypoint', 'remove_waypoint', 'mine', 'smelt', 'shoot', 'butcher',
+  'horse_feed', 'horse_tack', 'horse_mount', 'horse_dismount', 'horse_gait',
+  'trade_barter', 'settler_recruit', 'settler_assign', 'community_collect'];
 /** Commands a wilderness world shares with the settlement by name only. */
 export const SHARED_WITH_SETTLEMENT: readonly string[] = ['place_site', 'cancel_site'];
 

@@ -15,6 +15,7 @@ import { LandingPlan, SpawnPlan, planAvatarSpawn, planLanding } from './avatar-s
 import { Entity, World, isSolid, residentVoxelAt, nearestHarvestable } from '../sim/world';
 import { OrbitRig } from '../render/camera';
 import { Figure, buildFigure, animateFigure, placeFigure } from '../render/characters';
+import { ProtagonistClip, ProtagonistEquipmentState, ProtagonistRig } from '../render/protagonist';
 import { BannerPoint, BannerSet, BannerTarget, ReturnChannel, bannerGroundY, findLanding, plantBanner } from '../sim/banners';
 import { BannerStore } from './banners';
 import { BannerView } from '../render/banners';
@@ -79,6 +80,9 @@ export class ExploreController {
     return o ? o.name : BANNER_NAMES[target];
   }
   private figure: Figure;
+  private protagonist: ProtagonistRig;
+  private mounted = false;
+  private mountGait: 'walk' | 'trot' | 'gallop' | null = null;
   private readonly marker: THREE.Mesh;
   private readonly smoothTarget = new THREE.Vector3();
   private saveTimer = 0;
@@ -107,17 +111,26 @@ export class ExploreController {
   get rightHand(): THREE.Object3D { return this.figure.armR; }
   /** W8: the left arm joint, for the bow. */
   get leftHand(): THREE.Object3D { return this.figure.armL; }
+  get protagonistLoaded(): boolean { return this.protagonist.isLoaded; }
+  get protagonistClip(): ProtagonistClip | null { return this.protagonist.activeClip; }
+  setEquipment(eq: ProtagonistEquipmentState): void { this.protagonist.applyEquipment(eq); }
+  setMounted(mounted: boolean, gait: 'walk' | 'trot' | 'gallop' | null = null): void {
+    this.mounted = mounted;
+    this.mountGait = mounted ? (gait ?? 'walk') : null;
+  }
+  triggerAction(clip: ProtagonistClip, durationSec = 0.65): void { this.protagonist.triggerAction(clip, durationSec); }
   /** W3: an accepted axe swing (presentation): start time and the direction to face. */
   private swingStart = -1;
   private swingFace: number | null = null;
   /** Swings drawn this session (metrics). */
   swings = 0;
-  /** W3: play the axe swing toward (x, z): wind-up over the head, strike, recover (SWING_S). */
-  swing(x: number, z: number): void {
+  /** W3: play the tool swing toward (x, z): wind-up over the head, strike, recover (SWING_S). */
+  swing(x: number, z: number, clip: ProtagonistClip = 'Chop'): void {
     const s = this.state;
     this.swingStart = performance.now();
     this.swingFace = s ? Math.atan2(x - s.x, z - s.z) : null;
     this.swings++;
+    this.protagonist.triggerAction(clip, SWING_S);
   }
   get swinging(): boolean { return this.swingStart >= 0 && performance.now() - this.swingStart < SWING_S * 1000; }
   /** Player-facing messages (planted, returning, cancelled...). */
@@ -132,6 +145,8 @@ export class ExploreController {
     this.figure = buildFigure();
     this.figure.root.visible = false;
     o.scene.add(this.figure.root);
+    this.protagonist = new ProtagonistRig();
+    o.scene.add(this.protagonist.root);
     this.key = `astrix:avatar:v1:seed:${o.world.seed}:gen:${o.world.params.generatorVersion}${o.storageScope ? `:world:${o.storageScope}` : ''}`;
     const ring = new THREE.RingGeometry(0.7, 0.9, 6);
     ring.rotateX(-Math.PI / 2);
@@ -365,10 +380,17 @@ export class ExploreController {
     while (this.accumulator >= FIXED_STEP) {
       this.prev = this.state;
       const wasDead = this.state!.dead;
+      const mountedRun = this.mounted ? (this.mountGait === 'trot' || this.mountGait === 'gallop' || intent.run) : intent.run;
       this.state = stepCharacter(this.o.world, this.state!, {
-        moveX: intent.x, moveZ: intent.z, run: intent.run, jump: this.jumpQueued,
+        moveX: intent.x, moveZ: intent.z, run: mountedRun, jump: this.jumpQueued,
         rise: this.jumpHeld, dive: this.diveHeld,
       }, FIXED_STEP, bodies);
+      if (this.mounted && this.mountGait === 'gallop' && !this.state.dead && (intent.x !== 0 || intent.z !== 0)) {
+        this.state = stepCharacter(this.o.world, this.state, {
+          moveX: intent.x, moveZ: intent.z, run: true, jump: false,
+          rise: false, dive: false,
+        }, FIXED_STEP * 0.75, bodies);
+      }
       stepped++;
       this.jumpQueued = false;
       this.accumulator -= FIXED_STEP;
@@ -408,6 +430,15 @@ export class ExploreController {
     animateFigure(this.figure, s, frameDt, y);
     this.poseSwing(s);
     this.poseAim(s);
+    if (this.protagonist.isLoaded) {
+      this.figure.root.visible = false;
+      this.protagonist.root.visible = this.active && !!this.state;
+      this.protagonist.root.position.set(x, y + (this.mounted ? 0.62 : 0), z);
+      this.protagonist.root.rotation.y = this.aim ? this.aim.heading : (this.swinging && this.swingFace !== null ? this.swingFace : s.heading);
+      this.protagonist.update(s, frameDt, !!this.aim, this.mounted);
+    } else {
+      this.protagonist.root.visible = false;
+    }
 
     // Follow camera: smooth the target (snappier horizontally than vertically
     // so stepping up a voxel does not jolt the view).
@@ -581,6 +612,10 @@ export class ExploreController {
       vx: Math.round(s.vx * 100) / 100, vz: Math.round(s.vz * 100) / 100,
       contact: this.contactMetrics(),
       placement: this.placement,
+      protagonistLoaded: this.protagonist.isLoaded,
+      protagonistClip: this.protagonist.activeClip,
+      mounted: this.mounted,
+      mountGait: this.mountGait,
     };
   }
 
